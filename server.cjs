@@ -24,8 +24,10 @@ function createServer(database) {
       const rawPath = req.url.split('?')[0];
       if (!rawPath.startsWith('/') || /%2f|%5c/i.test(rawPath)) throw new Error('Invalid path');
       const pathname = decodeURIComponent(rawPath);
-      if ((pathname === '/dashboard' || pathname.startsWith('/dashboard/')) && !auth.account(req)) {
-        res.writeHead(303, { Location: '/login/', 'Cache-Control': 'no-store' }); res.end(); return;
+      if (pathname === '/dashboard' || pathname.startsWith('/dashboard/')) {
+        let account;
+        try { account = await auth.account(req); } catch { send(503, 'Database unavailable'); return; }
+        if (!account) { res.writeHead(303, { Location: '/login/', 'Cache-Control': 'no-store' }); res.end(); return; }
       }
       if (pathname === '/dashboard' || pathname.startsWith('/dashboard/')) res.setHeader('Cache-Control', 'no-store');
       if (/[\\\0]/.test(pathname) || pathname.split('/').some(part => part === '..')) throw new Error('Invalid path');
@@ -50,11 +52,15 @@ function createServer(database) {
     }
   });
 }
-if (require.main === module) {
-  const database = openDatabase();
-  if (process.env.BOOTSTRAP_PHONE && process.env.BOOTSTRAP_PASSWORD_HASH) database.provisionAccount(process.env.BOOTSTRAP_PHONE, process.env.BOOTSTRAP_PASSWORD_HASH);
+if (require.main === module) (async () => {
+  const database = await openDatabase();
+  if (process.env.SQLITE_MIGRATION_PATH) {
+    const migrated = await database.importSqlite(process.env.SQLITE_MIGRATION_PATH);
+    console.log('MySQL migration verified: ' + migrated.users + ' account(s).');
+  }
+  if (process.env.BOOTSTRAP_PHONE && process.env.BOOTSTRAP_PASSWORD_HASH) await database.provisionAccount(process.env.BOOTSTRAP_PHONE, process.env.BOOTSTRAP_PASSWORD_HASH);
   const server = createServer(database);
   server.listen(port, host, () => console.log(`ResumeIt: http://localhost:${port} (listening on ${host})`)).on('error', err => { database.close(); console.error(err.message); process.exitCode = 1; });
-  for (const signal of ['SIGINT', 'SIGTERM']) process.once(signal, () => server.close(() => { database.close(); process.exit(0); }));
-}
+  for (const signal of ['SIGINT', 'SIGTERM']) process.once(signal, () => server.close(async () => { await database.close(); process.exit(0); }));
+})().catch(() => { console.error('MySQL startup failed; check connection settings and migration source.'); process.exitCode = 1; });
 module.exports = { createServer };

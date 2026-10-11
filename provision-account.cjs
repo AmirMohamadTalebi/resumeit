@@ -10,7 +10,7 @@ catch (error) { if (error.code !== 'ENOENT') throw error; }
   if (body.length > 2048) throw new Error('Input too large');
   const { phone, password } = JSON.parse(body);
   const hash = await hashPassword(password);
-  const database = openDatabase();
-  try { database.provisionAccount(phone, hash); console.log('Account ready. Existing passwords are never overwritten.'); }
-  finally { database.close(); }
+  const database = await openDatabase();
+  try { await database.provisionAccount(phone, hash); console.log('Account ready. Existing passwords are never overwritten.'); }
+  finally { await database.close(); }
 })().catch(() => { console.error('Account provisioning failed; check input and database access.'); process.exitCode = 1; });
