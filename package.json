@@ -10,7 +10,8 @@
     "check:database": "node database-check.cjs",
     "check:auth": "node auth-check.cjs",
     "check:sms": "node smsir-check.cjs && node otp-check.cjs",
-    "check:dashboard": "node dashboard-check.cjs"
+    "check:dashboard": "node dashboard-check.cjs",
+    "check:auth-ui": "node auth-ui-check.cjs"
   },
   "dependencies": {
     "mysql2": "3.24.5"

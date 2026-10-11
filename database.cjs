@@ -1,5 +1,5 @@
 const mysql = require('mysql2/promise');
-const { randomUUID } = require('node:crypto');
+const { randomUUID, timingSafeEqual } = require('node:crypto');
 
 async function openDatabase(options) {
   if (!options && (!process.env.MYSQL_HOST || !process.env.MYSQL_DATABASE || !process.env.MYSQL_USER || !process.env.MYSQL_PASSWORD)) throw new Error('MySQL settings are required');
@@ -22,6 +22,7 @@ async function openDatabase(options) {
       `CREATE TABLE IF NOT EXISTS links (user_id CHAR(36) NOT NULL, position INT NOT NULL, name VARCHAR(80) NOT NULL, url VARCHAR(2048) NOT NULL, PRIMARY KEY(user_id,position), FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE) ENGINE=InnoDB`,
       `CREATE TABLE IF NOT EXISTS sessions (token_hash CHAR(64) PRIMARY KEY, user_id CHAR(36) NOT NULL, expires_at BIGINT NOT NULL, INDEX(expires_at), FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE) ENGINE=InnoDB`,
       `CREATE TABLE IF NOT EXISTS login_attempts (attempt_key VARCHAR(96) PRIMARY KEY, count INT NOT NULL, expires_at BIGINT NOT NULL, INDEX(expires_at)) ENGINE=InnoDB`,
+      `CREATE TABLE IF NOT EXISTS otp_challenges (phone CHAR(11) PRIMARY KEY, challenge_id CHAR(36) NOT NULL UNIQUE, purpose VARCHAR(8) NOT NULL, code_hash CHAR(64) NOT NULL, status VARCHAR(10) NOT NULL, attempts INT NOT NULL DEFAULT 0, sent_at BIGINT NOT NULL, expires_at BIGINT NOT NULL, registration_token CHAR(64), INDEX(expires_at)) ENGINE=InnoDB`,
     ]) await execute(sql);
   } catch (error) { await pool.end(); throw error; }
   function text(value, limit, required = false) {
@@ -29,6 +30,50 @@ async function openDatabase(options) {
     return value.trim();
   }
   const store = {
+    async reserveOtp(record, ipHash, now) {
+      await execute('DELETE FROM login_attempts WHERE expires_at<=?', [now]);
+      await execute('DELETE FROM otp_challenges WHERE expires_at<?', [now - 86400000]);
+      return transaction(async connection => {
+        const day = Math.floor(now / 86400000), tomorrow = (day + 1) * 86400000;
+        const limits = [['sms:all:'+day,100,tomorrow], ['sms:ip:'+ipHash,10,now+900000], ['sms:phone:'+record.phone,5,tomorrow]];
+        // Lock the shared budget first so concurrent replicas cannot overspend or resend together.
+        for (const [key,limit,expires] of limits) {
+          await connection.execute('INSERT INTO login_attempts(attempt_key,count,expires_at) VALUES(?,0,?) ON DUPLICATE KEY UPDATE attempt_key=attempt_key',[key,expires]);
+          const [[row]] = await connection.execute('SELECT count FROM login_attempts WHERE attempt_key=? FOR UPDATE',[key]);
+          if (row.count >= limit) return false;
+        }
+        const [[old]] = await connection.execute('SELECT sent_at FROM otp_challenges WHERE phone=? FOR UPDATE',[record.phone]);
+        if (old && old.sent_at + 60000 > now) return false;
+        for (const [key] of limits) await connection.execute('UPDATE login_attempts SET count=count+1 WHERE attempt_key=?',[key]);
+        await connection.execute(`INSERT INTO otp_challenges(phone,challenge_id,purpose,code_hash,status,sent_at,expires_at) VALUES(?,?,?,?,'pending',?,?) ON DUPLICATE KEY UPDATE challenge_id=VALUES(challenge_id),purpose=VALUES(purpose),code_hash=VALUES(code_hash),status='pending',attempts=0,sent_at=VALUES(sent_at),expires_at=VALUES(expires_at),registration_token=NULL`,[record.phone,record.id,record.purpose,record.hash,now,now+120000]);
+        return true;
+      });
+    },
+    async finishOtpSend(id, success) { await execute('UPDATE otp_challenges SET status=? WHERE challenge_id=? AND status=?',[success?'ready':'consumed',id,'pending']); },
+    async verifyOtp(id, hash, purpose, grantHash, now) {
+      return transaction(async connection => {
+        const [[row]] = await connection.execute('SELECT * FROM otp_challenges WHERE challenge_id=? FOR UPDATE',[id]);
+        if (!row || row.purpose !== purpose || row.status !== 'ready' || row.expires_at<=now || row.attempts>=5) return null;
+        await connection.execute('UPDATE otp_challenges SET attempts=attempts+1 WHERE challenge_id=?',[id]);
+        if (!timingSafeEqual(Buffer.from(row.code_hash,'hex'),Buffer.from(hash,'hex'))) return null;
+        await connection.execute('UPDATE otp_challenges SET status=?,registration_token=?,expires_at=? WHERE challenge_id=?',[purpose==='register'?'verified':'consumed',grantHash,now+300000,id]);
+        return row.phone;
+      });
+    },
+    async registrationValid(grantHash,now) { return (await execute("SELECT phone FROM otp_challenges WHERE registration_token=? AND purpose='register' AND status='verified' AND expires_at>?",[grantHash,now])).length>0; },
+    async registerVerified(grantHash, passwordHash, now) {
+      return transaction(async connection => {
+        const [[row]] = await connection.execute("SELECT * FROM otp_challenges WHERE registration_token=? AND purpose='register' AND status='verified' FOR UPDATE",[grantHash]);
+        if (!row || row.expires_at<=now) return null;
+        const [[existing]] = await connection.execute('SELECT id FROM users WHERE phone=?',[row.phone]);
+        if (existing) return { existing: true };
+        const id = randomUUID();
+        await connection.execute('INSERT INTO users(id,phone,password_hash) VALUES(?,?,?)',[id,row.phone,passwordHash]);
+        await connection.execute('INSERT INTO profiles(user_id) VALUES(?)',[id]);
+        await connection.execute("UPDATE otp_challenges SET status='consumed',registration_token=NULL WHERE challenge_id=?",[row.challenge_id]);
+        return { id, phone: row.phone };
+      });
+    },
     async provisionAccount(phone, passwordHash) {
       if (typeof phone !== 'string' || !/^09\d{9}$/.test(phone) || !/^scrypt\$[a-f0-9]{32}\$[a-f0-9]{128}$/.test(passwordHash)) throw new Error('Invalid account');
       return transaction(async connection => {

@@ -12,7 +12,8 @@ async function verifyPassword(password, stored) {
   const actual = await derive(password, salt, 64, { N: 32768, maxmem: 64 * 1024 * 1024 });
   return timingSafeEqual(actual, Buffer.from(hash, 'hex')) && !!stored;
 }
-function authHandler(database) {
+function authHandler(database, options = {}) {
+  const otp = require('./otp.cjs').createOtpService({ database, ...options });
   let pending = 0;
   const token = req => {
     const value = /(?:^|;\s*)ri_session=([a-f0-9]{64})(?:;|$)/.exec(req.headers.cookie || '')?.[1];
@@ -35,6 +36,50 @@ function authHandler(database) {
     if (pathname === '/api/auth/logout') {
       try { await database.deleteSession(token(req)); cookie('', 0); reply(200, { ok: true }); } catch { reply(503, { error: 'خروج انجام نشد.' }); } return true;
     }
+    const signIn = async user => {
+      await database.deleteSession(token(req));
+      const value = randomBytes(32).toString('hex');
+      await database.createSession(digest(value),user.id,Date.now()+7*86400000);
+      cookie(value,7*86400); reply(200,{ok:true});
+    };
+    if (['/api/auth/otp/request','/api/auth/otp/verify','/api/auth/register'].includes(pathname)) {
+      try {
+        const chunks=[]; let size=0;
+        for await (const chunk of req) { size+=chunk.length; if(size>2048) { reply(413,{error:'درخواست بیش از حد بزرگ است.'}); return true; } chunks.push(chunk); }
+        const input=JSON.parse(Buffer.concat(chunks).toString('utf8'));
+        if (pathname==='/api/auth/register') {
+          if (typeof input.registrationToken!=='string'||!/^[a-f0-9]{64}$/.test(input.registrationToken) || typeof input.password!=='string' || input.password.length<8 || input.password.length>128) { reply(400,{error:'رمز باید بین ۸ تا ۱۲۸ نویسه باشد.'}); return true; }
+          if (!await database.registrationValid(digest(input.registrationToken),Date.now())) { reply(401,{error:'تأیید شماره منقضی شده؛ دوباره کد بگیر.'}); return true; }
+          if (pending>=1) { reply(429,{error:'چند لحظه بعد دوباره امتحان کن.'}); return true; }
+          pending++;
+          try {
+            const user=await database.registerVerified(digest(input.registrationToken),await hashPassword(input.password),Date.now());
+            if (!user) reply(401,{error:'تأیید شماره منقضی شده؛ دوباره کد بگیر.'});
+            else if(user.existing) reply(409,{error:'این شماره حساب دارد؛ از صفحهٔ ورود استفاده کن.'});
+            else await signIn(user);
+          } finally { pending--; }
+          return true;
+        }
+        if (!['login','register'].includes(input.purpose)) { reply(400,{error:'درخواست معتبر نیست.'}); return true; }
+        if (pathname.endsWith('/request')) {
+          if (typeof input.phone!=='string'||!/^09\d{9}$/.test(input.phone)) { reply(400,{error:'شمارهٔ موبایل معتبر وارد کن.'}); return true; }
+          const result=await otp.request(input.phone,input.purpose,digest(req.socket.remoteAddress||'unknown'));
+          if (!result) { res.setHeader('Retry-After','60'); reply(429,{error:'محدودیت ارسال کد؛ یک دقیقه صبر کن. اگر سهمیهٔ روزانه تمام شده، فردا امتحان کن.'}); }
+          else reply(200,result);
+        } else {
+          if (typeof input.challengeId!=='string'||!/^[a-f0-9-]{36}$/.test(input.challengeId)||typeof input.code!=='string'||!/^\d{6}$/.test(input.code)) { reply(400,{error:'کد شش‌رقمی معتبر وارد کن.'}); return true; }
+          const result=await otp.verify(input.challengeId,input.code,input.purpose);
+          if (!result) reply(401,{error:'کد نادرست، مصرف‌شده یا منقضی است؛ حداکثر پنج تلاش مجاز است.'});
+          else if(input.purpose==='register') reply(200,{registrationToken:result.registrationToken});
+          else {
+            const user=await database.accountByPhone(result.phone);
+            if (!user) reply(404,{error:'این شماره هنوز حساب ندارد؛ ثبت‌نام کن.'});
+            else await signIn(user);
+          }
+        }
+      } catch(error) { reply(error instanceof SyntaxError?400:503,{error:'درخواست انجام نشد. شماره را بررسی کن و کمی بعد دوباره امتحان کن.'}); }
+      return true;
+    }
     if (pathname !== '/api/auth/login') { reply(404, { error: 'Not found' }); return true; }
     try {
       const chunks = []; let size = 0;
@@ -42,7 +87,7 @@ function authHandler(database) {
       const { phone, password } = JSON.parse(Buffer.concat(chunks).toString('utf8'));
       if (typeof phone !== 'string' || !/^09\d{9}$/.test(phone) || typeof password !== 'string' || password.length < 8 || password.length > 128) { reply(400, { error: 'شماره و رمز معتبر وارد کن.' }); return true; }
       const now = Date.now();
-      if (pending >= 4) {
+      if (pending >= 1) {
         res.setHeader('Retry-After', '900'); reply(429, { error: 'تلاش‌های زیادی انجام شده؛ ۱۵ دقیقه بعد دوباره امتحان کن.' }); return true;
       }
       pending++;

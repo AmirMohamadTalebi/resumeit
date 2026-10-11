@@ -9,8 +9,8 @@ const port = Number(process.env.PORT || 5077), host = process.env.HOST || '127.0
 const root = path.join(__dirname, 'dist');
 const mime = { '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8', '.js': 'application/javascript', '.mjs': 'application/javascript', '.woff2': 'font/woff2', '.svg': 'image/svg+xml', '.txt': 'text/plain; charset=utf-8', '.xml': 'application/xml; charset=utf-8', '.jpg': 'image/jpeg', '.png': 'image/png', '.webp': 'image/webp', '.ico': 'image/x-icon' };
 
-function createServer(database) {
-  const auth = authHandler(database);
+function createServer(database, options) {
+  const auth = authHandler(database, options);
   return http.createServer(async (req, res) => {
     const send = (status, body, type = 'text/plain; charset=utf-8') => {
       res.writeHead(status, { 'Content-Type': type, 'Content-Length': Buffer.byteLength(body), 'X-Content-Type-Options': 'nosniff' });

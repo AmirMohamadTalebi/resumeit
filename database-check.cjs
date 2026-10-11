@@ -14,6 +14,27 @@ try { process.loadEnvFile(); } catch (error) { if (error.code !== 'ENOENT') thro
     const config = { ...options, database: name, connectionLimit: 4 };
     database = await openDatabase(config);
     const hash = 'scrypt$' + randomBytes(16).toString('hex') + '$' + randomBytes(64).toString('hex');
+    const { digest } = require('./auth.cjs');
+    const now=Date.now(), challenge=randomUUID(), grant=digest('test-registration-grant');
+    const reserved=await Promise.all(Array.from({length:4},()=>database.reserveOtp({id:challenge,phone:'09120000003',purpose:'register',hash:digest(challenge+'123456')},'otp-test-ip',now)));
+    assert.equal(reserved.filter(Boolean).length,1);
+    await database.finishOtpSend(challenge,true);
+    assert.equal(await database.verifyOtp(challenge,digest(challenge+'123456'),'login',null,now),null);
+    assert.equal(await database.verifyOtp(challenge,digest(challenge+'654321'),'register',grant,now),null);
+    assert.equal(await database.verifyOtp(challenge,digest(challenge+'123456'),'register',grant,now),'09120000003');
+    assert.equal(await database.verifyOtp(challenge,digest(challenge+'123456'),'register',grant,now),null);
+    await database.close(); database=await openDatabase(config);
+    assert(await database.registrationValid(grant,now));
+    assert.equal(await database.registrationValid(grant,now+300001),false);
+    const registered=await database.registerVerified(grant,hash,now);
+    assert.equal(registered.phone,'09120000003');
+    assert.equal(await database.registerVerified(grant,hash,now),null);
+    assert.equal((await database.accountByPhone('09120000003')).password_hash,hash);
+    for(const [phone,purpose,offset] of [['09120000004','login',0],['09120000005','login',0]]) {
+      const id=randomUUID();assert(await database.reserveOtp({id,phone,purpose,hash:digest(id+'123456')},'otp-test-ip',now+offset));await database.finishOtpSend(id,true);
+      if(phone==='09120000004') assert.equal(await database.verifyOtp(id,digest(id+'123456'),purpose,null,now+120001),null);
+      else { for(let i=0;i<5;i++)assert.equal(await database.verifyOtp(id,digest(id+'654321'),purpose,null,now),null);assert.equal(await database.verifyOtp(id,digest(id+'123456'),purpose,null,now),null); }
+    }
     const id = await database.provisionAccount('09120000001', hash);
     await database.provisionAccount('09120000001', 'scrypt$' + randomBytes(16).toString('hex') + '$' + randomBytes(64).toString('hex'));
     assert.equal((await database.accountByPhone('09120000001')).password_hash, hash);
@@ -47,7 +68,7 @@ try { process.loadEnvFile(); } catch (error) { if (error.code !== 'ENOENT') thro
       assert.equal((await database.accountByPhone('09120000002')).password_hash,hash);
       await database.importSqlite(filename);
     } finally { require('node:fs').unlinkSync(filename); }
-    console.log('PASS: MySQL persistence, atomic profiles, secure sessions, concurrent attempt limits and repeatable SQLite migration.');
+    console.log('PASS: MySQL persistence, atomic profiles, secure sessions, OTP across restarts, replay/expiry/attempt protection, verified registration, concurrent limits and repeatable SQLite migration.');
   } finally {
     if (database) await database.close();
     await admin.query('DROP DATABASE IF EXISTS `' + name + '`'); await admin.end();

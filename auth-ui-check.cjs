@@ -1,0 +1,36 @@
+const assert=require('node:assert/strict');
+const fs=require('node:fs');const path=require('node:path');
+const {createServer}=require('./server.cjs');const {testStore}=require('./auth-test-store.cjs');
+const {chromium}=require(process.env.PLAYWRIGHT_PATH||'C:/Users/win/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright');
+(async()=>{
+ delete process.env.PUBLIC_ORIGIN;const db=testStore(),codes=new Map();
+ const server=createServer(db,{send:async(phone,code)=>codes.set(phone,code)});await new Promise(r=>server.listen(0,'127.0.0.1',r));
+ const base='http://127.0.0.1:'+server.address().port;let browser;
+ try {
+  browser=await chromium.launch({channel:'msedge',headless:true});
+  const page=await browser.newPage({viewport:{width:1360,height:960},reducedMotion:'reduce'});const errors=[];page.on('pageerror',e=>errors.push(e.message));
+  await page.goto(base+'/register/');await page.locator('[name="phone"]').fill('۰۹۱۲۰۰۰۰۰۲۱');await page.locator('#continue').click();
+  await page.locator('[data-stage="code"]').waitFor({state:'visible'});
+  await page.locator('.sms-help summary').click();assert.match(await page.locator('.sms-help').innerText(),/3000626252/);
+  await page.locator('[name="otp"]').fill('000000');await page.locator('#continue').click();await page.waitForFunction(()=>document.querySelector('#form-message').textContent.includes('نادرست'));
+  await page.locator('[name="otp"]').fill(codes.get('09120000021'));await page.locator('#continue').click();await page.locator('[data-stage="password"]').waitFor({state:'visible'});
+  await page.locator('[name="password"]').fill('Password123!');await page.locator('[name="confirm"]').fill('Wrong123!');await page.locator('#continue').click();await page.waitForFunction(()=>document.querySelector('#form-message').textContent.includes('یکسان'));
+  await page.locator('[name="confirm"]').fill('Password123!');await page.locator('#continue').click();await page.waitForURL('**/dashboard/');
+  await page.request.post(base+'/api/auth/logout',{headers:{Origin:base},data:{}});
+  await page.goto(base+'/login/');await page.locator('[data-method="code"]').click();await page.locator('[name="phone"]').fill('09120000021');
+  assert(await page.locator('[name="password"]').isDisabled());
+  const out=path.join(__dirname,'artifacts','auth');fs.mkdirSync(out,{recursive:true});await page.evaluate(()=>document.fonts.ready);
+  await page.screenshot({path:path.join(out,'login-desktop.png'),fullPage:true});
+  await page.setViewportSize({width:390,height:844});await page.screenshot({path:path.join(out,'login-mobile.png'),fullPage:true});
+  assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+  await db.provisionAccount('09120000022',null);
+  await page.locator('[name="phone"]').fill('09120000022');await page.locator('#continue').click();await page.locator('[data-stage="code"]').waitFor({state:'visible'});
+  await page.locator('.sms-help summary').click();await page.screenshot({path:path.join(out,'code-help-mobile.png'),fullPage:true});
+  await page.locator('[name="otp"]').fill(codes.get('09120000022'));await page.locator('#continue').click();await page.waitForURL('**/dashboard/');
+  const session=await(await page.request.get(base+'/api/auth/session')).json();assert.equal(session.user.phone,'09120000022');
+  await page.goto(base+'/register/');await page.screenshot({path:path.join(out,'register-mobile.png'),fullPage:true});
+  await page.goto(base+'/forgot-password/');await page.screenshot({path:path.join(out,'forgot-mobile.png'),fullPage:true});
+  assert.equal(await page.locator('a.main-btn').getAttribute('href'),'/login/');assert.deepEqual(errors,[]);
+  console.log('PASS: real registration UI, Persian digits, wrong code, password mismatch, dashboard session, login method switching, SMS help, mobile layout and no browser errors.');
+ }finally{if(browser)await browser.close();await new Promise(r=>server.close(r));}
+})().catch(error=>{console.error(error);process.exitCode=1;});
