@@ -56,11 +56,24 @@ async function openDatabase(options) {
         if (!row || row.purpose !== purpose || row.status !== 'ready' || row.expires_at<=now || row.attempts>=5) return null;
         await connection.execute('UPDATE otp_challenges SET attempts=attempts+1 WHERE challenge_id=?',[id]);
         if (!timingSafeEqual(Buffer.from(row.code_hash,'hex'),Buffer.from(hash,'hex'))) return null;
-        await connection.execute('UPDATE otp_challenges SET status=?,registration_token=?,expires_at=? WHERE challenge_id=?',[purpose==='register'?'verified':'consumed',grantHash,now+300000,id]);
+        await connection.execute('UPDATE otp_challenges SET status=?,registration_token=?,expires_at=? WHERE challenge_id=?',[purpose!=='login'?'verified':'consumed',grantHash,now+300000,id]);
         return row.phone;
       });
     },
-    async registrationValid(grantHash,now) { return (await execute("SELECT phone FROM otp_challenges WHERE registration_token=? AND purpose='register' AND status='verified' AND expires_at>?",[grantHash,now])).length>0; },
+    async registrationValid(grantHash,now,purpose='register') { return (await execute("SELECT phone FROM otp_challenges WHERE registration_token=? AND purpose=? AND status='verified' AND expires_at>?",[grantHash,purpose,now])).length>0; },
+    async resetPasswordVerified(grantHash,passwordHash,now) {
+      return transaction(async connection => {
+        const [[row]]=await connection.execute("SELECT * FROM otp_challenges WHERE registration_token=? AND purpose='reset' AND status='verified' FOR UPDATE",[grantHash]);
+        if(!row||row.expires_at<=now)return null;
+        const [[user]]=await connection.execute('SELECT id,phone FROM users WHERE phone=? FOR UPDATE',[row.phone]);
+        if(!user)return null;
+        await connection.execute('UPDATE users SET password_hash=? WHERE id=?',[passwordHash,user.id]);
+        await connection.execute('DELETE FROM sessions WHERE user_id=?',[user.id]);
+        await connection.execute('DELETE FROM login_attempts WHERE attempt_key=?',['phone:'+user.phone]);
+        await connection.execute("UPDATE otp_challenges SET status='consumed',registration_token=NULL WHERE challenge_id=?",[row.challenge_id]);
+        return {...user,password_hash:passwordHash};
+      });
+    },
     async registerVerified(grantHash, passwordHash, now) {
       return transaction(async connection => {
         const [[row]] = await connection.execute("SELECT * FROM otp_challenges WHERE registration_token=? AND purpose='register' AND status='verified' FOR UPDATE",[grantHash]);
@@ -84,9 +97,14 @@ async function openDatabase(options) {
       });
     },
     async accountByPhone(phone) { return (await execute('SELECT id,phone,password_hash FROM users WHERE phone=?', [phone]))[0]; },
-    async createSession(tokenHash, userId, expiresAt) {
+    async createSession(tokenHash, userId, expiresAt, expectedHash) {
       await execute('DELETE FROM sessions WHERE expires_at<=?', [Date.now()]);
-      await execute('INSERT INTO sessions(token_hash,user_id,expires_at) VALUES(?,?,?)', [tokenHash, userId, expiresAt]);
+      return transaction(async connection=>{
+        const [[user]]=await connection.execute('SELECT password_hash FROM users WHERE id=? FOR UPDATE',[userId]);
+        if(!user||(expectedHash!==undefined&&user.password_hash!==expectedHash))return false;
+        await connection.execute('INSERT INTO sessions(token_hash,user_id,expires_at) VALUES(?,?,?)', [tokenHash, userId, expiresAt]);
+        return true;
+      });
     },
     async session(tokenHash) { return (await execute('SELECT users.id,users.phone FROM sessions JOIN users ON users.id=sessions.user_id WHERE token_hash=? AND expires_at>?', [tokenHash, Date.now()]))[0]; },
     async deleteSession(tokenHash) { await execute('DELETE FROM sessions WHERE token_hash=?', [tokenHash]); },

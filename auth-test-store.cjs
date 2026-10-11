@@ -15,17 +15,24 @@ function testStore() {
     async verifyOtp(id,hash,purpose,grant,now) {
       const row=[...challenges.values()].find(r=>r.id===id);
       if(!row||row.purpose!==purpose||row.status!=='ready'||row.expires<=now||row.attempts>=5)return null;
-      row.attempts++;if(row.hash!==hash)return null;row.status=purpose==='register'?'verified':'consumed';row.grant=grant;row.expires=now+300000;return row.phone;
+      row.attempts++;if(row.hash!==hash)return null;row.status=purpose!=='login'?'verified':'consumed';row.grant=grant;row.expires=now+300000;return row.phone;
     },
-    async registrationValid(grant,now) {return [...challenges.values()].some(r=>r.grant===grant&&r.status==='verified'&&r.expires>now);},
+    async registrationValid(grant,now,purpose='register') {return [...challenges.values()].some(r=>r.grant===grant&&r.purpose===purpose&&r.status==='verified'&&r.expires>now);},
+    async resetPasswordVerified(grant,hash,now) {
+      const row=[...challenges.values()].find(r=>r.grant===grant&&r.purpose==='reset'&&r.status==='verified'&&r.expires>now);
+      if(!row)return null;const user=users.get(row.phone);if(!user)return null;
+      user.password_hash=hash;row.status='consumed';row.grant=null;attempts.delete(row.phone);
+      for(const [key,session] of sessions)if(session.id===user.id)sessions.delete(key);
+      return {...user};
+    },
     async registerVerified(grant,hash,now) {
-      const row=[...challenges.values()].find(r=>r.grant===grant&&r.status==='verified'&&r.expires>now);
+      const row=[...challenges.values()].find(r=>r.grant===grant&&r.purpose==='register'&&r.status==='verified'&&r.expires>now);
       if(!row)return null;if(users.has(row.phone))return {existing:true};
       const user={id:randomUUID(),phone:row.phone,password_hash:hash};users.set(row.phone,user);row.status='consumed';row.grant=null;return user;
     },
     async provisionAccount(phone, hash) { if (!users.has(phone)) users.set(phone, { id: randomUUID(), phone, password_hash: hash }); return users.get(phone).id; },
-    async accountByPhone(phone) { return users.get(phone); },
-    async createSession(token, id, expires) { sessions.set(token, { id, expires }); },
+    async accountByPhone(phone) { const user=users.get(phone); return user?{...user}:undefined; },
+    async createSession(token, id, expires, expectedHash) {const user=[...users.values()].find(u=>u.id===id);if(!user||(expectedHash!==undefined&&user.password_hash!==expectedHash))return false;sessions.set(token, { id, expires });return true;},
     async session(token) { const s = sessions.get(token); if (!s || s.expires <= Date.now()) return; const user = [...users.values()].find(u => u.id === s.id); return { id: user.id, phone: user.phone }; },
     async deleteSession(token) { sessions.delete(token); },
     async claimLoginAttempts(phone, ip) { const keys = [[ip,100],[phone,5]]; if (keys.some(([key,limit]) => (attempts.get(key)||0) >= limit)) return false; keys.forEach(([key]) => attempts.set(key,(attempts.get(key)||0)+1)); return true; },

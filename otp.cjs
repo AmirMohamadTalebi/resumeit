@@ -11,8 +11,8 @@ function createOtpService({ database, send = sendVerificationSms, now = Date.now
   }
   async function verify(id,code,purpose) {
     const grant = randomBytes(32).toString('hex');
-    const phone = await database.verifyOtp(id,digest(id+code),purpose,purpose==='register'?digest(grant):null,now());
-    return phone ? { phone, ...(purpose==='register'?{registrationToken:grant}:{}) } : null;
+    const phone = await database.verifyOtp(id,digest(id+code),purpose,purpose!=='login'?digest(grant):null,now());
+    return phone ? { phone, ...(purpose==='register'?{registrationToken:grant}:purpose==='reset'?{resetToken:grant}:{}) } : null;
   }
   return { request, verify };
 }

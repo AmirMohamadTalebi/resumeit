@@ -52,6 +52,20 @@ try { process.loadEnvFile(); } catch (error) { if (error.code !== 'ENOENT') thro
     const attempts = await Promise.all(Array.from({ length: 8 }, () => database.claimLoginAttempts('09120000001','test-ip')));
     assert.equal(attempts.filter(Boolean).length,5);
     await database.clearLoginAttempts('09120000001'); assert(await database.claimLoginAttempts('09120000001','test-ip'));
+    const resetId=randomUUID(),resetGrant=digest('reset-grant'),newHash='scrypt$'+randomBytes(16).toString('hex')+'$'+randomBytes(64).toString('hex');
+    assert(await database.reserveOtp({id:resetId,phone:'09120000001',purpose:'reset',hash:digest(resetId+'123456')},'reset-ip',now));
+    await database.finishOtpSend(resetId,true);
+    await database.verifyOtp(resetId,digest(resetId+'123456'),'reset',resetGrant,now);
+    await database.close();database=await openDatabase(config);
+    assert(await database.registrationValid(resetGrant,now,'reset'));
+    assert.equal(await database.registrationValid(resetGrant,now),false);
+    assert.equal(await database.resetPasswordVerified(resetGrant,newHash,now+300001),null);
+    await database.createSession('c'.repeat(64),id,Date.now()+60000,hash);
+    assert.equal((await database.resetPasswordVerified(resetGrant,newHash,now)).password_hash,newHash);
+    assert.equal(await database.session('c'.repeat(64)),undefined);
+    assert.equal(await database.resetPasswordVerified(resetGrant,hash,now),null);
+    assert.equal(await database.createSession('d'.repeat(64),id,Date.now()+60000,hash),false);
+    assert(await database.createSession('e'.repeat(64),id,Date.now()+60000,newHash));
     const { DatabaseSync } = require('node:sqlite');
     const filename = require('node:path').join(require('node:os').tmpdir(),name + '.sqlite');
     const source = new DatabaseSync(filename), oldId = randomUUID();
@@ -68,7 +82,7 @@ try { process.loadEnvFile(); } catch (error) { if (error.code !== 'ENOENT') thro
       assert.equal((await database.accountByPhone('09120000002')).password_hash,hash);
       await database.importSqlite(filename);
     } finally { require('node:fs').unlinkSync(filename); }
-    console.log('PASS: MySQL persistence, atomic profiles, secure sessions, OTP across restarts, replay/expiry/attempt protection, verified registration, concurrent limits and repeatable SQLite migration.');
+    console.log('PASS: MySQL persistence, atomic profiles, secure sessions, OTP across restarts, replay/expiry/attempt protection, verified registration, password reset and session revocation, concurrent limits and repeatable SQLite migration.');
   } finally {
     if (database) await database.close();
     await admin.query('DROP DATABASE IF EXISTS `' + name + '`'); await admin.end();

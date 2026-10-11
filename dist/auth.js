@@ -5,12 +5,12 @@ if (form) {
   const message=document.querySelector('#form-message'), submit=document.querySelector('#continue');
   const resend=document.querySelector('#resend');
   let stage='phone', method='password', challengeId='', registrationToken='', phone='', retryAt=0, busy=false;
-  const mode=form.dataset.mode, purpose=mode==='register'?'register':'login';
+  const mode=form.dataset.mode, purpose=mode==='register'?'register':mode==='forgot-password'?'reset':'login';
   function showStage(next) {
     stage=next;
     form.querySelectorAll('[data-stage]').forEach(field=>{field.hidden=field.dataset.stage!==next;field.disabled=field.hidden;});
     document.querySelectorAll('[data-stage-label]').forEach(label=>label.classList.toggle('active',label.dataset.stageLabel===next));
-    submit.textContent=next==='password'?'ساخت حساب':next==='code'?'تأیید کد و ادامه':mode==='login'&&method==='password'?'ورود به حساب':'دریافت کد تأیید';
+    submit.textContent=next==='password'?(mode==='forgot-password'?'ذخیرهٔ رمز و ورود':'ساخت حساب'):next==='code'?'تأیید کد و ادامه':mode==='login'&&method==='password'?'ورود به حساب':'دریافت کد تأیید';
     document.querySelector('#login-password')?.toggleAttribute('hidden',method!=='password');
     if(mode==='login') form.elements.password.required=method==='password';
     if(mode==='login') form.elements.password.disabled=method!=='password'||next!=='phone';
@@ -50,9 +50,9 @@ if (form) {
   document.querySelectorAll('[data-provider]').forEach(button=>button.addEventListener('click',()=>{message.textContent='ورود با این حساب هنوز فعال نیست.';}));
   document.querySelector('#edit-phone')?.addEventListener('click',()=>{challengeId='';registrationToken='';message.textContent='';showStage('phone');});
   resend?.addEventListener('click',()=>run(requestCode));
-  if(mode==='forgot-password') { submit.disabled=true;message.textContent='بازیابی رمز هنوز فعال نیست؛ می‌توانی با کد پیامکی وارد شوی.'; }
+
   form.addEventListener('submit',event=>{
-    event.preventDefault();if(mode==='forgot-password'||busy) return;
+    event.preventDefault();if(busy) return;
     run(async()=>{
       if(stage==='phone') {
         phone=normalizePhone(form.elements.phone.value);
@@ -64,12 +64,12 @@ if (form) {
         if(!/^\d{6}$/.test(code)) throw new Error('کد شش‌رقمی معتبر وارد کن.');
         const result=await api('otp/verify',{challengeId,code,purpose});
         form.elements.otp.value='';
-        if(mode==='register') { registrationToken=result.registrationToken;showStage('password');message.textContent='شماره تأیید شد. تا پنج دقیقه فرصت داری رمز انتخاب کنی.'; }
+        if(mode!=='login') { registrationToken=mode==='register'?result.registrationToken:result.resetToken;showStage('password');message.textContent='شماره تأیید شد. تا پنج دقیقه فرصت داری رمز انتخاب کنی.'; }
         else location.assign('/dashboard/');
       } else {
         const password=form.elements.password.value;
         if(password!==form.elements.confirm.value) throw new Error('تکرار رمز با رمز عبور یکسان نیست.');
-        await api('register',{registrationToken,password});form.elements.password.value='';form.elements.confirm.value='';location.assign('/dashboard/');
+        await api(mode==='forgot-password'?'password/reset':'register',mode==='forgot-password'?{resetToken:registrationToken,password}:{registrationToken,password});form.elements.password.value='';form.elements.confirm.value='';location.assign('/dashboard/');
       }
     });
   });
@@ -77,5 +77,5 @@ if (form) {
     const password=form.elements.password,visible=password.type==='password';password.type=visible?'text':'password';
     event.currentTarget.textContent=visible?'پنهان':'نمایش';event.currentTarget.setAttribute('aria-pressed',String(visible));event.currentTarget.setAttribute('aria-label',visible?'پنهان کردن رمز عبور':'نمایش رمز عبور');
   });
-  if(mode!=='forgot-password') showStage('phone');
+  showStage('phone');
 }

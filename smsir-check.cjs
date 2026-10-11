@@ -3,17 +3,17 @@ const { smsirConfig, sendVerificationSms } = require('./smsir.cjs');
 (async () => {
   assert.throws(() => smsirConfig({}));
   const savedFetch = globalThis.fetch;
-  const names = ['SMSIR_API_KEY', 'SMSIR_LINE_NUMBER'];
+  const names = ['SMSIR_API_KEY', 'SMSIR_TEMPLATE_ID', 'SMSIR_CODE_PARAMETER'];
   const savedEnv = names.map(name => process.env[name]);
-  Object.assign(process.env, { SMSIR_API_KEY: 'test-key', SMSIR_LINE_NUMBER: '3000626252' });
+  Object.assign(process.env, { SMSIR_API_KEY: 'test-key', SMSIR_TEMPLATE_ID: '357964', SMSIR_CODE_PARAMETER: 'CODE' });
   let calls = 0;
   try {
     globalThis.fetch = async (url, options) => {
       calls++;
-      assert.equal(url, 'https://api.sms.ir/v1/send/bulk/');
+      assert.equal(url, 'https://api.sms.ir/v1/send/verify/');
       assert.equal(options.headers['X-API-KEY'], 'test-key');
-      assert.deepEqual(JSON.parse(options.body), { lineNumber: 3000626252, MessageText: 'کد تأیید ResumeIt: 234567\nاعتبار: ۲ دقیقه\nاین کد را در اختیار دیگران نگذارید.', Mobiles: ['09120000001'] });
-      return { ok: true, json: async () => ({ status: 1, data: { messageIds: [456] } }) };
+      assert.deepEqual(JSON.parse(options.body), { mobile: '09120000001', templateId: 357964, parameters: [{name:'CODE',value:'234567'}] });
+      return { ok: true, json: async () => ({ status: 1, data: { messageId: 456 } }) };
     };
     await assert.rejects(sendVerificationSms('invalid', '234567'));
     assert.equal(calls, 0);

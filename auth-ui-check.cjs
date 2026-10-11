@@ -11,7 +11,7 @@ const {chromium}=require(process.env.PLAYWRIGHT_PATH||'C:/Users/win/.cache/codex
   const page=await browser.newPage({viewport:{width:1360,height:960},reducedMotion:'reduce'});const errors=[];page.on('pageerror',e=>errors.push(e.message));
   await page.goto(base+'/register/');await page.locator('[name="phone"]').fill('۰۹۱۲۰۰۰۰۰۲۱');await page.locator('#continue').click();
   await page.locator('[data-stage="code"]').waitFor({state:'visible'});
-  await page.locator('.sms-help summary').click();assert.match(await page.locator('.sms-help').innerText(),/3000626252/);
+  await page.locator('.sms-help summary').click();assert.match(await page.locator('.sms-help').innerText(),/مسدود/);
   await page.locator('[name="otp"]').fill('000000');await page.locator('#continue').click();await page.waitForFunction(()=>document.querySelector('#form-message').textContent.includes('نادرست'));
   await page.locator('[name="otp"]').fill(codes.get('09120000021'));await page.locator('#continue').click();await page.locator('[data-stage="password"]').waitFor({state:'visible'});
   await page.locator('[name="password"]').fill('Password123!');await page.locator('[name="confirm"]').fill('Wrong123!');await page.locator('#continue').click();await page.waitForFunction(()=>document.querySelector('#form-message').textContent.includes('یکسان'));
@@ -30,7 +30,11 @@ const {chromium}=require(process.env.PLAYWRIGHT_PATH||'C:/Users/win/.cache/codex
   const session=await(await page.request.get(base+'/api/auth/session')).json();assert.equal(session.user.phone,'09120000022');
   await page.goto(base+'/register/');await page.screenshot({path:path.join(out,'register-mobile.png'),fullPage:true});
   await page.goto(base+'/forgot-password/');await page.screenshot({path:path.join(out,'forgot-mobile.png'),fullPage:true});
-  assert.equal(await page.locator('a.main-btn').getAttribute('href'),'/login/');assert.deepEqual(errors,[]);
+  await db.provisionAccount('09120000023',null);
+  await page.locator('[name="phone"]').fill('09120000023');await page.locator('#continue').click();await page.locator('[data-stage="code"]').waitFor({state:'visible'});
+  await page.locator('[name="otp"]').fill(codes.get('09120000023'));await page.locator('#continue').click();await page.locator('[data-stage="password"]').waitFor({state:'visible'});
+  await page.locator('[name="password"]').fill('ResetPassword123!');await page.locator('[name="confirm"]').fill('ResetPassword123!');await page.locator('#continue').click();await page.waitForURL('**/dashboard/');
+  assert.deepEqual(errors,[]);
   console.log('PASS: real registration UI, Persian digits, wrong code, password mismatch, dashboard session, login method switching, SMS help, mobile layout and no browser errors.');
  }finally{if(browser)await browser.close();await new Promise(r=>server.close(r));}
 })().catch(error=>{console.error(error);process.exitCode=1;});

@@ -50,6 +50,22 @@ const {createServer}=require('./server.cjs');
   const e=await(await post('otp/request',{phone:'09120000011',purpose:'register'})).json();
   // The original successful request is still inside its cooldown; do not overwrite that account.
   assert.equal(e.challengeId,undefined);assert(await verifyPassword('NewPassword123!',(await webDb.accountByPhone('09120000011')).password_hash));
+  const {hashPassword}=require('./auth.cjs');
+  const oldHash=await hashPassword('OldPassword123!'),resetPhone='09120000013';
+  const resetId=await webDb.provisionAccount(resetPhone,oldHash);
+  await webDb.createSession('c'.repeat(64),resetId,Date.now()+60000,oldHash);
+  const reset=await(await post('otp/request',{phone:resetPhone,purpose:'reset'})).json();
+  const resetGrant=await(await post('otp/verify',{challengeId:reset.challengeId,code:codes.get(resetPhone),purpose:'reset'},base2)).json();
+  assert(resetGrant.resetToken);
+  assert.equal((await post('register',{registrationToken:resetGrant.resetToken,password:'NewPassword123!'})).status,401);
+  const changed=await post('password/reset',{...resetGrant,password:'NewPassword123!'});assert.equal(changed.status,200);
+  assert.equal(await webDb.session('c'.repeat(64)),undefined);
+  assert.equal(await webDb.createSession('d'.repeat(64),resetId,Date.now()+60000,oldHash),false);
+  assert.equal((await post('password/reset',{...resetGrant,password:'OtherPassword123!'})).status,401);
+  assert.equal((await post('login',{phone:resetPhone,password:'OldPassword123!'})).status,401);
+  assert.equal((await post('login',{phone:resetPhone,password:'NewPassword123!'})).status,200);
+  const unknown=await(await post('otp/request',{phone:'09120000014',purpose:'reset'})).json();
+  assert.equal((await post('otp/verify',{challengeId:unknown.challengeId,code:codes.get('09120000014'),purpose:'reset'})).status,404);
  } finally {await new Promise(r=>server.close(r));await new Promise(r=>server2.close(r));}
  console.log('PASS: shared OTP, expiry, replay, purpose binding, attempts, quotas, concurrent sends, SMS failure, verified registration and code login; no real SMS sent.');
 })().catch(error=>{console.error(error);process.exitCode=1;});

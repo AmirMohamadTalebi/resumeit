@@ -39,28 +39,30 @@ function authHandler(database, options = {}) {
     const signIn = async user => {
       await database.deleteSession(token(req));
       const value = randomBytes(32).toString('hex');
-      await database.createSession(digest(value),user.id,Date.now()+7*86400000);
+      if(!await database.createSession(digest(value),user.id,Date.now()+7*86400000,user.password_hash)) { reply(401,{error:'رمز حساب تغییر کرده؛ دوباره وارد شو.'}); return; }
       cookie(value,7*86400); reply(200,{ok:true});
     };
-    if (['/api/auth/otp/request','/api/auth/otp/verify','/api/auth/register'].includes(pathname)) {
+    if (['/api/auth/otp/request','/api/auth/otp/verify','/api/auth/register','/api/auth/password/reset'].includes(pathname)) {
       try {
         const chunks=[]; let size=0;
         for await (const chunk of req) { size+=chunk.length; if(size>2048) { reply(413,{error:'درخواست بیش از حد بزرگ است.'}); return true; } chunks.push(chunk); }
         const input=JSON.parse(Buffer.concat(chunks).toString('utf8'));
-        if (pathname==='/api/auth/register') {
-          if (typeof input.registrationToken!=='string'||!/^[a-f0-9]{64}$/.test(input.registrationToken) || typeof input.password!=='string' || input.password.length<8 || input.password.length>128) { reply(400,{error:'رمز باید بین ۸ تا ۱۲۸ نویسه باشد.'}); return true; }
-          if (!await database.registrationValid(digest(input.registrationToken),Date.now())) { reply(401,{error:'تأیید شماره منقضی شده؛ دوباره کد بگیر.'}); return true; }
+        if (pathname==='/api/auth/register'||pathname==='/api/auth/password/reset') {
+          const reset=pathname==='/api/auth/password/reset',grant=reset?input.resetToken:input.registrationToken;
+          if (typeof grant!=='string'||!/^[a-f0-9]{64}$/.test(grant) || typeof input.password!=='string' || input.password.length<8 || input.password.length>128) { reply(400,{error:'رمز باید بین ۸ تا ۱۲۸ نویسه باشد.'}); return true; }
+          if (!await database.registrationValid(digest(grant),Date.now(),reset?'reset':'register')) { reply(401,{error:'تأیید شماره منقضی شده؛ دوباره کد بگیر.'}); return true; }
           if (pending>=1) { reply(429,{error:'چند لحظه بعد دوباره امتحان کن.'}); return true; }
           pending++;
           try {
-            const user=await database.registerVerified(digest(input.registrationToken),await hashPassword(input.password),Date.now());
+            const hash=await hashPassword(input.password);
+            const user=await (reset?database.resetPasswordVerified(digest(grant),hash,Date.now()):database.registerVerified(digest(grant),hash,Date.now()));
             if (!user) reply(401,{error:'تأیید شماره منقضی شده؛ دوباره کد بگیر.'});
             else if(user.existing) reply(409,{error:'این شماره حساب دارد؛ از صفحهٔ ورود استفاده کن.'});
             else await signIn(user);
           } finally { pending--; }
           return true;
         }
-        if (!['login','register'].includes(input.purpose)) { reply(400,{error:'درخواست معتبر نیست.'}); return true; }
+        if (!['login','register','reset'].includes(input.purpose)) { reply(400,{error:'درخواست معتبر نیست.'}); return true; }
         if (pathname.endsWith('/request')) {
           if (typeof input.phone!=='string'||!/^09\d{9}$/.test(input.phone)) { reply(400,{error:'شمارهٔ موبایل معتبر وارد کن.'}); return true; }
           const result=await otp.request(input.phone,input.purpose,digest(req.socket.remoteAddress||'unknown'));
@@ -71,6 +73,10 @@ function authHandler(database, options = {}) {
           const result=await otp.verify(input.challengeId,input.code,input.purpose);
           if (!result) reply(401,{error:'کد نادرست، مصرف‌شده یا منقضی است؛ حداکثر پنج تلاش مجاز است.'});
           else if(input.purpose==='register') reply(200,{registrationToken:result.registrationToken});
+          else if(input.purpose==='reset') {
+            if(!await database.accountByPhone(result.phone)) reply(404,{error:'این شماره هنوز حساب ندارد؛ ثبت‌نام کن.'});
+            else reply(200,{resetToken:result.resetToken});
+          }
           else {
             const user=await database.accountByPhone(result.phone);
             if (!user) reply(404,{error:'این شماره هنوز حساب ندارد؛ ثبت‌نام کن.'});
@@ -86,7 +92,6 @@ function authHandler(database, options = {}) {
       for await (const chunk of req) { size += chunk.length; if (size > 2048) { reply(413, { error: 'درخواست بیش از حد بزرگ است.' }); return true; } chunks.push(chunk); }
       const { phone, password } = JSON.parse(Buffer.concat(chunks).toString('utf8'));
       if (typeof phone !== 'string' || !/^09\d{9}$/.test(phone) || typeof password !== 'string' || password.length < 8 || password.length > 128) { reply(400, { error: 'شماره و رمز معتبر وارد کن.' }); return true; }
-      const now = Date.now();
       if (pending >= 1) {
         res.setHeader('Retry-After', '900'); reply(429, { error: 'تلاش‌های زیادی انجام شده؛ ۱۵ دقیقه بعد دوباره امتحان کن.' }); return true;
       }
@@ -99,10 +104,7 @@ function authHandler(database, options = {}) {
       const valid = await verifyPassword(password, user?.password_hash);
       if (!valid) { reply(401, { error: 'شماره یا رمز عبور درست نیست.' }); return true; }
       await database.clearLoginAttempts(phone);
-      await database.deleteSession(token(req));
-      const value = randomBytes(32).toString('hex');
-      await database.createSession(digest(value), user.id, now + 7 * 86400000);
-      cookie(value, 7 * 86400); reply(200, { ok: true });
+      await signIn(user);
       } finally { pending--; }
     } catch (error) {
       reply(error instanceof SyntaxError ? 400 : 500, { error: 'ورود انجام نشد؛ دوباره امتحان کن.' });
