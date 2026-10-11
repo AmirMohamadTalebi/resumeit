@@ -1,0 +1,7 @@
+/* Keep the shared hero below the landing page's sticky navigation. */
+#main .sig-hero{--sig-top:108px;background:transparent}
+#main .sig-hero.is-animated .sig-pin{top:var(--sig-top)}
+@media(max-width:760px){
+ #main .sig-hero{--sig-top:90px}
+ #main .sig-mobile.is-animated .sig-visual{top:calc(var(--sig-top) + 12px)}
+}

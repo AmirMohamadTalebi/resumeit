@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="robots" content="noindex,nofollow">
+  <script src="js/session.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#dbe7ed">
+  <title>داشبورد | ResumeIt</title>
+  <meta name="description" content="داشبورد ساخت رزومه و صفحهٔ لینک شخصی ResumeIt (نسخهٔ نمایشی UI)">
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="css/tokens.css">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/shell.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/preview.css">
+  <link rel="stylesheet" href="css/pages.css">
+</head>
+<body>
+  <a class="skip-link" href="#view">رفتن به محتوای اصلی</a>
+
+  <div class="app">
+    <aside class="sidebar" id="sidebar" data-open="false" aria-label="ناوبری اصلی"></aside>
+    <div class="scrim" id="scrim" data-open="false"></div>
+
+    <div class="main">
+      <header class="topbar">
+        <button type="button" class="btn btn--icon btn--ghost topbar__menu" id="menuBtn" aria-label="باز کردن منو" aria-expanded="false"></button>
+        <span class="topbar__crumb">ResumeIt /</span>
+        <span class="topbar__title" id="topTitle">خانه</span>
+        <span class="topbar__spacer"></span>
+        <div class="topbar__actions">
+          <span class="chip chip--sample hide-sm" title="همهٔ اطلاعات این داشبورد نمونه است و جایی ذخیره نمی‌شود">داده‌های نمونه</span>
+          <span class="save-state" id="saveState" data-state="saved" title="اطلاعات فقط در حافظهٔ صفحه است و با رفرش پاک می‌شود"></span>
+          <button type="button" class="btn btn--soft btn--sm" id="saveBtn" aria-label="ذخیرهٔ نمایشی"></button>
+          <button type="button" class="btn btn--soft btn--sm" id="topPreview" aria-label="پیش‌نمایش"></button>
+          <button type="button" class="btn btn--primary btn--sm" id="topPublish" aria-label="انتشار نمایشی"></button>
+        </div>
+      </header>
+      <main id="view" class="view" tabindex="-1"></main>
+    </div>
+  </div>
+
+  <nav class="bottom-nav" id="bottomNav" aria-label="میانبر"></nav>
+  <div id="modal-root"></div>
+  <div id="toast-root" class="toast-root" aria-live="polite" aria-atomic="false"></div>
+
+  <script src="js/icons.js"></script>
+  <script src="js/core.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/data.js"></script>
+  <script src="js/state.js"></script>
+  <script src="js/preview.js"></script>
+  <script src="js/commerce.js"></script>
+  <script src="js/pages/home.js"></script>
+  <script src="js/pages/resume.js"></script>
+  <script src="js/pages/links.js"></script>
+  <script src="js/pages/themes.js"></script>
+  <script src="js/pages/publish.js"></script>
+  <script src="js/pages/billing.js"></script>
+  <script src="js/pages/stats.js"></script>
+  <script src="js/pages/settings.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    /* آیکن‌های ثابت نوار بالا */
+    document.getElementById('menuBtn').innerHTML = RI.icon('menu');
+    document.getElementById('topPreview').innerHTML = RI.icon('eye') + '<span class="hide-sm">پیش‌نمایش</span>';
+    document.getElementById('topPublish').innerHTML = RI.icon('rocket') + '<span class="hide-sm">انتشار</span>';
+  </script>
+</body>
+</html>
