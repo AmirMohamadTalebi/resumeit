@@ -42,19 +42,23 @@ function authHandler(database) {
       const { phone, password } = JSON.parse(Buffer.concat(chunks).toString('utf8'));
       if (typeof phone !== 'string' || !/^09\d{9}$/.test(phone) || typeof password !== 'string' || password.length < 8 || password.length > 128) { reply(400, { error: 'شماره و رمز معتبر وارد کن.' }); return true; }
       const now = Date.now();
-      if (pending >= 4 || !await database.claimLoginAttempts(phone, digest(req.socket.remoteAddress || 'unknown'))) {
+      if (pending >= 4) {
+        res.setHeader('Retry-After', '900'); reply(429, { error: 'تلاش‌های زیادی انجام شده؛ ۱۵ دقیقه بعد دوباره امتحان کن.' }); return true;
+      }
+      pending++;
+      try {
+      if (!await database.claimLoginAttempts(phone, digest(req.socket.remoteAddress || 'unknown'))) {
         res.setHeader('Retry-After', '900'); reply(429, { error: 'تلاش‌های زیادی انجام شده؛ ۱۵ دقیقه بعد دوباره امتحان کن.' }); return true;
       }
       const user = await database.accountByPhone(phone);
-      pending++;
-      let valid;
-      try { valid = await verifyPassword(password, user?.password_hash); } finally { pending--; }
+      const valid = await verifyPassword(password, user?.password_hash);
       if (!valid) { reply(401, { error: 'شماره یا رمز عبور درست نیست.' }); return true; }
       await database.clearLoginAttempts(phone);
       await database.deleteSession(token(req));
       const value = randomBytes(32).toString('hex');
       await database.createSession(digest(value), user.id, now + 7 * 86400000);
       cookie(value, 7 * 86400); reply(200, { ok: true });
+      } finally { pending--; }
     } catch (error) {
       reply(error instanceof SyntaxError ? 400 : 500, { error: 'ورود انجام نشد؛ دوباره امتحان کن.' });
     }
