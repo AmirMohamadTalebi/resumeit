@@ -2,7 +2,7 @@ const assert = require('node:assert/strict');
 const mysql = require('mysql2/promise');
 const { randomBytes, randomUUID } = require('node:crypto');
 const { openDatabase } = require('./database.cjs');
-const { hashPassword } = require('./auth.cjs');
+
 try { process.loadEnvFile(); } catch (error) { if (error.code !== 'ENOENT') throw error; }
 (async () => {
   const options = { host: process.env.MYSQL_HOST, port: Number(process.env.MYSQL_PORT || 3306), user: process.env.MYSQL_USER, password: process.env.MYSQL_PASSWORD };
@@ -13,9 +13,9 @@ try { process.loadEnvFile(); } catch (error) { if (error.code !== 'ENOENT') thro
     await admin.query('CREATE DATABASE `' + name + '`');
     const config = { ...options, database: name, connectionLimit: 4 };
     database = await openDatabase(config);
-    const hash = await hashPassword('AuthFixture123!');
+    const hash = 'scrypt$' + randomBytes(16).toString('hex') + '$' + randomBytes(64).toString('hex');
     const id = await database.provisionAccount('09120000001', hash);
-    await database.provisionAccount('09120000001', await hashPassword('Different123!'));
+    await database.provisionAccount('09120000001', 'scrypt$' + randomBytes(16).toString('hex') + '$' + randomBytes(64).toString('hex'));
     assert.equal((await database.accountByPhone('09120000001')).password_hash, hash);
     const profile = { name: "O'Reilly", role: 'Developer', bio: '', links: [{ name: 'Site', url: 'https://example.com/' }] };
     await database.saveProfile(id, profile);
