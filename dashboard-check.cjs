@@ -2,16 +2,21 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const { createServer } = require('./server.cjs');
+const { openDatabase } = require('./database.cjs');
+const { hashPassword } = require('./auth.cjs');
 const { chromium } = require(process.env.PLAYWRIGHT_PATH || 'C:/Users/win/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright');
 (async () => {
-  const server = createServer();
+  delete process.env.PUBLIC_ORIGIN;
+  const database = openDatabase(':memory:');
+  database.provisionAccount('09120000001', await hashPassword('DemoOnly123!'));
+  const server = createServer(database);
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
   const base = 'http://127.0.0.1:' + server.address().port;
   let browser;
   try {
     const redirect = await fetch(base + '/dashboard?test=1', { redirect: 'manual' });
-    assert.equal(redirect.status, 308);
-    assert.equal(redirect.headers.get('location'), '/dashboard/?test=1');
+    assert.equal(redirect.status, 303);
+    assert.equal(redirect.headers.get('location'), '/login/');
     assert.equal((await fetch(base + '/.env')).status, 404);
     browser = await chromium.launch({ channel: 'msedge', headless: true });
     const page = await browser.newPage({ viewport: { width: 1440, height: 960 }, reducedMotion: 'reduce' });
@@ -87,5 +92,5 @@ const { chromium } = require(process.env.PLAYWRIGHT_PATH || 'C:/Users/win/.cache
     assert.deepEqual(errors, []); assert.deepEqual(failed, []);
     assert.deepEqual(overflow, [], 'Mobile overflow');
     console.log('PASS: all eight routes, login/logout, skill creation, link CRUD/order/toggle, memory reset, desktop/mobile and no browser errors.');
-  } finally { if (browser) await browser.close(); await new Promise(resolve => server.close(resolve)); }
+  } finally { if (browser) await browser.close(); await new Promise(resolve => server.close(resolve)); database.close(); }
 })().catch(error => { console.error(error); process.exitCode = 1; });

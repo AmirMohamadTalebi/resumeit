@@ -105,7 +105,14 @@
   function closeDrawer() { RI.$('#sidebar').dataset.open = 'false'; RI.$('#scrim').dataset.open = 'false'; const b = RI.$('#menuBtn'); if (b) b.setAttribute('aria-expanded', 'false'); }
 
   /* ---------- راه‌اندازی ---------- */
-  function boot() {
+  async function boot() {
+    const user = await window.resumeitSession;
+    if (!user) return;
+    RI.state.account.mobile = user.phone;
+    RI.state.account.mobileVerified = false;
+    RI.state.account.google = false;
+    RI.state.account.github = false;
+    RI.state.account.name = 'حساب شما';
     buildShell();
     paintSave();
     RI.on('save', paintSave);
@@ -141,7 +148,10 @@
     const ok = await RI.confirm({ title: 'خروج از حساب', text: 'از پنل نمایشی خارج می‌شوید و اطلاعات این صفحه پاک می‌شود. ادامه می‌دهید؟', confirmLabel: 'خروج', icon: 'logout' });
     if (!ok) return;
     if (RI.state.ui.dirty && !(await RI.leaveGuard())) return;
-    try { sessionStorage.removeItem('resumeit-demo-session'); } catch {}
+    try {
+      const response = await fetch('/api/auth/logout', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+      if (!response.ok) throw new Error('Logout failed');
+    } catch { RI.toast('خروج انجام نشد؛ دوباره امتحان کنید.'); return; }
     RI.state.ui.dirty = false;
     location.replace('/login/');
   };

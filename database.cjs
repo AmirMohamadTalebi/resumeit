@@ -8,7 +8,7 @@ function openDatabase(filename = process.env.DATABASE_PATH || path.join(__dirnam
   const db = new DatabaseSync(filename);
   db.exec('PRAGMA foreign_keys = ON; PRAGMA journal_mode = WAL; PRAGMA busy_timeout = 5000;');
   const version = db.prepare('PRAGMA user_version').get().user_version;
-  if (version > 1) { db.close(); throw new Error('Database belongs to a newer version of ResumeIt'); }
+  if (version > 2) { db.close(); throw new Error('Database belongs to a newer version of ResumeIt'); }
   if (version === 0) db.exec(`
     BEGIN IMMEDIATE;
     CREATE TABLE users (
@@ -30,7 +30,17 @@ function openDatabase(filename = process.env.DATABASE_PATH || path.join(__dirnam
     PRAGMA user_version = 1;
     COMMIT;
   `);
-  const userByPhone = db.prepare('SELECT id FROM users WHERE phone = ?');
+  if (version < 2) db.exec(`
+    BEGIN IMMEDIATE;
+    ALTER TABLE users ADD COLUMN password_hash TEXT;
+    CREATE TABLE sessions (
+      token_hash TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      expires_at INTEGER NOT NULL
+    ) STRICT;
+    PRAGMA user_version = 2;
+    COMMIT;
+  `);
+  const userByPhone = db.prepare('SELECT id, phone, password_hash FROM users WHERE phone = ?');
   const userExists = db.prepare('SELECT id FROM users WHERE id = ?');
   const insertUser = db.prepare('INSERT INTO users (id, phone) VALUES (?, ?) ON CONFLICT(phone) DO NOTHING');
   const insertProfile = db.prepare('INSERT INTO profiles (user_id) VALUES (?) ON CONFLICT(user_id) DO NOTHING');
@@ -49,6 +59,25 @@ function openDatabase(filename = process.env.DATABASE_PATH || path.join(__dirnam
     return value.trim();
   }
   return {
+    provisionAccount(phone, passwordHash) {
+      if (!/^09\d{9}$/.test(phone) || !/^scrypt\$[a-f0-9]{32}\$[a-f0-9]{128}$/.test(passwordHash)) throw new Error('Invalid account');
+      return transaction(() => {
+        insertUser.run(randomUUID(), phone);
+        const user = userByPhone.get(phone);
+        if (!user.password_hash) db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(passwordHash, user.id);
+        insertProfile.run(user.id);
+        return user.id;
+      });
+    },
+    accountByPhone(phone) { return userByPhone.get(phone); },
+    createSession(tokenHash, userId, expiresAt) {
+      db.prepare('DELETE FROM sessions WHERE expires_at <= ?').run(Date.now());
+      db.prepare('INSERT INTO sessions (token_hash, user_id, expires_at) VALUES (?, ?, ?)').run(tokenHash, userId, expiresAt);
+    },
+    session(tokenHash) {
+      return db.prepare('SELECT users.id, users.phone FROM sessions JOIN users ON users.id = sessions.user_id WHERE token_hash = ? AND expires_at > ?').get(tokenHash, Date.now());
+    },
+    deleteSession(tokenHash) { db.prepare('DELETE FROM sessions WHERE token_hash = ?').run(tokenHash); },
     // Call only after a server-side OTP verification; never accept this operation from the demo UI.
     userAfterVerifiedPhone(phone) {
       if (typeof phone !== 'string' || !/^09\d{9}$/.test(phone)) throw new Error('Invalid phone');

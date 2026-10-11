@@ -6,6 +6,7 @@
   "scripts": {
     "start": "node server.cjs",
     "check:database": "node database-check.cjs",
+    "check:auth": "node auth-check.cjs",
     "check:sms": "node smsir-check.cjs && node otp-check.cjs",
     "check:dashboard": "node dashboard-check.cjs"
   }

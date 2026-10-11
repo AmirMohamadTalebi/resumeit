@@ -1,6 +1,6 @@
-// This flag only gates the demo UI; real authorization must use a server session.
-(() => {
-  let active = false;
-  try { active = sessionStorage.getItem('resumeit-demo-session') === '1'; } catch {}
-  if (!active) location.replace('/login/');
-})();
+window.resumeitSession = fetch('/api/auth/session', { cache: 'no-store' }).then(async response => {
+  if (!response.ok) throw new Error('Session unavailable');
+  const { user } = await response.json();
+  if (!user) { location.replace('/login/'); return null; }
+  return user;
+}).catch(() => { location.replace('/login/'); return null; });
