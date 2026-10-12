@@ -67,7 +67,7 @@ function oauthHandler(database,{oauthFetch=fetch}={}) {
       if(typeof subject!=='string'||!/^\d{1,255}$/.test(subject))throw new Error('Invalid identity');
       const displayName=typeof identity.name==='string'?identity.name.slice(0,80):typeof identity.login==='string'?identity.login.slice(0,80):'';
       const user=await database.socialAccount(name,subject,displayName,pending.owner_id);
-      if(pending.owner_id){redirect('/dashboard/#/settings');return true;}
+      if(pending.owner_id){redirect('/dashboard/settings/');return true;}
       const session=randomBytes(32).toString('hex');
       if(!await database.createSession(hash(session),user.id,Date.now()+7*86400000,user.password_hash))throw new Error('Session changed');
       const previous=/(?:^|;\s*)ri_session=([a-f0-9]{64})(?:;|$)/.exec(req.headers.cookie||'')?.[1];

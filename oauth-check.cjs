@@ -48,7 +48,7 @@ const {chromium}=require(process.env.PLAYWRIGHT_PATH||'C:/Users/win/.cache/codex
     const {hashPassword}=require('./auth.cjs');await db.provisionAccount('09120000901',await hashPassword('Password123!'));
     const login=await post('login',{phone:'09120000901',password:'Password123!'},'');const phoneCookie=login.headers.get('set-cookie').split(';')[0];
     const phoneUser=(await(await get('/api/auth/session',phoneCookie)).json()).user;
-    subject='345678';const githubLink=await start('github',phoneCookie);assert.equal((await finish(githubLink)).headers.get('location'),'/dashboard/#/settings');
+    subject='345678';const githubLink=await start('github',phoneCookie);assert.equal((await finish(githubLink)).headers.get('location'),'/dashboard/settings/');
     assert((await(await get('/api/auth/session',phoneCookie)).json()).user.github);
     const githubLogin=await finish(await start('github'));const githubCookie=githubLogin.headers.getSetCookie().find(c=>c.startsWith('ri_session=')).split(';')[0];
     assert.equal((await(await get('/api/auth/session',githubCookie)).json()).user.id,phoneUser.id);
@@ -71,7 +71,7 @@ const {chromium}=require(process.env.PLAYWRIGHT_PATH||'C:/Users/win/.cache/codex
     await page.evaluate(()=>document.fonts.ready);await page.screenshot({path:'artifacts/social-account/login-mobile.png',fullPage:true});
     await page.goto(base+'/register/');await page.locator('[data-social=github]').waitFor();assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
     await page.context().addCookies([{name:'ri_session',value:socialCookie.split('=')[1],url:base}]);
-    await page.goto(base+'/dashboard/#/settings');await page.locator('#a_last').waitFor();assert.equal(await page.locator('#a_name').inputValue(),'سارا');assert.equal(await page.locator('#a_last').inputValue(),'محمدی');
+    await page.goto(base+'/dashboard/settings/');await page.locator('#a_last').waitFor();assert.equal(await page.locator('#a_name').inputValue(),'سارا');assert.equal(await page.locator('#a_last').inputValue(),'محمدی');
     await page.setViewportSize({width:320,height:740});assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));await page.screenshot({path:'artifacts/social-account/settings-mobile.png',fullPage:true});
     await page.locator('#a_last').fill('احمدی');await page.locator('[data-name]').tap();await page.waitForFunction(()=>RI.state.account.lastName==='احمدی');
     await page.reload();await page.locator('#a_last').waitFor();assert.equal(await page.locator('#a_last').inputValue(),'احمدی');

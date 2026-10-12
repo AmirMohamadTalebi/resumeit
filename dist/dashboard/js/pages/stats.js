@@ -3,18 +3,6 @@
   'use strict';
   const RI = window.RI, esc = RI.esc;
 
-  /* تولید ثابت و تکرارپذیر (بدون Math.random) */
-  function rng(seed) { let s = seed >>> 0 || 7; return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }; }
-  RI.sampleSeries = function (n, seed) {
-    const r = rng(typeof seed === 'string' ? seed.length * 97 + n : seed), views = [], linkViews = [], clicks = [];
-    for (let i = 0; i < n; i++) {
-      const wave = 1 + 0.35 * Math.sin(i / 2.4) + i / (n * 2.5);
-      const v = Math.round((14 + r() * 16) * wave), lv = Math.round((9 + r() * 12) * wave);
-      views.push(v); linkViews.push(lv); clicks.push(Math.round(lv * (0.38 + r() * 0.25)));
-    }
-    return { views: views, linkViews: linkViews, clicks: clicks };
-  };
-
   function chart(ser, n) {
     const W = 640, H = 220, pad = { l: 36, r: 10, t: 12, b: 26 };
     const iw = W - pad.l - pad.r, ih = H - pad.t - pad.b;
@@ -39,7 +27,7 @@
       const ui = RI.state.ui;
       const head = RI.pageHead({ eyebrow: 'انتشار', eyebrowIcon: 'chart', title: 'آمار بازدید و کلیک', desc: 'همهٔ اعداد این صفحه <b>داده‌های نمونه</b> هستند تا شکل نهایی را ببینی؛ آمار واقعی پس از انتشار و اتصال به سرور می‌آید' });
       if (ui.sim.netError) return head + '<div class="panel">' + RI.empty({ icon: 'wifi', title: 'آمار بارگذاری نشد', text: 'اتصال برقرار نشد', action: '<button type="button" class="btn btn--primary" data-retry>' + RI.icon('refresh') + 'تلاش دوباره</button>' }) + '</div>';
-      if (ui.sim.nodata || (RI.state.pub.resume.status !== 'published' && RI.state.pub.links.status !== 'published' && ui.sim.nodata)) return head + '<div class="panel">' + RI.empty({ icon: 'chart', title: 'هنوز داده‌ای نیست', text: 'وقتی صفحه‌ات منتشر شود و اولین بازدیدکننده بیاید، نمودارها این‌جا جان می‌گیرند', action: '<a class="btn btn--primary" href="#/publish" data-go="publish">' + RI.icon('rocket') + 'رفتن به انتشار</a>' }) + '</div>';
+      if (ui.sim.nodata || (RI.state.pub.resume.status !== 'published' && RI.state.pub.links.status !== 'published' && ui.sim.nodata)) return head + '<div class="panel">' + RI.empty({ icon: 'chart', title: 'هنوز داده‌ای نیست', text: 'وقتی صفحه‌ات منتشر شود و اولین بازدیدکننده بیاید، نمودارها این‌جا جان می‌گیرند', action: '<a class="btn btn--primary" href="/dashboard/publish/" data-go="publish">' + RI.icon('rocket') + 'رفتن به انتشار</a>' }) + '</div>';
       return head + '<div class="banner banner--brown" style="margin-bottom:20px">' + RI.icon('flask') + '<div class="banner__body"><b>نمایش نمونه</b>این آمار ساختگی است و به صفحهٔ شما ربطی ندارد</div></div>' +
         '<div class="statbar"><div class="segmented" role="group" aria-label="بازهٔ زمانی" id="range">' + [[7, '۷ روز'], [30, '۳۰ روز'], [90, '۹۰ روز']].map((r, i) => '<button type="button" data-r="' + r[0] + '" aria-pressed="' + (i === 0) + '">' + r[1] + '</button>').join('') + '</div></div><div id="sbody"></div>';
     },

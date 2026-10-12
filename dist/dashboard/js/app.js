@@ -1,4 +1,4 @@
-/* پوستهٔ برنامه: ناوبری، مسیریاب هش، نوار بالا، وضعیت ذخیره، اتصال به ورود و خروج */
+/* پوستهٔ برنامه: ناوبری، صفحات مستقل، نوار بالا، وضعیت ذخیره، اتصال به ورود و خروج */
 (function () {
   'use strict';
   const RI = (window.RI = window.RI || {});
@@ -18,10 +18,10 @@
     const acc = RI.state.account;
     RI.$('#sidebar').innerHTML =
       '<div class="sidebar__glass"><div class="brand">' + LOGO + '</div>' +
-      '<nav class="nav" aria-label="بخش‌های داشبورد">' + NAV.map((g) => '<div class="nav__group"><div class="nav__label">' + g.group + '</div>' + g.items.map((i) => '<a class="nav__item" href="#/' + i[0] + '" data-route="' + i[0] + '">' + RI.icon(i[2]) + '<span>' + i[1] + '</span></a>').join('') + '</div>').join('') + '</nav>' +
-      '<div class="sidebar__foot"><div class="ri-support-links"><a href="/about/">درباره ما</a><a href="/terms/">شرایط و حریم خصوصی</a><a href="/contact/">ارتباط با ما</a><a href="https://t.me/resumeit_ir" target="_blank" rel="noopener">کانال تلگرام</a><a href="https://t.me/amirtalebi_x" target="_blank" rel="noopener">تلگرام پشتیبانی</a></div>' +
-      '<button type="button" class="account-btn" id="accountBtn" aria-haspopup="menu"><img class="avatar" id="accAvatar" alt="" src=""><span><span class="account-btn__name" id="accName"></span><br><span class="account-btn__sub">حساب نمونه</span></span></button></div></div>';
-    RI.$('#bottomNav').innerHTML = BOTTOM.map((i) => '<a href="#/' + i[0] + '" data-route="' + i[0] + '">' + RI.icon(i[2]) + '<span>' + i[1] + '</span></a>').join('');
+      '<nav class="nav" aria-label="بخش‌های داشبورد">' + NAV.map((g) => '<div class="nav__group"><div class="nav__label">' + g.group + '</div>' + g.items.map((i) => '<a class="nav__item" href="' + RI.routeUrl(i[0]) + '" data-route="' + i[0] + '">' + RI.icon(i[2]) + '<span>' + i[1] + '</span></a>').join('') + '</div>').join('') + '</nav>' +
+      '<div class="sidebar__foot"><div class="ri-support-links"><a href="https://t.me/resumeit_ir" target="_blank" rel="noopener">کانال تلگرام</a><a href="https://t.me/amirtalebi_x" target="_blank" rel="noopener">تلگرام پشتیبانی</a></div>' +
+      '<button type="button" class="account-btn" id="accountBtn" aria-haspopup="menu"><img class="avatar" id="accAvatar" alt="" src=""><span><span class="account-btn__name" id="accName"></span><br><span class="account-btn__sub">حساب من</span></span></button></div></div>';
+    RI.$('#bottomNav').innerHTML = BOTTOM.map((i) => '<a href="' + RI.routeUrl(i[0]) + '" data-route="' + i[0] + '">' + RI.icon(i[2]) + '<span>' + i[1] + '</span></a>').join('');
     paintAccount();
   }
   function paintAccount() {
@@ -32,7 +32,7 @@
   /* ---------- نوار بالا و وضعیت ذخیره ---------- */
   function paintSave() {
     const ui = RI.state.ui, el = RI.$('#saveState'), btn = RI.$('#saveBtn');
-    let st = 'saved', txt = 'در حافظهٔ این صفحه؛ با رفرش پاک می‌شود', ic = 'check';
+    let st = 'saved', txt = 'ذخیرهٔ موقت در این تب', ic = 'check';
     if (ui.saving) { st = 'saving'; txt = 'در حال ذخیره…'; ic = 'refresh'; }
     else if (ui.saveError) { st = 'error'; txt = 'ذخیره نشد'; ic = 'alert'; }
     else if (ui.dirty) { st = 'dirty'; txt = 'تغییرات ذخیره‌نشده'; ic = 'edit'; }
@@ -44,29 +44,26 @@
   }
   RI.doSave = async function () {
     const ok = await RI.save();
-    if (ok) RI.toast('تغییرات در حافظهٔ این صفحه نگه داشته شد؛ با رفرش پاک می‌شود');
+    if (ok) RI.toast('تغییرات در این تب ذخیره شد');
     return ok;
   };
 
   /* ---------- مسیریاب ---------- */
   RI.go = function (id, opts) {
     if (opts) RI.routeOpts = opts;
-    const h = '#/' + id;
-    if (location.hash === h) { render(id, true); } else location.hash = h;
+    if (id === current) { render(id, true); return; }
+    navigate(id, opts);
   };
   RI.routeOpts = null;
-  const routeFromHash = () => { const m = /^#\/([a-z]+)/.exec(location.hash); return m && RI.pages[m[1]] ? m[1] : 'home'; };
-
-  async function onHash() {
-    const id = routeFromHash();
-    if (current && id !== current && RI.state.ui.dirty) {
-      /* بازگرداندن آدرس تا کاربر تصمیم بگیرد */
-      history.replaceState(null, '', '#/' + current);
-      const okLeave = await RI.leaveGuard();
-      if (!okLeave) return;
-      history.replaceState(null, '', '#/' + id);
-    }
-    render(id);
+  RI.routeUrl = (id, opts) => {
+    const url = new URL(id === 'home' ? '/dashboard/' : '/dashboard/' + id + '/', location.origin);
+    for (const key of ['step', 'tab', 'anchor']) if (opts && opts[key]) url.searchParams.set(key, opts[key]);
+    return url.pathname + url.search;
+  };
+  async function navigate(id, opts) {
+    if (!NAV.some(g => g.items.some(i => i[0] === id))) return;
+    if (!(await RI.leaveGuard()) || !RI.keepDraft()) return;
+    location.assign(RI.routeUrl(id, opts));
   }
 
   async function render(id, force) {
@@ -95,6 +92,7 @@
       if (token !== navToken) return;
     }
     view.innerHTML = page.render(ctx);
+    RI.$$('a[data-go]', view).forEach(a => { a.href = RI.routeUrl(a.dataset.go, a.dataset); });
     cleanup = page.mount ? page.mount(view, ctx) : null;
     RI.animateRings(view); RI.animateBars(view);
     window.scrollTo({ top: 0, behavior: 'instant' in window ? 'instant' : 'auto' });
@@ -110,6 +108,7 @@
   async function boot() {
     const user = await window.resumeitSession;
     if (!user) return;
+    RI.restoreDraft(user.id);
     RI.applyAccount(user);
     buildShell();
     paintSave();
@@ -136,14 +135,20 @@
     });
     RI.delegate(document, 'click', '[data-copy]', (e, b) => RI.copy(b.dataset.copy));
     RI.delegate(document, 'click', '[data-open-url]', (e, b) => RI.openPreview(/\/links$/.test(b.dataset.openUrl) ? 'links' : 'resume', { title: 'پیش‌نمایش ' + b.dataset.openUrl }));
-    RI.delegate(document, 'click', '[data-go]', (e, b) => { e.preventDefault(); RI.go(b.dataset.go, b.dataset.step ? { step: b.dataset.step, tab: b.dataset.tab, anchor: b.dataset.anchor } : null); });
+    RI.delegate(document, 'click', '[data-go], [data-route]', (e, b) => {
+      if (e.ctrlKey || e.metaKey || e.shiftKey || e.altKey || e.button !== 0) return;
+      e.preventDefault();
+      RI.go(b.dataset.go || b.dataset.route, { step: b.dataset.step, tab: b.dataset.tab, anchor: b.dataset.anchor });
+    });
     window.addEventListener('beforeunload', (e) => { if (RI.state.ui.dirty) { e.preventDefault(); e.returnValue = ''; } });
-    window.addEventListener('hashchange', onHash);
-    onHash();
+    const legacy = /^#\/([a-z]+)$/.exec(location.hash);
+    if (legacy && NAV.some(g => g.items.some(i => i[0] === legacy[1]))) { location.replace(RI.routeUrl(legacy[1])); return; }
+    RI.routeOpts = Object.fromEntries(new URLSearchParams(location.search));
+    render(document.body.dataset.page);
   }
 
   RI.logout = async function () {
-    const ok = await RI.confirm({ title: 'خروج از حساب', text: 'از پنل نمایشی خارج می‌شوید و اطلاعات این صفحه پاک می‌شود. ادامه می‌دهید؟', confirmLabel: 'خروج', icon: 'logout' });
+    const ok = await RI.confirm({ title: 'خروج از حساب', text: 'از حساب خارج می‌شوید و پیش‌نویس موقت این تب پاک می‌شود. ادامه می‌دهید؟', confirmLabel: 'خروج', icon: 'logout' });
     if (!ok) return;
     if (RI.state.ui.dirty && !(await RI.leaveGuard())) return;
     try {
@@ -151,6 +156,7 @@
       if (!response.ok) throw new Error('Logout failed');
     } catch { RI.toast('خروج انجام نشد؛ دوباره امتحان کنید.'); return; }
     RI.state.ui.dirty = false;
+    RI.clearDraft();
     location.replace('/login/');
   };
 

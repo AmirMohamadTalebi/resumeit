@@ -188,3 +188,18 @@
     };
   };
 })();
+
+(function(){const RI=window.RI;
+  /* تولید ثابت و تکرارپذیر (بدون Math.random) */
+  function rng(seed) { let s = seed >>> 0 || 7; return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }; }
+  RI.sampleSeries = function (n, seed) {
+    const r = rng(typeof seed === 'string' ? seed.length * 97 + n : seed), views = [], linkViews = [], clicks = [];
+    for (let i = 0; i < n; i++) {
+      const wave = 1 + 0.35 * Math.sin(i / 2.4) + i / (n * 2.5);
+      const v = Math.round((14 + r() * 16) * wave), lv = Math.round((9 + r() * 12) * wave);
+      views.push(v); linkViews.push(lv); clicks.push(Math.round(lv * (0.38 + r() * 0.25)));
+    }
+    return { views: views, linkViews: linkViews, clicks: clicks };
+  };
+
+})();

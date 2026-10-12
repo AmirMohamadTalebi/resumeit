@@ -1,5 +1,4 @@
-/* وضعیت برنامه (فقط در حافظهٔ مرورگر)، ذخیره‌ی نمایشی، پیشرفت، چک‌لیست انتشار.
-   هیچ‌چیز روی سرور یا localStorage ذخیره نمی‌شود. تیم بک‌اند باید جای RI.save و RI.publish را وصل کند. */
+/* پیش‌نویس در sessionStorage همین تب نگهداری می‌شود؛ ذخیرهٔ سرور و انتشار عمومی هنوز متصل نیستند. */
 (function () {
   'use strict';
   const RI = (window.RI = window.RI || {});
@@ -17,6 +16,26 @@
   RI.saved = JSON.stringify(RI.state.content);
   RI.S = () => RI.state;
   RI.C = () => RI.state.content;
+
+  // shortcut: drafts live only in this browser tab; connect server storage before supporting other devices.
+  let draftKey;
+  RI.restoreDraft = function (owner) {
+    draftKey = 'resumeit-draft-v1:' + owner;
+    try {
+      const draft = JSON.parse(sessionStorage.getItem(draftKey));
+      if (draft && draft.content && draft.content.profile && draft.pub) {
+        RI.state.content = draft.content; RI.state.pub = draft.pub;
+        RI.saved = JSON.stringify(draft.content); RI.savedSlug = draft.content.slug;
+      }
+    } catch { RI.toast('پیش‌نویس موقت قابل بازیابی نبود.', { kind: 'error' }); }
+  };
+  RI.keepDraft = function () {
+    try {
+      sessionStorage.setItem(draftKey, JSON.stringify({ content: JSON.parse(RI.saved), pub: RI.state.pub }));
+      return true;
+    } catch { RI.toast('فضای ذخیرهٔ این تب کافی نیست؛ صفحه را ترک نکنید و حجم عکس‌ها را کاهش دهید.', { kind: 'error' }); return false; }
+  };
+  RI.clearDraft = () => { try { sessionStorage.removeItem(draftKey); } catch {} };
 
   /* ---------- تغییر و ذخیره ---------- */
   RI.touch = function (scope) {
@@ -37,7 +56,9 @@
       RI.toast('ذخیره نشد؛ اتصال برقرار نبود. دوباره تلاش کنید.', { kind: 'error' });
       return false;
     }
+    const previous = RI.saved;
     RI.saved = JSON.stringify(RI.state.content);
+    if (!RI.keepDraft()) { RI.saved = previous; ui.saveError = true; RI.emit('save'); return false; }
     ui.dirty = false; ui.savedAt = Date.now();
     RI.emit('save');
     return true;
