@@ -1,5 +1,5 @@
 const { randomInt, randomUUID, randomBytes, createHash } = require('node:crypto');
-const { sendVerificationSms } = require('./smsir.cjs');
+const { sendVerificationSms } = require('../services/smsir.cjs');
 const digest = value => createHash('sha256').update(value).digest('hex');
 function createOtpService({ database, send = sendVerificationSms, now = Date.now }) {
   async function request(phone, purpose, ipHash, ownerId=null) {
@@ -11,8 +11,8 @@ function createOtpService({ database, send = sendVerificationSms, now = Date.now
   }
   async function verify(id,code,purpose) {
     const grant = randomBytes(32).toString('hex');
-    const phone = await database.verifyOtp(id,digest(id+code),purpose,purpose!=='login'?digest(grant):null,now());
-    return phone ? { phone, ...(purpose==='register'?{registrationToken:grant}:purpose==='reset'?{resetToken:grant}:{}) } : null;
+    const proof = await database.verifyOtp(id,digest(id+code),purpose,purpose!=='login'?digest(grant):null,now());
+    return proof ? { ...proof, ...(purpose==='register'?{registrationToken:grant}:purpose==='reset'?{resetToken:grant}:{}) } : null;
   }
   return { request, verify };
 }

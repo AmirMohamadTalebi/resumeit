@@ -1,10 +1,10 @@
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
-const { createServer } = require('./server.cjs');
+const { createServer } = require('../server.cjs');
 const { testStore } = require('./auth-test-store.cjs');
-const { hashPassword } = require('./auth.cjs');
-const { chromium } = require(process.env.PLAYWRIGHT_PATH || 'C:/Users/win/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright');
+const { hashPassword } = require('../src/auth/auth.cjs');
+const { chromium } = require(process.env.PLAYWRIGHT_PATH || 'playwright');
 (async () => {
   delete process.env.PUBLIC_ORIGIN;
   const database = testStore();
@@ -22,8 +22,8 @@ const { chromium } = require(process.env.PLAYWRIGHT_PATH || 'C:/Users/win/.cache
       const response = await fetch(base + '/dashboard/' + route + '/', {redirect:'manual'});
       assert.equal(response.status,303); assert.equal(response.headers.get('location'),'/login/');
     }
-    assert.equal((await fetch(base + '/.env')).status, 404);
-    browser = await chromium.launch({ channel: 'msedge', headless: true });
+    assert.equal((await fetch(base + '/.env')).status, 400);
+    browser = await chromium.launch({ channel: process.platform === 'win32' ? 'msedge' : undefined, headless: true });
     const context = await browser.newContext({ viewport: { width: 1440, height: 960 }, reducedMotion: 'reduce' });
     const page = await context.newPage();
     const errors = [], failed = [];
@@ -52,7 +52,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_PATH || 'C:/Users/win/.cache
       await page.waitForFunction(k=>!RI.state.account[k],provider);assert.equal(await page.getByRole('dialog').count(),0);
     }
     await page.evaluate(()=>RI.go('home'));await page.waitForURL('**/dashboard/');await page.waitForSelector('#page-title');
-    const output = path.join(__dirname, 'artifacts', 'dashboard'); fs.mkdirSync(output, { recursive: true });
+    const output = path.join(__dirname, '../artifacts', 'dashboard'); fs.mkdirSync(output, { recursive: true });
     await page.screenshot({ path: path.join(output, 'desktop.png'), fullPage: true });
     for (const route of ['resume', 'links', 'themes', 'publish', 'billing', 'stats', 'settings', 'home']) {
       await page.locator('#sidebar [data-route="' + route + '"]').click();

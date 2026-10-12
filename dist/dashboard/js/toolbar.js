@@ -1,0 +1,1 @@
+(function(){'use strict';document.getElementById('menuBtn').innerHTML=RI.icon('menu');document.getElementById('topPreview').innerHTML=RI.icon('eye')+'<span class="hide-sm">پیش‌نمایش</span>';document.getElementById('topPublish').innerHTML=RI.icon('rocket')+'<span class="hide-sm">انتشار</span>';})();

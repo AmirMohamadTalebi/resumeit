@@ -1,7 +1,7 @@
 const assert=require('node:assert/strict');
-const {createOtpService}=require('./otp.cjs');
+const {createOtpService}=require('../src/auth/otp.cjs');
 const {testStore}=require('./auth-test-store.cjs');
-const {createServer}=require('./server.cjs');
+const {createServer}=require('../server.cjs');
 (async()=>{
  let time=Date.now(),sent=[];const database=testStore();
  const send=async(phone,code)=>sent.push({phone,code});
@@ -11,7 +11,7 @@ const {createServer}=require('./server.cjs');
  assert.equal(await second.verify(request.challengeId,sent[0].code,'login'),null);
  const verified=await second.verify(request.challengeId,sent[0].code,'register');assert(verified.registrationToken);
  assert.equal(await otp.verify(request.challengeId,sent[0].code,'register'),null);
- const {digest}=require('./auth.cjs');
+ const {digest}=require('../src/auth/auth.cjs');
  assert(await database.registrationValid(digest(verified.registrationToken),time));
  time+=300001;assert.equal(await database.registrationValid(digest(verified.registrationToken),time),false);
  const expired=await otp.request('09120000002','login','ip');time+=120001;
@@ -42,7 +42,7 @@ const {createServer}=require('./server.cjs');
   assert.equal((await post('otp/verify',body)).status,401);
   const registration=await post('register',{...grant,password:'NewPassword123!'});assert.equal(registration.status,200);assert.match(registration.headers.get('set-cookie'),/HttpOnly/);
   assert.equal((await post('register',{...grant,password:'OtherPassword123!'})).status,401);
-  const user=await webDb.accountByPhone('09120000011');const {verifyPassword}=require('./auth.cjs');assert(await verifyPassword('NewPassword123!',user.password_hash));
+  const user=await webDb.accountByPhone('09120000011');const {verifyPassword}=require('../src/auth/auth.cjs');assert(await verifyPassword('NewPassword123!',user.password_hash));
   await webDb.provisionAccount('09120000012',null);
   const l=await(await post('otp/request',{phone:'09120000012',purpose:'login'})).json();
   const login=await post('otp/verify',{challengeId:l.challengeId,code:codes.get('09120000012'),purpose:'login'},base2);assert.equal(login.status,200);
@@ -50,7 +50,7 @@ const {createServer}=require('./server.cjs');
   const e=await(await post('otp/request',{phone:'09120000011',purpose:'register'})).json();
   // The original successful request is still inside its cooldown; do not overwrite that account.
   assert.equal(e.challengeId,undefined);assert(await verifyPassword('NewPassword123!',(await webDb.accountByPhone('09120000011')).password_hash));
-  const {hashPassword}=require('./auth.cjs');
+  const {hashPassword}=require('../src/auth/auth.cjs');
   const oldHash=await hashPassword('OldPassword123!'),resetPhone='09120000013';
   const resetId=await webDb.provisionAccount(resetPhone,oldHash);
   await webDb.createSession('c'.repeat(64),resetId,Date.now()+60000,oldHash);
@@ -65,8 +65,8 @@ const {createServer}=require('./server.cjs');
   assert.equal((await post('login',{phone:resetPhone,password:'OldPassword123!'})).status,401);
   assert.equal((await post('login',{phone:resetPhone,password:'NewPassword123!'})).status,200);
   for(const purpose of ['login','reset']) {
-    const unknown=await post('otp/request',{phone:'09120000014',purpose});assert.equal(unknown.status,404);
-    assert.equal((await unknown.json()).code,'ACCOUNT_NOT_FOUND');assert.equal(codes.has('09120000014'),false);
+    const unknown=await post('otp/request',{phone:'09120000014',purpose});assert.equal(unknown.status,200);
+    assert((await unknown.json()).challengeId);assert.equal(codes.has('09120000014'),false);
   }
   const signup=await post('otp/request',{phone:'09120000014',purpose:'register'});assert.equal(signup.status,200);assert(codes.has('09120000014'));
  } finally {await new Promise(r=>server.close(r));await new Promise(r=>server2.close(r));}

@@ -1,8 +1,8 @@
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
-const {createServer} = require('./server.cjs');
+const {createServer} = require('../server.cjs');
 const {testStore} = require('./auth-test-store.cjs');
-const {chromium} = require(process.env.PLAYWRIGHT_PATH || 'C:/Users/win/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright');
+const {chromium} = require(process.env.PLAYWRIGHT_PATH || 'playwright');
 (async () => {
   delete process.env.PUBLIC_ORIGIN;
   const db = testStore(), codes = new Map();
@@ -11,7 +11,7 @@ const {chromium} = require(process.env.PLAYWRIGHT_PATH || 'C:/Users/win/.cache/c
   const base = 'http://127.0.0.1:'+server.address().port;
   let browser;
   try {
-    browser = await chromium.launch({channel:'msedge',headless:true});
+    browser = await chromium.launch({channel: process.platform === 'win32' ? 'msedge' : undefined,headless:true});
     const context = await browser.newContext({viewport:{width:320,height:740},isMobile:true,hasTouch:true});
     const page = await context.newPage(), errors = [];
     page.on('pageerror',e=>errors.push(e.message));

@@ -29,10 +29,9 @@
   };
 
   RI.isUrl = (s) => {
-    try {
-      const u = new URL(/^https?:\/\//i.test(s) ? s : 'https://' + s);
-      return u.hostname.includes('.') && !/\s/.test(s);
-    } catch (e) { return false; }
+    if (typeof s !== 'string' || /[\s\x00-\x1f\x7f]/.test(s) || (/^[a-z][a-z0-9+.-]*:/i.test(s) && !/^https?:\/\//i.test(s))) return false;
+    try { const u = new URL(RI.normUrl(s)); return ['http:', 'https:'].includes(u.protocol) && !u.username && !u.password && u.hostname.includes('.'); }
+    catch { return false; }
   };
   RI.isEmail = (s) => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(s);
   RI.isMobile = (s) => /^09\d{9}$/.test(String(s).replace(/[\s-]/g, ''));
@@ -74,7 +73,7 @@
     overlay.className = 'modal-overlay';
     overlay.innerHTML =
       '<div class="modal modal--' + o.size + '" role="dialog" aria-modal="true" aria-labelledby="' + tid + '">' +
-      '<header class="modal__head"><h2 id="' + tid + '">' + o.title + '</h2>' +
+      '<header class="modal__head"><h2 id="' + tid + '">' + RI.esc(o.title) + '</h2>' +
       (o.dismissible ? '<button type="button" class="btn btn--icon btn--ghost btn--sm" data-close aria-label="بستن">' + RI.icon('x') + '</button>' : '') +
       '</header><div class="modal__body"></div><footer class="modal__foot"></footer></div>';
     const box = overlay.firstElementChild;
@@ -83,7 +82,7 @@
     const api = { el: box, body: body, foot: foot, closed: false };
 
     api.setBody = (b) => { if (typeof b === 'string') body.innerHTML = b; else { body.innerHTML = ''; body.appendChild(b); } };
-    api.setTitle = (t) => { box.querySelector('h2').innerHTML = t; };
+    api.setTitle = (t) => { box.querySelector('h2').textContent = t; };
     api.setActions = (actions) => {
       foot.innerHTML = '';
       actions.forEach((a) => {

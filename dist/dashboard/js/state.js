@@ -19,13 +19,34 @@
 
   // shortcut: drafts live only in this browser tab; connect server storage before supporting other devices.
   let draftKey;
+  function validateDraft(value, sample, key = '') {
+    if (sample === null) {
+      if (key === 'at' && typeof value === 'number' && Number.isFinite(value)) return value;
+      if (value !== null && (typeof value !== 'string' || value.length > 3 * 1024 * 1024)) throw new Error('Invalid image or snapshot');
+      return value;
+    }
+    if (Array.isArray(sample)) {
+      if (!Array.isArray(value) || value.length > 100 || (!sample.length && value.length)) throw new Error('Invalid list');
+      return value.map(item => validateDraft(item, sample.find(s => s.type && s.type === item?.type) || sample[0]));
+    }
+    if (typeof sample === 'object') {
+      if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('Invalid object');
+      return Object.fromEntries(Object.keys(sample).map(k => [k, validateDraft(value[k] === undefined ? sample[k] : value[k], sample[k], k)]));
+    }
+    if (typeof value !== typeof sample || (typeof value === 'number' && !Number.isFinite(value)) || (typeof value === 'string' && value.length > 10000)) throw new Error('Invalid field');
+    if (key === 'id' && !/^[a-z0-9_-]{1,64}$/i.test(value)) throw new Error('Invalid identifier');
+    return value;
+  }
   RI.restoreDraft = function (owner) {
     draftKey = 'resumeit-draft-v1:' + owner;
     try {
       const draft = JSON.parse(sessionStorage.getItem(draftKey));
       if (draft && draft.content && draft.content.profile && draft.pub) {
-        RI.state.content = draft.content; RI.state.pub = draft.pub;
-        RI.saved = JSON.stringify(draft.content); RI.savedSlug = draft.content.slug;
+        const content = validateDraft(draft.content, RI.seed('full'));
+        const publication = validateDraft(draft.pub, RI.state.pub);
+        if (content.sections.some(s => !RI.seed('empty').sections.some(known => known.key === s.key))) throw new Error('Invalid section');
+        RI.state.content = content; RI.state.pub = publication;
+        RI.saved = JSON.stringify(content); RI.savedSlug = content.slug;
       }
     } catch { RI.toast('پیش‌نویس موقت قابل بازیابی نبود.', { kind: 'error' }); }
   };

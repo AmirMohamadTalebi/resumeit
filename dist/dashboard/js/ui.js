@@ -6,13 +6,16 @@
 
   /* ---------- تصویر و پس‌زمینه ---------- */
   RI.presets = ['grad:#cfe0e8,#97b5c5', 'grad:#e4cdb6,#bd8e64', 'grad:#97b5c5,#52788d', 'grad:#f2e6da,#97b5c5', 'grad:#3d5c6f,#875a36'];
+  RI.safeImage = function (src) {
+    if (typeof src !== 'string' || !src || src.length > 3 * 1024 * 1024) return '';
+    if (/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(src)) return src;
+    try { const url = new URL(src, location.origin); if (url.protocol !== 'https:' && url.origin !== location.origin) return ''; if (url.username || url.password || /[\s'"()\\\x00-\x1f\x7f]/.test(src)) return ''; return url.href; } catch { return ''; }
+  };
   RI.bg = function (src) {
-    if (!src) return '';
-    if (src.indexOf('grad:') === 0) {
-      const p = src.slice(5).split(',');
-      return 'background-image:linear-gradient(135deg,' + p[0] + ',' + p[1] + ')';
-    }
-    return "background-image:url('" + src + "')";
+    if (typeof src !== 'string') return '';
+    if (/^grad:#[0-9a-f]{6},#[0-9a-f]{6}$/i.test(src)) return 'background-image:linear-gradient(135deg,' + src.slice(5) + ')';
+    const safe = RI.safeImage(src);
+    return safe ? "background-image:url('" + safe + "')" : '';
   };
   RI.avatarSvg = function (name, hue) {
     const ch = esc((name || 'ر').trim().charAt(0) || 'ر');
@@ -20,7 +23,7 @@
     const svg = "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 96'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='" + a + "'/><stop offset='1' stop-color='" + b + "'/></linearGradient></defs><rect width='96' height='96' fill='url(#g)'/><text x='48' y='60' font-family='Tahoma,sans-serif' font-size='42' font-weight='700' text-anchor='middle' fill='white'>" + ch + '</text></svg>';
     return 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
   };
-  RI.avatarOf = (p) => p.avatar && p.avatar.indexOf('grad:') !== 0 ? p.avatar : RI.avatarSvg(p.name);
+  RI.avatarOf = (p) => RI.safeImage(p.avatar) || RI.avatarSvg(p.name);
 
   /* ---------- قطعات HTML ---------- */
   RI.pageHead = (o) =>
@@ -87,7 +90,7 @@
       if (!/^image\/(png|jpeg|webp)$/.test(f.type)) return fail('فقط تصویر PNG، JPG یا WebP مجاز است');
       if (f.size > 2 * 1024 * 1024) return fail('حجم تصویر بیش از ۲ مگابایت است؛ لطفاً تصویر کوچک‌تری انتخاب کنید');
       const rd = new FileReader();
-      rd.onload = () => { io.set(rd.result); show(rd.result); };
+      rd.onload = () => { const image = new Image(); image.onload = () => { if (image.naturalWidth * image.naturalHeight > 16000000) return fail('ابعاد تصویر بیش از حد بزرگ است'); io.set(rd.result); show(rd.result); }; image.onerror = () => fail('فایل انتخاب‌شده تصویر معتبر نیست'); image.src = rd.result; };
       rd.onerror = () => fail('خواندن تصویر ممکن نشد دوباره تلاش کنید');
       rd.readAsDataURL(f);
       e.target.value = '';

@@ -1,0 +1,39 @@
+const { createHash } = require('node:crypto');
+
+function publicOrigin(req) {
+  const configured = process.env.PUBLIC_ORIGIN;
+  if (configured) {
+    const url = new URL(configured);
+    if (url.username || url.password || url.pathname !== '/' || url.search || url.hash ||
+        (url.protocol !== 'https:' && !/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(url.origin))) throw new Error('Invalid PUBLIC_ORIGIN');
+    return url.origin;
+  }
+  if (process.env.NODE_ENV === 'production' || !/^(localhost|127\.0\.0\.1)(:\d+)?$/.test(req.headers.host || '')) throw new Error('PUBLIC_ORIGIN is required');
+  return 'http://' + req.headers.host;
+}
+
+function securityHeaders(res, origin, html = '', allowSameOriginFrame = false) {
+  const hashes = [...html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script\s*>/gi)]
+    .filter(([, attributes, body]) => !/\bsrc\s*=/i.test(attributes) && body.trim())
+    .map(([, , body]) => "'sha256-" + createHash('sha256').update(body).digest('base64') + "'");
+  res.setHeader('Content-Security-Policy', ["default-src 'self'", "script-src 'self' " + hashes.join(' '), "style-src 'self' 'unsafe-inline'", "img-src 'self' data: https:", "font-src 'self'", "connect-src 'self'", "object-src 'none'", "base-uri 'none'", allowSameOriginFrame ? "frame-ancestors 'self'" : "frame-ancestors 'none'", "form-action 'self'"].join('; '));
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', allowSameOriginFrame ? 'SAMEORIGIN' : 'DENY');
+  res.setHeader('Referrer-Policy', 'no-referrer');
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  if (origin.startsWith('https:')) res.setHeader('Strict-Transport-Security', 'max-age=31536000');
+}
+
+async function readJson(req, limit = 2048) {
+  const chunks = []; let size = 0;
+  for await (const chunk of req) {
+    size += chunk.length;
+    if (size > limit) throw Object.assign(new Error('Request too large'), { status: 413 });
+    chunks.push(chunk);
+  }
+  const input = JSON.parse(Buffer.concat(chunks).toString('utf8'));
+  if (!input || typeof input !== 'object' || Array.isArray(input)) throw new SyntaxError('Expected JSON object');
+  return input;
+}
+
+module.exports = { publicOrigin, securityHeaders, readJson };

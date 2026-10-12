@@ -92,7 +92,7 @@
     e.hidden = false; e.innerHTML = RIA.icon('alert') + '<span>' + RIA.esc(msg) + '</span>';
     if (!RIA.reduce()) e.animate([{ transform: 'translateX(-6px)' }, { transform: 'translateX(6px)' }, { transform: 'none' }], { duration: 260 });
   };
-  RIA.handleError=function(root,error){if(error.code!=='ACCOUNT_NOT_FOUND'){RIA.formError(root,error.message);return;}let dialog=$('#account-notice');if(!dialog){dialog=document.createElement('dialog');dialog.id='account-notice';dialog.className='modal account-notice';dialog.setAttribute('aria-labelledby','account-title');dialog.innerHTML='<div class="modal-box"><button type="button" class="notice-close" aria-label="بستن">×</button><div class="notice-icon">'+RIA.icon('user')+'</div><h2 id="account-title">هنوز با این شماره حساب نداری</h2><p>برای شروع ثبت‌نام کن، برای این درخواست پیامکی نفرستادیم</p><a class="btn btn--primary btn--block" href="/register/">ساخت حساب</a><button type="button" class="btn btn--ghost btn--block" id="edit-number">ویرایش شماره</button></div>';document.body.appendChild(dialog);$('.notice-close',dialog).onclick=()=>dialog.close();$('#edit-number',dialog).onclick=()=>dialog.close();dialog.addEventListener('close',()=>$('#mobile')?.focus());dialog.addEventListener('click',e=>{if(e.target===dialog)dialog.close();});}if(!dialog.open)dialog.showModal();};
+  RIA.handleError=(root,error)=>RIA.formError(root,error.message);
   RIA.fieldError = function (field, msg) {
     const g = field.closest('.field'), e = $('.field__error', g), inp = $('input', g);
     if (msg) { e.innerHTML = RIA.icon('alert') + RIA.esc(msg); e.hidden = false; inp.setAttribute('aria-invalid', 'true'); }

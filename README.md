@@ -1,38 +1,49 @@
-# پنل جدید ResumeIt برای هاست Node.js
+# ResumeIt
 
-طراحی دریافت‌شده از پوشهٔ `resumeit-dashboard` به `dist/dashboard` منتقل شده است. فایل‌های اصلی طراح در Downloads تغییر نکرده‌اند. خانه، رزومهٔ نه‌مرحله‌ای، لینک‌ها، ظاهر، انتشار، اشتراک، آمار و تنظیمات همان طراحی را استفاده می‌کنند. دکمه و پنجرهٔ «حالت‌های نمایشی» حذف شده‌اند. خروج به صفحهٔ ورود متصل است و آدرس `/dashboard` به `/dashboard/` هدایت می‌شود و هر بخش سند HTML و مسیر مستقل دارد.
+Persian RTL résumé and links site, maintained in [VY1-pick/resumeit](https://github.com/VY1-pick/resumeit) for a Node.js host. The frontend uses static HTML, daisyUI 5, self-hosted Vazirmatn and GSAP. Account authentication, sessions, OTP and configured Google/GitHub OAuth use MySQL.
 
-## اجرای محلی و انتقال
+## Run
 
-Node.js نسخهٔ 24.15 یا جدیدتر لازم است. فایل ZIP جدید را در یک پوشهٔ مستقل استخراج کنید. `.env.example` را به `.env` کپی کنید، تنظیمات هاست را وارد کنید و `npm start` را اجرا کنید. وابستگی اتصال MySQL با npm ci نصب می‌شود. برای دسترسی عمومی `HOST=0.0.0.0` و پورت تعیین‌شدهٔ هاست را تنظیم کنید؛ HTTPS و سرویس MySQL با دیسک دائمی لازم است. جزئیات در `HOSTING.fa.md` آمده است.
+Use Node.js 24.15 or newer. Install production packages with `npm ci --omit=dev`, configure host environment variables from `.env.example`, then run `npm start`. Local development can load `.env`. Public execution requires a valid HTTPS `PUBLIC_ORIGIN`; never commit real keys, passwords or a database. Detailed instructions: [hosting](docs/HOSTING.fa.md), [authentication](docs/AUTH-SETUP.fa.md), [SMS.ir](docs/SMSIR.fa.md).
 
-صفحهٔ ورود `/login/` و پنل `/dashboard/` هستند. ورود با شماره و رمز حساب از پیش ساخته‌شده واقعی است؛ ثبت‌نام، ورود پیامکی و بازیابی رمز فعال هستند؛ ورود گوگل و گیت‌هاب با تنظیمات واقعی سرور فعال می‌شود.
+`node preview.cjs` serves a static preview on loopback port 4173; it does not provide an account backend.
 
-بستهٔ جدید `ResumeIt-Node-dashboard.zip` جایگزین پیشنهادی بستهٔ قدیمی `ResumeIt-Node-source.zip` است؛ بستهٔ قدیمی دست‌نخورده باقی مانده و این دو را روی هم استخراج نکنید. هیچ `.env` واقعی یا دیتابیس کاربر در بستهٔ جدید نیست.
+## Structure
 
-## مرز نسخهٔ فعلی
+```text
+server.cjs               Application entry point
+src/http/                Server, static files, request and browser protection
+src/auth/                Password, authentication routes, OAuth, OTP
+src/database/            MySQL connection, schema and store modules
+src/services/            SMS.ir adapter
+dist/                    Public pages and frontend assets
+  auth-ui/               Shared authentication components
+  dashboard/js/pages/    Independent dashboard page modules
+  signature/             Shared card-formed R hero
+tests/                   Security, integration and browser tests
+scripts/                 Account provisioning tools
+docs/                    Setup, design and review reports
+```
 
-پیش‌نویس در sessionStorage همین تب بین صفحات و رفرش باقی می‌ماند؛ خروج آن را پاک می‌کند. ذخیرهٔ سرور و انتشار عمومی هنوز متصل نیستند؛ حساب و نشست در MySQL نگه داشته می‌شوند؛ کوکی نشست HttpOnly است. رمز، کد و کلید SMS.ir ذخیرهٔ مرورگری ندارند. پرداخت و دامنه همچنان نمونه‌اند. پنل نباید هنوز برای دریافت اطلاعات واقعی کاربران راه‌اندازی عمومی شود.
+## Product boundaries
 
-ثبت‌نام و ورود پیامکی واقعی با قالب 357964 به MySQL متصل‌اند. کد، مجوز ثبت‌نام و سهمیهٔ ارسال بین نمونه‌های سرور مشترک‌اند. جزئیات در `SMSIR.fa.md` آمده است. بازیابی رمز با تأیید پیامکی فعال است و نشست‌های قبلی را باطل می‌کند؛ ورود گوگل و گیت‌هاب با تنظیمات واقعی سرور فعال می‌شود.
+Dashboard résumé and links drafts live in `sessionStorage` for the current tab and account; logout clears that tab's draft. Server résumé storage, public publication, domain connection, payment and analytics are not production services yet. Billing controls do not grant a paid plan. Account names, verified phone and linked social identities use the server. The settings password control opens the real OTP reset flow.
 
-## بررسی‌های انجام‌شده
+Current proposed plans: 3 months at 95,000 toman/month (285,000 total), 6 months at 85,000 (510,000 total), 12 months at 75,000 (900,000 total). Individual items start at 45,000 toman. Example profiles and statistics are illustrative.
 
-`npm run check:sms`: قالب درخواست سرویس، ورودی نامعتبر، خطاهای امن، انقضای کد، مصرف یک‌باره، پنج تلاش، فاصلهٔ ارسال و درخواست‌های هم‌زمان؛ بدون ارسال واقعی.
+The Persian RTL visual identity remains icy blue, off-white and warm brown. Cards form the signature R. Reduced motion and responsive layouts are retained.
 
-`npm run check:database`: ماندگاری، جداسازی دادهٔ کاربران و جلوگیری از بازنویسی با ورودی نامعتبر.
+## Validate
 
-`npm run check:dashboard`: هر هشت مسیر، ورود و خروج، افزودن مهارت، افزودن/ویرایش/حذف/ترتیب/غیرفعال‌کردن لینک، حفظ داده با رفرش و جابه‌جایی بین سندهای مستقل و عرض موبایل، بدون خطای مرورگر. این بررسی توسعه به Playwright و Edge نیاز دارد؛ برای اجرای سرور لازم نیست. روی محیط دیگری مسیر Playwright را با `PLAYWRIGHT_PATH` بدهید. تصاویر بررسی در `artifacts/dashboard` هستند.
+Install development packages with `npm ci`. On Windows browser tests use installed Edge; other platforms use Chromium installed by `npx playwright install --with-deps chromium`. An existing Playwright installation can be selected with `PLAYWRIGHT_PATH`.
 
-تحویل واقعی پیامک با قالب 357964، آزمون بار و سخت‌افزار موبایل هنوز بررسی نشده‌اند. مسیر تحویل این پروژه گیت‌هاب (`VY1-pick/resumeit`) و هاست Node.js در Runflare است؛ GPT Sites مسیر انتشار پروژه نیست.
+```text
+npm test                 Security, password/session, mocked SMS/OTP and OAuth
+npm run check:ui         Dashboard, authentication, mobile, motion and public pages
+npm run check:database   Real MySQL integration in a temporary test database
+npm audit --omit=dev     Dependency advisories
+```
 
-اتصال گوگل و گیت‌هاب از تنظیمات به همان حساب انجام می‌شود و ورود بعدی با هر روش متصل‌شده به همان حساب برمی‌گردد، حساب اجتماعی بدون شماره قابل ساخت است، انتشار نیاز به نام و نام خانوادگی و شماره تأییدشده دارد، شماره تکراری پیش از ارسال پیامک رد می‌شود، راهنمای تنظیمات در AUTH-SETUP.fa.md و آزمون شبیه‌سازی‌شده در npm run check:oauth است
+Database tests create and remove a randomly named database; use a test MySQL instance and an account allowed to create databases. Tests do not send real SMS or call real OAuth providers. `.github/workflows/checks.yml` runs the suite with MySQL 8.4 and Chromium.
 
-
-## لوگو، تعرفه‌ها و صفحات عمومی
-
-لوگوهای تأییدشده در همهٔ صفحات استفاده می‌شوند. خرید تکی از ۴۵ هزار تومان شروع می‌شود؛ اشتراک‌های سه، شش و دوازده‌ماهه به‌ترتیب ماهی ۹۵، ۸۵ و ۷۵ هزار تومان و مجموع دوره ۲۸۵، ۵۱۰ و ۹۰۰ هزار تومان هستند. درگاه پرداخت هنوز فعال نیست؛ انتخاب پلن یا مورد پولی خرید و رسید موفق ایجاد نمی‌کند.
-
-صفحات `/about/`، `/terms/` (شامل حریم خصوصی) و `/contact/` اضافه شده‌اند؛ ورود و ثبت‌نام نیاز به تأیید قوانین دارند. کانال تلگرام `@resumeit_ir` و پشتیبانی `@amirtalebi_x` هستند. آزمون `node site-content-check.cjs` صفحات، تعرفه‌ها، لینک‌های تماس و تأیید قوانین را بررسی می‌کند.
-
-بخش‌های داشبورد اکنون فایل و URL مستقل دارند: خانه `/dashboard/`، رزومه `/dashboard/resume/`، لینک‌ها `/dashboard/links/`، قالب‌ها `/dashboard/themes/`، انتشار `/dashboard/publish/`، اشتراک `/dashboard/billing/`، آمار `/dashboard/stats/` و حساب `/dashboard/settings/`. صفحات عمومی از منوی داشبورد حذف شده‌اند و لینک‌های پشتیبانی باقی هستند.
+See the [Persian security and change report](docs/SECURITY-REVIEW.fa.md) for fixes, evidence and unverified production conditions. Local checks and a GitHub branch do not confirm a live deployment.
