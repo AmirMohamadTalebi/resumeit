@@ -13,6 +13,7 @@
       '<form id="of" novalidate>' + RIA.otpHtml('کد پیامک‌شده') + '<button type="submit" class="btn btn--primary btn--block" id="vb">' + (o.submitLabel || 'تأیید کد') + '</button></form><div class="resend" id="resend" aria-live="polite"></div><details class="sms-help"><summary>کد تأیید نرسید؟</summary><p>شماره را بررسی کنید و پس از پایان زمان، کد تازه بگیرید. اگر پیامک‌های خدماتی را مسدود کرده‌اید، تنظیمات مسدودسازی یا پشتیبانی اپراتورتان را بررسی کنید.</p></details>';
     RIA.swap(o.view, html, (root) => {
       let rs, busy = false;
+      if(o.purpose!=='login')RIA.setMark(1);
       const otp = RIA.bindOtp(root, () => submit());
       rs = RIA.resend(root, () => RIA.run(o.card,async()=>{await RIA.api.sendOtp(o.mobile,o.purpose);otp.error('');otp.clear();},'در حال ارسال کد تازه…'));
       $('#back', root).addEventListener('click', () => { rs.stop(); o.onBack(); });
@@ -23,7 +24,7 @@
         if (code.length < RIA.cfg.otpLength) { otp.error('کد را کامل وارد کنید.'); return; }
         busy = true; RIA.formError($('#of', root), '');
         try {
-          await RIA.run(o.card, () => RIA.api.verifyOtp(o.mobile, code, o.purpose), 'در حال بررسی کد…', $('#vb', root));
+          await RIA.run(o.card, () => RIA.api.verifyOtp(o.mobile, code, o.purpose), 'در حال بررسی کد…', $('#vb', root), o.purpose==='login');
           rs.stop(); busy = false; o.onVerified();
         } catch (e) {
           busy = false;

@@ -60,9 +60,19 @@
     };
   };
   /* اجرای یک عملیات ناهمگام با دکمه یا پوششِ لودینگ */
-  RIA.run = async function (card, promiseFn, msg, btn) {
-    const b = RIA.busy(card, msg); if (btn) btn.disabled = true;
-    try { return await promiseFn(); } finally { b.done(); if (btn) btn.disabled = false; }
+  RIA.run = async function(card,promiseFn,msg,btn,final=false) {
+    if(card.dataset.pending)throw new Error('درخواست قبلی هنوز تمام نشده است.');
+    let loading;
+    if(final){card.dataset.pending='true';card.setAttribute('aria-busy','true');loading=RIA.centerMark(msg);}
+    else loading=RIA.busy(card,msg);
+    if(btn)btn.disabled=true;
+    try {
+      // Start the request immediately; reserve only enough display time for the R journey.
+      if(!final)return await promiseFn();
+      const [result]=await Promise.allSettled([Promise.resolve().then(promiseFn),new Promise(r=>setTimeout(r,RIA.reduce()?700:2400))]);
+      if(result.status==='rejected')throw result.reason;
+      return result.value;
+    }finally{if(btn)btn.disabled=false;await loading.done();delete card.dataset.pending;card.removeAttribute('aria-busy');}
   };
 
   /* ---------- خطای فرم ---------- */
@@ -135,11 +145,6 @@
     return { stop: () => clearInterval(t) };
   };
 
-  /* ---------- ورود اجتماعی (نمایشی) ---------- */
-  const GOOGLE = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M21.6 12.2c0-.7-.1-1.3-.2-1.9H12v3.700h5.400a4.600 4.600 0 0 1-2 3v2.500h3.200c1.900-1.700 3-4.300 3-7.300z"/><path fill="#34A853" d="M12 22c2.700 0 5-.9 6.600-2.400l-3.200-2.500c-.9.600-2 1-3.400 1-2.600 0-4.800-1.800-5.600-4.100H3.100v2.600A10 10 0 0 0 12 22z"/><path fill="#FBBC05" d="M6.400 14c-.2-.6-.3-1.300-.3-2s.1-1.400.3-2V7.400H3.100a10 10 0 0 0 0 9.200z"/><path fill="#EA4335" d="M12 5.900c1.500 0 2.800.5 3.800 1.500l2.800-2.800A10 10 0 0 0 3.100 7.400L6.400 10c.8-2.300 3-4.100 5.600-4.100z"/></svg>';
-  RIA.socialHtml = (verb) => '<div class="or"><span>یا</span></div><div class="social"><button type="button" class="btn btn--social" data-social="google">' + GOOGLE + verb + ' با گوگل</button><button type="button" class="btn btn--social" data-social="github">' + RIA.icon('github') + verb + ' با گیت‌هاب</button></div>';
-  RIA.bindSocial = function(root){$$('[data-social]',root).forEach(b=>b.addEventListener('click',()=>RIA.formError($('form',root)||root,'ورود با گوگل و گیت‌هاب هنوز فعال نشده است. از شماره و رمز یا کد پیامکی استفاده کنید.')));};
-
   /* ---------- نمای موفقیت / ورود به داشبورد ---------- */
   RIA.successHtml = (o) => '<div class="done"><div class="done__art">' + RIA.icon(o.icon || 'check') + '</div><h1 data-focus>' + o.title + '</h1><p>' + o.text + '</p>' + (o.note ? '<div class="note">' + RIA.icon('info') + '<span>' + o.note + '</span></div>' : '') + o.actions + '</div>';
   RIA.enterDashboard = function (card, view, o) {
@@ -157,9 +162,9 @@
   /* ---------- پوستهٔ مشترک صفحه ---------- */
   RIA.shell = function (o) {
     document.getElementById('auth-root').innerHTML =
-      '<a class="skip" href="#view">رفتن به محتوا</a><main class="auth"><section class="auth__main"><header class="auth__top"><a class="brand" href="' + (o.home || '/') + '" aria-label="ResumeIt"><img class="brand__logo" src="/brand/resumeit-logo-v1.png" alt="ResumeIt" width="150" height="50"></a><a class="link link--sm" href="/">بازگشت به سایت</a></header>' +
+      '<a class="skip" href="#view">رفتن به محتوا</a><main class="auth"><section class="auth__main"><header class="auth__top"><a class="brand" href="' + (o.home || '/') + '" aria-label="ResumeIt"><span class="brand__name" dir="ltr">Resume<b>It</b></span></a><a class="link link--sm" href="/">بازگشت به سایت</a></header>' +
       '<div class="card" id="card"><div id="view"></div></div><footer class="auth__foot">' + (o.foot || '') + '</footer></section>' +
-      '<aside class="auth__art" aria-hidden="true"><div class="art"><div class="art__glow"></div><div class="art__logo"><img src="/brand/resumeit-mark-v1.png" alt="" width="180" height="180"></div><div class="art__card art__card--resume"><i class="av"></i><b></b><s></s><s></s><div class="tags"><u></u><u></u><u></u></div></div><div class="art__card art__card--links"><i class="av"></i><b></b><span></span><span></span><span class="hot"></span></div><div class="art__copy"><h2>' + o.artTitle + '</h2><p>' + o.artText + '</p></div></div></aside></main><div id="toast-root" class="toast-root" aria-live="polite"></div>';
+      '<aside class="auth__art" aria-hidden="true"><div class="art"><div class="art__glow"></div>' + RIA.markHtml() + '<div class="art__copy"><h2>' + o.artTitle + '</h2><p>' + o.artText + '</p></div></div></aside></main><div id="toast-root" class="toast-root" aria-live="polite"></div>';
     return { card: $('#card'), view: $('#view') };
   };
 })();

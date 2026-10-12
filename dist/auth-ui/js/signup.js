@@ -10,10 +10,10 @@ document.addEventListener('DOMContentLoaded', function () {
   function step1() {
     const html = RIA.stepper(LABELS, 1) + '<h1 data-focus>ساخت حساب</h1><p>با شمارهٔ موبایلت شروع کن؛ بعد از تأیید شماره، رمز عبور می‌گذاری.</p>' +
       '<form id="f" novalidate>' + RIA.mobileField({ value: mobile }) +
-      '<button type="submit" class="btn btn--primary btn--block" id="sb">دریافت کد تأیید</button></form>' + RIA.socialHtml('ثبت‌نام');
+      '<button type="submit" class="btn btn--primary btn--block" id="sb">دریافت کد تأیید</button></form>';
     RIA.swap(sh.view, html, (root) => {
       const m = RIA.bindMobile(root);
-      RIA.bindSocial(root);
+      RIA.watchMark(root,()=>RIA.isMobile(m.value())?1:0);
       $('#f', root).addEventListener('submit', async (e) => {
         e.preventDefault(); if(sh.card.dataset.pending)return; RIA.formError($('#f', root), '');
         const mob = m.validate(); if (!mob) return;
@@ -30,9 +30,10 @@ document.addEventListener('DOMContentLoaded', function () {
     const html = RIA.stepper(LABELS, 3) + '<h1 data-focus>یک رمز عبور بساز</h1><p>شمارهٔ <b class="ltr-inline">' + RIA.showMobile(mobile) + '</b> تأیید شد. حالا رمز ورودت را تعیین کن.</p><form id="f" novalidate>' + RIA.newPassHtml() + '<button type="submit" class="btn btn--primary btn--block" id="sb">ساخت حساب</button></form>';
     RIA.swap(sh.view, html, (root) => {
       const np = RIA.bindNewPass(root);
+      RIA.watchMark(root,()=>{const p=$('#np',root).value;return p.length>=8 && p.length<=128 && p===$('#np2',root).value?3:2;});
       $('#f', root).addEventListener('submit', async (e) => {
-        e.preventDefault(); RIA.formError($('#f', root), ''); if (!np.validate()) return;
-        try { await RIA.run(sh.card, () => RIA.api.setPassword(mobile, np.value(), 'signup'), 'در حال ساخت حساب…', $('#sb', root)); RIA.enterDashboard(sh.card, sh.view, { title: 'حسابت ساخته شد 🎉', text: 'خوش آمدی! حالا می‌توانی رزومه و صفحهٔ لینکت را بسازی.' }); }
+        e.preventDefault(); if(sh.card.dataset.pending)return; RIA.formError($('#f', root), ''); if (!np.validate()) return;
+        try { await RIA.run(sh.card, () => RIA.api.setPassword(mobile, np.value(), 'signup'), 'در حال ساخت حساب…', $('#sb', root), true); RIA.enterDashboard(sh.card, sh.view, { title: 'حسابت ساخته شد 🎉', text: 'خوش آمدی! حالا می‌توانی رزومه و صفحهٔ لینکت را بسازی.' }); }
         catch (er) { if (er.code === 'weak') np.setError(er.message); else RIA.handleError($('#f', root), er); }
       });
     });

@@ -12,6 +12,7 @@ document.addEventListener('DOMContentLoaded', function () {
       '<button type="submit" class="btn btn--primary btn--block" id="sb">ارسال کد بازیابی</button></form><div class="note">' + RIA.icon('shield') + '<span>تغییر رمز فقط پس از تأیید شماره انجام می‌شود و ورودهای قبلی حساب را می‌بندد.</span></div>';
     RIA.swap(sh.view, html, (root) => {
       const m = RIA.bindMobile(root);
+      RIA.watchMark(root,()=>RIA.isMobile(m.value())?1:0);
       $('#f', root).addEventListener('submit', async (e) => {
         e.preventDefault(); if(sh.card.dataset.pending)return; RIA.formError($('#f', root), ''); const mob = m.validate(); if (!mob) return;
         try { await RIA.run(sh.card, () => RIA.api.sendOtp(mob, 'reset'), 'در حال ارسال کد…', $('#sb', root)); mobile = mob; step2(); }
@@ -24,9 +25,10 @@ document.addEventListener('DOMContentLoaded', function () {
     const html = RIA.stepper(LABELS, 3) + '<h1 data-focus>رمز عبور تازه</h1><p>رمز جدیدی انتخاب کن که قبلاً جای دیگر استفاده نکرده‌ای.</p><form id="f" novalidate>' + RIA.newPassHtml() + '<button type="submit" class="btn btn--primary btn--block" id="sb">تغییر رمز عبور</button></form>';
     RIA.swap(sh.view, html, (root) => {
       const np = RIA.bindNewPass(root);
+      RIA.watchMark(root,()=>{const p=$('#np',root).value;return p.length>=8 && p.length<=128 && p===$('#np2',root).value?3:2;});
       $('#f', root).addEventListener('submit', async (e) => {
-        e.preventDefault(); RIA.formError($('#f', root), ''); if (!np.validate()) return;
-        try { await RIA.run(sh.card, () => RIA.api.setPassword(mobile, np.value(), 'reset'), 'در حال ذخیرهٔ رمز جدید…', $('#sb', root)); finish(); }
+        e.preventDefault(); if(sh.card.dataset.pending)return; RIA.formError($('#f', root), ''); if (!np.validate()) return;
+        try { await RIA.run(sh.card, () => RIA.api.setPassword(mobile, np.value(), 'reset'), 'در حال ذخیرهٔ رمز جدید…', $('#sb', root), true); finish(); }
         catch (er) { if (er.code === 'weak') np.setError(er.message); else RIA.handleError($('#f', root), er); }
       });
     });
