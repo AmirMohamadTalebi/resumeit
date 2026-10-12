@@ -22,7 +22,7 @@
 
   RI.registerPage('stats',{
     title:'آمار',
-    render(){return RI.pageHead({title:'آمار بازدید و کلیک',desc:'تعداد درخواست‌های بازدید و کلیک ثبت‌شده روی صفحه‌های عمومی؛ این اعداد شمارش افراد یکتا نیستند.'})+'<div class="statbar"><div class="segmented" id="range" role="group" aria-label="بازهٔ زمانی">'+[[7,'۷ روز'],[30,'۳۰ روز'],[90,'۹۰ روز']].map(([n,label])=>'<button type="button" data-r="'+n+'" aria-pressed="'+(n===7)+'">'+label+'</button>').join('')+'</div><button class="btn btn--soft" data-refresh>به‌روزرسانی</button></div><div id="sbody" aria-live="polite"></div>';},
+    render(){return RI.pageHead({title:'آمار بازدید و کلیک',desc:'هر مرورگر از هر صفحه در ۲۴ ساعت یک بازدید محسوب می‌شود؛ کلیک‌ها جدا شمرده می‌شوند. با پاک‌کردن کوکی یا مرورگر دیگر، بازدید تازه ثبت می‌شود.'})+'<div class="statbar"><div class="segmented" id="range" role="group" aria-label="بازهٔ زمانی">'+[[7,'۷ روز'],[30,'۳۰ روز'],[90,'۹۰ روز']].map(([n,label])=>'<button type="button" data-r="'+n+'" aria-pressed="'+(n===7)+'">'+label+'</button>').join('')+'</div><button class="btn btn--soft" data-refresh>به‌روزرسانی</button></div><div id="sbody" aria-live="polite"></div>';},
     mount(root){let n=7,active=true;const body=RI.$('#sbody',root);
       function paint(){if(!active)return;
         if(RI.statsRows===null){body.innerHTML=RI.empty({icon:'wifi',title:'آمار بارگذاری نشد',text:'اتصال را بررسی کن و به‌روزرسانی را بزن.'});return;}

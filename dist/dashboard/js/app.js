@@ -63,6 +63,7 @@
   async function navigate(id, opts) {
     if (!NAV.some(g => g.items.some(i => i[0] === id))) return;
     if (!(await RI.leaveGuard()) || !RI.keepDraft()) return;
+    window.resumeitPageLoading?.start(true);
     location.assign(RI.routeUrl(id, opts));
   }
 
@@ -109,7 +110,7 @@
     const user = await window.resumeitSession;
     if (!user) return;
     RI.restoreDraft(user.id);
-    try{await RI.loadDashboard();}catch(e){RI.$('#view').textContent=e.message;const retry=document.createElement('button');retry.className='btn';retry.textContent='تلاش دوباره';retry.addEventListener('click',()=>location.reload());RI.$('#view').appendChild(retry);return;}
+    try{await RI.loadDashboard();}catch(e){RI.$('#view').textContent=e.message;const retry=document.createElement('button');retry.className='btn';retry.textContent='تلاش دوباره';retry.addEventListener('click',()=>location.reload());RI.$('#view').appendChild(retry);document.dispatchEvent(new Event('ri:dashboard-ready'));return;}
     RI.applyAccount(user);
     buildShell();
     paintSave();
@@ -145,7 +146,8 @@
     const legacy = /^#\/([a-z]+)$/.exec(location.hash);
     if (legacy && NAV.some(g => g.items.some(i => i[0] === legacy[1]))) { location.replace(RI.routeUrl(legacy[1])); return; }
     RI.routeOpts = Object.fromEntries(new URLSearchParams(location.search));
-    render(document.body.dataset.page);
+    await render(document.body.dataset.page);
+    document.dispatchEvent(new Event('ri:dashboard-ready'));
   }
 
   RI.logout = async function () {

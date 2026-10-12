@@ -21,6 +21,9 @@ try{
  assert.equal((await request('publish',{revision:2,kind:'links'})).status,200);
  let r=await fetch(base+'/u/amir/'),html=await r.text();assert.equal(r.status,200);assert(html.includes('public@example.com'));assert(!html.includes('09129999999'));assert(!html.includes('<script>alert'));assert(html.includes('&lt;script&gt;'));
  r=await fetch(base+'/u/amir/links');html=await r.text();assert.equal(r.status,200);assert(html.includes('/u/amir/out/link1'));assert(!html.includes('SECRET_LINK'));
+ const seenCookie=r.headers.get('set-cookie');assert.match(seenCookie,/ri_seen_links=1; Path=\/u\/amir; HttpOnly; SameSite=Lax; Max-Age=86400/);
+ for(let i=0;i<3;i++){const refreshed=await fetch(base+'/u/amir/links',{headers:{Cookie:seenCookie.split(';')[0]}});assert.equal(refreshed.status,200);assert.equal(refreshed.headers.get('set-cookie'),null);}
+ assert.equal((await(await request('stats')).json()).rows.find(x=>x.event==='links').total,1);
  r=await fetch(base+'/u/amir/out/link1',{redirect:'manual'});assert.equal(r.status,302);assert.equal(r.headers.get('location'),'https://github.com/test');
  assert.equal((await fetch(base+'/u/amir/out/hidden',{redirect:'manual'})).status,404);
  r=await subRequest('/');assert.equal(r.status,200);assert(r.body.includes('//amir.resumeit.ir'));

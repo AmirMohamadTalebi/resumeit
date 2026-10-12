@@ -21,7 +21,14 @@ function dashboardHandler(database,auth){return async(req,res,pathname,origin)=>
     const c=page.content,esc=RI.esc,canonical=local?origin+base+(kind==='links'?'/links':''):root.protocol+'//'+slug+'.'+domain+(kind==='links'?'/links':'');
     const image=c.share.image||c.profile.avatar,ogImage=/^https:\/\//.test(image||'')?image:/^data:image\//.test(image||'')?canonical+'/share-image':null;
     const html='<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+esc(c.share.title||c.profile.name)+'</title><meta name="description" content="'+esc(c.share.desc||c.profile.bio)+'"><meta name="robots" content="'+(page.preferences.indexing?'index,follow':'noindex,nofollow')+'"><link rel="canonical" href="'+esc(canonical)+'"><meta property="og:title" content="'+esc(c.share.title||c.profile.name)+'"><meta property="og:description" content="'+esc(c.share.desc||c.profile.bio)+'"><meta property="og:url" content="'+esc(canonical)+'">'+(ogImage?'<meta property="og:image" content="'+esc(ogImage)+'">':'')+'<link rel="icon" href="/brand/favicon.svg"><link rel="stylesheet" href="/public-assets/tokens.css"><link rel="stylesheet" href="/public-assets/base.css"><link rel="stylesheet" href="/public-assets/preview.css"></head><body><main class="public-page">'+render(c,kind,page.preferences,base)+'</main></body></html>';
-    securityHeaders(res,origin,html);if(req.method==='GET')await database.recordMetric(page.id,kind);res.writeHead(200,{'Content-Type':'text/html; charset=utf-8'});res.end(req.method==='HEAD'?undefined:html);return true;
+    securityHeaders(res,origin,html);
+    res.setHeader('Cache-Control','private, no-store');
+    if(req.method==='GET'){
+      const marker='ri_seen_'+kind,seen=(req.headers.cookie||'').split(';').some(c=>c.trim()===marker+'=1');
+      // shortcut: cookie-based visits; clearing cookies or using another browser starts a new visit.
+      if(!seen){await database.recordMetric(page.id,kind);res.setHeader('Set-Cookie',marker+'=1; Path='+(base||'/')+'; HttpOnly; SameSite=Lax; Max-Age=86400'+(origin.startsWith('https:')?'; Secure':''));}
+    }
+    res.writeHead(200,{'Content-Type':'text/html; charset=utf-8'});res.end(req.method==='HEAD'?undefined:html);return true;
   }
   if(assets.has(pathname)&&(pathname.startsWith('/public-assets/')||pathname.endsWith('.woff2'))&&req.method==='GET'){res.writeHead(200,{'Content-Type':pathname.endsWith('.woff2')?'font/woff2':'text/css; charset=utf-8'});res.end(fs.readFileSync(path.join(__dirname,'../../dist',assets.get(pathname))));return true;}
   if(!pathname.startsWith('/api/dashboard/'))return false;
