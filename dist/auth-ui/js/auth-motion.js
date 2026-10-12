@@ -27,7 +27,7 @@
     update();
   };
   function travel(mark, from, to) {
-    if (RIA.reduce()) return Promise.resolve();
+    if (RIA.reduce() || !from.width || !from.height || !to.width || !to.height) return Promise.resolve();
     const animation = mark.animate([
       { transform: 'translate(' + (from.left-to.left) + 'px,' + (from.top-to.top) + 'px) scale(' + from.width/to.width + ')' },
       { transform: 'none' }

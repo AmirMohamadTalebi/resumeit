@@ -23,7 +23,7 @@
 .auth-loading-line::after{content:'';display:block;width:100%;height:100%;background:#89624a;transform:scaleX(0);transform-origin:left;animation:auth-loading-fill 1500ms cubic-bezier(.4,0,.2,1) infinite}
 .auth-transit.is-leaving{opacity:0;pointer-events:none}
 @keyframes auth-loading-fill{0%{transform:scaleX(0)}85%,100%{transform:scaleX(1)}}
-@media(max-width:960px){.auth__art{display:block;grid-row:1;padding:16px 16px 0}.art{min-height:0;height:260px;padding:12px;gap:0;border-radius:24px}.auth-mark-home{width:240px}.art__copy{display:none}.auth__main{padding-top:16px}.auth__top{gap:16px}}
+@media(max-width:960px){.auth__art{display:none}.auth__main{padding-top:16px}.auth__top{gap:16px}}
 @media(prefers-reduced-motion:reduce){.auth-piece.card{transition:none}.auth-loading-line::after{animation:none;transform:scaleX(.55)}.auth-transit{transition:none}}
 
 .input::-ms-reveal,.input::-ms-clear{display:none}
