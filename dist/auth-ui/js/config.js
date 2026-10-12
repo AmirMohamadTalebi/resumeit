@@ -1,0 +1,1 @@
+window.RIA=window.RIA||{};RIA.cfg={dashboardUrl:'/dashboard/',loginUrl:'/login/',signupUrl:'/register/',forgotUrl:'/forgot-password/',otpLength:6,otpResendSeconds:60,slowNoticeMs:4000};

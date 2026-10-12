@@ -1,0 +1,96 @@
+/* ResumeIt — توکن‌های طراحی
+   آبی یخی مات = ساختار و سطح‌ها | سفید یخی = فضا و شیشه | قهوه‌ای گرم = اقدام، پیشرفت و «حس انسانی» */
+
+@font-face {
+  font-family: 'Vazirmatn';
+  src: url('../assets/fonts/Vazirmatn.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  /* آبی یخی */
+  --ice-50: #f7fafb;
+  --ice-100: #edf3f6;
+  --ice-200: #dbe7ed;
+  --ice-300: #bfd3dd;
+  --ice-400: #97b5c5;
+  --ice-500: #6f93a8;
+  --ice-600: #52788d;
+  --ice-700: #3d5c6f;
+  --ice-800: #2b4251;
+  --ice-900: #1c2d38;
+
+  /* قهوه‌ای گرم */
+  --bro-50: #faf4ee;
+  --bro-100: #f2e6da;
+  --bro-200: #e4cdb6;
+  --bro-300: #d2ae89;
+  --bro-400: #bd8e64;
+  --bro-500: #a47248;
+  --bro-600: #875a36;
+  --bro-700: #6b4629;
+  --bro-800: #4d3320;
+
+  /* متن */
+  --ink: #1d2c36;
+  --ink-2: #435867;
+  --ink-3: #5a7080;
+  --ink-inv: #ffffff;
+
+  /* معنایی */
+  --ok: #3f7d63;
+  --ok-bg: #e2f1ea;
+  --warn: #9a6a1f;
+  --warn-bg: #f8ecd4;
+  --err: #b0443a;
+  --err-bg: #f9e3e0;
+  --info: var(--ice-700);
+  --info-bg: var(--ice-100);
+
+  /* شیشه */
+  --glass-bg: rgba(255, 255, 255, 0.58);
+  --glass-bg-strong: rgba(255, 255, 255, 0.82);
+  --glass-bd: rgba(255, 255, 255, 0.75);
+  --glass-line: rgba(82, 120, 141, 0.16);
+  --glass-blur: blur(20px) saturate(1.45);
+  --glass-sh: inset 0 1px 0 rgba(255, 255, 255, 0.9), inset 0 -1px 0 rgba(82, 120, 141, 0.1),
+    0 14px 34px -16px rgba(43, 66, 81, 0.28);
+
+  /* شکل */
+  --r-xs: 8px;
+  --r-sm: 12px;
+  --r-md: 18px;
+  --r-lg: 26px;
+  --r-xl: 34px;
+  --r-pill: 999px;
+
+  /* فاصله */
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 24px;
+  --s-6: 32px;
+  --s-7: 48px;
+  --s-8: 72px;
+
+  /* سایه */
+  --sh-1: 0 1px 2px rgba(43, 66, 81, 0.08), 0 2px 8px -2px rgba(43, 66, 81, 0.08);
+  --sh-2: 0 6px 20px -8px rgba(43, 66, 81, 0.25);
+  --sh-3: 0 24px 60px -20px rgba(43, 66, 81, 0.4);
+
+  /* حرکت */
+  --ease: cubic-bezier(0.22, 0.8, 0.28, 1);
+  --ease-spring: cubic-bezier(0.34, 1.4, 0.5, 1);
+  --t-fast: 140ms;
+  --t-med: 260ms;
+  --t-slow: 480ms;
+
+  --font: 'Vazirmatn', 'Vazir', Tahoma, 'Segoe UI', system-ui, sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', Menlo, Consolas, 'Vazirmatn', monospace;
+
+  --sidebar-w: 276px;
+  --bottom-nav-h: 68px;
+}

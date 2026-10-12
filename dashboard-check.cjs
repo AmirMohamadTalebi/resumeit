@@ -25,9 +25,10 @@ const { chromium } = require(process.env.PLAYWRIGHT_PATH || 'C:/Users/win/.cache
     page.on('response', response => { if (response.status() >= 400) failed.push(response.url()); });
     await page.goto(base + '/dashboard/');
     await page.waitForURL('**/login/');
-    await page.locator('[name="phone"]').fill('09120000001');
-    await page.locator('[name="password"]').fill('DemoOnly123!');
-    await page.locator('#continue').click();
+    await page.locator('#mobile').fill('09120000001');
+    await page.locator('#pass').fill('DemoOnly123!');
+    await page.locator('#sb').click();
+    await page.locator('#goDash').click();
     await page.waitForURL('**/dashboard/');
     await page.waitForSelector('#page-title');
     assert.equal(await page.locator('#demoBtn').count(), 0);
