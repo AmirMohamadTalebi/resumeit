@@ -6,11 +6,18 @@ if (form) {
   const resend=document.querySelector('#resend');
   let stage='phone', method='password', challengeId='', registrationToken='', phone='', retryAt=0, busy=false;
   const mode=form.dataset.mode, purpose=mode==='register'?'register':mode==='forgot-password'?'reset':'login';
+  const spinner=document.createElement('span'),buttonLabel=document.createElement('span');
+  spinner.className='loading loading-spinner loading-sm';spinner.setAttribute('aria-hidden','true');spinner.hidden=true;
+  submit.replaceChildren(spinner,buttonLabel);
+  function renderSubmit() {
+    spinner.hidden=!busy;
+    buttonLabel.textContent=busy?'لطفاً صبر کن':stage==='password'?(mode==='forgot-password'?'ذخیرهٔ رمز و ورود':'ساخت حساب'):stage==='code'?'تأیید کد و ادامه':mode==='login'&&method==='password'?'ورود به حساب':'دریافت کد تأیید';
+  }
   function showStage(next) {
     stage=next;
     form.querySelectorAll('[data-stage]').forEach(field=>{field.hidden=field.dataset.stage!==next;field.disabled=field.hidden;});
     document.querySelectorAll('[data-stage-label]').forEach(label=>label.classList.toggle('active',label.dataset.stageLabel===next));
-    submit.textContent=next==='password'?(mode==='forgot-password'?'ذخیرهٔ رمز و ورود':'ساخت حساب'):next==='code'?'تأیید کد و ادامه':mode==='login'&&method==='password'?'ورود به حساب':'دریافت کد تأیید';
+    renderSubmit();
     document.querySelector('#login-password')?.toggleAttribute('hidden',method!=='password');
     if(mode==='login') form.elements.password.required=method==='password';
     if(mode==='login') form.elements.password.disabled=method!=='password'||next!=='phone';
@@ -31,11 +38,11 @@ if (form) {
   }
   async function run(action) {
     if(busy) return;
-    busy=true;submit.disabled=true;form.setAttribute('aria-busy','true');message.textContent='در حال انجام درخواست…';tick();
+    busy=true;submit.disabled=true;submit.setAttribute('aria-busy','true');form.setAttribute('aria-busy','true');message.textContent='';renderSubmit();tick();
     document.querySelectorAll('[data-method],#edit-phone').forEach(button=>button.disabled=true);
     try { await action(); }
     catch(error) { message.textContent=error.message==='Failed to fetch'?'ارتباط با سرور برقرار نشد؛ دوباره امتحان کن.':error.message; }
-    finally { busy=false;submit.disabled=false;form.removeAttribute('aria-busy');document.querySelectorAll('[data-method],#edit-phone').forEach(button=>button.disabled=false);tick(); }
+    finally { busy=false;submit.disabled=false;submit.removeAttribute('aria-busy');form.removeAttribute('aria-busy');renderSubmit();document.querySelectorAll('[data-method],#edit-phone').forEach(button=>button.disabled=false);tick(); }
   }
   async function requestCode() {
     const result=await api('otp/request',{phone,purpose});

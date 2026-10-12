@@ -9,6 +9,26 @@ const {chromium}=require(process.env.PLAYWRIGHT_PATH||'C:/Users/win/.cache/codex
  try {
   browser=await chromium.launch({channel:'msedge',headless:true});
   const page=await browser.newPage({viewport:{width:1360,height:960},reducedMotion:'reduce'});const errors=[];page.on('pageerror',e=>errors.push(e.message));
+  const loadingOut=path.join(__dirname,'artifacts','auth');fs.mkdirSync(loadingOut,{recursive:true});
+  let releasePage;const pageHeld=new Promise(r=>releasePage=r);
+  await page.route('**/auth.js',async route=>{await pageHeld;await route.continue();});
+  await page.goto(base+'/login/',{waitUntil:'commit'});await page.locator('.ri-page-loading').waitFor({state:'visible'});
+  assert.equal(await page.locator('.ri-mark-fold').evaluate(e=>getComputedStyle(e).animationName),'none');
+  await page.screenshot({path:path.join(loadingOut,'page-loading-desktop.png')});
+  await page.setViewportSize({width:390,height:844});await page.screenshot({path:path.join(loadingOut,'page-loading-mobile.png')});
+  releasePage();await page.waitForLoadState('load');assert.equal(await page.locator('.ri-page-loading').count(),0);await page.unroute('**/auth.js');
+  await page.setViewportSize({width:1360,height:960});
+  await page.goto(base+'/register/');await page.locator('[name="phone"]').fill('09120000021');
+  let releaseRequest;const requestHeld=new Promise(r=>releaseRequest=r);
+  await page.route('**/api/auth/otp/request',async route=>{await requestHeld;await route.abort('failed');});
+  await page.locator('#continue').click();await page.locator('#continue[aria-busy=true]').waitFor();
+  assert(await page.locator('#continue .loading-spinner').isVisible());assert(await page.locator('#continue').isDisabled());assert.equal(await page.locator('#form-message').innerText(),'');
+  assert.equal(await page.locator('#continue .loading-spinner').evaluate(e=>getComputedStyle(e).maskImage),'none');
+  await page.screenshot({path:path.join(loadingOut,'request-loading-desktop.png'),fullPage:true});
+  await page.setViewportSize({width:390,height:844});await page.screenshot({path:path.join(loadingOut,'request-loading-mobile.png'),fullPage:true});
+  releaseRequest();await page.waitForFunction(()=>!document.querySelector('#continue').disabled);
+  assert(await page.locator('#continue .loading-spinner').isHidden());assert.match(await page.locator('#form-message').innerText(),/ارتباط/);await page.unroute('**/api/auth/otp/request');
+  await page.setViewportSize({width:1360,height:960});
   await page.goto(base+'/register/');await page.locator('[name="phone"]').fill('۰۹۱۲۰۰۰۰۰۲۱');await page.locator('#continue').click();
   await page.locator('[data-stage="code"]').waitFor({state:'visible'});
   await page.locator('.sms-help summary').click();assert.match(await page.locator('.sms-help').innerText(),/مسدود/);
@@ -35,6 +55,6 @@ const {chromium}=require(process.env.PLAYWRIGHT_PATH||'C:/Users/win/.cache/codex
   await page.locator('[name="otp"]').fill(codes.get('09120000023'));await page.locator('#continue').click();await page.locator('[data-stage="password"]').waitFor({state:'visible'});
   await page.locator('[name="password"]').fill('ResetPassword123!');await page.locator('[name="confirm"]').fill('ResetPassword123!');await page.locator('#continue').click();await page.waitForURL('**/dashboard/');
   assert.deepEqual(errors,[]);
-  console.log('PASS: real registration UI, Persian digits, wrong code, password mismatch, dashboard session, login method switching, SMS help, mobile layout and no browser errors.');
+  console.log('PASS: page and request loading, reduced motion, network failure recovery, registration, password recovery, code login, mobile layout and no browser errors.');
  }finally{if(browser)await browser.close();await new Promise(r=>server.close(r));}
 })().catch(error=>{console.error(error);process.exitCode=1;});
