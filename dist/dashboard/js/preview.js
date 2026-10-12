@@ -52,7 +52,7 @@
 
   function brandFoot() {
     if (!RI.state.account.brand) return '';
-    return '<footer class="pv-foot"><span>ساخته‌شده با</span> <b class="ltr-inline">ResumeIt</b></footer>';
+    return '<footer class="pv-foot"><span>ساخته‌شده با</span> <span class="ri-logo"><img src="/brand/resumeit-logo-v1.png" alt="ResumeIt" width="2172" height="724"></span></footer>';
   }
   function nav(c, active) {
     const nm = c.profile.name.trim() || 'نام شما';

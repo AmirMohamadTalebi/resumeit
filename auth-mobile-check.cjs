@@ -34,6 +34,7 @@ const {chromium} = require(process.env.PLAYWRIGHT_PATH || 'C:/Users/win/.cache/c
       let release;
       const held = new Promise(r=>release=r);
       await page.route('**/api/auth/otp/request',async r=>{await held;await r.continue();});
+      if(await page.locator('#accept-terms').count())await page.locator('#accept-terms').check();
       const start=Date.now();
       await page.locator('#sb').tap();
       await page.waitForFunction(()=>window.smsCalls===1);

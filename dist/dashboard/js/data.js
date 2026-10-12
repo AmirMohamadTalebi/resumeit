@@ -45,7 +45,7 @@
       v: { bg: 'linear-gradient(160deg,#f2e6da,#faf4ee)', ink: '#3b2a1d', muted: '#7a6552', btnBg: '#875a36', btnInk: '#ffffff', btnBd: 'transparent', accent: '#52788d' } },
     { id: 'graphite', name: 'گرافیت', cats: ['dev'], access: 'free', desc: 'ساده و خطی برای صفحهٔ کاری.', btn: 'outline',
       v: { bg: '#f3f5f6', ink: '#111417', muted: '#5d6670', btnBg: 'transparent', btnInk: '#111417', btnBd: '#111417', accent: '#52788d' } },
-    { id: 'midnight', name: 'نیمه‌شب', cats: ['dev', 'creator'], access: 'buy', price: 39000, desc: 'تیره با درخشش ملایم آبی.', btn: 'glass',
+    { id: 'midnight', name: 'نیمه‌شب', cats: ['dev', 'creator'], access: 'buy', price: 45000, desc: 'تیره با درخشش ملایم آبی.', btn: 'glass',
       v: { bg: 'linear-gradient(160deg,#10181e,#1d3d5c)', ink: '#eaf3fb', muted: '#9fbad2', btnBg: 'rgba(255,255,255,.1)', btnInk: '#eaf3fb', btnBd: 'rgba(255,255,255,.22)', accent: '#8fd0ff' } },
     { id: 'paper', name: 'کاغذ', cats: ['student', 'creator'], access: 'sub', desc: 'برگه‌ای با سایهٔ نرم؛ ویژهٔ اشتراک.', btn: 'paper',
       v: { bg: '#f7f3ec', ink: '#2e2a24', muted: '#756c5f', btnBg: '#ffffff', btnInk: '#2e2a24', btnBd: '#e5dac7', accent: '#8a5f3c' } },
@@ -57,8 +57,8 @@
     { id: 'vazir', name: 'وزیرمتن', access: 'free', stack: "'Vazirmatn', Tahoma, sans-serif", hw: 800, note: 'فونت پیش‌فرض و رایگان' },
     { id: 'system', name: 'سیستمی', access: 'free', stack: "Tahoma, 'Segoe UI', system-ui, sans-serif", hw: 700, note: 'سبک و سریع' },
     { id: 'naskh', name: 'نسخ کلاسیک', access: 'sub', stack: "'Noto Naskh Arabic','Scheherazade New','Times New Roman',serif", hw: 700, note: 'ویژهٔ اشتراک' },
-    { id: 'display', name: 'تیتر درشت', access: 'buy', price: 29000, stack: "'Vazirmatn', Tahoma, sans-serif", hw: 900, spacing: '-0.02em', note: 'خرید یک‌بارهٔ نمایشی' },
-    { id: 'code', name: 'کد و متن', access: 'buy', price: 19000, stack: "'Vazirmatn', ui-monospace, Consolas, monospace", hw: 700, note: 'خرید یک‌بارهٔ نمایشی' },
+    { id: 'display', name: 'تیتر درشت', access: 'buy', price: 45000, stack: "'Vazirmatn', Tahoma, sans-serif", hw: 900, spacing: '-0.02em', note: 'خرید یک‌بارهٔ نمایشی' },
+    { id: 'code', name: 'کد و متن', access: 'buy', price: 45000, stack: "'Vazirmatn', ui-monospace, Consolas, monospace", hw: 700, note: 'خرید یک‌بارهٔ نمایشی' },
   ];
 
   RI.PALETTES = [
@@ -67,14 +67,14 @@
     { id: 'cocoa', name: 'قهوه‌ای گرم', access: 'free', colors: ['#875a36', '#52788d'] },
     { id: 'sage', name: 'سبز مات', access: 'sub', colors: ['#5e8b7e', '#b08457'] },
     { id: 'navy', name: 'سرمه‌ای', access: 'sub', colors: ['#34508a', '#c79a6b'] },
-    { id: 'sand', name: 'شنی', access: 'buy', price: 15000, colors: ['#b08457', '#5b7482'] },
+    { id: 'sand', name: 'شنی', access: 'buy', price: 45000, colors: ['#b08457', '#5b7482'] },
   ];
 
   /* ---------- پلن‌ها (مبلغ‌ها نمایشی‌اند) ---------- */
   RI.PLANS = {
-    q: { id: 'q', name: 'سه‌ماهه', months: 3, price: 99000 },
-    h: { id: 'h', name: 'شش‌ماهه', months: 6, price: 169000, badge: 'محبوب' },
-    y: { id: 'y', name: 'سالانه', months: 12, price: 289000, badge: 'دامنهٔ ir رایگان' },
+    q: { id: 'q', name: 'سه‌ماهه', months: 3, price: 285000 },
+    h: { id: 'h', name: 'شش‌ماهه', months: 6, price: 510000, badge: 'محبوب' },
+    y: { id: 'y', name: 'سالانه', months: 12, price: 900000, badge: 'دامنهٔ ir رایگان' },
   };
   RI.PLAN_FEATURES = [
     ['یک رزومه و یک صفحهٔ لینک', true, true],

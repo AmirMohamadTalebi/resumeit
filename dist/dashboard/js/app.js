@@ -9,7 +9,7 @@
     { group: 'حساب', items: [['billing', 'اشتراک و خریدها', 'card'], ['settings', 'تنظیمات حساب', 'settings']] },
   ];
   const BOTTOM = [['home', 'خانه', 'home'], ['resume', 'رزومه', 'resume'], ['links', 'لینک‌ها', 'link'], ['themes', 'ظاهر', 'palette'], ['publish', 'انتشار', 'globe']];
-  const LOGO = '<svg class="brand__mark" viewBox="0 0 48 48" aria-hidden="true"><defs><linearGradient id="lg1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#bfd3dd"/><stop offset="1" stop-color="#52788d"/></linearGradient><linearGradient id="lg2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#d2ae89"/><stop offset="1" stop-color="#875a36"/></linearGradient></defs><rect x="5" y="4" width="26" height="34" rx="9" fill="url(#lg1)"/><rect x="5.5" y="4.5" width="25" height="33" rx="8.5" fill="none" stroke="#fff" stroke-opacity=".7"/><path d="M12 14h12M12 20h12M12 26h7" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/><rect x="22" y="18" width="21" height="26" rx="8" fill="url(#lg2)" opacity=".95"/><path d="M29 31a4 4 0 0 0 5.600 0l2-2a4 4 0 0 0-5.600-5.600M34 30a4 4 0 0 0-5.600 0" fill="none" stroke="#fff" stroke-width="2.200" stroke-linecap="round" transform="translate(-.5 1)"/></svg>';
+  const LOGO = '<span class="ri-logo"><img src="/brand/resumeit-logo-v1.png" alt="ResumeIt" width="2172" height="724"></span>';
 
   let current = null, cleanup = null, navToken = 0;
 
@@ -17,9 +17,9 @@
   function buildShell() {
     const acc = RI.state.account;
     RI.$('#sidebar').innerHTML =
-      '<div class="sidebar__glass"><div class="brand">' + LOGO + '<div><div class="brand__name">Resume<b>It</b></div><div class="brand__sub">استودیوی هویت شخصی</div></div></div>' +
+      '<div class="sidebar__glass"><div class="brand">' + LOGO + '</div>' +
       '<nav class="nav" aria-label="بخش‌های داشبورد">' + NAV.map((g) => '<div class="nav__group"><div class="nav__label">' + g.group + '</div>' + g.items.map((i) => '<a class="nav__item" href="#/' + i[0] + '" data-route="' + i[0] + '">' + RI.icon(i[2]) + '<span>' + i[1] + '</span></a>').join('') + '</div>').join('') + '</nav>' +
-      '<div class="sidebar__foot">' +
+      '<div class="sidebar__foot"><div class="ri-support-links"><a href="/about/">درباره ما</a><a href="/terms/">شرایط و حریم خصوصی</a><a href="/contact/">ارتباط با ما</a><a href="https://t.me/resumeit_ir" target="_blank" rel="noopener">کانال تلگرام</a><a href="https://t.me/amirtalebi_x" target="_blank" rel="noopener">تلگرام پشتیبانی</a></div>' +
       '<button type="button" class="account-btn" id="accountBtn" aria-haspopup="menu"><img class="avatar" id="accAvatar" alt="" src=""><span><span class="account-btn__name" id="accName"></span><br><span class="account-btn__sub">حساب نمونه</span></span></button></div></div>';
     RI.$('#bottomNav').innerHTML = BOTTOM.map((i) => '<a href="#/' + i[0] + '" data-route="' + i[0] + '">' + RI.icon(i[2]) + '<span>' + i[1] + '</span></a>').join('');
     paintAccount();

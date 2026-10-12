@@ -11,6 +11,8 @@
   const fa = new Intl.NumberFormat('fa-IR');
   RIA.fa = (n) => fa.format(n);
 
+  RIA.termsHtml = () => '<div class="terms-field"><label class="terms-check" for="accept-terms"><input class="checkbox checkbox-sm" id="accept-terms" type="checkbox" required aria-describedby="terms-error"><span><a class="link" href="/terms/" target="_blank" rel="noopener">شرایط استفاده و حریم خصوصی</a> را خوانده‌ام و می‌پذیرم.</span></label><p id="terms-error" role="alert" hidden>برای ادامه، شرایط استفاده و حریم خصوصی را تأیید کن.</p></div>';
+  RIA.requireTerms = root => {const input=$('#accept-terms',root);if(!input)return true;const valid=input.checked;$('#terms-error',root).hidden=valid;input.setAttribute('aria-invalid',String(!valid));if(!valid)input.focus();return valid;};
   /* ---------- ورودی‌ها ---------- */
   RIA.digits = (s) => String(s).replace(/[۰-۹]/g, (d) => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d)).replace(/[٠-٩]/g, (d) => '٠١٢٣٤٥٦٧٨٩'.indexOf(d));
   RIA.normMobile = (s) => { let v = RIA.digits(s).replace(/[\s\-()]/g, ''); v = v.replace(/^(\+98|0098)/, '0'); if (/^9\d{9}$/.test(v)) v = '0' + v; return v; };
@@ -45,7 +47,7 @@
       if(!container.isConnected)return;
       const buttons=[['google','گوگل'],['github','گیت‌هاب']].filter(([key])=>providers[key]===true);
       container.innerHTML=buttons.length?'<div class="or">یا با حساب دیگه‌ات</div><div class="social">'+buttons.map(([key,name])=>'<a class="btn btn--social" data-social="'+key+'" href="/api/auth/'+key+'/start">'+RIA.icon(key)+name+'</a>').join('')+'</div>':'';
-      container.hidden=!buttons.length;
+      container.hidden=!buttons.length;container.addEventListener('click',e=>{if(e.target.closest('[data-social]')&&!RIA.requireTerms(root))e.preventDefault();});
     } catch {container.hidden=true;}
   };
 
@@ -181,8 +183,8 @@
   /* ---------- پوستهٔ مشترک صفحه ---------- */
   RIA.shell = function (o) {
     document.getElementById('auth-root').innerHTML =
-      '<a class="skip" href="#view">رفتن به محتوا</a><main class="auth"><section class="auth__main"><header class="auth__top"><a class="brand" href="' + (o.home || '/') + '" aria-label="ResumeIt"><span class="brand__name" dir="ltr">Resume<b>It</b></span></a><a class="link link--sm" href="/">بازگشت به سایت</a></header>' +
-      '<div class="card" id="card"><div id="view"></div></div><footer class="auth__foot">' + (o.foot || '') + '</footer></section>' +
+      '<a class="skip" href="#view">رفتن به محتوا</a><main class="auth"><section class="auth__main"><header class="auth__top"><a class="brand" href="' + (o.home || '/') + '" aria-label="ResumeIt"><span class="ri-logo"><img src="/brand/resumeit-logo-v1.png" alt="ResumeIt" width="2172" height="724"></span></a><a class="link link--sm" href="/">بازگشت به سایت</a></header>' +
+      '<div class="card" id="card"><div id="view"></div></div><footer class="auth__foot">' + (o.foot || '') + '<div class="ri-support-links"><a href="/about/">درباره ما</a><a href="/terms/">شرایط و حریم خصوصی</a><a href="/contact/">ارتباط با ما</a><a href="https://t.me/resumeit_ir" target="_blank" rel="noopener">کانال تلگرام</a><a href="https://t.me/amirtalebi_x" target="_blank" rel="noopener">تلگرام پشتیبانی</a></div></footer></section>' +
       '<aside class="auth__art" aria-hidden="true"><div class="art"><div class="art__glow"></div>' + RIA.markHtml() + '<div class="art__copy"><h2>' + o.artTitle + '</h2><p>' + o.artText + '</p></div></div></aside></main><div id="toast-root" class="toast-root" aria-live="polite"></div>';
     return { card: $('#card'), view: $('#view') };
   };

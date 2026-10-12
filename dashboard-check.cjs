@@ -28,7 +28,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_PATH || 'C:/Users/win/.cache
     await page.waitForURL('**/login/');
     await page.locator('#mobile').fill('09120000001');
     await page.locator('#pass').fill('DemoOnly123!');
-    await page.locator('#sb').click();
+    await page.locator('#accept-terms').check();await page.locator('#sb').click();
     await page.locator('#goDash').click();
     await page.waitForURL('**/dashboard/');
     await page.waitForSelector('#page-title');
