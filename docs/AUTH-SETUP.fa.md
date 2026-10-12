@@ -1,7 +1,7 @@
 # تنظیم ورود اجتماعی و جایگذاری پیامک
 
-مسیرهای ورود گوگل و گیت‌هاب پیاده شده‌اند و دکمه‌ها وقتی تنظیمات کامل هاست موجود باشد در ورود و ثبت‌نام نمایش داده می‌شوند
-برای تنظیمات OAuth، `PUBLIC_ORIGIN=https://mintra.ir` هم باید روی هاست باشد
+مسیرهای ورود گوگل و گیت‌هاب پیاده شده‌اند و دکمه‌ها در ورود و ثبت‌نام نمایش داده می‌شوند؛ فعال‌شدن آن‌ها به تنظیمات کامل هاست وابسته است
+برای تنظیمات OAuth، `PUBLIC_ORIGIN=https://resumeit.ir` هم باید روی هاست باشد
 پس از استقرار، `/api/auth/providers` باید برای هر دو سرویس مقدار true نشان دهد
 
 ## گوگل
@@ -11,8 +11,8 @@
 در Audience نوع External را انتخاب کن و در حالت Testing، ایمیل خودت را به Test users اضافه کن
 در Clients یک OAuth Client از نوع Web application بساز
 
-- Authorized JavaScript origins: `https://mintra.ir`
-- Authorized redirect URIs: `https://mintra.ir/api/auth/google/callback`
+- Authorized JavaScript origins: `https://resumeit.ir`
+- Authorized redirect URIs: `https://resumeit.ir/api/auth/google/callback`
 - اطلاعات مورد نیاز برای ورود: `openid email profile`
 
 Client ID و Client Secret را در متغیرهای محیطی هاست با نام‌های `GOOGLE_CLIENT_ID` و `GOOGLE_CLIENT_SECRET` بگذار
@@ -23,8 +23,8 @@ Secret را در چت یا گیت‌هاب قرار نده
 در https://github.com/settings/developers بخش OAuth Apps، گزینهٔ New OAuth App را بزن
 
 - Application name: `ResumeIt`
-- Homepage URL: `https://mintra.ir`
-- Authorization callback URL: `https://mintra.ir/api/auth/github/callback`
+- Homepage URL: `https://resumeit.ir`
+- Authorization callback URL: `https://resumeit.ir/api/auth/github/callback`
 
 Client ID و Client Secret را در متغیرهای محیطی هاست با نام‌های `GITHUB_CLIENT_ID` و `GITHUB_CLIENT_SECRET` بگذار
 با این چهار متغیر، دکمه‌های ورود واقعی فعال می‌شوند و callback به داشبورد برمی‌گردد
@@ -58,11 +58,11 @@ OAuth از PKCE، state تک‌مصرف با اعتبار ۱۰ دقیقه و ک�
 #CODE#
 تا ۲ دقیقه معتبره
 این کد رو به کسی نده
-@mintra.ir ##CODE#
+@resumeit.ir ##CODE#
 ```
 
 در خط آخر، اولین # علامت فرمت مرورگر است و #CODE# متغیر قالب SMS.ir است
-برای نمونه، با کد 123456 باید خروجی دقیقاً `@mintra.ir #123456` باشد
+برای نمونه، با کد 123456 باید خروجی دقیقاً `@resumeit.ir #123456` باشد
 پیش از استفاده، پیش‌نمایش پنل را بررسی کن که این خروجی را بسازد و خط آخر را عوض نکند
 اگر پنل این ترکیب را نپذیرفت، باید قالب را با متغیر جداگانهٔ مورد تأیید پشتیبانی SMS.ir تنظیم کنیم
 بعد از ویرایش قالب، تأیید دوبارهٔ پنل لازم است و تا آن زمان جایگذاری دستی کار می‌کند

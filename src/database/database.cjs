@@ -21,6 +21,7 @@ async function openDatabase(options) {
     ...require('./otp.cjs')(context),
     ...require('./sessions.cjs')(context),
     ...require('./profiles.cjs')(context),
+    ...require('./dashboard.cjs')(context),
     ...require('./migration.cjs')(context),
     close: () => pool.end(),
   };

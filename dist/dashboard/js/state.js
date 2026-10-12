@@ -1,10 +1,10 @@
-/* پیش‌نویس در sessionStorage همین تب نگهداری می‌شود؛ ذخیرهٔ سرور و انتشار عمومی هنوز متصل نیستند. */
+/* ذخیرهٔ حساب روی سرور، پشتیبان تب و انتشار مستقل صفحه‌ها */
 (function () {
   'use strict';
   const RI = (window.RI = window.RI || {});
 
   RI.state = {
-    content: RI.seed('partial'),
+    content: RI.seed('empty'),
     billing: RI.seedBilling('free'),
     account: RI.seedAccount(),
     pub: {
@@ -17,7 +17,7 @@
   RI.S = () => RI.state;
   RI.C = () => RI.state.content;
 
-  // shortcut: drafts live only in this browser tab; connect server storage before supporting other devices.
+  // Keep a tab backup for migration; MySQL is authoritative once the account has a saved revision.
   let draftKey;
   function validateDraft(value, sample, key = '') {
     if (sample === null) {
@@ -43,6 +43,7 @@
       const draft = JSON.parse(sessionStorage.getItem(draftKey));
       if (draft && draft.content && draft.content.profile && draft.pub) {
         const content = validateDraft(draft.content, RI.seed('full'));
+        content.resumeTemplates = RI.validateResumeValues ? RI.validateResumeValues(draft.content.resumeTemplates || {}) : {};
         const publication = validateDraft(draft.pub, RI.state.pub);
         if (content.sections.some(s => !RI.seed('empty').sections.some(known => known.key === s.key))) throw new Error('Invalid section');
         RI.state.content = content; RI.state.pub = publication;
@@ -54,7 +55,7 @@
     try {
       sessionStorage.setItem(draftKey, JSON.stringify({ content: JSON.parse(RI.saved), pub: RI.state.pub }));
       return true;
-    } catch { RI.toast('فضای ذخیرهٔ این تب کافی نیست؛ صفحه را ترک نکنید و حجم عکس‌ها را کاهش دهید.', { kind: 'error' }); return false; }
+    } catch { if(RI.revision)return true;RI.toast('ذخیرهٔ پشتیبان این تب انجام نشد؛ اطلاعات را روی حساب ذخیره کن.', { kind: 'error' }); return false; }
   };
   RI.clearDraft = () => { try { sessionStorage.removeItem(draftKey); } catch {} };
 
@@ -70,19 +71,14 @@
     const ui = RI.state.ui;
     if (ui.saving) return false;
     ui.saving = true; ui.saveError = false; RI.emit('save');
-    await RI.sleep(ui.sim.slow ? 1600 : 650);
-    ui.saving = false;
-    if (ui.sim.failNext) {
-      ui.sim.failNext = false; ui.saveError = true; RI.emit('save');
-      RI.toast('ذخیره نشد؛ اتصال برقرار نبود. دوباره تلاش کنید.', { kind: 'error' });
-      return false;
-    }
-    const previous = RI.saved;
-    RI.saved = JSON.stringify(RI.state.content);
-    if (!RI.keepDraft()) { RI.saved = previous; ui.saveError = true; RI.emit('save'); return false; }
-    ui.dirty = false; ui.savedAt = Date.now();
-    RI.emit('save');
-    return true;
+    const snapshot=JSON.stringify(RI.C()),indexing=RI.state.account.indexing;
+    try {
+      const doc=await RI.dashboardRequest('save',{revision:RI.revision,content:JSON.parse(snapshot),preferences:RI.state.account});
+      RI.revision=doc.revision;RI.saved=JSON.stringify(doc.content);RI.savedSlug=doc.slug||'';
+      if(snapshot===JSON.stringify(RI.C())&&indexing===RI.state.account.indexing){RI.state.content=doc.content;Object.assign(RI.state.account,doc.preferences);ui.dirty=false;}
+      ui.savedAt=Date.now();RI.keepDraft();return true;
+    }catch(e){ui.saveError=true;RI.toast(e.message,{kind:'error'});return false;}
+    finally{ui.saving=false;RI.emit('save');}
   };
 
   RI.revert = function () {
@@ -131,16 +127,15 @@
     if (/^-|-$/.test(s)) return { state: 'invalid', msg: 'نام صفحه نباید با خط تیره شروع یا تمام شود.' };
     if (/--/.test(s)) return { state: 'invalid', msg: 'دو خط تیرهٔ پشت‌سرهم مجاز نیست.' };
     const own = (RI.savedSlug || '');
-    if (RI.TAKEN_SLUGS.indexOf(s) > -1 && s !== own) return { state: 'taken', msg: 'این نام را کاربر دیگری گرفته است.' };
-    return { state: 'ok', msg: 'این نام آزاد است.' };
+    if (RI.TAKEN_SLUGS.indexOf(s) > -1 && s !== own) return { state: 'taken', msg: 'این نام رزرو شده است.' };
+    return { state: 'ok', msg: 'نام معتبر است؛ آزاد بودن آن هنگام ذخیره بررسی می‌شود.' };
   };
   RI.savedSlug = RI.state.content.slug;
   RI.suggestSlugs = (s) => [s + '-dev', s + '-' + (new Date().getFullYear() % 100), 'the-' + s].filter((x) => RI.slugCheck(x).state === 'ok');
   RI.urls = function () {
     const sl = RI.C().slug || 'username';
-    const dom = RI.C().domain;
-    const host = dom.status === 'connected' && dom.value ? dom.value : sl + '.' + RI.DOMAIN;
-    return { resume: host, links: host + '/links', base: sl + '.' + RI.DOMAIN };
+    const host = 'https://' + sl + '.' + RI.DOMAIN.toLowerCase();
+    return { resume: host, links: host + '/links', base: sl + '.' + RI.DOMAIN, fallbackResume:location.origin+'/u/'+sl+'/',fallbackLinks:location.origin+'/u/'+sl+'/links' };
   };
 
   /* ---------- پیشرفت و چک‌لیست ---------- */
@@ -182,9 +177,7 @@
       {id:'account-first',req:true,label:'نام حساب کامل شده',done:!!RI.state.account.firstName,route:'settings'},
       {id:'account-last',req:true,label:'نام خانوادگی کامل شده',done:!!RI.state.account.lastName,route:'settings'},
       {id:'account-phone',req:true,label:'شماره موبایل تأیید شده',done:RI.state.account.mobileVerified&&!!RI.state.account.mobile,route:'settings'},
-      { id: 'name', req: true, label: 'نام و عنوان حرفه‌ای وارد شده', done: !!(p.name.trim() && p.title.trim()), route: 'resume', step: 'profile' },
-      { id: 'contact', req: true, label: 'دست‌کم یک راه تماس عمومی', done: c.contacts.some((x) => x.public && x.value.trim()), route: 'resume', step: 'contacts' },
-      { id: 'body', req: true, label: 'حداقل یک بخش محتوایی پر شده (مهارت، تجربه، تحصیلات یا پروژه)', done: hasBody, route: 'resume', step: 'skills' },
+      ...RI.resumeRequirements(c),
       { id: 'slug', req: true, label: 'نام صفحهٔ معتبر و آزاد', done: slug.state === 'ok', route: 'publish', anchor: 'slug' },
       { id: 'avatar', req: false, label: 'عکس پروفایل', done: !!p.avatar, route: 'resume', step: 'profile' },
       { id: 'bio', req: false, label: 'معرفی کوتاه', done: p.bio.trim().length >= 40, route: 'resume', step: 'profile' },
@@ -206,43 +199,24 @@
   /* ---------- نسخهٔ منتشرشده ---------- */
   RI.pubData = function (k) {
     const c = RI.C();
-    if (k === 'resume') return { slug: c.slug, profile: c.profile, contacts: c.contacts, skills: c.skills, experience: c.experience, education: c.education, projects: c.projects, certs: c.certs, languages: c.languages, socials: c.socials, sections: c.sections, theme: { resume: c.theme.resume, font: c.theme.font, palette: c.theme.palette, radius: c.theme.radius }, share: c.share };
+    if (k === 'resume') return { slug: c.slug, profile: c.profile, contacts: c.contacts, skills: c.skills, experience: c.experience, education: c.education, projects: c.projects, certs: c.certs, languages: c.languages, socials: c.socials, sections: c.sections, resumeTemplates: c.resumeTemplates, theme: { resume: c.theme.resume, font: c.theme.font, palette: c.theme.palette, radius: c.theme.radius }, share: c.share };
     return { slug: c.slug, links: c.links, name: c.profile.name, bio: c.profile.bio, avatar: c.profile.avatar, theme: { links: c.theme.links, font: c.theme.font, linksPalette: c.theme.linksPalette } };
   };
   RI.pubDirty = function (k) { const s = RI.state.pub[k]; return s.status === 'published' && JSON.stringify(RI.pubData(k)) !== s.snap; };
 
-  /* انتشار نمایشی: فقط پیشرفت را شبیه‌سازی می‌کند */
+  /* انتشار آخرین محتوای ذخیره‌شده روی سرور */
   RI.publish = async function (k, onStep) {
     const eligibility=await RI.accountRequest('publication-check');
     if(!eligibility.canPublish){RI.toast('قبل از انتشار '+eligibility.missing.join('، ')+' رو در تنظیمات کامل کن',{kind:'error'});throw new Error('account-incomplete');}
     const steps = ['بررسی اطلاعات صفحه', 'ساخت نسخهٔ جدید', 'آماده‌سازی آدرس عمومی'];
-    for (let i = 0; i < steps.length; i++) {
-      onStep && onStep(i, steps);
-      await RI.sleep(RI.state.ui.sim.slow ? 1200 : 650);
-    }
-    if (RI.state.ui.sim.failNext) { RI.state.ui.sim.failNext = false; throw new Error('publish-failed'); }
-    const s = RI.state.pub[k];
-    s.status = 'published'; s.version += 1; s.at = Date.now(); s.snap = JSON.stringify(RI.pubData(k));
-    RI.savedSlug = RI.C().slug;
+    onStep && onStep(0,steps);
+    if(RI.state.ui.dirty||!RI.revision){if(!await RI.save())throw new Error('ابتدا تغییرات را ذخیره کن');}
+    onStep && onStep(1,steps);
+    const doc=await RI.dashboardRequest('publish',{revision:RI.revision,kind:k});
+    RI.revision=doc.revision;RI.state.pub=doc.pub;RI.savedSlug=doc.slug;
     onStep && onStep(steps.length, steps);
     RI.emit('pub');
   };
-  RI.unpublish = function (k) { const s = RI.state.pub[k]; s.status = 'draft'; s.snap = null; RI.emit('pub'); };
+  RI.unpublish = async function (k) {const doc=await RI.dashboardRequest('unpublish',{revision:RI.revision,kind:k});RI.revision=doc.revision;RI.state.pub=doc.pub;RI.emit('pub');};
 
-  /* ---------- حالت‌های نمایشی (برای تیم طراحی و بک‌اند) ---------- */
-  RI.applyDemo = function (d) {
-    const ui = RI.state.ui;
-    if (d.profile) { ui.profile = d.profile; RI.state.content = RI.seed(d.profile); RI.saved = JSON.stringify(RI.state.content); RI.savedSlug = RI.state.content.slug; ui.dirty = false; }
-    if (d.plan) { ui.plan = d.plan; RI.state.billing = RI.seedBilling(d.plan); }
-    if (d.pubDemo) {
-      ui.pubDemo = d.pubDemo;
-      ['resume', 'links'].forEach((k) => {
-        const s = RI.state.pub[k];
-        if (d.pubDemo === 'published') { s.status = 'published'; s.version = 3; s.at = Date.now() - 864e5 * 2; s.snap = JSON.stringify(RI.pubData(k)); }
-        else { s.status = 'draft'; s.version = 0; s.at = null; s.snap = null; }
-      });
-    }
-    if (d.sim) Object.assign(ui.sim, d.sim);
-    RI.emit('save'); RI.emit('demo');
-  };
 })();

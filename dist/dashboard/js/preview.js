@@ -3,6 +3,7 @@
   'use strict';
   const RI = (window.RI = window.RI || {});
   const esc = RI.esc;
+  const socialUrl=s=>RI.isUrl(s.handle)?RI.normUrl(s.handle):({github:'https://github.com/',linkedin:'https://linkedin.com/in/',telegram:'https://t.me/',instagram:'https://instagram.com/',twitter:'https://x.com/',youtube:'https://youtube.com/@'}[s.platform]||'https://resumeit.ir/')+encodeURIComponent(s.handle.replace(/^@/,''));
 
   RI.LINK_BGS = [
     { id: 'tpl', name: 'طبق قالب' },
@@ -54,9 +55,9 @@
     if (!RI.state.account.brand) return '';
     return '<footer class="pv-foot"><span>ساخته‌شده با</span> <span class="ri-logo"><img src="/brand/resumeit-logo-v1.png" alt="ResumeIt" width="2172" height="724"></span></footer>';
   }
-  function nav(c, active) {
+  function nav(c, active, base) {
     const nm = c.profile.name.trim() || 'نام شما';
-    return '<nav class="pv-nav" aria-label="منوی صفحه"><span class="pv-nav__brand">' + esc(nm) + '</span><span class="pv-nav__links"><a href="#" data-pv-go="resume" class="' + (active === 'resume' ? 'is-on' : '') + '">رزومه</a><a href="#" data-pv-go="links" class="' + (active === 'links' ? 'is-on' : '') + '">لینک‌ها</a></span></nav>';
+    return '<nav class="pv-nav" aria-label="منوی صفحه"><span class="pv-nav__brand">' + esc(nm) + '</span><span class="pv-nav__links"><a href="' + esc(base === undefined ? '#' : base + '/') + '" data-pv-go="resume" class="' + (active === 'resume' ? 'is-on' : '') + '">رزومه</a><a href="' + esc(base === undefined ? '#' : base + '/links') + '" data-pv-go="links" class="' + (active === 'links' ? 'is-on' : '') + '">لینک‌ها</a></span></nav>';
   }
 
   const SEC_TITLES = { skills: ['مهارت‌ها', 'sparkle'], experience: ['تجربه‌های کاری', 'briefcase'], education: ['تحصیلات', 'book'], projects: ['پروژه‌ها و نمونه‌کارها', 'code'], certs: ['دوره‌ها، گواهی‌ها و افتخارات', 'award'], languages: ['زبان‌ها', 'language'] };
@@ -68,7 +69,7 @@
     if (key === 'skills') inner = '<ul class="pv-chips">' + items.map((s) => '<li>' + esc(s.name) + dots(s.level) + '</li>').join('') + '</ul>';
     if (key === 'experience') inner = '<ol class="pv-tl">' + items.map((x) => '<li><b>' + esc(x.role) + '</b><span class="pv-sub">' + esc(x.org) + ' · ' + esc(when(x)) + '</span>' + (x.desc ? '<p>' + esc(x.desc) + '</p>' : '') + '</li>').join('') + '</ol>';
     if (key === 'education') inner = '<ol class="pv-tl">' + items.map((x) => '<li><b>' + esc(x.degree) + '</b><span class="pv-sub">' + esc(x.school) + ' · ' + esc(when(x)) + '</span>' + (x.desc ? '<p>' + esc(x.desc) + '</p>' : '') + '</li>').join('') + '</ol>';
-    if (key === 'projects') inner = '<div class="pv-proj">' + items.map((x) => '<article><div class="pv-proj__img" style="' + esc(RI.bg(x.image) || 'background:var(--pv-line)') + '"></div><div class="pv-proj__body"><b>' + esc(x.title) + '</b><p>' + esc(x.desc) + '</p>' + (x.url ? '<span class="pv-url ltr">' + esc(x.url) + '</span>' : '') + '</div></article>').join('') + '</div>';
+    if (key === 'projects') inner = '<div class="pv-proj">' + items.map((x) => '<article><div class="pv-proj__img" style="' + esc(RI.bg(x.image) || 'background:var(--pv-line)') + '"></div><div class="pv-proj__body"><b>' + esc(x.title) + '</b><p>' + esc(x.desc) + '</p>' + (x.url ? '<a class="pv-url ltr" data-pv-link="1" href="'+esc(RI.isUrl(x.url)?RI.normUrl(x.url):'#')+'" rel="noopener noreferrer">' + esc(x.url) + '</a>' : '') + '</div></article>').join('') + '</div>';
     if (key === 'certs') inner = '<ul class="pv-list">' + items.map((x) => '<li><b>' + esc(x.title) + '</b><span class="pv-sub">' + esc(x.issuer) + (x.year ? ' · ' + esc(x.year) : '') + '</span></li>').join('') + '</ul>';
     if (key === 'languages') inner = '<ul class="pv-list pv-list--inline">' + items.map((x) => '<li><b>' + esc(x.name) + '</b><span class="pv-sub">' + LV(x.level) + '</span></li>').join('') + '</ul>';
     return '<section class="pv-sec pv-sec--' + key + '"><h3>' + esc(SEC_TITLES[key][0]) + '</h3>' + inner + '</section>';
@@ -78,8 +79,10 @@
     o = o || {};
     const theme = Object.assign({}, c.theme, o.theme || {});
     const t = RI.findTemplate('resume', theme.resume);
+    const spec = RI.resumeSpec(theme.resume), templateValues = RI.resumeValues(c, theme.resume);
+    if (RI.RESUME_RENDERERS[theme.resume]) return RI.RESUME_RENDERERS[theme.resume](c, { theme, spec, values: templateValues, publicBase: o.publicBase });
     const p = c.profile;
-    const vis = (k) => { const s = c.sections.find((x) => x.key === k); return !s || s.visible; };
+    const vis = (k) => { const s = c.sections.find((x) => x.key === k); return spec.sections.includes(k) && (!s || s.visible); };
     const contacts = vis('contacts') ? c.contacts.filter((x) => x.public && x.value.trim()) : [];
     const socials = vis('socials') ? c.socials : [];
     const ICON = { email: 'mail', phone: 'phone', website: 'globe' };
@@ -88,14 +91,15 @@
       '<h1 class="pv-name">' + (p.name.trim() ? esc(p.name) : '<span class="pv-ph">نام شما</span>') + '</h1>' +
       '<p class="pv-title">' + (p.title.trim() ? esc(p.title) : '<span class="pv-ph">عنوان حرفه‌ای یا تحصیلی</span>') + '</p>' +
       (p.location ? '<p class="pv-loc">' + RI.icon('pin') + esc(p.location) + '</p>' : '') +
-      (contacts.length ? '<ul class="pv-contacts">' + contacts.map((x) => '<li>' + RI.icon(ICON[x.type] || 'link') + '<span class="ltr">' + esc(x.value) + '</span></li>').join('') + '</ul>' : '') +
-      (socials.length ? '<ul class="pv-socials">' + socials.map((s) => '<li title="' + esc(s.platform) + '">' + RI.icon(s.platform) + '<span class="ltr">' + esc(s.handle) + '</span></li>').join('') + '</ul>' : '') + '</div>';
+      (contacts.length ? '<ul class="pv-contacts">' + contacts.map((x) => '<li>' + RI.icon(ICON[x.type] || 'link') + '<a class="ltr" data-pv-link="1" href="' + esc(x.type==='email'&&RI.isEmail(x.value)?'mailto:'+x.value:x.type==='phone'?'tel:'+x.value.replace(/[^+0-9]/g,''):RI.isUrl(x.value)?RI.normUrl(x.value):'#') + '" rel="noopener noreferrer">' + esc(x.value) + '</a></li>').join('') + '</ul>' : '') +
+      (socials.length ? '<ul class="pv-socials">' + socials.map((s) => '<li title="' + esc(s.platform) + '"><a data-pv-link="1" href="'+esc(socialUrl(s))+'" rel="noopener noreferrer">' + RI.icon(s.platform) + '<span class="ltr">' + esc(s.handle) + '</span></a></li>').join('') + '</ul>' : '') + '</div>';
     const order = c.sections.map((s) => s.key).filter((k) => SEC_TITLES[k] && vis(k));
-    const body = order.map((k) => bodySection(k, c)).join('');
+    const extras = spec.fields.filter(f => f.public === true && RI.resumeValue(templateValues.fields || {}, f)).map(f => '<section class="pv-sec"><h2>' + esc(f.label) + '</h2><p>' + esc(f.type === 'checkbox' ? 'بله' : RI.resumeValue(templateValues.fields || {}, f)) + '</p></section>').join('');
+    const body = order.map((k) => bodySection(k, c)).join('') + extras;
     const bio = p.bio.trim() ? '<section class="pv-sec pv-about"><p>' + esc(p.bio) + '</p></section>' : '';
     const empty = !body && !bio ? '<section class="pv-sec pv-empty"><p>هنوز محتوایی اضافه نشده است. از بخش «رزومه» شروع کنید؛ این‌جا همان لحظه ساخته می‌شود.</p></section>' : '';
     const cover = '<div class="pv-cover" style="' + esc(RI.bg(p.cover) || 'background:var(--pv-hero)') + '"></div>';
-    return '<div class="pv pv--' + t.layout + (t.mono ? ' pv--mono' : '') + '" style="' + esc(RI.resumeVars(t, theme)) + '">' + nav(c, 'resume') + cover +
+    return '<div class="pv pv--' + t.layout + (t.mono ? ' pv--mono' : '') + '" style="' + esc(RI.resumeVars(t, theme)) + '">' + nav(c, 'resume', o.publicBase) + cover +
       '<div class="pv-wrap">' + idBlock + '<main class="pv-main">' + bio + body + empty + '</main></div>' + brandFoot() + '</div>';
   };
 
@@ -109,13 +113,13 @@
     const list = items.map((i) => {
       if (i.type === 'divider') return '<li class="lv-div"><span>' + esc(i.title) + '</span></li>';
       const feat = i.featured ? ' lv-btn--feat' : '';
-      return '<li><a href="#" class="lv-btn lv-btn--' + t.btn + feat + '" data-pv-link="1">' +
+      return '<li><a href="' + esc(o.publicBase === undefined ? RI.normUrl(i.url) : o.publicBase + '/out/' + i.id) + '" rel="noopener noreferrer" class="lv-btn lv-btn--' + t.btn + feat + '" data-pv-link="1">' +
         (i.image ? '<span class="lv-btn__img" style="' + esc(RI.bg(i.image)) + '"></span>' : '<span class="lv-btn__ico">' + RI.icon(i.icon || 'link') + '</span>') +
         '<span class="lv-btn__txt"><b>' + esc(i.title) + '</b>' + (i.featured ? '<small class="ltr">' + esc(RI.hostOf(i.url || '')) + '</small>' : '') + '</span>' + (i.featured ? '<span class="lv-btn__star">' + RI.icon('star') + '</span>' : '') + '</a></li>';
     }).join('');
-    const socials = c.socials.length ? '<ul class="lv-soc">' + c.socials.map((s) => '<li title="' + esc(s.platform) + '">' + RI.icon(s.platform) + '</li>').join('') + '</ul>' : '';
+    const socials = c.socials.length ? '<ul class="lv-soc">' + c.socials.map((s) => '<li title="' + esc(s.platform) + '"><a data-pv-link="1" href="'+esc(socialUrl(s))+'" rel="noopener noreferrer" aria-label="'+esc(s.platform)+'">' + RI.icon(s.platform) + '</a></li>').join('') + '</ul>' : '';
     const empty = !items.length ? '<li class="lv-empty">لینکی برای نمایش نیست؛ از «لینک‌ها» یک لینک فعال اضافه کنید.</li>' : '';
-    return '<div class="lv lv--' + (st.align === 'start' ? 'start' : 'center') + '" style="' + esc(RI.linksVars(t, theme, st)) + '">' + nav(c, 'links') +
+    return '<div class="lv lv--' + (st.align === 'start' ? 'start' : 'center') + '" style="' + esc(RI.linksVars(t, theme, st)) + '">' + nav(c, 'links', o.publicBase) +
       '<div class="lv-head"><img class="lv-avatar' + (st.ring ? ' lv-avatar--ring' : '') + '" src="' + esc(RI.avatarOf(p)) + '" alt="">' +
       '<h1>' + (name ? esc(name) : '<span class="pv-ph">نام شما</span>') + '</h1>' + (bio ? '<p>' + esc(bio) + '</p>' : '') + '</div>' +
       '<ul class="lv-list">' + list + empty + '</ul>' + socials + brandFoot() + '</div>';

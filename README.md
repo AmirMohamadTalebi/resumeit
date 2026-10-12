@@ -16,6 +16,7 @@ src/http/                Server, static files, request and browser protection
 src/auth/                Password, authentication routes, OAuth, OTP
 src/database/            MySQL connection, schema and store modules
 src/services/            SMS.ir adapter
+src/dashboard/           Dashboard validation, API and shared public rendering
 dist/                    Public pages and frontend assets
   auth-ui/               Shared authentication components
   dashboard/js/pages/    Independent dashboard page modules
@@ -27,9 +28,9 @@ docs/                    Setup, design and review reports
 
 ## Product boundaries
 
-Dashboard résumé and links drafts live in `sessionStorage` for the current tab and account; logout clears that tab's draft. Server résumé storage, public publication, domain connection, payment and analytics are not production services yet. Billing controls do not grant a paid plan. Account names, verified phone and linked social identities use the server. The settings password control opens the real OTP reset flow.
+Dashboard content and publication snapshots use MySQL with per-account revision checks and unique usernames. Published résumé and links pages render independently at `username.resumeit.ir` and `/links`; `/u/username/` on the main domain is also available. Public visits and link clicks feed daily request counts. Runflare wildcard DNS, project routing and HTTPS must be configured before subdomains work. Payment, independent custom domains and automatic notifications remain unavailable. See [dashboard implementation](docs/DASHBOARD-IMPLEMENTATION.fa.md).
 
-Current proposed plans: 3 months at 95,000 toman/month (285,000 total), 6 months at 85,000 (510,000 total), 12 months at 75,000 (900,000 total). Individual items start at 45,000 toman. Example profiles and statistics are illustrative.
+Current proposed plans: 3 months at 95,000 toman/month (285,000 total), 6 months at 85,000 (510,000 total), 12 months at 75,000 (900,000 total). Individual items start at 45,000 toman. Gallery preview profiles are illustrative; dashboard statistics use stored request counts.
 
 The Persian RTL visual identity remains icy blue, off-white and warm brown. Cards form the signature R. Reduced motion and responsive layouts are retained.
 

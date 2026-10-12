@@ -32,7 +32,7 @@
   /* ---------- نوار بالا و وضعیت ذخیره ---------- */
   function paintSave() {
     const ui = RI.state.ui, el = RI.$('#saveState'), btn = RI.$('#saveBtn');
-    let st = 'saved', txt = 'ذخیرهٔ موقت در این تب', ic = 'check';
+    let st = 'saved', txt = 'در حساب ذخیره شده', ic = 'check';
     if (ui.saving) { st = 'saving'; txt = 'در حال ذخیره…'; ic = 'refresh'; }
     else if (ui.saveError) { st = 'error'; txt = 'ذخیره نشد'; ic = 'alert'; }
     else if (ui.dirty) { st = 'dirty'; txt = 'تغییرات ذخیره‌نشده'; ic = 'edit'; }
@@ -44,7 +44,7 @@
   }
   RI.doSave = async function () {
     const ok = await RI.save();
-    if (ok) RI.toast('تغییرات در این تب ذخیره شد');
+    if (ok) RI.toast('تغییرات در حساب ذخیره شد');
     return ok;
   };
 
@@ -109,6 +109,7 @@
     const user = await window.resumeitSession;
     if (!user) return;
     RI.restoreDraft(user.id);
+    try{await RI.loadDashboard();}catch(e){RI.$('#view').textContent=e.message;const retry=document.createElement('button');retry.className='btn';retry.textContent='تلاش دوباره';retry.addEventListener('click',()=>location.reload());RI.$('#view').appendChild(retry);return;}
     RI.applyAccount(user);
     buildShell();
     paintSave();
@@ -134,7 +135,7 @@
       ], { up: true });
     });
     RI.delegate(document, 'click', '[data-copy]', (e, b) => RI.copy(b.dataset.copy));
-    RI.delegate(document, 'click', '[data-open-url]', (e, b) => RI.openPreview(/\/links$/.test(b.dataset.openUrl) ? 'links' : 'resume', { title: 'پیش‌نمایش ' + b.dataset.openUrl }));
+    RI.delegate(document, 'click', '[data-open-url]', (e, b) => {const k=/\/links$/.test(b.dataset.openUrl)?'links':'resume';if(RI.state.pub[k].status!=='published'){RI.toast('ابتدا این صفحه را منتشر کن',{kind:'info'});return;}window.open('https://'+(b.dataset.openUrl.replace(/^https?:\/\//,'')),'_blank','noopener,noreferrer');});
     RI.delegate(document, 'click', '[data-go], [data-route]', (e, b) => {
       if (e.ctrlKey || e.metaKey || e.shiftKey || e.altKey || e.button !== 0) return;
       e.preventDefault();

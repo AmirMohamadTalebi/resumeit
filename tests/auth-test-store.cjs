@@ -3,6 +3,7 @@ function testStore() {
   const users = new Map(), sessions = new Map(), attempts = new Map(), challenges = new Map(), smsLimits = new Map(), oauthStates = new Map(), identities=new Map();
   const byId=id=>[...users.values()].find(u=>u.id===id);
   return {
+    ...require('./dashboard-test-store.cjs')(byId,id=>{for(const [p,u]of users)if(u.id===id)users.delete(p);for(const [k,s]of sessions)if(s.id===id)sessions.delete(k);for(const [k,owner]of identities)if(owner===id)identities.delete(k);}),
     async createOAuthState(hash,provider,verifier,expires,ownerId=null) {oauthStates.set(hash,{provider,verifier,expires_at:expires,owner_id:ownerId});},
     async consumeOAuthState(hash,provider,now) {const row=oauthStates.get(hash);if(!row||row.provider!==provider)return null;oauthStates.delete(hash);return row.expires_at>now?row:null;},
     async socialAccount(provider,subject,name,ownerId=null) {const key=provider+':'+subject,existing=identities.get(key);if(existing){if(ownerId&&ownerId!==existing)throw new Error('Already linked');return {...byId(existing)};}const user=ownerId?byId(ownerId):{id:randomUUID(),phone:null,password_hash:null,name};if(!user)throw new Error('Missing');if(!ownerId)users.set(user.id,user);identities.set(key,user.id);return {...user};},

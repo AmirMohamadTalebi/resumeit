@@ -1,0 +1,17 @@
+const assert=require('node:assert/strict');
+const {RI,blank,render}=require('../src/dashboard/render.cjs');
+const model=require('../src/dashboard/model.cjs');
+const template=RI.RESUME_TEMPLATES.find(t=>t.id==='campus');
+template.editor={sections:['education'],bodySections:['education'],requiredSections:['education'],fields:[{key:'thesis',label:'پایان‌نامه',type:'textarea',max:80,required:true,public:true},{key:'note',label:'یادداشت خصوصی',type:'text'}],settings:[{key:'compact',label:'چیدمان فشرده',type:'checkbox',default:false}]};
+const c=blank();c.slug='student';c.theme.resume='campus';c.profile.name='دانشجو';c.profile.title='پژوهشگر';c.education=[{id:'edu1',degree:'کارشناسی',school:'دانشگاه',from:'',to:'',current:false,desc:''}];c.skills=[{id:'skill1',name:'HIDDEN_SKILL',level:3}];
+assert.throws(()=>model.ready(c,'resume'),/پایان‌نامه/);
+c.resumeTemplates={campus:{fields:{thesis:'<script>THESIS</script>',note:'PRIVATE_NOTE'},settings:{compact:true}}};
+const saved=model.content(c);model.ready(saved,'resume');
+let html=render(saved,'resume',{},'/u/student/');assert(html.includes('&lt;script&gt;THESIS'));assert(!html.includes('PRIVATE_NOTE'));assert(!html.includes('HIDDEN_SKILL'));
+c.theme.resume='glacier';const switched=model.content(c);assert.equal(switched.resumeTemplates.campus.fields.thesis,c.resumeTemplates.campus.fields.thesis);
+html=render(switched,'resume',{},'/u/student/');assert(!html.includes('THESIS'));assert(html.includes('HIDDEN_SKILL'));
+c.resumeTemplates.campus.settings.compact='yes';assert.throws(()=>model.content(c),/تنظیمات/);
+c.resumeTemplates.campus.settings.compact=true;c.resumeTemplates.campus.fields.unknown='x';assert.throws(()=>model.content(c),/تنظیمات/);delete c.resumeTemplates.campus.fields.unknown;
+c.resumeTemplates.campus.fields.thesis='x'.repeat(81);assert.throws(()=>model.content(c),/تنظیمات/);
+delete template.editor;
+console.log('Resume template contract: requirements, typed settings, private fields, escaped rendering and template switching passed');

@@ -2,6 +2,11 @@
    این استایل‌ها «طرح صفحهٔ منتشرشده» را شبیه‌سازی می‌کنند؛ سایت عمومی را تیم جداگانه می‌سازد. */
 
 /* ---------- میزبان و قاب ---------- */
+.public-page { container-type: inline-size; container-name: pv; }
+.public-page a { color: inherit; text-underline-offset: .2em; }
+.public-page .pv-foot .ri-logo { display: inline-flex; vertical-align: middle; }
+.public-page .pv-foot .ri-logo img { display: block; width: 96px; height: auto; }
+.public-page .pv-name, .public-page .pv-title, .public-page .pv-sec, .public-page .lv-head, .public-page .lv-btn { overflow-wrap: anywhere; }
 .pvhost { display: grid; gap: 12px; min-width: 0; }
 .pvhost__bar { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
 .pvhost__stage { display: flex; justify-content: center; min-width: 0; }

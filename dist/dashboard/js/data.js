@@ -3,8 +3,8 @@
   'use strict';
   const RI = (window.RI = window.RI || {});
 
-  RI.DOMAIN = 'ResumeIt.ir';
-  RI.TAKEN_SLUGS = ['admin', 'ali', 'resume', 'links', 'test', 'niloo', 'sara', 'dev', 'support', 'blog'];
+  RI.DOMAIN = 'resumeit.ir';
+  RI.TAKEN_SLUGS = ['www','admin','api','app','dashboard','auth','login','register','support','mail','smtp','ftp','cdn','assets','static','cname','blog','status','links','resume','demo'];
 
   /* ---------- شبکه‌های اجتماعی و آیکن لینک ---------- */
   RI.SOCIALS = [
@@ -90,6 +90,7 @@
   function blank() {
     return {
       slug: '',
+      resumeTemplates: {},
       profile: { name: '', title: '', bio: '', location: '', avatar: null, cover: null },
       contacts: [
         { id: 'c1', type: 'email', label: 'ایمیل', value: '', public: false },

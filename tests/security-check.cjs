@@ -66,7 +66,7 @@ const { publicOrigin } = require('../src/http/security.cjs');
     assert(sqlCalls.some(([sql,params]) => sql.includes('id=? AND phone=? FOR UPDATE') && params[0] === 'original-owner'));
     const sqlSession = require('../src/database/sessions.cjs')({execute:async()=>[],transaction:async action=>action({execute:async()=>[[{password_hash:'hash',phone:'09120000889'}]]})});
     assert.equal(await sqlSession.createSession('token','owner',Date.now()+60000,'hash','09120000888'),false);
-    const corrupted = JSON.parse(JSON.stringify(original)); corrupted.skills[0].id = '\"><script>';
+    const corrupted = JSON.parse(JSON.stringify(original)); corrupted.skills=[{id:'\"><script>',name:'Bad',level:3}];
     context.sessionStorage.getItem = () => JSON.stringify({content:corrupted,pub:RI.state.pub});
     RI.restoreDraft('test-owner'); assert.equal(RI.state.content, original);
     console.log('PASS: path aliases, auth guards, host/origin validation, malformed/oversized JSON, fail-closed errors, CSP and URL/image injection.');

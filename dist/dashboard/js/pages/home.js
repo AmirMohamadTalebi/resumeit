@@ -1,4 +1,4 @@
-/* خانهٔ داشبورد: میز کار، مسیر پیشرفت، وضعیت صفحه‌ها، راهنمای شروع، خلاصهٔ نمونه */
+/* خانهٔ داشبورد: میز کار، مسیر پیشرفت، وضعیت صفحه‌ها، راهنمای شروع، خلاصهٔ بازدیدها */
 (function () {
   'use strict';
   const RI = window.RI, esc = RI.esc;
@@ -46,15 +46,16 @@
   }
 
   function sampleStrip() {
-    const ser = RI.sampleSeries(7, 'home');
+    if(RI.statsRows===null)return '<p>آمار بارگذاری نشد؛ در <a href="/dashboard/stats/">بخش آمار</a> دوباره تلاش کن.</p>';
+    const ser = RI.metricSeries(7);
     const sum = (a) => a.reduce((x, y) => x + y, 0);
     const max = Math.max.apply(null, ser.views) || 1;
     const pts = ser.views.map((v, i) => [(i / (ser.views.length - 1)) * 200, 46 - (v / max) * 40]);
     const d = pts.map((p, i) => (i ? 'L' : 'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join(' ');
-    return '<section class="strip" aria-label="خلاصهٔ نمونه"><div class="strip__label"><span class="chip chip--sample">داده‌های نمونه</span><p>آمار واقعی بعد از انتشار صفحه‌ها این‌جا می‌آید فعلاً شکل نهایی را می‌بینید</p></div>' +
+    return '<section class="strip" aria-label="خلاصهٔ نمونه"><div class="strip__label"><span class="chip chip--sample">آمار صفحه‌های شما</span><p>بازدیدها و کلیک‌های ثبت‌شده در هفت روز اخیر</p></div>' +
       '<dl class="strip__nums"><div><dt>بازدید رزومه</dt><dd class="num">' + RI.fa(sum(ser.views)) + '</dd></div><div><dt>بازدید لینک‌ها</dt><dd class="num">' + RI.fa(sum(ser.linkViews)) + '</dd></div><div><dt>کلیک روی لینک‌ها</dt><dd class="num">' + RI.fa(sum(ser.clicks)) + '</dd></div></dl>' +
-      '<svg class="strip__spark" viewBox="0 0 200 50" preserveAspectRatio="none" role="img" aria-label="روند نمونهٔ بازدید ۷ روز"><path d="' + d + ' L200 50 L0 50Z" fill="rgba(164,114,72,.16)"/><path d="' + d + '" fill="none" stroke="var(--bro-500)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></svg>' +
-      '<a class="btn btn--ghost btn--sm" href="/dashboard/stats/" data-go="stats">' + RI.icon('chart') + 'همهٔ آمار نمونه</a></section>';
+      '<svg class="strip__spark" viewBox="0 0 200 50" preserveAspectRatio="none" role="img" aria-label="روند بازدید ۷ روز"><path d="' + d + ' L200 50 L0 50Z" fill="rgba(164,114,72,.16)"/><path d="' + d + '" fill="none" stroke="var(--bro-500)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></svg>' +
+      '<a class="btn btn--ghost btn--sm" href="/dashboard/stats/" data-go="stats">' + RI.icon('chart') + 'همهٔ آمار</a></section>';
   }
 
   function guide(open) {

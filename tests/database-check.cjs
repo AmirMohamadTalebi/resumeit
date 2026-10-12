@@ -99,6 +99,16 @@ try { process.loadEnvFile(); } catch (error) { if (error.code !== 'ENOENT') thro
     assert.equal(await database.registrationValid(oldGrant,now+60001,'reset'),false);
     await database.provisionAccount('09120000001',hash);
     assert.equal(await database.resetPasswordVerified(oldGrant,hash,now+60001),null);
+    const dashModel=require('../src/dashboard/model.cjs'),draft=dashModel.initial().content;draft.slug='mysql-profile';draft.profile.name='Persistent';draft.links.items=[{id:'one',type:'link',title:'Site',url:'https://example.com',icon:'link',active:true,featured:false}];
+    const owner=(await database.accountByPhone('09120000001')).id;
+    await database.mutateDashboard(owner,0,d=>{d.content=dashModel.content(draft);d.slug=draft.slug;});
+    await database.close();database=await openDatabase(config);assert.equal((await database.loadDashboard(owner)).content.profile.name,'Persistent');
+    await assert.rejects(database.mutateDashboard(owner,0,()=>{}),e=>e.status===409);
+    const rival=await database.provisionAccount('09120000008',hash);await assert.rejects(database.mutateDashboard(rival,0,d=>{d.slug=draft.slug;}),e=>e.status===409);
+    await database.mutateDashboard(owner,1,d=>{d.published.links=structuredClone(d.content);d.pub.links.status='published';});
+    assert.equal((await database.publicPage('mysql-profile','links')).content.links.items[0].title,'Site');
+    await database.recordMetric(owner,'links');await database.recordMetric(owner,'click','one');assert.equal((await database.dashboardStats(owner)).length,2);
+    await database.deleteAccount(rival);assert.equal(await database.accountByPhone('09120000008'),undefined);
     const { DatabaseSync } = require('node:sqlite');
     const filename = require('node:path').join(require('node:os').tmpdir(),name + '.sqlite');
     const source = new DatabaseSync(filename), oldId = randomUUID();

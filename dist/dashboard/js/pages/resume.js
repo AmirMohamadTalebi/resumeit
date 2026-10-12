@@ -3,17 +3,6 @@
   'use strict';
   const RI = window.RI, esc = RI.esc;
 
-  const STEPS = [
-    { id: 'profile', label: 'معرفی', icon: 'user', req: true },
-    { id: 'contacts', label: 'تماس', icon: 'phone', req: true },
-    { id: 'skills', label: 'مهارت‌ها', icon: 'sparkle' },
-    { id: 'experience', label: 'تجربه', icon: 'briefcase' },
-    { id: 'education', label: 'تحصیلات', icon: 'book' },
-    { id: 'projects', label: 'پروژه‌ها', icon: 'code' },
-    { id: 'certs', label: 'گواهی‌ها', icon: 'award' },
-    { id: 'languages', label: 'زبان‌ها', icon: 'language' },
-    { id: 'socials', label: 'شبکه‌ها', icon: 'globe' },
-  ];
   const SECTION_META = { contacts: ['اطلاعات تماس', 'phone', true], socials: ['شبکه‌های اجتماعی', 'globe'], skills: ['مهارت‌ها', 'sparkle'], experience: ['تجربه‌های کاری', 'briefcase'], education: ['تحصیلات', 'book'], projects: ['پروژه‌ها و نمونه‌کارها', 'code'], certs: ['دوره‌ها، گواهی‌ها و افتخارات', 'award'], languages: ['زبان‌ها', 'language'] };
 
   const yearField = { type: 'text', max: 20 };
@@ -57,6 +46,8 @@
         '<aside class="editor__side" aria-label="پیش‌نمایش زندهٔ رزومه"><div class="sticky"><div id="rpv"></div></div></aside></div>';
     },
     mount(root, ctx) {
+      const spec = RI.resumeSpec(RI.C().theme.resume);
+      const STEPS = [{ id: 'profile', label: 'معرفی', icon: 'user', req: true }, ...Object.keys(SECTION_META).filter(k => spec.sections.includes(k)).map(k => ({ id: k, label: SECTION_META[k][0], icon: SECTION_META[k][1], req: spec.requiredSections.includes(k) || k === 'contacts' })), ...(spec.fields.length || spec.settings.length ? [{ id: 'template', label: 'ویژهٔ قالب', icon: 'palette', req: spec.fields.concat(spec.settings).some(f => f.required) }] : [])];
       let tab = 'content', step = (ctx.opts && ctx.opts.step) || 'profile';
       if (!STEPS.some((s) => s.id === step)) step = 'profile';
       const body = RI.$('#rbody', root);
@@ -66,7 +57,7 @@
       const off = RI.on('change', refresh);
 
       function stepper() {
-        const done = STEPS.filter((s) => stepDone(s.id)).length;
+        const done = STEPS.filter((s) => s.id === 'template' ? RI.resumeRequirements(RI.C()).filter(x => x.step === 'template').every(x => x.done) : stepDone(s.id)).length;
         return '<div class="stepper"><div class="stepper__top"><b>' + RI.fa(done) + ' از ' + RI.fa(STEPS.length) + ' بخش پر شده</b><span class="chip chip--brown">' + RI.fa(RI.completion().pct) + '٪ کامل</span></div><div class="bar" aria-hidden="true"><i style="width:' + done / STEPS.length * 100 + '%"></i></div>' +
           '<div class="stepper__chips" role="tablist" aria-label="بخش‌های رزومه">' + STEPS.map((s) => '<button type="button" role="tab" class="schip' + (stepDone(s.id) ? ' is-done' : '') + '" data-step="' + s.id + '" aria-selected="' + (s.id === step) + '">' + RI.icon(stepDone(s.id) ? 'check' : s.icon) + '<span>' + s.label + '</span>' + (s.req ? '<em title="ضروری">*</em>' : '') + '</button>').join('') + '</div></div>';
       }
@@ -101,9 +92,18 @@
           (items.length ? '<ul class="rows" id="rlist">' + rows + '</ul>' : RI.empty({ icon: L.icon, title: L.empty[0], text: L.empty[1], action: '<button type="button" class="btn btn--primary" data-add>' + RI.icon('plus') + L.add + '</button>' })) + '</div>';
       }
 
+      function templatePanel() {
+        const t = RI.findTemplate('resume', RI.C().theme.resume), values = RI.resumeValues(RI.C());
+        return '<div class="panel"><div class="panel__head"><h2>اطلاعات و تنظیمات «' + esc(t.name) + '»</h2><p>اطلاعات هر قالب جدا ذخیره می‌شود؛ با تغییر قالب از بین نمی‌رود. فقط فیلدهایی که «عمومی» هستند نمایش داده می‌شوند.</p></div>' + ['fields', 'settings'].map(group => spec[group].map(f => {
+          const value = RI.resumeValue(values[group] || {}, f), id = 'template-' + group + '-' + f.key;
+          const attrs = ' id="' + esc(id) + '" data-template-group="' + group + '" data-template-key="' + esc(f.key) + '"';
+          const control = f.type === 'checkbox' ? '<input class="checkbox" type="checkbox"' + attrs + (value ? ' checked' : '') + '>' : f.type === 'select' ? '<select class="select input"' + attrs + '><option value="">انتخاب کن</option>' + f.options.map(o => '<option value="' + esc(o[0]) + '"' + (o[0] === value ? ' selected' : '') + '>' + esc(o[1]) + '</option>').join('') + '</select>' : f.type === 'textarea' ? '<textarea class="textarea input"' + attrs + ' maxlength="' + (f.max || 1000) + '">' + esc(value) + '</textarea>' : '<input class="input" type="text"' + attrs + ' maxlength="' + (f.max || 1000) + '" value="' + esc(value) + '">';
+          return '<div class="field"><label class="field__label" for="' + esc(id) + '">' + esc(f.label) + (f.required ? ' — ضروری' : ' — اختیاری') + (group === 'fields' && f.public === true ? ' — عمومی' : '') + '</label>' + control + '</div>';
+        }).join('')).join('') + '</div>';
+      }
       function layoutPanel() {
         const c = RI.C();
-        const rows = c.sections.map((s, i) => { const m = SECTION_META[s.key];
+        const rows = c.sections.filter(s => spec.sections.includes(s.key)).map((s, i) => { const m = SECTION_META[s.key];
           return '<li class="row' + (s.visible ? '' : ' is-off') + '" data-id="' + s.key + '"><span class="row__grip" aria-hidden="true">' + RI.icon('grip') + '</span><span class="row__ico">' + RI.icon(m[1]) + '</span><div class="row__main"><div class="row__title">' + m[0] + '</div><div class="row__sub">' + (s.key === 'contacts' ? 'ضروری برای انتشار' : (c[s.key] && c[s.key].length ? RI.fa(c[s.key].length) + ' مورد' : 'خالی؛ تا پر نشود نمایش داده نمی‌شود')) + '</div></div>' +
             '<div class="row__actions"><button type="button" class="btn btn--icon btn--ghost btn--sm" data-sup="' + s.key + '" aria-label="بالا" ' + (i === 0 ? 'disabled' : '') + '>' + RI.icon('up') + '</button><button type="button" class="btn btn--icon btn--ghost btn--sm" data-sdown="' + s.key + '" aria-label="پایین" ' + (i === c.sections.length - 1 ? 'disabled' : '') + '>' + RI.icon('down') + '</button></div>' +
             RI.switchHtml({ checked: s.visible, label: 'نمایش ' + m[0] }).replace('<input', '<input data-svis="' + s.key + '"') + '</li>'; }).join('');
@@ -113,7 +113,7 @@
       function paint(keepScroll) {
         if (tab === 'layout') body.innerHTML = layoutPanel();
         else {
-          body.innerHTML = stepper() + '<div id="panel">' + (step === 'profile' ? profilePanel() : step === 'contacts' ? contactsPanel() : listPanel(step)) + '</div>' + navButtons();
+          body.innerHTML = stepper() + '<div id="panel">' + (step === 'profile' ? profilePanel() : step === 'contacts' ? contactsPanel() : step === 'template' ? templatePanel() : listPanel(step)) + '</div>' + navButtons();
           bindPanel();
           const ul = RI.$('#rlist', body);
           if (ul) { const L = RI.C()[step]; RI.sortable(ul, { onReorder: (f, t) => RI.flip(ul, () => { RI.move(L, f, t); RI.touch(step); paint(); }) }); }
@@ -150,6 +150,13 @@
       RI.delegate(body, 'click', '[data-del]', (e, b) => remove(b.dataset.del));
       RI.delegate(body, 'click', '[data-up],[data-down]', (e, b) => shift(b.dataset.up || b.dataset.down, b.dataset.up ? -1 : 1));
       body.addEventListener('input', (e) => {
+        const el = e.target;
+        if (el.dataset.templateKey) {
+          const c = RI.C(); c.resumeTemplates = c.resumeTemplates || {};
+          const values = c.resumeTemplates[c.theme.resume] || (c.resumeTemplates[c.theme.resume] = { fields: {}, settings: {} });
+          values[el.dataset.templateGroup][el.dataset.templateKey] = el.type === 'checkbox' ? el.checked : el.value;
+          RI.touch('resumeTemplates'); return;
+        }
         const id = e.target.dataset.c; if (!id) return;
         const x = RI.C().contacts.find((k) => k.id === id); x.value = e.target.value; RI.touch('contacts');
         let m = '';
@@ -181,7 +188,7 @@
       function bindLayout() {
         const ul = RI.$('#slist', body); const secs = RI.C().sections;
         RI.delegate(ul, 'click', '[data-sup],[data-sdown]', (e, b) => { const k = b.dataset.sup || b.dataset.sdown, i = secs.findIndex((s) => s.key === k), j = i + (b.dataset.sup ? -1 : 1); if (j < 0 || j >= secs.length) return; RI.flip(ul, () => { RI.move(secs, i, j); RI.touch('sections'); paint(); }); });
-        RI.sortable(ul, { onReorder: (f, t) => RI.flip(ul, () => { RI.move(secs, f, t); RI.touch('sections'); paint(); }) });
+        RI.sortable(ul, { onReorder: (f, t) => RI.flip(ul, () => { const shown=secs.filter(x=>spec.sections.includes(x.key)); RI.move(secs, secs.indexOf(shown[f]), secs.indexOf(shown[t])); RI.touch('sections'); paint(); }) });
       }
       RI.delegate(root, 'click', '[data-tab]', (e, b) => { tab = b.dataset.tab; paint(); });
       RI.delegate(root, 'click', '[data-live]', () => RI.openPreview('resume'));

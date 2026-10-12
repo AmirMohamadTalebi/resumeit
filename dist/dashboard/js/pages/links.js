@@ -38,13 +38,13 @@
             (div ? '<span class="row__ico">' + RI.icon('divider') + '</span>' : x.image ? '<span class="row__thumb" style="' + esc(RI.bg(x.image)) + '"></span>' : '<span class="row__ico">' + RI.icon(x.icon || 'link') + '</span>') +
             '<div class="row__main"><div class="row__title">' + esc(x.title) + (div ? ' <span class="chip">جداکننده</span>' : '') + '</div>' +
             (div ? '' : '<div class="row__sub ltr">' + esc(x.url) + '</div>') + '</div>' +
-            (div ? '' : '<span class="clicks" title="تعداد کلیک نمونه">' + RI.icon('cursor') + '<b class="num">' + RI.fa(x.clicks || 0) + '</b><small>نمونه</small></span>') +
+            (div ? '' : '<span class="clicks" title="تعداد کلیک ثبت‌شده در ۹۰ روز اخیر">' + RI.icon('cursor') + '<b class="num">' + RI.fa(RI.linkClicks(x.id)) + '</b><small>کلیک</small></span>') +
             '<div class="row__actions">' + (div ? '' : '<button type="button" class="btn btn--icon btn--sm ' + (x.featured ? 'btn--primary' : 'btn--ghost') + '" data-feat="' + x.id + '" aria-pressed="' + !!x.featured + '" aria-label="برجسته" title="لینک برجسته">' + RI.icon('star') + '</button>') +
             '<button type="button" class="btn btn--icon btn--ghost btn--sm" data-up="' + x.id + '" aria-label="بالا" ' + (i === 0 ? 'disabled' : '') + '>' + RI.icon('up') + '</button><button type="button" class="btn btn--icon btn--ghost btn--sm" data-down="' + x.id + '" aria-label="پایین" ' + (i === items.length - 1 ? 'disabled' : '') + '>' + RI.icon('down') + '</button>' +
             '<button type="button" class="btn btn--icon btn--ghost btn--sm" data-edit="' + x.id + '" aria-label="ویرایش">' + RI.icon('edit') + '</button><button type="button" class="btn btn--icon btn--ghost btn--sm" data-del="' + x.id + '" aria-label="حذف">' + RI.icon('trash') + '</button></div>' +
             (div ? '' : RI.switchHtml({ checked: x.active, label: (x.active ? 'غیرفعال کردن ' : 'فعال کردن ') + x.title }).replace('<input', '<input data-active="' + x.id + '"')) + '</li>';
         }).join('');
-        return '<div class="panel"><div class="panel__head panel__head--row"><div><h2>لینک‌ها</h2><p>' + RI.fa(n) + ' لینک · کلیدِ کنار هر لینک آن را فعال یا غیرفعال می‌کند آمار کلیک‌ها نمونه است</p></div><div class="btnrow"><button type="button" class="btn btn--soft btn--sm" data-add-div>' + RI.icon('divider') + 'جداکننده</button><button type="button" class="btn btn--primary btn--sm" data-add>' + RI.icon('plus') + 'افزودن لینک</button></div></div>' +
+        return '<div class="panel"><div class="panel__head panel__head--row"><div><h2>لینک‌ها</h2><p>' + RI.fa(n) + ' لینک · کلیدِ کنار هر لینک آن را فعال یا غیرفعال می‌کند آمار کلیک‌ها از بازدیدهای عمومی ثبت می‌شود</p></div><div class="btnrow"><button type="button" class="btn btn--soft btn--sm" data-add-div>' + RI.icon('divider') + 'جداکننده</button><button type="button" class="btn btn--primary btn--sm" data-add>' + RI.icon('plus') + 'افزودن لینک</button></div></div>' +
           (items.length ? '<ul class="rows" id="llist">' + rows + '</ul>' : RI.empty({ icon: 'link', title: 'هنوز لینکی نداری', text: 'اولین لینکت را اضافه کن؛ مثلاً رزومهٔ آنلاین، گیت‌هاب یا کانال تلگرام', action: '<button type="button" class="btn btn--primary" data-add>' + RI.icon('plus') + 'افزودن اولین لینک</button>' })) + '</div>';
       }
       function headerPanel() {
@@ -81,7 +81,7 @@
       RI.delegate(body, 'click', '[data-up],[data-down]', (e, b) => { const items = L().items, id = b.dataset.up || b.dataset.down, i = items.findIndex((k) => k.id === id), j = i + (b.dataset.up ? -1 : 1); if (j < 0 || j >= items.length) return; RI.flip(RI.$('#llist', body), () => { RI.move(items, i, j); RI.touch('links'); paint(); }); });
       RI.delegate(body, 'click', '[data-del]', async (e, b) => {
         const x = L().items.find((k) => k.id === b.dataset.del);
-        if (!(await RI.confirm({ title: 'حذف «' + esc(x.title) + '»', text: x.type === 'divider' ? 'این جداکننده برداشته می‌شود' : 'این لینک و آمار کلیک نمونه‌اش حذف می‌شود اگر فقط می‌خواهی موقتاً نمایش داده نشود، به‌جای حذف آن را غیرفعال کن', danger: true, icon: 'trash', confirmLabel: 'حذف' }))) return;
+        if (!(await RI.confirm({ title: 'حذف «' + esc(x.title) + '»', text: x.type === 'divider' ? 'این جداکننده برداشته می‌شود' : 'این لینک از پیش‌نویس حذف می‌شود؛ پس از به‌روزرسانی انتشار از صفحهٔ عمومی هم برداشته می‌شود اگر فقط می‌خواهی موقتاً نمایش داده نشود، به‌جای حذف آن را غیرفعال کن', danger: true, icon: 'trash', confirmLabel: 'حذف' }))) return;
         const el = RI.$('[data-id="' + x.id + '"]', body); if (el && !RI.reduceMotion()) await el.animate([{ opacity: 1 }, { opacity: 0, transform: 'translateX(24px)' }], { duration: 220 }).finished.catch(() => {});
         L().items.splice(L().items.indexOf(x), 1); RI.touch('links'); paint(); RI.toast('حذف شد', { kind: 'info' });
       });

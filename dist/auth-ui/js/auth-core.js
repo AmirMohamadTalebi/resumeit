@@ -45,9 +45,9 @@
       RIA.providersPromise ||= fetch('/api/auth/providers',{cache:'no-store'}).then(r=>{if(!r.ok)throw new Error('Providers unavailable');return r.json();});
       const providers=await RIA.providersPromise;
       if(!container.isConnected)return;
-      const buttons=[['google','گوگل'],['github','گیت‌هاب']].filter(([key])=>providers[key]===true);
-      container.innerHTML=buttons.length?'<div class="or">یا با حساب دیگه‌ات</div><div class="social">'+buttons.map(([key,name])=>'<a class="btn btn--social" data-social="'+key+'" href="/api/auth/'+key+'/start">'+RIA.icon(key)+name+'</a>').join('')+'</div>':'';
-      container.hidden=!buttons.length;container.addEventListener('click',e=>{if(e.target.closest('[data-social]')&&!RIA.requireTerms(root))e.preventDefault();});
+      const buttons=[['google','گوگل'],['github','گیت‌هاب']];
+      container.innerHTML=buttons.length?'<div class="or">یا با حساب دیگه‌ات</div><div class="social">'+buttons.map(([key,name])=>providers[key]===true?'<a class="btn btn--social" data-social="'+key+'" href="/api/auth/'+key+'/start">'+RIA.icon(key)+name+'</a>':'<button class="btn btn--social" type="button" disabled title="ورود با این سرویس فعلاً آماده نیست">'+RIA.icon(key)+name+'</button>').join('')+'</div>':'';
+      if(buttons.some(([key])=>providers[key]!==true))container.insertAdjacentHTML('beforeend','<p class="field__hint">روش‌های غیرفعال فعلاً آماده نیستند؛ با شماره موبایل وارد شو.</p>');container.hidden=false;container.addEventListener('click',e=>{if(e.target.closest('[data-social]')&&!RIA.requireTerms(root))e.preventDefault();});
     } catch {container.hidden=true;}
   };
 
