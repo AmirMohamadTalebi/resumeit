@@ -10,7 +10,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const tabs = '<div class="segmented" role="tablist" aria-label="روش ورود"><button type="button" role="tab" data-mode="pass" aria-selected="' + (mode === 'pass') + '">' + RIA.icon('key') + 'رمز عبور</button><button type="button" role="tab" data-mode="otp" aria-selected="' + (mode === 'otp') + '">' + RIA.icon('phone') + 'کد پیامکی</button></div>';
     const html = '<h1 data-focus>ورود به حساب</h1><p>با شماره موبایلت وارد شو</p>' + tabs +
       '<form id="f" novalidate>' + RIA.mobileField({ value: mobileKeep }) +
-      (mode === 'pass' ? RIA.passField({ id: 'pass', extra: '<a class="link link--sm" href="' + RIA.cfg.forgotUrl + '">فراموشی رمز عبور؟</a>' }) : '<div class="field__hint hint--otp">یه کد ورود به این شماره پیامک می‌کنیم</div>') +
+      (mode === 'pass' ? RIA.passField({ id: 'pass', extra: '<a class="link link--sm" href="' + RIA.cfg.forgotUrl + '">فراموشی رمز عبور؟</a>' }) : '<div class="field__hint hint--otp">اگر این شماره حساب داشته باشد، کد ورود پیامک می‌شود</div>') +
       RIA.termsHtml() + '<button type="submit" class="btn btn--primary btn--block" id="sb">' + (mode === 'pass' ? 'ورود' : 'دریافت کد ورود') + '</button></form>' + RIA.socialHtml();
     RIA.swap(sh.view, html, (root) => {
       const m = RIA.bindMobile(root); RIA.bindEyes(root);

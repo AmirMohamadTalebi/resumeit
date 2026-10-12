@@ -1,7 +1,7 @@
 const assert = require('node:assert/strict');
 const { testStore } = require('./auth-test-store.cjs');
-const { createServer } = require('./server.cjs');
-const { hashPassword, verifyPassword, digest } = require('./auth.cjs');
+const { createServer } = require('../src/http/server.cjs');
+const { hashPassword, verifyPassword, digest } = require('../src/auth/auth.cjs');
 (async () => {
   delete process.env.PUBLIC_ORIGIN;
   const password = 'AuthFixture123!';

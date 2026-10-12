@@ -1,5 +1,5 @@
 const assert = require('node:assert/strict');
-const { smsirConfig, sendVerificationSms } = require('./smsir.cjs');
+const { smsirConfig, sendVerificationSms } = require('../src/services/smsir.cjs');
 (async () => {
   assert.throws(() => smsirConfig({}));
   const savedFetch = globalThis.fetch;

@@ -1,10 +1,10 @@
 const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const {createHash,randomBytes}=require('node:crypto');
-const {createServer}=require('./server.cjs');
+const {createServer}=require('../src/http/server.cjs');
 const {testStore}=require('./auth-test-store.cjs');
 const digest=v=>createHash('sha256').update(v).digest('hex');
-const {chromium}=require(process.env.PLAYWRIGHT_PATH||'C:/Users/win/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright');
+const {chromium}=require(process.env.PLAYWRIGHT_PATH || 'playwright');
 (async()=>{
   const db=testStore(),codes=new Map();let calls=0,subject='123456',failToken=false;
   const server=createServer(db,{send:async(p,c)=>codes.set(p,c),oauthFetch:async(url,options)=>{
@@ -45,7 +45,7 @@ const {chromium}=require(process.env.PLAYWRIGHT_PATH||'C:/Users/win/.cache/codex
     const repeat=await finish(await start('google'));const repeatCookie=repeat.headers.getSetCookie().find(c=>c.startsWith('ri_session=')).split(';')[0];
     assert.equal((await(await get('/api/auth/session',repeatCookie)).json()).user.id,socialUser.id);
     assert.equal((await post('social/unlink',{provider:'google'},socialCookie)).status,409);
-    const {hashPassword}=require('./auth.cjs');await db.provisionAccount('09120000901',await hashPassword('Password123!'));
+    const {hashPassword}=require('../src/auth/auth.cjs');await db.provisionAccount('09120000901',await hashPassword('Password123!'));
     const login=await post('login',{phone:'09120000901',password:'Password123!'},'');const phoneCookie=login.headers.get('set-cookie').split(';')[0];
     const phoneUser=(await(await get('/api/auth/session',phoneCookie)).json()).user;
     subject='345678';const githubLink=await start('github',phoneCookie);assert.equal((await finish(githubLink)).headers.get('location'),'/dashboard/settings/');
@@ -54,7 +54,7 @@ const {chromium}=require(process.env.PLAYWRIGHT_PATH||'C:/Users/win/.cache/codex
     assert.equal((await(await get('/api/auth/session',githubCookie)).json()).user.id,phoneUser.id);
     assert.equal((await finish(await start('github',socialCookie))).headers.get('location'),'/login/?social_error=failed');
     assert.equal((await post('account/names',{firstName:'سارا',lastName:'محمدی'},socialCookie)).status,200);
-    const priorSends=codes.size;assert.equal((await post('phone/request',{phone:'09120000901'},socialCookie)).status,409);assert.equal(codes.size,priorSends);
+    const priorSends=codes.size;assert.equal((await post('phone/request',{phone:'09120000901'},socialCookie)).status,200);assert.equal(codes.size,priorSends);
     const request=await post('phone/request',{phone:'09120000902'},socialCookie);const challenge=await request.json();
     assert.equal((await post('phone/verify',{challengeId:challenge.challengeId,code:codes.get('09120000902')},phoneCookie)).status,401);
     assert.equal((await post('phone/verify',{challengeId:challenge.challengeId,code:'000000'},socialCookie)).status,401);
@@ -65,7 +65,7 @@ const {chromium}=require(process.env.PLAYWRIGHT_PATH||'C:/Users/win/.cache/codex
     const linkExpired=await start('google',phoneCookie);await post('logout',{},phoneCookie);assert.equal((await finish(linkExpired)).headers.get('location'),'/login/?social_error=expired');
     const expired=await start('google');await db.consumeOAuthState(digest(expired.state),'google',Date.now()+600001);assert.equal((await finish(expired)).headers.get('location'),'/login/?social_error=expired');
     failToken=true;assert.equal((await finish(await start('google'))).headers.get('location'),'/login/?social_error=failed');failToken=false;
-    browser=await chromium.launch({channel:'msedge',headless:true});const page=await browser.newPage({viewport:{width:390,height:844},isMobile:true,hasTouch:true});const errors=[];page.on('pageerror',e=>errors.push(e.message));
+    browser=await chromium.launch({channel: process.platform === 'win32' ? 'msedge' : undefined,headless:true});const page=await browser.newPage({viewport:{width:390,height:844},isMobile:true,hasTouch:true});const errors=[];page.on('pageerror',e=>errors.push(e.message));
     fs.mkdirSync('artifacts/social-account',{recursive:true});
     await page.goto(base+'/login/');await page.locator('[data-social=google]').waitFor();assert.equal(await page.locator('[data-social=github]').getAttribute('href'),'/api/auth/github/start');
     await page.evaluate(()=>document.fonts.ready);await page.screenshot({path:'artifacts/social-account/login-mobile.png',fullPage:true});

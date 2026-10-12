@@ -1,8 +1,8 @@
 const assert=require('node:assert/strict'),fs=require('fs');
-const {createServer}=require('./server.cjs'),{testStore}=require('./auth-test-store.cjs');
-const {chromium}=require(process.env.PLAYWRIGHT_PATH||'C:/Users/win/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright');
+const {createServer}=require('../src/http/server.cjs'),{testStore}=require('./auth-test-store.cjs');
+const {chromium}=require(process.env.PLAYWRIGHT_PATH || 'playwright');
 (async()=>{delete process.env.PUBLIC_ORIGIN;const db=testStore();const server=createServer(db,{send:async()=>{throw new Error('No live SMS in motion tests');}});await new Promise(r=>server.listen(0,'127.0.0.1',r));const base='http://127.0.0.1:'+server.address().port;let browser;
-try{browser=await chromium.launch({channel:'msedge',headless:true});const page=await browser.newPage({viewport:{width:1440,height:960}});const errors=[],out='artifacts/auth-r';fs.mkdirSync(out,{recursive:true});page.on('pageerror',e=>errors.push(e.message));
+try{browser=await chromium.launch({channel: process.platform === 'win32' ? 'msedge' : undefined,headless:true});const page=await browser.newPage({viewport:{width:1440,height:960}});const errors=[],out='artifacts/auth-r';fs.mkdirSync(out,{recursive:true});page.on('pageerror',e=>errors.push(e.message));
 await page.goto(base+'/login/');await page.evaluate(()=>document.fonts.ready);const mark=page.locator('.auth-assembly');assert.equal(await mark.getAttribute('data-progress'),'0');await page.screenshot({path:out+'/login-empty.png',fullPage:true});
 const from=await page.locator('.mark-person').evaluate(e=>getComputedStyle(e).transform);await page.locator('#mobile').fill('09120000001');assert.equal(await mark.getAttribute('data-progress'),'1');await page.waitForTimeout(1050);assert.notEqual(await page.locator('.mark-person').evaluate(e=>getComputedStyle(e).transform),from);await page.screenshot({path:out+'/login-phone.png',fullPage:true});
 await page.locator('#pass').fill('Password123!');assert.equal(await mark.getAttribute('data-progress'),'3');await page.waitForTimeout(1050);await page.screenshot({path:out+'/login-complete.png',fullPage:true});

@@ -1,6 +1,6 @@
-const { openDatabase } = require('./database.cjs');
-const { hashPassword } = require('./auth.cjs');
-try { require('node:process').loadEnvFile(require('node:path').join(__dirname, '.env')); }
+const { openDatabase } = require('../src/database/database.cjs');
+const { hashPassword } = require('../src/auth/auth.cjs');
+try { require('node:process').loadEnvFile(require('node:path').join(__dirname, '../.env')); }
 catch (error) { if (error.code !== 'ENOENT') throw error; }
 (async () => {
   let body = '';
