@@ -11,9 +11,10 @@ document.addEventListener('DOMContentLoaded', function () {
     const html = '<h1 data-focus>ورود به حساب</h1><p>با شماره موبایلت وارد شو</p>' + tabs +
       '<form id="f" novalidate>' + RIA.mobileField({ value: mobileKeep }) +
       (mode === 'pass' ? RIA.passField({ id: 'pass', extra: '<a class="link link--sm" href="' + RIA.cfg.forgotUrl + '">فراموشی رمز عبور؟</a>' }) : '<div class="field__hint hint--otp">یه کد ورود به این شماره پیامک می‌کنیم</div>') +
-      '<button type="submit" class="btn btn--primary btn--block" id="sb">' + (mode === 'pass' ? 'ورود' : 'دریافت کد ورود') + '</button></form>';
+      '<button type="submit" class="btn btn--primary btn--block" id="sb">' + (mode === 'pass' ? 'ورود' : 'دریافت کد ورود') + '</button></form>' + RIA.socialHtml();
     RIA.swap(sh.view, html, (root) => {
       const m = RIA.bindMobile(root); RIA.bindEyes(root);
+      RIA.bindSocial(root);
       RIA.watchMark(root,()=>RIA.isMobile(m.value()) ? (mode==='pass' && $('#pass',root).value.length ? 3 : 1) : 0);
       if (mode === 'pass') $('#pass', root).addEventListener('input', () => RIA.fieldError($('#pass', root), ''));
       RIA.$$('[data-mode]', root).forEach((b) => b.addEventListener('click', () => { mobileKeep = m.input.value; if(mode===b.dataset.mode)return; mode = b.dataset.mode; main(); }));

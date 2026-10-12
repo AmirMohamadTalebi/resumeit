@@ -24,7 +24,7 @@ const { hashPassword, verifyPassword, digest } = require('./auth.cjs');
     const headers = { Cookie: cookie.split(';')[0] };
     assert.equal((await fetch(base + '/dashboard/', { headers })).status, 200);
     const session = await (await fetch(base + '/api/auth/session', { headers })).json();
-    assert.deepEqual(session.user, { id: userId, phone: '09120000001' });
+    assert.deepEqual(session.user, { id: userId, phone: '09120000001',phone_verified:false,first_name:'',last_name:'',google:false,github:false });
     const secondServer = createServer(database);
     await new Promise(resolve => secondServer.listen(0, '127.0.0.1', resolve));
     const secondBase = 'http://127.0.0.1:' + secondServer.address().port;

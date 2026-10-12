@@ -10,9 +10,10 @@ document.addEventListener('DOMContentLoaded', function () {
   function step1() {
     const html = RIA.stepper(LABELS, 1) + '<h1 data-focus>ساخت حساب</h1><p>شماره موبایلت رو بنویس، تأییدش کن و برای حسابت رمز بذار</p>' +
       '<form id="f" novalidate>' + RIA.mobileField({ value: mobile }) +
-      '<button type="submit" class="btn btn--primary btn--block" id="sb">دریافت کد تأیید</button></form>';
+      '<button type="submit" class="btn btn--primary btn--block" id="sb">دریافت کد تأیید</button></form>' + RIA.socialHtml();
     RIA.swap(sh.view, html, (root) => {
       const m = RIA.bindMobile(root);
+      RIA.bindSocial(root);
       RIA.watchMark(root,()=>RIA.isMobile(m.value())?1:0);
       $('#f', root).addEventListener('submit', async (e) => {
         e.preventDefault(); if(sh.card.dataset.pending)return; RIA.formError($('#f', root), '');

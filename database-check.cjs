@@ -15,6 +15,25 @@ try { process.loadEnvFile(); } catch (error) { if (error.code !== 'ENOENT') thro
     database = await openDatabase(config);
     const hash = 'scrypt$' + randomBytes(16).toString('hex') + '$' + randomBytes(64).toString('hex');
     const { digest } = require('./auth.cjs');
+    const socialAccounts=await Promise.all(Array.from({length:4},()=>database.socialAccount('google','9000001','Test User')));
+    assert.equal(new Set(socialAccounts.map(u=>u.id)).size,1);const socialId=socialAccounts[0].id;assert.equal(socialAccounts[0].phone,null);
+    await database.createOAuthState(digest('oauth-test-state'),'google','v'.repeat(43),Date.now()+600000,socialId);
+    await database.close();database=await openDatabase(config);
+    const consumed=await Promise.all(Array.from({length:4},()=>database.consumeOAuthState(digest('oauth-test-state'),'google',Date.now())));
+    assert.equal(consumed.filter(Boolean).length,1);assert.equal(consumed.find(Boolean).owner_id,socialId);
+    await database.setAccountNames(socialId,'سارا','محمدی');
+    const phoneProof=randomUUID(),proofTime=Date.now();
+    assert(await database.reserveOtp({id:phoneProof,phone:'09120000991',purpose:'phone',hash:digest(phoneProof+'123456'),ownerId:socialId},'social-phone-ip',proofTime));
+    await database.finishOtpSend(phoneProof,true);
+    assert.equal(await database.verifyPhoneOtp(phoneProof,digest(phoneProof+'123456'),randomUUID(),proofTime),null);
+    assert.equal((await database.verifyPhoneOtp(phoneProof,digest(phoneProof+'123456'),socialId,proofTime)).phone,'09120000991');
+    assert.equal(await database.verifyPhoneOtp(phoneProof,digest(phoneProof+'123456'),socialId,proofTime),null);
+    assert.equal((await database.socialAccount('github','9000002','',socialId)).id,socialId);
+    const otherSocial=await database.socialAccount('google','9000003','Another');
+    await assert.rejects(database.socialAccount('github','9000002','',otherSocial.id));
+    assert.equal(await database.unlinkSocial(otherSocial.id,'google'),false);
+    await database.createSession('f'.repeat(64),socialId,Date.now()+60000,null);
+    const verifiedSocial=await database.session('f'.repeat(64));assert.equal(verifiedSocial.first_name,'سارا');assert.equal(verifiedSocial.last_name,'محمدی');assert.equal(verifiedSocial.phone_verified,1);assert.equal(verifiedSocial.github,1);
     const now=Date.now(), challenge=randomUUID(), grant=digest('test-registration-grant');
     const reserved=await Promise.all(Array.from({length:4},()=>database.reserveOtp({id:challenge,phone:'09120000003',purpose:'register',hash:digest(challenge+'123456')},'otp-test-ip',now)));
     assert.equal(reserved.filter(Boolean).length,1);
@@ -82,7 +101,7 @@ try { process.loadEnvFile(); } catch (error) { if (error.code !== 'ENOENT') thro
       assert.equal((await database.accountByPhone('09120000002')).password_hash,hash);
       await database.importSqlite(filename);
     } finally { require('node:fs').unlinkSync(filename); }
-    console.log('PASS: MySQL persistence, atomic profiles, secure sessions, OTP across restarts, replay/expiry/attempt protection, verified registration, password reset and session revocation, concurrent limits and repeatable SQLite migration.');
+    console.log('PASS: MySQL persistence, concurrent social identities, bound single-use OAuth/phone proof, names/verified phone, unlink protection, atomic profiles, secure sessions, OTP across restarts, replay/expiry/attempt protection, verified registration, password reset and session revocation, concurrent limits and repeatable SQLite migration.');
   } finally {
     if (database) await database.close();
     await admin.query('DROP DATABASE IF EXISTS `' + name + '`'); await admin.end();

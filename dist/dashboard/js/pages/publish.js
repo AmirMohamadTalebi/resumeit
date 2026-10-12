@@ -136,7 +136,13 @@
           m.setTitle(update ? 'به‌روزرسانی شد' : 'منتشر شد'); const u = RI.urls();
           m.setBody('<div class="pay-state pay-state--ok"><div class="empty__art">' + RI.icon('rocket') + '</div><b>صفحه‌ات حالا زنده است (نمایشی)</b><p>در نسخهٔ واقعی این آدرس برای همه باز می‌شود</p>' + RI.urlChip(k === 'resume' ? u.resume : u.links, {}) + '</div>');
           m.setActions([{ label: 'تمام', kind: 'primary', value: true }]); m.el.querySelector('[data-close]') || null; paint();
-        }).catch(() => {
+        }).catch((error) => {
+          if (error.message === 'account-incomplete') {
+            m.setTitle('مشخصات حسابت رو کامل کن');
+            m.setBody('<p>برای انتشار صفحه باید اسم، فامیل و شماره موبایل تأییدشده داشته باشی</p>');
+            m.setActions([{ label: 'بستن', kind: 'ghost' }, { label: 'تکمیل مشخصات', kind: 'primary', onClick: () => RI.go('settings') }]);
+            return;
+          }
           m.setTitle('انتشار انجام نشد'); m.setBody('<div class="banner banner--err" role="alert">' + RI.icon('alert') + '<div class="banner__body"><b>خطا در انتشار</b>اتصال برقرار نشد؛ نسخهٔ قبلی دست‌نخورده ماند دوباره تلاش کن</div></div>');
           m.setActions([{ label: 'بستن', kind: 'ghost' }, { label: 'تلاش دوباره', kind: 'primary', icon: 'refresh', onClick: () => { setTimeout(() => runPublish(k), 220); } }]);
         });

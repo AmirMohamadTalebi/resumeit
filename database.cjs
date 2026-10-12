@@ -23,13 +23,70 @@ async function openDatabase(options) {
       `CREATE TABLE IF NOT EXISTS sessions (token_hash CHAR(64) PRIMARY KEY, user_id CHAR(36) NOT NULL, expires_at BIGINT NOT NULL, INDEX(expires_at), FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE) ENGINE=InnoDB`,
       `CREATE TABLE IF NOT EXISTS login_attempts (attempt_key VARCHAR(96) PRIMARY KEY, count INT NOT NULL, expires_at BIGINT NOT NULL, INDEX(expires_at)) ENGINE=InnoDB`,
       `CREATE TABLE IF NOT EXISTS otp_challenges (phone CHAR(11) PRIMARY KEY, challenge_id CHAR(36) NOT NULL UNIQUE, purpose VARCHAR(8) NOT NULL, code_hash CHAR(64) NOT NULL, status VARCHAR(10) NOT NULL, attempts INT NOT NULL DEFAULT 0, sent_at BIGINT NOT NULL, expires_at BIGINT NOT NULL, registration_token CHAR(64), INDEX(expires_at)) ENGINE=InnoDB`,
+      `CREATE TABLE IF NOT EXISTS social_identities (provider VARCHAR(8) NOT NULL, subject VARCHAR(255) CHARACTER SET ascii COLLATE ascii_bin NOT NULL, user_id CHAR(36) NOT NULL, PRIMARY KEY(provider,subject), FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE) ENGINE=InnoDB`,
+      `CREATE TABLE IF NOT EXISTS oauth_states (state_hash CHAR(64) PRIMARY KEY, provider VARCHAR(8) NOT NULL, verifier VARCHAR(43) NOT NULL, owner_id CHAR(36), expires_at BIGINT NOT NULL, INDEX(expires_at)) ENGINE=InnoDB`,
     ]) await execute(sql);
+    const [phoneColumn]=await execute("SELECT IS_NULLABLE FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='users' AND COLUMN_NAME='phone'");
+    if(phoneColumn.IS_NULLABLE==='NO')await execute('ALTER TABLE users MODIFY phone CHAR(11) NULL');
+    for(const [table,column,type] of [['users','phone_verified','BOOLEAN NOT NULL DEFAULT FALSE'],['profiles','first_name',"VARCHAR(39) NOT NULL DEFAULT ''"],['profiles','last_name',"VARCHAR(39) NOT NULL DEFAULT ''"],['otp_challenges','owner_id','CHAR(36)']]) {
+      const rows=await execute('SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=? AND COLUMN_NAME=?',[table,column]);
+      if(!rows.length)await execute(`ALTER TABLE ${table} ADD COLUMN ${column} ${type}`);
+    }
   } catch (error) { await pool.end(); throw error; }
   function text(value, limit, required = false) {
     if (typeof value !== 'string' || value.length > limit || (required && !value.trim())) throw new Error('Invalid profile text');
     return value.trim();
   }
   const store = {
+    async createOAuthState(hash,provider,verifier,expires,ownerId=null) {
+      await execute('DELETE FROM oauth_states WHERE expires_at<=?',[Date.now()]);
+      await execute('INSERT INTO oauth_states(state_hash,provider,verifier,expires_at,owner_id) VALUES(?,?,?,?,?)',[hash,provider,verifier,expires,ownerId]);
+    },
+    async consumeOAuthState(hash,provider,now) {
+      return transaction(async connection=>{
+        const [[row]]=await connection.execute('SELECT verifier,expires_at,owner_id FROM oauth_states WHERE state_hash=? AND provider=? FOR UPDATE',[hash,provider]);
+        if(!row)return null;
+        await connection.execute('DELETE FROM oauth_states WHERE state_hash=?',[hash]);
+        return row.expires_at>now?row:null;
+      });
+    },
+    async socialAccount(provider,subject,name,ownerId=null) {
+      const lookup=async()=> (await execute('SELECT users.id,users.phone,users.password_hash FROM social_identities JOIN users ON users.id=user_id WHERE provider=? AND subject=?',[provider,subject]))[0];
+      const existing=await lookup();if(existing){if(ownerId&&existing.id!==ownerId)throw new Error('Identity already linked');return existing;}
+      try {
+        return await transaction(async connection=>{
+          const id=ownerId||randomUUID();
+          if(!ownerId){await connection.execute('INSERT INTO users(id,phone,password_hash) VALUES(?,NULL,NULL)',[id]);await connection.execute('INSERT INTO profiles(user_id,name) VALUES(?,?)',[id,name]);}
+          const [[user]]=await connection.execute('SELECT id,phone,password_hash FROM users WHERE id=? FOR UPDATE',[id]);
+          if(!user)throw new Error('Account missing');
+          await connection.execute('INSERT INTO social_identities(provider,subject,user_id) VALUES(?,?,?)',[provider,subject,id]);
+          return user;
+        });
+      } catch(error) {if(error.code!=='ER_DUP_ENTRY')throw error;const winner=await lookup();if(!winner||(ownerId&&winner.id!==ownerId))throw error;return winner;}
+    },
+    async unlinkSocial(userId,provider) {
+      return transaction(async connection=>{
+        const [[user]]=await connection.execute('SELECT phone,phone_verified,password_hash FROM users WHERE id=? FOR UPDATE',[userId]);
+        const [others]=await connection.execute('SELECT provider FROM social_identities WHERE user_id=? AND provider<>?',[userId,provider]);
+        if(!user||(!others.length&&!(user.phone&&(user.phone_verified||user.password_hash))))return false;
+        await connection.execute('DELETE FROM social_identities WHERE user_id=? AND provider=?',[userId,provider]);return true;
+      });
+    },
+    async setAccountNames(userId,first,last) {await execute('UPDATE profiles SET first_name=?,last_name=?,name=? WHERE user_id=?',[first,last,first+' '+last,userId]);},
+    async markPhoneVerified(userId) {await execute('UPDATE users SET phone_verified=TRUE WHERE id=? AND phone IS NOT NULL',[userId]);},
+    async verifyPhoneOtp(id,hash,userId,now) {
+      return transaction(async connection=>{
+        const [[row]]=await connection.execute("SELECT * FROM otp_challenges WHERE challenge_id=? AND purpose='phone' AND owner_id=? FOR UPDATE",[id,userId]);
+        if(!row||row.status!=='ready'||row.expires_at<=now||row.attempts>=5)return null;
+        await connection.execute('UPDATE otp_challenges SET attempts=attempts+1 WHERE challenge_id=?',[id]);
+        if(!timingSafeEqual(Buffer.from(row.code_hash,'hex'),Buffer.from(hash,'hex')))return null;
+        const [[existing]]=await connection.execute('SELECT id FROM users WHERE phone=?',[row.phone]);
+        if(existing&&existing.id!==userId)return {existing:true};
+        await connection.execute('UPDATE users SET phone=?,phone_verified=TRUE WHERE id=?',[row.phone,userId]);
+        await connection.execute("UPDATE otp_challenges SET status='consumed' WHERE challenge_id=?",[id]);
+        return {phone:row.phone};
+      }).catch(error=>{if(error.code==='ER_DUP_ENTRY')return {existing:true};throw error;});
+    },
     async reserveOtp(record, ipHash, now) {
       await execute('DELETE FROM login_attempts WHERE expires_at<=?', [now]);
       await execute('DELETE FROM otp_challenges WHERE expires_at<?', [now - 86400000]);
@@ -45,7 +102,7 @@ async function openDatabase(options) {
         const [[old]] = await connection.execute('SELECT sent_at FROM otp_challenges WHERE phone=? FOR UPDATE',[record.phone]);
         if (old && old.sent_at + 60000 > now) return false;
         for (const [key] of limits) await connection.execute('UPDATE login_attempts SET count=count+1 WHERE attempt_key=?',[key]);
-        await connection.execute(`INSERT INTO otp_challenges(phone,challenge_id,purpose,code_hash,status,sent_at,expires_at) VALUES(?,?,?,?,'pending',?,?) ON DUPLICATE KEY UPDATE challenge_id=VALUES(challenge_id),purpose=VALUES(purpose),code_hash=VALUES(code_hash),status='pending',attempts=0,sent_at=VALUES(sent_at),expires_at=VALUES(expires_at),registration_token=NULL`,[record.phone,record.id,record.purpose,record.hash,now,now+120000]);
+        await connection.execute(`INSERT INTO otp_challenges(phone,challenge_id,purpose,code_hash,status,sent_at,expires_at,owner_id) VALUES(?,?,?,?,'pending',?,?,?) ON DUPLICATE KEY UPDATE challenge_id=VALUES(challenge_id),purpose=VALUES(purpose),code_hash=VALUES(code_hash),status='pending',attempts=0,sent_at=VALUES(sent_at),expires_at=VALUES(expires_at),registration_token=NULL,owner_id=VALUES(owner_id)`,[record.phone,record.id,record.purpose,record.hash,now,now+120000,record.ownerId||null]);
         return true;
       });
     },
@@ -67,7 +124,7 @@ async function openDatabase(options) {
         if(!row||row.expires_at<=now)return null;
         const [[user]]=await connection.execute('SELECT id,phone FROM users WHERE phone=? FOR UPDATE',[row.phone]);
         if(!user)return null;
-        await connection.execute('UPDATE users SET password_hash=? WHERE id=?',[passwordHash,user.id]);
+        await connection.execute('UPDATE users SET password_hash=?,phone_verified=TRUE WHERE id=?',[passwordHash,user.id]);
         await connection.execute('DELETE FROM sessions WHERE user_id=?',[user.id]);
         await connection.execute('DELETE FROM login_attempts WHERE attempt_key=?',['phone:'+user.phone]);
         await connection.execute("UPDATE otp_challenges SET status='consumed',registration_token=NULL WHERE challenge_id=?",[row.challenge_id]);
@@ -81,7 +138,7 @@ async function openDatabase(options) {
         const [[existing]] = await connection.execute('SELECT id FROM users WHERE phone=?',[row.phone]);
         if (existing) return { existing: true };
         const id = randomUUID();
-        await connection.execute('INSERT INTO users(id,phone,password_hash) VALUES(?,?,?)',[id,row.phone,passwordHash]);
+          await connection.execute('INSERT INTO users(id,phone,password_hash,phone_verified) VALUES(?,?,?,TRUE)',[id,row.phone,passwordHash]);
         await connection.execute('INSERT INTO profiles(user_id) VALUES(?)',[id]);
         await connection.execute("UPDATE otp_challenges SET status='consumed',registration_token=NULL WHERE challenge_id=?",[row.challenge_id]);
         return { id, phone: row.phone };
@@ -106,7 +163,7 @@ async function openDatabase(options) {
         return true;
       });
     },
-    async session(tokenHash) { return (await execute('SELECT users.id,users.phone FROM sessions JOIN users ON users.id=sessions.user_id WHERE token_hash=? AND expires_at>?', [tokenHash, Date.now()]))[0]; },
+    async session(tokenHash) { return (await execute("SELECT u.id,u.phone,u.phone_verified,p.first_name,p.last_name,EXISTS(SELECT 1 FROM social_identities WHERE user_id=u.id AND provider='google') AS google,EXISTS(SELECT 1 FROM social_identities WHERE user_id=u.id AND provider='github') AS github FROM sessions s JOIN users u ON u.id=s.user_id JOIN profiles p ON p.user_id=u.id WHERE s.token_hash=? AND s.expires_at>?", [tokenHash, Date.now()]))[0]; },
     async deleteSession(tokenHash) { await execute('DELETE FROM sessions WHERE token_hash=?', [tokenHash]); },
     async claimLoginAttempts(phone, ipHash) {
       const now = Date.now();

@@ -14,6 +14,7 @@ async function verifyPassword(password, stored) {
 }
 function authHandler(database, options = {}) {
   const otp = require('./otp.cjs').createOtpService({ database, ...options });
+  const oauth = require('./oauth.cjs').oauthHandler(database,options);
   let pending = 0;
   const token = req => {
     const value = /(?:^|;\s*)ri_session=([a-f0-9]{64})(?:;|$)/.exec(req.headers.cookie || '')?.[1];
@@ -24,6 +25,7 @@ function authHandler(database, options = {}) {
     if (!pathname.startsWith('/api/auth/')) return false;
     res.setHeader('Cache-Control', 'no-store');
     res.setHeader('Vary', 'Cookie');
+    if(await oauth(req,res,pathname))return true;
     const reply = (status, body) => { res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'X-Content-Type-Options': 'nosniff' }); res.end(JSON.stringify(body)); };
     const local = /^(localhost|127\.0\.0\.1)(:\d+)?$/.test(req.headers.host || '');
     const origin = process.env.PUBLIC_ORIGIN || (local ? 'http://' : 'https://') + req.headers.host;
@@ -31,10 +33,38 @@ function authHandler(database, options = {}) {
     if (pathname === '/api/auth/session' && req.method === 'GET') {
       try { const user = await account(req); reply(200, { user: user || null }); } catch { reply(503, { error: 'ارتباط با دیتابیس برقرار نشد' }); } return true;
     }
+    if(pathname==='/api/auth/publication-check'&&req.method==='GET') {
+      try{const user=await account(req);if(!user){reply(401,{error:'اول وارد حسابت شو'});return true;}const missing=[!user.first_name&&'نام',!user.last_name&&'نام خانوادگی',!(user.phone&&user.phone_verified)&&'شماره تأییدشده'].filter(Boolean);reply(200,{canPublish:!missing.length,missing});}catch{reply(503,{error:'نتونستیم مشخصات حسابت رو بررسی کنیم'});}return true;
+    }
     if (req.method !== 'POST') { reply(405, { error: 'Method not allowed' }); return true; }
     if (req.headers.origin !== origin || req.headers['content-type']?.split(';')[0] !== 'application/json') { reply(403, { error: 'درخواست معتبر نیست' }); return true; }
     if (pathname === '/api/auth/logout') {
       try { await database.deleteSession(token(req)); cookie('', 0); reply(200, { ok: true }); } catch { reply(503, { error: 'خروج انجام نشد' }); } return true;
+    }
+    if(['/api/auth/account/names','/api/auth/social/unlink','/api/auth/phone/request','/api/auth/phone/verify'].includes(pathname)) {
+      try {
+        const user=await account(req);if(!user){reply(401,{error:'اول وارد حسابت شو'});return true;}
+        const chunks=[];let size=0;for await(const chunk of req){size+=chunk.length;if(size>2048){reply(413,{error:'درخواست خیلی بزرگه'});return true;}chunks.push(chunk);}
+        const input=JSON.parse(Buffer.concat(chunks).toString('utf8'));
+        if(pathname.endsWith('/names')) {
+          const {firstName,lastName}=input;
+          if([firstName,lastName].some(s=>typeof s!=='string'||!s.trim()||!/[\p{L}]/u.test(s)||s.trim().length>39||/[\x00-\x1f\x7f]/.test(s))){reply(400,{error:'نام و نام خانوادگی رو کامل بنویس، هرکدوم تا ۳۹ کاراکتر'});return true;}
+          await database.setAccountNames(user.id,firstName.trim(),lastName.trim());reply(200,{ok:true});
+        } else if(pathname.endsWith('/unlink')) {
+          if(!['google','github'].includes(input.provider)){reply(400,{error:'روش ورود معتبر نیست'});return true;}
+          if(!await database.unlinkSocial(user.id,input.provider))reply(409,{error:'اول یه روش ورود دیگه اضافه کن تا از حسابت بیرون نمونی'});else reply(200,{ok:true});
+        } else if(pathname.endsWith('/request')) {
+          if(typeof input.phone!=='string'||!/^09\d{9}$/.test(input.phone)){reply(400,{error:'شماره موبایلت رو درست بنویس'});return true;}
+          const existing=await database.accountByPhone(input.phone);
+          if(existing&&existing.id!==user.id){reply(409,{error:'این شماره روی یه حساب دیگه ثبت شده'});return true;}
+          const result=await otp.request(input.phone,'phone',digest(req.socket.remoteAddress||'unknown'),user.id);
+          if(!result)reply(429,{error:'یه دقیقه صبر کن و دوباره امتحان کن'});else reply(200,result);
+        } else {
+          if(typeof input.challengeId!=='string'||!/^[a-f0-9-]{36}$/.test(input.challengeId)||typeof input.code!=='string'||!/^\d{6}$/.test(input.code)){reply(400,{error:'کد ۶ رقمی رو درست بنویس'});return true;}
+          const result=await database.verifyPhoneOtp(input.challengeId,digest(input.challengeId+input.code),user.id,Date.now());
+          if(!result)reply(401,{error:'کد درست نیست یا اعتبارش تموم شده'});else if(result.existing)reply(409,{error:'این شماره روی یه حساب دیگه ثبت شده'});else reply(200,{ok:true});
+        }
+      } catch{reply(503,{error:'درخواست انجام نشد، دوباره امتحان کن'});}return true;
     }
     const signIn = async user => {
       await database.deleteSession(token(req));
@@ -84,7 +114,7 @@ function authHandler(database, options = {}) {
           else {
             const user=await database.accountByPhone(result.phone);
             if (!user) reply(404,{error:'این شماره هنوز حساب ندارد؛ ثبت‌نام کن'});
-            else await signIn(user);
+            else {await database.markPhoneVerified(user.id);await signIn(user);}
           }
         }
       } catch(error) { reply(error instanceof SyntaxError?400:503,{error:'درخواست انجام نشد شماره را بررسی کن و کمی بعد دوباره امتحان کن'}); }

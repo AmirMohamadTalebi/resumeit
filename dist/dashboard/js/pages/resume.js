@@ -76,6 +76,7 @@
         return '<div class="panel"><div class="panel__head"><h2>خودت را معرفی کن</h2><p>اولین چیزی که بازدیدکننده می‌بیند <span class="field__req">ضروری</span> برای انتشار: نام و عنوان</p></div>' +
           '<div class="field"><div class="field__label">تصویر کاور<span class="field__opt">اختیاری</span></div>' + RI.imageFieldHtml('cover', { value: p.cover, wide: true, label: 'کاور' }) + '</div>' +
           '<div class="field"><div class="field__label">عکس پروفایل<span class="field__opt">اختیاری</span></div>' + RI.imageFieldHtml('avatar', { value: p.avatar, round: true, label: 'عکس پروفایل' }) + '</div><hr class="divider">' +
+          '<div class="syncrow"><div><b>مشخصات حساب برای انتشار</b><div class="field__hint">نام، نام خانوادگی و شماره تأییدشده رو در حساب کامل کن</div></div><a class="btn btn--soft btn--sm" href="#/settings">تکمیل مشخصات</a></div><div class="syncrow"><div><b>شماره حساب</b><div class="field__hint"><span class="ltr-inline">'+esc(RI.state.account.mobile||'اضافه نشده')+'</span> — '+(RI.state.account.mobileVerified?'تأیید شده':'نیاز به تأیید')+'</div><div class="field__hint">این شماره خودکار در صفحه عمومی نمایش داده نمی‌شه</div></div><button type="button" class="btn btn--soft btn--sm" data-account-phone>تأیید شماره</button></div><hr class="divider">' +
           '<div class="form-grid" id="pform"><div class="field" data-field="name"><label class="field__label" for="p_name">نام و نام خانوادگی<span class="field__req">ضروری</span></label><input class="input" id="p_name" data-p="name" value="' + esc(p.name) + '" maxlength="50" autocomplete="off"><div class="field__error" role="alert" hidden></div></div>' +
           '<div class="field" data-field="location"><label class="field__label" for="p_loc">شهر<span class="field__opt">اختیاری</span></label><input class="input" id="p_loc" data-p="location" value="' + esc(p.location) + '" maxlength="30"></div>' +
           '<div class="field span-2" data-field="title"><label class="field__label" for="p_title">عنوان حرفه‌ای یا تحصیلی<span class="field__req">ضروری</span></label><input class="input" id="p_title" data-p="title" value="' + esc(p.title) + '" maxlength="90" placeholder="مثلاً دانشجوی کامپیوتر | طراح رابط کاربری"><div class="field__hint">یک خط که بگوید کی هستی و چه می‌کنی</div><div class="field__error" role="alert" hidden></div></div>' +
@@ -131,6 +132,7 @@
         const c = RI.C(), p = c.profile;
         if (step === 'profile') {
           const panel = RI.$('#panel', root);
+          RI.delegate(panel,'click','[data-account-phone]',()=>RI.phoneDialog());
           RI.bindImageField(panel, 'cover', { set: (v) => { p.cover = v; RI.touch('cover'); } });
           RI.bindImageField(panel, 'avatar', { set: (v) => { p.avatar = v; RI.touch('avatar'); } });
           const cnt = () => { const e = RI.$('#bioCount', panel); if (e) e.textContent = RI.fa(p.bio.length) + '/۳۰۰'; }; cnt();

@@ -110,11 +110,7 @@
   async function boot() {
     const user = await window.resumeitSession;
     if (!user) return;
-    RI.state.account.mobile = user.phone;
-    RI.state.account.mobileVerified = false;
-    RI.state.account.google = false;
-    RI.state.account.github = false;
-    RI.state.account.name = 'حساب شما';
+    RI.applyAccount(user);
     buildShell();
     paintSave();
     RI.on('save', paintSave);

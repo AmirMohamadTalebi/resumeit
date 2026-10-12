@@ -137,6 +137,9 @@
     const c = RI.C(), p = c.profile, slug = RI.slugCheck(c.slug);
     const hasBody = c.skills.length + c.experience.length + c.education.length + c.projects.length > 0;
     const resume = [
+      {id:'account-first',req:true,label:'نام حساب کامل شده',done:!!RI.state.account.firstName,route:'settings'},
+      {id:'account-last',req:true,label:'نام خانوادگی کامل شده',done:!!RI.state.account.lastName,route:'settings'},
+      {id:'account-phone',req:true,label:'شماره موبایل تأیید شده',done:RI.state.account.mobileVerified&&!!RI.state.account.mobile,route:'settings'},
       { id: 'name', req: true, label: 'نام و عنوان حرفه‌ای وارد شده', done: !!(p.name.trim() && p.title.trim()), route: 'resume', step: 'profile' },
       { id: 'contact', req: true, label: 'دست‌کم یک راه تماس عمومی', done: c.contacts.some((x) => x.public && x.value.trim()), route: 'resume', step: 'contacts' },
       { id: 'body', req: true, label: 'حداقل یک بخش محتوایی پر شده (مهارت، تجربه، تحصیلات یا پروژه)', done: hasBody, route: 'resume', step: 'skills' },
@@ -147,6 +150,9 @@
       { id: 'share', req: false, label: 'عنوان و توضیح اشتراک‌گذاری', done: !!(c.share.title.trim() && c.share.desc.trim()), route: 'publish', anchor: 'share' },
     ];
     const links = [
+      {id:'account-first',req:true,label:'نام حساب کامل شده',done:!!RI.state.account.firstName,route:'settings'},
+      {id:'account-last',req:true,label:'نام خانوادگی کامل شده',done:!!RI.state.account.lastName,route:'settings'},
+      {id:'account-phone',req:true,label:'شماره موبایل تأیید شده',done:RI.state.account.mobileVerified&&!!RI.state.account.mobile,route:'settings'},
       { id: 'lslug', req: true, label: 'نام صفحهٔ معتبر و آزاد', done: slug.state === 'ok', route: 'publish', anchor: 'slug' },
       { id: 'litem', req: true, label: 'حداقل یک لینک فعال', done: c.links.items.some((i) => i.type === 'link' && i.active), route: 'links' },
       { id: 'lname', req: true, label: 'نام نمایشی بالای صفحه', done: !!((c.links.header.sync ? p.name : c.links.header.name).trim()), route: 'links', tab: 'header' },
@@ -165,6 +171,8 @@
 
   /* انتشار نمایشی: فقط پیشرفت را شبیه‌سازی می‌کند */
   RI.publish = async function (k, onStep) {
+    const eligibility=await RI.accountRequest('publication-check');
+    if(!eligibility.canPublish){RI.toast('قبل از انتشار '+eligibility.missing.join('، ')+' رو در تنظیمات کامل کن',{kind:'error'});throw new Error('account-incomplete');}
     const steps = ['بررسی اطلاعات صفحه', 'ساخت نسخهٔ جدید', 'آماده‌سازی آدرس عمومی'];
     for (let i = 0; i < steps.length; i++) {
       onStep && onStep(i, steps);
