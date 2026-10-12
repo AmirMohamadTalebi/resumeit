@@ -72,8 +72,10 @@
   async function render(id, force) {
     const page = RI.pages[id];
     const token = ++navToken;
-    const view = RI.$('#view');
+    const previousView = RI.$('#view');
     if (cleanup) { try { cleanup(); } catch (e) { /* ok */ } cleanup = null; }
+    // Each mount owns its listeners; replacing the root discards the previous mount's handlers.
+    const view=previousView.cloneNode(false);previousView.replaceWith(view);
     current = id;
     RI.$$('[data-route]').forEach((a) => { if (a.dataset.route === id) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
     RI.$('#topTitle').textContent = page.title;

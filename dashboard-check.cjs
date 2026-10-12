@@ -32,6 +32,19 @@ const { chromium } = require(process.env.PLAYWRIGHT_PATH || 'C:/Users/win/.cache
     await page.waitForSelector('#page-title');
     assert.equal(await page.locator('#demoBtn').count(), 0);
     await page.evaluate(() => document.fonts.ready);
+    await page.evaluate(()=>RI.go('settings'));await page.waitForSelector('[data-conn="google"]');
+    await page.evaluate(()=>{for(let i=0;i<12;i++)RI.rerender();});
+    for(const provider of ['google','github']) {
+      const control=()=>page.locator('[data-conn="'+provider+'"]');
+      await control().click();await page.waitForFunction(k=>RI.state.account[k],provider);
+      await control().click();assert.equal(await page.getByRole('dialog').count(),1);
+      await page.getByRole('dialog').getByRole('button',{name:'انصراف',exact:true}).click();
+      assert.equal(await page.getByRole('dialog').count(),0);assert(await page.evaluate(k=>RI.state.account[k],provider));
+      await control().click();assert.equal(await page.getByRole('dialog').count(),1);
+      await page.getByRole('dialog').getByRole('button',{name:'قطع اتصال',exact:true}).click();
+      await page.waitForFunction(k=>!RI.state.account[k],provider);assert.equal(await page.getByRole('dialog').count(),0);
+    }
+    await page.evaluate(()=>RI.go('home'));await page.waitForSelector('#page-title');
     const output = path.join(__dirname, 'artifacts', 'dashboard'); fs.mkdirSync(output, { recursive: true });
     await page.screenshot({ path: path.join(output, 'desktop.png'), fullPage: true });
     for (const route of ['resume', 'links', 'themes', 'publish', 'billing', 'stats', 'settings', 'home']) {

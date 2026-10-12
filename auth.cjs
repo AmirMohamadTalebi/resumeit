@@ -65,6 +65,10 @@ function authHandler(database, options = {}) {
         if (!['login','register','reset'].includes(input.purpose)) { reply(400,{error:'درخواست معتبر نیست.'}); return true; }
         if (pathname.endsWith('/request')) {
           if (typeof input.phone!=='string'||!/^09\d{9}$/.test(input.phone)) { reply(400,{error:'شمارهٔ موبایل معتبر وارد کن.'}); return true; }
+          if(input.purpose!=='register') {
+            if(!await database.claimLoginAttempts(input.phone,digest(req.socket.remoteAddress||'unknown'))) { reply(429,{error:'تلاش‌های زیادی انجام شده؛ کمی بعد دوباره امتحان کن.'}); return true; }
+            if(!await database.accountByPhone(input.phone)) { reply(404,{code:'ACCOUNT_NOT_FOUND',error:'این شماره هنوز حساب ندارد؛ ثبت‌نام کن.'}); return true; }
+          }
           const result=await otp.request(input.phone,input.purpose,digest(req.socket.remoteAddress||'unknown'));
           if (!result) { res.setHeader('Retry-After','60'); reply(429,{error:'محدودیت ارسال کد؛ یک دقیقه صبر کن. اگر سهمیهٔ روزانه تمام شده، فردا امتحان کن.'}); }
           else reply(200,result);

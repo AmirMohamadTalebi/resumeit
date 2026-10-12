@@ -64,8 +64,11 @@ const {createServer}=require('./server.cjs');
   assert.equal((await post('password/reset',{...resetGrant,password:'OtherPassword123!'})).status,401);
   assert.equal((await post('login',{phone:resetPhone,password:'OldPassword123!'})).status,401);
   assert.equal((await post('login',{phone:resetPhone,password:'NewPassword123!'})).status,200);
-  const unknown=await(await post('otp/request',{phone:'09120000014',purpose:'reset'})).json();
-  assert.equal((await post('otp/verify',{challengeId:unknown.challengeId,code:codes.get('09120000014'),purpose:'reset'})).status,404);
+  for(const purpose of ['login','reset']) {
+    const unknown=await post('otp/request',{phone:'09120000014',purpose});assert.equal(unknown.status,404);
+    assert.equal((await unknown.json()).code,'ACCOUNT_NOT_FOUND');assert.equal(codes.has('09120000014'),false);
+  }
+  const signup=await post('otp/request',{phone:'09120000014',purpose:'register'});assert.equal(signup.status,200);assert(codes.has('09120000014'));
  } finally {await new Promise(r=>server.close(r));await new Promise(r=>server2.close(r));}
  console.log('PASS: shared OTP, expiry, replay, purpose binding, attempts, quotas, concurrent sends, SMS failure, verified registration and code login; no real SMS sent.');
 })().catch(error=>{console.error(error);process.exitCode=1;});

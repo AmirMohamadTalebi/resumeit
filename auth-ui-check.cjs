@@ -18,6 +18,13 @@ const {chromium}=require(process.env.PLAYWRIGHT_PATH||'C:/Users/win/.cache/codex
   await page.setViewportSize({width:390,height:844});await page.screenshot({path:path.join(loadingOut,'page-loading-mobile.png')});
   releasePage();await page.waitForLoadState('load');assert.equal(await page.locator('.ri-page-loading').count(),0);await page.unroute('**/auth.js');
   await page.setViewportSize({width:1360,height:960});
+  await page.goto(base+'/login/');await page.locator('[data-method="code"]').click();await page.locator('[name="phone"]').fill('09120000024');await page.locator('#continue').click();
+  await page.getByRole('dialog').waitFor({state:'visible'});assert.equal(codes.has('09120000024'),false);
+  assert.equal(await page.getByRole('dialog').getByRole('link',{name:'ساخت حساب',exact:true}).getAttribute('href'),'/register/');
+  await page.screenshot({path:path.join(loadingOut,'account-not-found-desktop.png'),fullPage:true});
+  await page.setViewportSize({width:390,height:844});await page.screenshot({path:path.join(loadingOut,'account-not-found-mobile.png'),fullPage:true});
+  await page.keyboard.press('Escape');assert(await page.getByRole('dialog').isHidden());assert(await page.locator('[data-stage="phone"]').isVisible());
+  await page.setViewportSize({width:1360,height:960});
   await page.goto(base+'/register/');await page.locator('[name="phone"]').fill('09120000021');
   let releaseRequest;const requestHeld=new Promise(r=>releaseRequest=r);
   await page.route('**/api/auth/otp/request',async route=>{await requestHeld;await route.abort('failed');});

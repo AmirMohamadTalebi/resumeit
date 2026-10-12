@@ -44,8 +44,11 @@
       });
       RI.delegate(root, 'click', '[data-conn]', async (e, b) => {
         const k = b.dataset.conn, nm = k === 'google' ? 'گوگل' : 'گیت‌هاب';
+        if(b.disabled)return;b.disabled=true;
+        try {
         if (a[k]) { const others = (a.google ? 1 : 0) + (a.github ? 1 : 0); if (await RI.confirm({ title: 'قطع اتصال ' + nm, text: 'دیگر نمی‌توانی با ' + nm + ' وارد شوی.' + (others === 1 ? ' این آخرین روش ورود اجتماعی توست؛ با رمز عبور یا کد پیامکی همچنان می‌توانی وارد شوی.' : ''), danger: true, icon: 'link', confirmLabel: 'قطع اتصال' })) { a[k] = false; RI.rerender(); RI.toast('اتصال ' + nm + ' قطع شد', { kind: 'info' }); } }
         else { b.disabled = true; b.innerHTML = '<span class="spinner"></span>'; await RI.sleep(900); a[k] = true; RI.rerender(); RI.toast('اتصال ' + nm + ' برقرار شد (نمایشی)'); }
+        } finally {b.disabled=false;}
       });
       root.addEventListener('change', (e) => {
         const t = e.target;
