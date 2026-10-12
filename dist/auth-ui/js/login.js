@@ -11,7 +11,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const html = '<h1 data-focus>ورود به حساب</h1><p>با شماره موبایلت وارد شو</p>' + tabs +
       '<form id="f" novalidate>' + RIA.mobileField({ value: mobileKeep }) +
       (mode === 'pass' ? RIA.passField({ id: 'pass', extra: '<a class="link link--sm" href="' + RIA.cfg.forgotUrl + '">فراموشی رمز عبور؟</a>' }) : '<div class="field__hint hint--otp">اگر این شماره حساب داشته باشد، کد ورود پیامک می‌شود</div>') +
-      RIA.termsHtml() + '<button type="submit" class="btn btn--primary btn--block" id="sb">' + (mode === 'pass' ? 'ورود' : 'دریافت کد ورود') + '</button></form>' + RIA.socialHtml();
+      '<button type="submit" class="btn btn--primary btn--block" id="sb">' + (mode === 'pass' ? 'ورود' : 'دریافت کد ورود') + '</button></form>' + RIA.socialHtml();
     RIA.swap(sh.view, html, (root) => {
       const m = RIA.bindMobile(root); RIA.bindEyes(root);
       RIA.bindSocial(root);
@@ -21,7 +21,6 @@ document.addEventListener('DOMContentLoaded', function () {
       RIA.$$('[data-mode]',root).forEach(b=>{b.tabIndex=b.dataset.mode===mode?0:-1;b.addEventListener('keydown',e=>{if(['ArrowLeft','ArrowRight','Home','End'].includes(e.key)){e.preventDefault();const target=e.key==='Home'?'pass':e.key==='End'?'otp':mode==='pass'?'otp':'pass';RIA.$('[data-mode="'+target+'"]',root).click();RIA.$('[data-mode="'+target+'"]',sh.view)?.focus();}});});
       $('#f', root).addEventListener('submit', async (e) => {
         e.preventDefault(); if(sh.card.dataset.pending)return; RIA.formError($('#f', root), '');
-        if (!RIA.requireTerms(root)) return;
         const mob = m.validate(); if (!mob) return;
         if (mode === 'pass') {
           const pw = $('#pass', root);

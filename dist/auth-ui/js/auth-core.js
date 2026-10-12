@@ -130,15 +130,18 @@
   };
 
   /* ---------- کد یک‌بارمصرف ---------- */
-  RIA.otpHtml = (label) => '<div class="field"><label class="field__label" for="otp-code">' + RIA.esc(label || 'کد ۶ رقمی') + '</label><div class="auth-otp" id="otp" dir="ltr"><input class="input otp__i" id="otp-code" name="code" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" enterkeyhint="done" placeholder="کد ۶ رقمی" aria-describedby="otp_e"></div><div class="field__error" id="otp_e" role="alert" hidden></div></div>';
+  RIA.otpHtml = (label) => '<div class="field"><label class="field__label" for="otp-code">' + RIA.esc(label || 'کد ۶ رقمی') + '</label><div class="auth-otp" id="otp" dir="ltr"><input class="input otp__i" id="otp-code" name="code" type="text" inputmode="numeric" pattern="[0-9]{6}" autocomplete="one-time-code" enterkeyhint="done" placeholder="کد ۶ رقمی" aria-describedby="otp_e"></div><div class="field__error" id="otp_e" role="alert" hidden></div></div>';
   RIA.bindOtp = function (root) {
     const box = $('#otp', root), inp = $('#otp-code', root), err = $('#otp_e', root);
     const setErr = m => { box.classList.toggle('is-bad',!!m); err.hidden=!m; err.textContent=m||''; inp.setAttribute('aria-invalid',String(!!m)); };
-    const fill = s => { inp.value=RIA.digits(s).replace(/\D/g,'').slice(0,6); inp.classList.toggle('has',!!inp.value); setErr(''); };
+    // Keyboard autofill may insert the SMS text, including its phone/domain, instead of just the code.
+    const fill = s => { const text=RIA.digits(s),code=/#(\d{6})(?!\d)/.exec(text)?.[1] || /(?:^|\D)(\d{6})(?!\d)/.exec(text)?.[1];inp.value=code || text.replace(/\D/g,'').slice(0,6); inp.classList.toggle('has',!!inp.value); setErr(''); };
     inp.addEventListener('input',()=>fill(inp.value));
+    inp.addEventListener('change',()=>fill(inp.value));
     inp.addEventListener('paste',e=>{e.preventDefault();fill(e.clipboardData.getData('text'));});
     const listen = () => { RIA.smsFill=code=>{if(inp.isConnected){fill(code);RIA.toast('کد جایگذاری شد، حالا تأییدش کن','success');}}; };
     listen();if(RIA.smsCode)RIA.smsFill(RIA.smsCode);
+    inp.focus({preventScroll:true});
     return { value:()=>inp.value, error:setErr, listen, clear(){inp.value='';inp.classList.remove('has');inp.focus();}, disable:b=>{inp.disabled=b;}, focus:()=>inp.focus() };
   };
 

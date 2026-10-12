@@ -47,9 +47,14 @@ const {createServer}=require('../src/http/server.cjs');
   const l=await(await post('otp/request',{phone:'09120000012',purpose:'login'})).json();
   const login=await post('otp/verify',{challengeId:l.challengeId,code:codes.get('09120000012'),purpose:'login'},base2);assert.equal(login.status,200);
   const cookie=login.headers.get('set-cookie').split(';')[0];assert.equal((await fetch(base+'/dashboard/',{headers:{Cookie:cookie}})).status,200);
-  const e=await(await post('otp/request',{phone:'09120000011',purpose:'register'})).json();
-  // The original successful request is still inside its cooldown; do not overwrite that account.
-  assert.equal(e.challengeId,undefined);assert(await verifyPassword('NewPassword123!',(await webDb.accountByPhone('09120000011')).password_hash));
+  for(const phone of ['09120000011','09120000012']) {
+    const before=codes.get(phone),e=await post('otp/request',{phone,purpose:'register'});
+    assert.equal(e.status,409);assert.equal((await e.json()).challengeId,undefined);assert.equal(codes.get(phone),before);
+  }
+  await webDb.provisionAccount('09120000015',null);
+  assert.equal((await post('otp/request',{phone:'09120000015',purpose:'register'})).status,409);
+  assert.equal(codes.has('09120000015'),false,'Existing account must never trigger a registration SMS, even without cooldown');
+  assert(await verifyPassword('NewPassword123!',(await webDb.accountByPhone('09120000011')).password_hash));
   const {hashPassword}=require('../src/auth/auth.cjs');
   const oldHash=await hashPassword('OldPassword123!'),resetPhone='09120000013';
   const resetId=await webDb.provisionAccount(resetPhone,oldHash);

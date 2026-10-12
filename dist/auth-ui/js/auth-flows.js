@@ -30,6 +30,7 @@
           rs.stop(); busy = false; o.onVerified();
         } catch (e) {
           busy = false;
+          otp.listen(); RIA.startSmsCapture();
           if (e.code === 'network') { RIA.formError($('#of', root), e.message); return; }
           otp.error(e.message); otp.clear();
         }

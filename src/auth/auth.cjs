@@ -82,6 +82,9 @@ function authHandler(database, options = {}) {
         if (pathname.endsWith('/request')) {
           if (typeof input.phone!=='string'||!/^09\d{9}$/.test(input.phone)) { reply(400,{error:'شمارهٔ موبایل معتبر وارد کن'}); return true; }
           let ownerId=null;
+          if(input.purpose==='register' && await database.accountByPhone(input.phone)) {
+            reply(409,{error:'این شماره حساب دارد؛ وارد شو یا رمزت را بازیابی کن'}); return true;
+          }
           if(input.purpose!=='register') {
             if(!await database.claimLoginAttempts(input.phone,digest(req.socket.remoteAddress||'unknown'))) { reply(429,{error:'تلاش‌های زیادی انجام شده؛ کمی بعد دوباره امتحان کن'}); return true; }
             const owner=await database.accountByPhone(input.phone);

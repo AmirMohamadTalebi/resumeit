@@ -33,7 +33,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_PATH || 'playwright');
     await page.waitForURL('**/login/');
     await page.locator('#mobile').fill('09120000001');
     await page.locator('#pass').fill('DemoOnly123!');
-    await page.locator('#accept-terms').check();await page.locator('#sb').click();
+    assert.equal(await page.locator('#accept-terms').count(),0);await page.locator('#sb').click();
     await page.locator('#goDash').click();
     await page.waitForURL('**/dashboard/');
     await page.waitForSelector('#page-title').catch(error => { console.error({errors,failed}); throw error; });
