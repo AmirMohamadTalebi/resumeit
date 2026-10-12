@@ -1,7 +1,7 @@
 const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const {createHash,randomBytes}=require('node:crypto');
-const {createServer}=require('../server.cjs');
+const {createServer}=require('../src/http/server.cjs');
 const {testStore}=require('./auth-test-store.cjs');
 const digest=v=>createHash('sha256').update(v).digest('hex');
 const {chromium}=require(process.env.PLAYWRIGHT_PATH || 'playwright');

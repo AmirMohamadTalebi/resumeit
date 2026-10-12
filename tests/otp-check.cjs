@@ -1,7 +1,7 @@
 const assert=require('node:assert/strict');
 const {createOtpService}=require('../src/auth/otp.cjs');
 const {testStore}=require('./auth-test-store.cjs');
-const {createServer}=require('../server.cjs');
+const {createServer}=require('../src/http/server.cjs');
 (async()=>{
  let time=Date.now(),sent=[];const database=testStore();
  const send=async(phone,code)=>sent.push({phone,code});

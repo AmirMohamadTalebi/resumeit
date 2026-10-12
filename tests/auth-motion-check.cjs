@@ -1,5 +1,5 @@
 const assert=require('node:assert/strict'),fs=require('fs');
-const {createServer}=require('../server.cjs'),{testStore}=require('./auth-test-store.cjs');
+const {createServer}=require('../src/http/server.cjs'),{testStore}=require('./auth-test-store.cjs');
 const {chromium}=require(process.env.PLAYWRIGHT_PATH || 'playwright');
 (async()=>{delete process.env.PUBLIC_ORIGIN;const db=testStore();const server=createServer(db,{send:async()=>{throw new Error('No live SMS in motion tests');}});await new Promise(r=>server.listen(0,'127.0.0.1',r));const base='http://127.0.0.1:'+server.address().port;let browser;
 try{browser=await chromium.launch({channel: process.platform === 'win32' ? 'msedge' : undefined,headless:true});const page=await browser.newPage({viewport:{width:1440,height:960}});const errors=[],out='artifacts/auth-r';fs.mkdirSync(out,{recursive:true});page.on('pageerror',e=>errors.push(e.message));

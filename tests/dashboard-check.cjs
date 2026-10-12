@@ -1,7 +1,7 @@
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
-const { createServer } = require('../server.cjs');
+const { createServer } = require('../src/http/server.cjs');
 const { testStore } = require('./auth-test-store.cjs');
 const { hashPassword } = require('../src/auth/auth.cjs');
 const { chromium } = require(process.env.PLAYWRIGHT_PATH || 'playwright');

@@ -1,5 +1,5 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
-const {createServer}=require('../server.cjs'),{testStore}=require('./auth-test-store.cjs');
+const {createServer}=require('../src/http/server.cjs'),{testStore}=require('./auth-test-store.cjs');
 const {chromium}=require(process.env.PLAYWRIGHT_PATH || 'playwright');
 (async()=>{const db=testStore(),server=createServer(db,{send:async()=>{}});await new Promise(r=>server.listen(0,'127.0.0.1',r));const base='http://127.0.0.1:'+server.address().port;let browser;
 try{browser=await chromium.launch({channel: process.platform === 'win32' ? 'msedge' : undefined,headless:true});const page=await browser.newPage({reducedMotion:'reduce'}),errors=[];page.on('pageerror',e=>errors.push(e.message));const out=path.join(__dirname,'../artifacts/site-content');fs.mkdirSync(out,{recursive:true});
