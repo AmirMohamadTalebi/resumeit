@@ -1,4 +1,4 @@
-/* هستهٔ ابزارها: رویدادها، توست، مودال، منو، مرتب‌سازی. بدون وابستگی. */
+/* هستهٔ ابزارها: رویدادها، توست، مودال، منو، مرتب‌سازی بدون وابستگی */
 (function () {
   'use strict';
   const RI = (window.RI = window.RI || {});
@@ -59,18 +59,7 @@
   };
 
   /* ---------- توست ---------- */
-  RI.toast = function (msg, opts) {
-    opts = opts || {};
-    const kind = opts.kind || 'success';
-    const root = RI.$('#toast-root');
-    if (!root) return;
-    const el = document.createElement('div');
-    el.className = 'toast toast--' + kind;
-    el.innerHTML = RI.icon(kind === 'error' ? 'alert' : kind === 'info' ? 'info' : 'check') + '<span>' + RI.esc(msg) + '</span>';
-    root.appendChild(el);
-    while (root.children.length > 3) root.firstChild.remove();
-    setTimeout(() => { el.classList.add('is-leaving'); setTimeout(() => el.remove(), 220); }, opts.duration || 3200);
-  };
+  RI.toast = (msg, opts) => window.ResumeItNotify(msg, opts || {kind:'success'});
 
   /* ---------- مودال ---------- */
   const stack = [];

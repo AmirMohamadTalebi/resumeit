@@ -1,0 +1,11 @@
+#ri-notifications{position:fixed;inset:auto;top:max(16px,env(safe-area-inset-top));right:max(16px,env(safe-area-inset-right));bottom:auto;left:auto;z-index:11000;display:grid;gap:8px;width:min(360px,calc(100vw - 32px));padding:0;transform:none;pointer-events:none;direction:rtl;background:transparent;border:0;border-radius:0;box-shadow:none;backdrop-filter:none;animation:none;color:inherit}
+#ri-notifications .ri-notification{position:relative;display:flex;align-items:center;gap:12px;min-width:0;width:100%;padding:14px 16px;background:rgba(247,251,253,.96);color:#294753;border:1px solid #aec5d0;border-radius:16px;box-shadow:0 8px 28px -15px #29475366;backdrop-filter:blur(14px);font:inherit;font-size:14px;line-height:1.8;pointer-events:auto;animation:ri-notification-in 220ms ease-out}
+#ri-notifications .ri-notification span{flex:1;overflow-wrap:anywhere}
+#ri-notifications .ri-notification[data-kind=error]{background:#fff5f1;color:#813f30;border-color:#d4ada0}
+#ri-notifications .ri-notification[data-kind=success]{border-color:#9ab6ad}
+#ri-notifications button{flex:none;display:grid;place-items:center;width:32px;height:32px;border:0;border-radius:8px;background:transparent;color:inherit;font-size:24px;cursor:pointer}
+#ri-notifications button:hover{background:#2947530c}
+#ri-notifications button:focus-visible{outline:2px solid #89624a;outline-offset:2px}
+#ri-notifications .is-leaving{opacity:0;transform:translateY(-8px);transition:opacity 200ms,transform 200ms}
+@keyframes ri-notification-in{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
+@media(prefers-reduced-motion:reduce){#ri-notifications .ri-notification{animation:none}#ri-notifications .is-leaving{transition:none}}

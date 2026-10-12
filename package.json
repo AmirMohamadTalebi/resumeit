@@ -12,7 +12,8 @@
     "check:sms": "node smsir-check.cjs && node otp-check.cjs",
     "check:dashboard": "node dashboard-check.cjs",
     "check:auth-ui": "node auth-ui-check.cjs",
-    "check:auth-motion": "node auth-motion-check.cjs"
+    "check:auth-motion": "node auth-motion-check.cjs",
+    "check:auth-mobile": "node auth-mobile-check.cjs"
   },
   "dependencies": {
     "mysql2": "3.24.5"

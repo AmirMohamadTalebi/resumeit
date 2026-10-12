@@ -18,25 +18,25 @@
 
   const yearField = { type: 'text', max: 20 };
   const LISTS = {
-    skills: { title: 'مهارت‌ها', add: 'افزودن مهارت', icon: 'sparkle', hint: 'سه مهارت کافی است تا بخش جان بگیرد؛ بعداً هر چقدر خواستی اضافه کن.', empty: ['هنوز مهارتی ننوشته‌ای', 'مهارت‌هایی را که واقعاً به آن‌ها مسلطی بنویس؛ کارفرما اول از همین‌جا نگاه می‌کند.'],
+    skills: { title: 'مهارت‌ها', add: 'افزودن مهارت', icon: 'sparkle', hint: 'سه مهارت کافی است تا بخش جان بگیرد؛ بعداً هر چقدر خواستی اضافه کن', empty: ['هنوز مهارتی ننوشته‌ای', 'مهارت‌هایی را که واقعاً به آن‌ها مسلطی بنویس؛ کارفرما اول از همین‌جا نگاه می‌کند'],
       fields: [{ key: 'name', label: 'نام مهارت', required: true, max: 40, placeholder: 'مثلاً JavaScript یا طراحی لوگو' }, { key: 'level', label: 'سطح مهارت', type: 'level', levels: RI.SKILL_LEVELS }],
       title_: (x) => x.name, sub: (x) => RI.SKILL_LEVELS[(x.level || 3) - 1], right: (x) => '<span class="dots" aria-hidden="true">' + [1, 2, 3, 4, 5].map((i) => '<i class="' + (i <= x.level ? 'on' : '') + '"></i>').join('') + '</span>', defaults: { level: 3 } },
-    experience: { title: 'تجربه‌های کاری', add: 'افزودن تجربه', icon: 'briefcase', hint: 'کارآموزی، فریلنس و پروژهٔ داوطلبانه هم تجربه حساب می‌شود.', empty: ['تجربهٔ کاری اضافه نشده', 'اگر هنوز سابقهٔ رسمی نداری، کارآموزی، همکاری با انجمن یا پروژهٔ مستقل را بنویس.'],
+    experience: { title: 'تجربه‌های کاری', add: 'افزودن تجربه', icon: 'briefcase', hint: 'کارآموزی، فریلنس و پروژهٔ داوطلبانه هم تجربه حساب می‌شود', empty: ['تجربهٔ کاری اضافه نشده', 'اگر هنوز سابقهٔ رسمی نداری، کارآموزی، همکاری با انجمن یا پروژهٔ مستقل را بنویس'],
       fields: [{ key: 'role', label: 'عنوان شغلی', required: true, max: 60 }, { key: 'org', label: 'محل کار یا مجموعه', required: true, max: 60 }, { key: 'from', label: 'شروع', placeholder: '۱۴۰۲/۰۶', max: 12, optional: true }, { key: 'to', label: 'پایان', placeholder: '۱۴۰۳/۰۱', max: 12, optional: true, showIf: (v) => !v.current }, { key: 'current', label: 'هنوز ادامه دارد', type: 'checkbox', span: true }, { key: 'desc', label: 'توضیح کوتاه', type: 'textarea', max: 300, optional: true, span: true, rows: 3 }],
       title_: (x) => x.role, sub: (x) => x.org + ' · ' + ((x.from || '') + (x.current ? ' تا اکنون' : x.to ? ' تا ' + x.to : '')) },
-    education: { title: 'تحصیلات', add: 'افزودن مقطع', icon: 'book', hint: 'برای دانش‌آموز و دانشجو، همین بخش ستارهٔ رزومه است.', empty: ['سابقهٔ تحصیلی اضافه نشده', 'مقطع، رشته و محل تحصیلت را بنویس.'],
+    education: { title: 'تحصیلات', add: 'افزودن مقطع', icon: 'book', hint: 'برای دانش‌آموز و دانشجو، همین بخش ستارهٔ رزومه است', empty: ['سابقهٔ تحصیلی اضافه نشده', 'مقطع، رشته و محل تحصیلت را بنویس'],
       fields: [{ key: 'degree', label: 'مقطع و رشته', required: true, max: 80 }, { key: 'school', label: 'دانشگاه یا مدرسه', required: true, max: 80 }, { key: 'from', label: 'شروع', max: 12, optional: true }, { key: 'to', label: 'پایان', max: 12, optional: true, showIf: (v) => !v.current }, { key: 'current', label: 'در حال تحصیل', type: 'checkbox', span: true }, { key: 'desc', label: 'توضیح (معدل، افتخار…)', type: 'textarea', max: 240, optional: true, span: true, rows: 2 }],
       title_: (x) => x.degree, sub: (x) => x.school + ' · ' + ((x.from || '') + (x.current ? ' تا اکنون' : x.to ? ' تا ' + x.to : '')) },
-    projects: { title: 'پروژه‌ها و نمونه‌کارها', add: 'افزودن پروژه', icon: 'code', hint: 'یک پروژهٔ خوب با تصویر و لینک، از ده خط توضیح مؤثرتر است.', empty: ['نمونه‌کاری اضافه نشده', 'پروژه، مقاله، طراحی یا محتوایی که دوست داری دیده شود را اضافه کن.'],
+    projects: { title: 'پروژه‌ها و نمونه‌کارها', add: 'افزودن پروژه', icon: 'code', hint: 'یک پروژهٔ خوب با تصویر و لینک، از ده خط توضیح مؤثرتر است', empty: ['نمونه‌کاری اضافه نشده', 'پروژه، مقاله، طراحی یا محتوایی که دوست داری دیده شود را اضافه کن'],
       fields: [{ key: 'title', label: 'عنوان پروژه', required: true, max: 60, span: true }, { key: 'desc', label: 'توضیح', type: 'textarea', max: 280, required: true, span: true, rows: 3 }, { key: 'url', label: 'لینک پروژه', type: 'url', ltr: true, optional: true, placeholder: 'github.com/you/project', span: true }, { key: 'image', label: 'تصویر پروژه', type: 'image', wide: true, optional: true }],
       title_: (x) => x.title, sub: (x) => x.url || x.desc, thumb: (x) => x.image },
-    certs: { title: 'دوره‌ها، گواهی‌ها و افتخارات', add: 'افزودن مورد', icon: 'award', hint: 'رتبه‌های مسابقه و دوره‌های معتبر را بنویس.', empty: ['موردی اضافه نشده', 'دوره‌ها، گواهینامه‌ها و رتبه‌ها این‌جا می‌نشینند.'],
+    certs: { title: 'دوره‌ها، گواهی‌ها و افتخارات', add: 'افزودن مورد', icon: 'award', hint: 'رتبه‌های مسابقه و دوره‌های معتبر را بنویس', empty: ['موردی اضافه نشده', 'دوره‌ها، گواهینامه‌ها و رتبه‌ها این‌جا می‌نشینند'],
       fields: [{ key: 'title', label: 'عنوان', required: true, max: 80, span: true }, { key: 'issuer', label: 'برگزارکننده', max: 60, optional: true }, { key: 'year', label: 'سال', max: 8, optional: true }],
       title_: (x) => x.title, sub: (x) => (x.issuer || '') + (x.year ? ' · ' + x.year : '') },
-    languages: { title: 'زبان‌ها', add: 'افزودن زبان', icon: 'language', hint: 'زبان‌هایی که می‌توانی با آن‌ها کار کنی.', empty: ['زبانی اضافه نشده', 'فارسی و انگلیسی؟ زبان‌های دیگر؟ همین‌جا بنویس.'],
+    languages: { title: 'زبان‌ها', add: 'افزودن زبان', icon: 'language', hint: 'زبان‌هایی که می‌توانی با آن‌ها کار کنی', empty: ['زبانی اضافه نشده', 'فارسی و انگلیسی؟ زبان‌های دیگر؟ همین‌جا بنویس'],
       fields: [{ key: 'name', label: 'زبان', required: true, max: 30 }, { key: 'level', label: 'سطح', type: 'level', levels: RI.LANG_LEVELS }],
       title_: (x) => x.name, sub: (x) => RI.LANG_LEVELS[(x.level || 3) - 1], defaults: { level: 3 } },
-    socials: { title: 'شبکه‌های اجتماعی', add: 'افزودن شبکه', icon: 'globe', hint: 'فقط نام کاربری لازم است، نه کل آدرس.', empty: ['شبکه‌ای اضافه نشده', 'گیت‌هاب، لینکدین، اینستاگرام و… را اضافه کن.'],
+    socials: { title: 'شبکه‌های اجتماعی', add: 'افزودن شبکه', icon: 'globe', hint: 'فقط نام کاربری لازم است، نه کل آدرس', empty: ['شبکه‌ای اضافه نشده', 'گیت‌هاب، لینکدین، اینستاگرام و… را اضافه کن'],
       fields: [{ key: 'platform', label: 'شبکه', type: 'select', options: RI.SOCIALS.map((s) => [s[0], s[1]]), required: true }, { key: 'handle', label: 'نام کاربری', required: true, ltr: true, max: 40, placeholder: 'username' }],
       title_: (x) => (RI.SOCIALS.find((s) => s[0] === x.platform) || [0, x.platform])[1], sub: (x) => '@' + x.handle, iconOf: (x) => x.platform, defaults: { platform: 'github' } },
   };
@@ -51,7 +51,7 @@
   RI.registerPage('resume', {
     title: 'ساخت و ویرایش رزومه',
     render(ctx) {
-      return RI.pageHead({ eyebrow: 'استودیو', eyebrowIcon: 'resume', title: 'رزومهٔ تو', desc: 'قدم‌به‌قدم پیش برو؛ هر تغییر همان لحظه در پیش‌نمایش سمت چپ دیده می‌شود.',
+      return RI.pageHead({ eyebrow: 'استودیو', eyebrowIcon: 'resume', title: 'رزومهٔ تو', desc: 'قدم‌به‌قدم پیش برو؛ هر تغییر همان لحظه در پیش‌نمایش سمت چپ دیده می‌شود',
         actions: '<button type="button" class="btn btn--soft btn--sm show-sm" data-live>' + RI.icon('eye') + 'پیش‌نمایش زنده</button><a class="btn btn--ghost btn--sm" href="#/themes" data-go="themes">' + RI.icon('palette') + 'ظاهر و قالب</a>' }) +
         '<div class="editor"><div class="editor__main"><div class="segmented" role="tablist" aria-label="حالت ویرایش" id="rtabs"><button type="button" role="tab" data-tab="content" aria-selected="true">' + RI.icon('edit') + 'محتوا</button><button type="button" role="tab" data-tab="layout" aria-selected="false">' + RI.icon('section') + 'چیدمان بخش‌ها</button></div><div id="rbody"></div></div>' +
         '<aside class="editor__side" aria-label="پیش‌نمایش زندهٔ رزومه"><div class="sticky"><div id="rpv"></div></div></aside></div>';
@@ -73,20 +73,20 @@
 
       function profilePanel() {
         const p = RI.C().profile;
-        return '<div class="panel"><div class="panel__head"><h2>خودت را معرفی کن</h2><p>اولین چیزی که بازدیدکننده می‌بیند. <span class="field__req">ضروری</span> برای انتشار: نام و عنوان.</p></div>' +
+        return '<div class="panel"><div class="panel__head"><h2>خودت را معرفی کن</h2><p>اولین چیزی که بازدیدکننده می‌بیند <span class="field__req">ضروری</span> برای انتشار: نام و عنوان</p></div>' +
           '<div class="field"><div class="field__label">تصویر کاور<span class="field__opt">اختیاری</span></div>' + RI.imageFieldHtml('cover', { value: p.cover, wide: true, label: 'کاور' }) + '</div>' +
           '<div class="field"><div class="field__label">عکس پروفایل<span class="field__opt">اختیاری</span></div>' + RI.imageFieldHtml('avatar', { value: p.avatar, round: true, label: 'عکس پروفایل' }) + '</div><hr class="divider">' +
           '<div class="form-grid" id="pform"><div class="field" data-field="name"><label class="field__label" for="p_name">نام و نام خانوادگی<span class="field__req">ضروری</span></label><input class="input" id="p_name" data-p="name" value="' + esc(p.name) + '" maxlength="50" autocomplete="off"><div class="field__error" role="alert" hidden></div></div>' +
           '<div class="field" data-field="location"><label class="field__label" for="p_loc">شهر<span class="field__opt">اختیاری</span></label><input class="input" id="p_loc" data-p="location" value="' + esc(p.location) + '" maxlength="30"></div>' +
-          '<div class="field span-2" data-field="title"><label class="field__label" for="p_title">عنوان حرفه‌ای یا تحصیلی<span class="field__req">ضروری</span></label><input class="input" id="p_title" data-p="title" value="' + esc(p.title) + '" maxlength="90" placeholder="مثلاً دانشجوی کامپیوتر | طراح رابط کاربری"><div class="field__hint">یک خط که بگوید کی هستی و چه می‌کنی.</div><div class="field__error" role="alert" hidden></div></div>' +
-          '<div class="field span-2" data-field="bio"><label class="field__label" for="p_bio">معرفی کوتاه<span class="field__opt">اختیاری</span><span class="field__count" id="bioCount"></span></label><textarea class="textarea" id="p_bio" data-p="bio" maxlength="300" rows="4" placeholder="دو سه جمله دربارهٔ آنچه دوست داری و می‌سازی">' + esc(p.bio) + '</textarea><div class="field__hint">با ۴۰ نویسه به بالا، نشان «پروفایل جان‌دار» نزدیک‌تر می‌شود.</div></div></div></div>';
+          '<div class="field span-2" data-field="title"><label class="field__label" for="p_title">عنوان حرفه‌ای یا تحصیلی<span class="field__req">ضروری</span></label><input class="input" id="p_title" data-p="title" value="' + esc(p.title) + '" maxlength="90" placeholder="مثلاً دانشجوی کامپیوتر | طراح رابط کاربری"><div class="field__hint">یک خط که بگوید کی هستی و چه می‌کنی</div><div class="field__error" role="alert" hidden></div></div>' +
+          '<div class="field span-2" data-field="bio"><label class="field__label" for="p_bio">معرفی کوتاه<span class="field__opt">اختیاری</span><span class="field__count" id="bioCount"></span></label><textarea class="textarea" id="p_bio" data-p="bio" maxlength="300" rows="4" placeholder="دو سه جمله دربارهٔ آنچه دوست داری و می‌سازی">' + esc(p.bio) + '</textarea><div class="field__hint">با ۴۰ نویسه به بالا، نشان «پروفایل جان‌دار» نزدیک‌تر می‌شود</div></div></div></div>';
       }
 
       function contactsPanel() {
         const ic = { email: 'mail', phone: 'phone', website: 'globe' };
         const rows = RI.C().contacts.map((x) => '<div class="crow" data-id="' + x.id + '"><span class="row__ico">' + RI.icon(ic[x.type]) + '</span><div class="field" data-field="' + x.id + '"><label class="field__label" for="c_' + x.id + '">' + esc(x.label) + '</label><input class="input" id="c_' + x.id + '" data-c="' + x.id + '" dir="ltr" value="' + esc(x.value) + '" inputmode="' + (x.type === 'email' ? 'email' : x.type === 'phone' ? 'tel' : 'url') + '" placeholder="' + (x.type === 'email' ? 'you@example.com' : x.type === 'phone' ? '09123456789' : 'example.com') + '"><div class="field__error" role="alert" hidden></div></div>' +
           '<label class="crow__pub"><span>' + (x.public ? RI.icon('eye') + 'عمومی' : RI.icon('eyeOff') + 'پنهان') + '</span>' + RI.switchHtml({ checked: x.public, label: 'نمایش عمومی ' + x.label }).replace('<input', '<input data-cpub="' + x.id + '"') + '</label></div>').join('');
-        return '<div class="panel"><div class="panel__head"><h2>اطلاعات تماس</h2><p>هر مورد را جدا برای نمایش عمومی انتخاب کن. <span class="field__req">ضروری</span> برای انتشار: دست‌کم یک راه تماس عمومی.</p></div>' + rows + '<div class="banner banner--brown">' + RI.icon('shield') + '<div class="banner__body">مورد پنهان هرگز روی صفحهٔ عمومی دیده نمی‌شود، حتی اگر پر باشد.</div></div></div>';
+        return '<div class="panel"><div class="panel__head"><h2>اطلاعات تماس</h2><p>هر مورد را جدا برای نمایش عمومی انتخاب کن <span class="field__req">ضروری</span> برای انتشار: دست‌کم یک راه تماس عمومی</p></div>' + rows + '<div class="banner banner--brown">' + RI.icon('shield') + '<div class="banner__body">مورد پنهان هرگز روی صفحهٔ عمومی دیده نمی‌شود، حتی اگر پر باشد</div></div></div>';
       }
 
       function listPanel(id) {
@@ -106,7 +106,7 @@
           return '<li class="row' + (s.visible ? '' : ' is-off') + '" data-id="' + s.key + '"><span class="row__grip" aria-hidden="true">' + RI.icon('grip') + '</span><span class="row__ico">' + RI.icon(m[1]) + '</span><div class="row__main"><div class="row__title">' + m[0] + '</div><div class="row__sub">' + (s.key === 'contacts' ? 'ضروری برای انتشار' : (c[s.key] && c[s.key].length ? RI.fa(c[s.key].length) + ' مورد' : 'خالی؛ تا پر نشود نمایش داده نمی‌شود')) + '</div></div>' +
             '<div class="row__actions"><button type="button" class="btn btn--icon btn--ghost btn--sm" data-sup="' + s.key + '" aria-label="بالا" ' + (i === 0 ? 'disabled' : '') + '>' + RI.icon('up') + '</button><button type="button" class="btn btn--icon btn--ghost btn--sm" data-sdown="' + s.key + '" aria-label="پایین" ' + (i === c.sections.length - 1 ? 'disabled' : '') + '>' + RI.icon('down') + '</button></div>' +
             RI.switchHtml({ checked: s.visible, label: 'نمایش ' + m[0] }).replace('<input', '<input data-svis="' + s.key + '"') + '</li>'; }).join('');
-        return '<div class="panel"><div class="panel__head"><h2>چیدمان بخش‌ها</h2><p>ترتیب را بکش یا با فلش‌ها عوض کن؛ با کلید هر بخش را از رزومه پنهان کن.</p></div><ul class="rows" id="slist">' + rows + '</ul></div>';
+        return '<div class="panel"><div class="panel__head"><h2>چیدمان بخش‌ها</h2><p>ترتیب را بکش یا با فلش‌ها عوض کن؛ با کلید هر بخش را از رزومه پنهان کن</p></div><ul class="rows" id="slist">' + rows + '</ul></div>';
       }
 
       function paint(keepScroll) {
@@ -136,7 +136,7 @@
           const cnt = () => { const e = RI.$('#bioCount', panel); if (e) e.textContent = RI.fa(p.bio.length) + '/۳۰۰'; }; cnt();
           RI.$$('[data-p]', panel).forEach((el) => {
             el.addEventListener('input', () => { p[el.dataset.p] = el.value; RI.touch('profile'); if (el.dataset.p === 'bio') cnt(); if (el.value.trim()) RI.showFieldError(panel, el.dataset.p, ''); });
-            el.addEventListener('blur', () => { if ((el.dataset.p === 'name' || el.dataset.p === 'title') && !el.value.trim()) RI.showFieldError(panel, el.dataset.p, 'این فیلد برای انتشار لازم است.'); });
+            el.addEventListener('blur', () => { if ((el.dataset.p === 'name' || el.dataset.p === 'title') && !el.value.trim()) RI.showFieldError(panel, el.dataset.p, 'این فیلد برای انتشار لازم است'); });
           });
         }
       }
@@ -151,11 +151,11 @@
         const id = e.target.dataset.c; if (!id) return;
         const x = RI.C().contacts.find((k) => k.id === id); x.value = e.target.value; RI.touch('contacts');
         let m = '';
-        if (e.target.value.trim()) { if (x.type === 'email' && !RI.isEmail(e.target.value)) m = 'ایمیل معتبر نیست.'; if (x.type === 'phone' && !RI.isMobile(e.target.value)) m = 'شمارهٔ موبایل را به شکل ۰۹۱۲۳۴۵۶۷۸۹ بنویس.'; if (x.type === 'website' && !RI.isUrl(e.target.value)) m = 'آدرس وب‌سایت معتبر نیست.'; }
+        if (e.target.value.trim()) { if (x.type === 'email' && !RI.isEmail(e.target.value)) m = 'ایمیل معتبر نیست'; if (x.type === 'phone' && !RI.isMobile(e.target.value)) m = 'شمارهٔ موبایل را به شکل ۰۹۱۲۳۴۵۶۷۸۹ بنویس'; if (x.type === 'website' && !RI.isUrl(e.target.value)) m = 'آدرس وب‌سایت معتبر نیست'; }
         RI.showFieldError(body, id, m);
       });
       body.addEventListener('change', (e) => {
-        if (e.target.dataset.cpub) { const x = RI.C().contacts.find((k) => k.id === e.target.dataset.cpub); if (e.target.checked && !x.value.trim()) { e.target.checked = false; RI.toast('اول مقدار را وارد کن، بعد می‌توانی عمومی‌اش کنی.', { kind: 'info' }); return; } x.public = e.target.checked; RI.touch('contacts'); paint(); }
+        if (e.target.dataset.cpub) { const x = RI.C().contacts.find((k) => k.id === e.target.dataset.cpub); if (e.target.checked && !x.value.trim()) { e.target.checked = false; RI.toast('اول مقدار را وارد کن، بعد می‌توانی عمومی‌اش کنی', { kind: 'info' }); return; } x.public = e.target.checked; RI.touch('contacts'); paint(); }
         if (e.target.dataset.svis) { const s = RI.C().sections.find((k) => k.key === e.target.dataset.svis); s.visible = e.target.checked; RI.touch('sections'); const li = e.target.closest('.row'); li.classList.toggle('is-off', !s.visible); }
       });
 
@@ -166,7 +166,7 @@
       }
       async function remove(id) {
         const L = LISTS[step], list = RI.C()[step], x = list.find((k) => k.id === id);
-        const ok = await RI.confirm({ title: 'حذف «' + esc(L.title_(x)) + '»', text: 'این مورد از رزومه حذف می‌شود. تا زمانی که ذخیره نکنی می‌توانی با «دور انداختن تغییرات» برش گردانی.', danger: true, icon: 'trash', confirmLabel: 'حذف' });
+        const ok = await RI.confirm({ title: 'حذف «' + esc(L.title_(x)) + '»', text: 'این مورد از رزومه حذف می‌شود تا زمانی که ذخیره نکنی می‌توانی با «دور انداختن تغییرات» برش گردانی', danger: true, icon: 'trash', confirmLabel: 'حذف' });
         if (!ok) return;
         const el = RI.$('[data-id="' + id + '"]', body);
         if (el && !RI.reduceMotion()) await el.animate([{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'translateX(24px)' }], { duration: 220, easing: 'ease-in' }).finished.catch(() => {});

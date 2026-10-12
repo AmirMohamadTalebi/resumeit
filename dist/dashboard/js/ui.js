@@ -72,7 +72,7 @@
       '<div class="imgfield__presets" role="group" aria-label="تصویر آماده">' +
       RI.presets.map((p, i) => '<button type="button" data-preset="' + p + '" style="' + esc(RI.bg(p)) + '" aria-label="تصویر آمادهٔ ' + RI.fa(i + 1) + '"></button>').join('') +
       '</div><div class="field__error" role="alert" hidden></div>' +
-      '<div class="field__hint">PNG یا JPG، حداکثر ۲ مگابایت. فقط در مرورگر نگه‌داری می‌شود (نمایشی).</div></div></div>';
+      '<div class="field__hint">PNG یا JPG، حداکثر ۲ مگابایت فقط در مرورگر نگه‌داری می‌شود (نمایشی).</div></div></div>';
   };
   RI.bindImageField = function (root, name, io) {
     const el = RI.$('[data-img="' + name + '"]', root);
@@ -84,11 +84,11 @@
       const f = e.target.files[0];
       if (!f) return;
       err.hidden = true;
-      if (!/^image\/(png|jpeg|webp)$/.test(f.type)) return fail('فقط تصویر PNG، JPG یا WebP مجاز است.');
-      if (f.size > 2 * 1024 * 1024) return fail('حجم تصویر بیش از ۲ مگابایت است؛ لطفاً تصویر کوچک‌تری انتخاب کنید.');
+      if (!/^image\/(png|jpeg|webp)$/.test(f.type)) return fail('فقط تصویر PNG، JPG یا WebP مجاز است');
+      if (f.size > 2 * 1024 * 1024) return fail('حجم تصویر بیش از ۲ مگابایت است؛ لطفاً تصویر کوچک‌تری انتخاب کنید');
       const rd = new FileReader();
       rd.onload = () => { io.set(rd.result); show(rd.result); };
-      rd.onerror = () => fail('خواندن تصویر ممکن نشد. دوباره تلاش کنید.');
+      rd.onerror = () => fail('خواندن تصویر ممکن نشد دوباره تلاش کنید');
       rd.readAsDataURL(f);
       e.target.value = '';
     });
@@ -118,10 +118,10 @@
   function validate(f, v, all) {
     if (f.showIf && !f.showIf(all)) return '';
     const s = typeof v === 'string' ? v.trim() : v;
-    if (f.required && (s === '' || s == null)) return 'این فیلد الزامی است.';
+    if (f.required && (s === '' || s == null)) return 'این فیلد الزامی است';
     if (s && f.type === 'url' && !RI.isUrl(s)) return 'آدرس معتبر نیست؛ مثلاً example.com یا https://example.com';
-    if (s && f.type === 'email' && !RI.isEmail(s)) return 'نشانی ایمیل معتبر نیست.';
-    if (s && f.min && String(s).length < f.min) return 'حداقل ' + RI.fa(f.min) + ' نویسه لازم است.';
+    if (s && f.type === 'email' && !RI.isEmail(s)) return 'نشانی ایمیل معتبر نیست';
+    if (s && f.min && String(s).length < f.min) return 'حداقل ' + RI.fa(f.min) + ' نویسه لازم است';
     if (f.validate) return f.validate(s, all) || '';
     return '';
   }
@@ -135,7 +135,7 @@
     else { e.hidden = true; if (c) c.removeAttribute('aria-invalid'); }
   };
 
-  /* فرم داخل مودال؛ values شیء ویرایش‌شده است. */
+  /* فرم داخل مودال؛ values شیء ویرایش‌شده است */
   RI.formModal = function (o) {
     const values = Object.assign({}, o.values || {});
     let tried = false;

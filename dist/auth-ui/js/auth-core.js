@@ -29,39 +29,34 @@
       if (!RIA.reduce()) root.animate([{ opacity: 0, transform: 'translateY(10px)' }, { opacity: 1, transform: 'none' }], { duration: 320, easing: 'cubic-bezier(.22,.8,.28,1)' });
       if (init) init(root);
     };
-    if (root.children.length && !RIA.reduce()) root.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 120 }).finished.then(run, run); else run();
+    run();
   };
 
   /* ---------- توست ---------- */
   RIA.toast = function (msg, kind) {
-    const root = $('#toast-root'); if (!root) return;
-    const el = document.createElement('div');
-    el.className = 'toast toast--' + (kind || 'info');
-    el.innerHTML = RIA.icon(kind === 'error' ? 'alert' : kind === 'success' ? 'check' : 'info') + '<span>' + RIA.esc(msg) + '</span>';
-    root.appendChild(el);
-    setTimeout(() => { el.classList.add('is-leaving'); setTimeout(() => el.remove(), 220); }, 3400);
+    window.ResumeItNotify(msg, {kind:kind||'info'});
   };
 
   /* ---------- لودینگ ----------
-     busy(card, 'پیام') یک پوشش روی کارت می‌گذارد؛ اگر عملیات طول بکشد پیام «کمی طول کشید» می‌آید. */
+     busy(card, 'پیام') یک پوشش روی کارت می‌گذارد؛ اگر عملیات طول بکشد پیام «کمی طول کشید» می‌آید */
   RIA.busy = function (host, msg) {
-    if(host.dataset.pending)throw new Error('درخواست قبلی هنوز تمام نشده است.');
+    if(host.dataset.pending)throw new Error('یه لحظه صبر کن تا درخواست قبلی تموم بشه');
     host.dataset.pending='true';const content=$('#view',host);if(content)content.inert=true;
     const o = document.createElement('div');
     o.className = 'busy'; o.setAttribute('role', 'status'); o.setAttribute('aria-live', 'polite');
-    o.innerHTML = '<div class="busy__box"><span class="loading loading-dots loading-lg" aria-hidden="true"></span><b class="busy__msg">' + RIA.esc(msg || 'لطفاً صبر کنید…') + '</b><small class="busy__slow" hidden>کمی بیشتر از معمول طول کشید؛ لطفاً صفحه را نبندید.</small></div>';
+    o.innerHTML = '<div class="busy__box"><span class="loading loading-dots loading-lg" aria-hidden="true"></span><b class="busy__msg">' + RIA.esc(msg || 'یه لحظه صبر کن…') + '</b><small class="busy__slow" hidden>کمی بیشتر از معمول طول کشید؛ صفحه رو باز نگه دار</small></div>';
     host.appendChild(o);
     host.setAttribute('aria-busy', 'true');
     const t = setTimeout(() => { $('.busy__slow', o).hidden = false; }, RIA.cfg.slowNoticeMs);
     requestAnimationFrame(() => o.classList.add('is-on'));
     return {
       text(m) { $('.busy__msg', o).textContent = m; },
-      done() { clearTimeout(t); delete host.dataset.pending;if(content)content.inert=false; host.removeAttribute('aria-busy'); o.classList.remove('is-on'); setTimeout(() => o.remove(), 200); },
+      done() { clearTimeout(t); delete host.dataset.pending;if(content)content.inert=false; host.removeAttribute('aria-busy'); o.remove(); },
     };
   };
   /* اجرای یک عملیات ناهمگام با دکمه یا پوششِ لودینگ */
   RIA.run = async function(card,promiseFn,msg,btn,final=false) {
-    if(card.dataset.pending)throw new Error('درخواست قبلی هنوز تمام نشده است.');
+    if(card.dataset.pending)throw new Error('یه لحظه صبر کن تا درخواست قبلی تموم بشه');
     let loading;
     if(final){card.dataset.pending='true';card.setAttribute('aria-busy','true');loading=RIA.centerMark(msg);}
     else loading=RIA.busy(card,msg);
@@ -83,7 +78,7 @@
     e.hidden = false; e.innerHTML = RIA.icon('alert') + '<span>' + RIA.esc(msg) + '</span>';
     if (!RIA.reduce()) e.animate([{ transform: 'translateX(-6px)' }, { transform: 'translateX(6px)' }, { transform: 'none' }], { duration: 260 });
   };
-  RIA.handleError=function(root,error){if(error.code!=='ACCOUNT_NOT_FOUND'){RIA.formError(root,error.message);return;}let dialog=$('#account-notice');if(!dialog){dialog=document.createElement('dialog');dialog.id='account-notice';dialog.className='modal account-notice';dialog.setAttribute('aria-labelledby','account-title');dialog.innerHTML='<div class="modal-box"><button type="button" class="notice-close" aria-label="بستن">×</button><div class="notice-icon">'+RIA.icon('user')+'</div><h2 id="account-title">هنوز حسابی با این شماره ندارید</h2><p>برای شروع، حساب بسازید. برای این درخواست پیامکی ارسال نشده است.</p><a class="btn btn--primary btn--block" href="/register/">ساخت حساب</a><button type="button" class="btn btn--ghost btn--block" id="edit-number">ویرایش شماره</button></div>';document.body.appendChild(dialog);$('.notice-close',dialog).onclick=()=>dialog.close();$('#edit-number',dialog).onclick=()=>dialog.close();dialog.addEventListener('close',()=>$('#mobile')?.focus());dialog.addEventListener('click',e=>{if(e.target===dialog)dialog.close();});}if(!dialog.open)dialog.showModal();};
+  RIA.handleError=function(root,error){if(error.code!=='ACCOUNT_NOT_FOUND'){RIA.formError(root,error.message);return;}let dialog=$('#account-notice');if(!dialog){dialog=document.createElement('dialog');dialog.id='account-notice';dialog.className='modal account-notice';dialog.setAttribute('aria-labelledby','account-title');dialog.innerHTML='<div class="modal-box"><button type="button" class="notice-close" aria-label="بستن">×</button><div class="notice-icon">'+RIA.icon('user')+'</div><h2 id="account-title">هنوز با این شماره حساب نداری</h2><p>برای شروع ثبت‌نام کن، برای این درخواست پیامکی نفرستادیم</p><a class="btn btn--primary btn--block" href="/register/">ساخت حساب</a><button type="button" class="btn btn--ghost btn--block" id="edit-number">ویرایش شماره</button></div>';document.body.appendChild(dialog);$('.notice-close',dialog).onclick=()=>dialog.close();$('#edit-number',dialog).onclick=()=>dialog.close();dialog.addEventListener('close',()=>$('#mobile')?.focus());dialog.addEventListener('click',e=>{if(e.target===dialog)dialog.close();});}if(!dialog.open)dialog.showModal();};
   RIA.fieldError = function (field, msg) {
     const g = field.closest('.field'), e = $('.field__error', g), inp = $('input', g);
     if (msg) { e.innerHTML = RIA.icon('alert') + RIA.esc(msg); e.hidden = false; inp.setAttribute('aria-invalid', 'true'); }
@@ -98,7 +93,7 @@
   RIA.bindMobile = function (root, id) {
     const inp = $('#' + (id || 'mobile'), root); if (!inp) return null;
     inp.addEventListener('input', () => { const p = inp.selectionStart; inp.value = RIA.digits(inp.value).replace(/[^\d+]/g, ''); RIA.fieldError(inp, ''); });
-    return { value: () => RIA.normMobile(inp.value), validate() { const v = RIA.normMobile(inp.value); if (!v) { RIA.fieldError(inp, 'شمارهٔ موبایل را وارد کنید.'); inp.focus(); return null; } if (!RIA.isMobile(v)) { RIA.fieldError(inp, 'شماره باید با ۰۹ شروع شود و ۱۱ رقم باشد؛ مثلاً ۰۹۱۲۳۴۵۶۷۸۹.'); inp.focus(); return null; } return v; }, input: inp };
+    return { value: () => RIA.normMobile(inp.value), validate() { const v = RIA.normMobile(inp.value); if (!v) { RIA.fieldError(inp, 'شماره موبایلت رو وارد کن'); inp.focus(); return null; } if (!RIA.isMobile(v)) { RIA.fieldError(inp, 'شماره باید ۱۱ رقم باشه و با ۰۹ شروع بشه، مثل ۰۹۱۲۳۴۵۶۷۸۹'); inp.focus(); return null; } return v; }, input: inp };
   };
 
   /* ---------- رمز عبور ---------- */
@@ -117,24 +112,36 @@
     RIA.bindEyes(root);
     p.addEventListener('input', () => { const l = RIA.strength(p.value); $('#stg', root).dataset.level = l; $('#stt', root).textContent = l ? 'قدرت رمز: ' + W[l] : ''; RIA.rules.forEach((r, i) => $('[data-r="' + i + '"]', root).classList.toggle('is-ok', r[1](p.value))); RIA.fieldError(p, ''); });
     p2.addEventListener('input', () => RIA.fieldError(p2, ''));
-    return { value: () => p.value, validate() { let bad = null; if (!RIA.rules.every((r) => r[1](p.value))) { RIA.fieldError(p, 'رمز باید بین ۸ تا ۱۲۸ نویسه باشد.'); bad = p; } else RIA.fieldError(p, ''); if (p.value !== p2.value) { RIA.fieldError(p2, 'تکرار رمز با رمز بالا یکی نیست.'); bad = bad || p2; } else RIA.fieldError(p2, ''); if (bad) { bad.focus(); return false; } return true; }, setError: (m) => { RIA.fieldError(p, m); p.focus(); } };
+    return { value: () => p.value, validate() { let bad = null; if (!RIA.rules.every((r) => r[1](p.value))) { RIA.fieldError(p, 'رمزت باید بین ۸ تا ۱۲۸ کاراکتر باشه'); bad = p; } else RIA.fieldError(p, ''); if (p.value !== p2.value) { RIA.fieldError(p2, 'این دو تا رمز با هم یکی نیستن'); bad = bad || p2; } else RIA.fieldError(p2, ''); if (bad) { bad.focus(); return false; } return true; }, setError: (m) => { RIA.fieldError(p, m); p.focus(); } };
   };
 
   /* ---------- کد یک‌بارمصرف ---------- */
-  RIA.otpHtml = (label) => '<div class="field"><div class="field__label" id="otpl">' + RIA.esc(label || 'کد ۶ رقمی') + '</div><div class="otp" id="otp" dir="ltr" role="group" aria-labelledby="otpl">' + Array.from({ length: RIA.cfg.otpLength }, (_, i) => '<input class="otp__i" inputmode="numeric" maxlength="' + (i ? 1 : RIA.cfg.otpLength) + '" autocomplete="' + (i ? 'off' : 'one-time-code') + '" aria-label="رقم ' + RIA.fa(i + 1) + '">').join('') + '</div><div class="field__error" id="otp_e" role="alert" hidden></div></div>';
-  RIA.bindOtp = function (root, onComplete) {
-    const box = $('#otp', root), ins = $$('.otp__i', box), err = $('#otp_e', root);
-    const val = () => ins.map((i) => i.value).join('');
-    const setErr = (m) => { box.classList.toggle('is-bad', !!m); err.hidden = !m; err.innerHTML = m ? RIA.icon('alert') + RIA.esc(m) : ''; if (m && !RIA.reduce()) box.animate([{ transform: 'translateX(-7px)' }, { transform: 'translateX(7px)' }, { transform: 'translateX(-4px)' }, { transform: 'none' }], { duration: 300 }); };
-    const fill = (s) => { const d = RIA.digits(s).replace(/\D/g, '').slice(0, ins.length); ins.forEach((i, k) => { i.value = d[k] || ''; i.classList.toggle('has', !!i.value); }); (ins[Math.min(d.length, ins.length - 1)]).focus(); if (d.length === ins.length) onComplete && onComplete(d); };
-    ins.forEach((inp, i) => {
-      inp.addEventListener('input', () => { const d = RIA.digits(inp.value).replace(/\D/g, ''); if (d.length > 1) { fill(val().slice(0, i) + d); return; } inp.value = d; inp.classList.toggle('has', !!d); setErr(''); if (d && i < ins.length - 1) ins[i + 1].focus(); if (val().length === ins.length) onComplete && onComplete(val()); });
-      inp.addEventListener('keydown', (e) => { if (e.key === 'Backspace' && !inp.value && i > 0) { ins[i - 1].focus(); ins[i - 1].value = ''; ins[i - 1].classList.remove('has'); } if (e.key === 'ArrowRight' && i < ins.length - 1) { e.preventDefault(); ins[i + 1].focus(); } if (e.key === 'ArrowLeft' && i > 0) { e.preventDefault(); ins[i - 1].focus(); } });
-      inp.addEventListener('paste', (e) => { e.preventDefault(); fill((e.clipboardData || window.clipboardData).getData('text')); });
-      inp.addEventListener('focus', () => inp.select());
-    });
-    return { value: val, error: setErr, clear() { ins.forEach((i) => { i.value = ''; i.classList.remove('has'); }); ins[0].focus(); }, disable(b) { ins.forEach((i) => { i.disabled = b; }); }, focus: () => ins[0].focus() };
+  RIA.otpHtml = (label) => '<div class="field"><label class="field__label" for="otp-code">' + RIA.esc(label || 'کد ۶ رقمی') + '</label><div class="auth-otp" id="otp" dir="ltr"><input class="input otp__i" id="otp-code" name="code" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" enterkeyhint="done" placeholder="کد ۶ رقمی" aria-describedby="otp_e"></div><div class="field__error" id="otp_e" role="alert" hidden></div></div>';
+  RIA.bindOtp = function (root) {
+    const box = $('#otp', root), inp = $('#otp-code', root), err = $('#otp_e', root);
+    const setErr = m => { box.classList.toggle('is-bad',!!m); err.hidden=!m; err.textContent=m||''; inp.setAttribute('aria-invalid',String(!!m)); };
+    const fill = s => { inp.value=RIA.digits(s).replace(/\D/g,'').slice(0,6); inp.classList.toggle('has',!!inp.value); setErr(''); };
+    inp.addEventListener('input',()=>fill(inp.value));
+    inp.addEventListener('paste',e=>{e.preventDefault();fill(e.clipboardData.getData('text'));});
+    const listen = () => { RIA.smsFill=code=>{if(inp.isConnected){fill(code);RIA.toast('کد جایگذاری شد، حالا تأییدش کن','success');}}; };
+    listen();if(RIA.smsCode)RIA.smsFill(RIA.smsCode);
+    return { value:()=>inp.value, error:setErr, listen, clear(){inp.value='';inp.classList.remove('has');inp.focus();}, disable:b=>{inp.disabled=b;}, focus:()=>inp.focus() };
   };
+
+  RIA.stopSmsCapture = () => { RIA.smsController?.abort();clearTimeout(RIA.smsTimer);RIA.smsFill=null;RIA.smsCode=null; };
+  RIA.startSmsCapture = () => {
+    const fill=RIA.smsFill;
+    RIA.stopSmsCapture();
+    RIA.smsFill=fill;
+    if(!window.isSecureContext || !('OTPCredential' in window) || !navigator.credentials)return;
+    const controller=RIA.smsController=new AbortController();
+    RIA.smsTimer=setTimeout(()=>controller.abort(),120000);
+    navigator.credentials.get({otp:{transport:['sms']},signal:controller.signal}).then(credential=>{
+      if(controller.signal.aborted || !credential)return;
+      RIA.smsCode=credential.code;RIA.smsFill?.(credential.code);
+    }).catch(()=>{}).finally(()=>{if(RIA.smsController===controller)clearTimeout(RIA.smsTimer);});
+  };
+  window.addEventListener('pagehide',()=>RIA.stopSmsCapture());
 
   /* شمارندهٔ ارسال مجدد */
   RIA.resend = function (root, onResend) {
