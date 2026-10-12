@@ -105,6 +105,8 @@ try { process.loadEnvFile(); } catch (error) { if (error.code !== 'ENOENT') thro
     await database.close();database=await openDatabase(config);assert.equal((await database.loadDashboard(owner)).content.profile.name,'Persistent');
     await assert.rejects(database.mutateDashboard(owner,0,()=>{}),e=>e.status===409);
     const rival=await database.provisionAccount('09120000008',hash);await assert.rejects(database.mutateDashboard(rival,0,d=>{d.slug=draft.slug;}),e=>e.status===409);
+    assert.equal((await database.loadDashboard(owner)).content.profile.name,'Persistent');
+    assert.equal((await database.loadDashboard(rival)).revision,0);
     await database.mutateDashboard(owner,1,d=>{d.published.links=structuredClone(d.content);d.pub.links.status='published';});
     assert.equal((await database.publicPage('mysql-profile','links')).content.links.items[0].title,'Site');
     await database.recordMetric(owner,'links');await database.recordMetric(owner,'click','one');assert.equal((await database.dashboardStats(owner)).length,2);

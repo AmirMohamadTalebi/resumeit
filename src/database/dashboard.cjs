@@ -9,7 +9,10 @@ module.exports=({execute,transaction})=>({
     const doc=r?{content:parse(r.draft),preferences:parse(r.preferences),pub:parse(r.pub),revision:r.revision,slug:r.slug,published:parse(r.published)}:{...initial(),slug:null,published:{}};
     if(doc.revision!==expected)fail('نسخهٔ جدیدتری ذخیره شده است؛ صفحه را دوباره باز کن',409);
     await action(doc);doc.revision++;
-    await con.execute('INSERT INTO dashboard_documents(user_id,slug,draft,preferences,pub,published,revision) VALUES(?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE slug=VALUES(slug),draft=VALUES(draft),preferences=VALUES(preferences),pub=VALUES(pub),published=VALUES(published),revision=VALUES(revision)',[id,doc.slug,JSON.stringify(doc.content),JSON.stringify(doc.preferences),JSON.stringify(doc.pub),JSON.stringify(doc.published),doc.revision]);
+    // Never upsert on the unique slug: a collision must not update another account's row.
+    const values=[doc.slug,JSON.stringify(doc.content),JSON.stringify(doc.preferences),JSON.stringify(doc.pub),JSON.stringify(doc.published),doc.revision];
+    if(r)await con.execute('UPDATE dashboard_documents SET slug=?,draft=?,preferences=?,pub=?,published=?,revision=? WHERE user_id=?',[...values,id]);
+    else await con.execute('INSERT INTO dashboard_documents(slug,draft,preferences,pub,published,revision,user_id) VALUES(?,?,?,?,?,?,?)',[...values,id]);
     const {published,...result}=doc;return result;
   });}catch(e){if(e.code==='ER_DUP_ENTRY')fail('این نام صفحه قبلاً گرفته شده است',409);throw e;}},
   async publicPage(slug,kind){const [r]=await execute('SELECT user_id,published,pub,preferences FROM dashboard_documents WHERE slug=?',[slug]);if(!r)return null;const pub=parse(r.pub),published=parse(r.published);return pub[kind].status==='published'&&published[kind]?{id:r.user_id,content:published[kind],preferences:parse(r.preferences)}:null;},
