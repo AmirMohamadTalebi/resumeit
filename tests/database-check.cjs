@@ -130,4 +130,4 @@ try { process.loadEnvFile(); } catch (error) { if (error.code !== 'ENOENT') thro
     if (database) await database.close();
     await admin.query('DROP DATABASE IF EXISTS `' + name + '`'); await admin.end();
   }
-})().catch(error => { console.error('MySQL check failed:', error.code || error.name); process.exitCode = 1; });
+})().catch(error => { console.error('MySQL check failed:', error.code === 'ERR_ASSERTION' ? error.stack : error.code || error.name); process.exitCode = 1; });
