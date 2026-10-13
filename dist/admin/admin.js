@@ -129,7 +129,7 @@
   }
   function table(headers, data) {
     return (
-      '<div class="table-scroll"><table class="table table-sm"><thead><tr>' +
+      '<div class="table-scroll"><table class="table"><thead><tr>' +
       headers.map((h) => '<th scope="col">' + esc(h) + "</th>").join("") +
       "</tr></thead><tbody>" +
       data

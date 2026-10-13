@@ -26,6 +26,8 @@ for(const [url,files] of [
   return source;
 }).join(url.endsWith('.css')?'\n':'\n;\n')));
 const compressedAssets=new Map();
+const fileBodies=new Map(),fileCacheLimit=32*1024*1024;
+let fileCacheBytes=0;
 const mime = { '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8', '.js': 'application/javascript', '.mjs': 'application/javascript', '.woff2': 'font/woff2', '.svg': 'image/svg+xml', '.txt': 'text/plain; charset=utf-8', '.xml': 'application/xml; charset=utf-8', '.jpg': 'image/jpeg', '.png': 'image/png', '.webp': 'image/webp', '.ico': 'image/x-icon' };
 Object.assign(mime,{'.jpeg':'image/jpeg','.gif':'image/gif','.woff':'font/woff','.ttf':'font/ttf'});
 
@@ -81,7 +83,15 @@ async function serveStatic(req, res, pathname, origin, account) {
       res.setHeader('Cache-Control', 'no-store');
       if (account && !await account(req)) { res.writeHead(303, { Location: '/login/' }); res.end(); return; }
     }
-    const type=mime[path.extname(realFile).toLowerCase()];let body=bundles.get(pathname)||await fs.readFile(realFile);
+    const type=mime[path.extname(realFile).toLowerCase()];let body=bundles.get(pathname)||fileBodies.get(realFile);
+    if(!body){
+      body=await fs.readFile(realFile);
+      // Static releases are immutable during a process lifetime; restart after changing dist.
+      if(!fileBodies.has(realFile)&&body.length<=fileCacheLimit){
+        while(fileCacheBytes+body.length>fileCacheLimit){const oldest=fileBodies.keys().next().value;fileCacheBytes-=fileBodies.get(oldest).length;fileBodies.delete(oldest);}
+        fileBodies.set(realFile,body);fileCacheBytes+=body.length;
+      }
+    }
     if(type.startsWith('text/html'))body=Buffer.from(body.toString('utf8').replace(/<html\b([^>]*)>/i,`<html$1 data-asset-version="${assetRevision}">`).replace(/\b(src|href)=(["'])(\/[^"'?#]+\.(?:js|css|woff2|png|svg))\2/g,(_,attr,quote,url)=>`${attr}=${quote}${url}?v=${assetRevision}${quote}`));
     if(type.startsWith('text/css'))body=Buffer.from(body.toString('utf8').replace(/url\((["']?)(?!data:|https?:|\/\/)([^)"'?#]+\.(?:woff2|woff|ttf|png|svg|webp|jpg))\1\)/g,(_,quote,url)=>`url(${quote}${url}?v=${assetRevision}${quote})`));
     send(200,body,type);
