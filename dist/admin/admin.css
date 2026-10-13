@@ -6,3 +6,6 @@ body{background:var(--ice-100);font-family:var(--font);color:var(--ink);font-siz
 .admin-backdrop{display:none}
 @media(max-width:760px){.admin-backdrop[data-open=true]{display:block}}
 .filters{margin-bottom:22px}
+
+#admin-close{display:none}
+@media(max-width:760px){#admin-close{display:inline-flex;margin-bottom:18px}.admin-side[data-open=false]{visibility:hidden;pointer-events:none}}
