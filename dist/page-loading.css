@@ -1,12 +1,7 @@
-.ri-page-loading{position:fixed;inset:0;z-index:9999;display:grid;place-items:center;background:#edf3f7;color:#36566c;font-family:inherit;direction:rtl}
+.ri-page-loading{position:fixed;inset:0 0 auto;z-index:9999;height:3px;pointer-events:none;color:#36566c;font-family:inherit;direction:rtl}
 .ri-page-loading[hidden]{display:none!important}
-.ri-loading-content{display:grid;justify-items:center;gap:18px;padding:32px;text-align:center}
-.ri-loading-mark{width:66px;height:66px;overflow:visible}
-.ri-mark-body{fill:#36566c}.ri-mark-fold{fill:#99745a;transform-origin:75px 35px;animation:ri-fold 1.6s ease-in-out infinite}
-.ri-loading-content strong{font:600 26px/1.2 Arial,sans-serif;letter-spacing:-1px}
-.ri-loading-content>span:last-child{font-size:12px;line-height:1.8;color:#4f687a}
-.ri-loading-track{position:relative;width:112px;height:3px;overflow:hidden;border-radius:3px;background:#ccdbe6;margin:5px 0}
+.ri-loading-content{height:3px}
+.ri-loading-track{display:block;position:relative;width:100%;height:3px;overflow:hidden;background:#ccdbe6}
 .ri-loading-track:after{content:'';position:absolute;inset:0;transform:translateX(-100%);background:#99745a;animation:ri-track 1.6s ease-in-out infinite}
 @keyframes ri-track{to{transform:translateX(100%)}}
-@keyframes ri-fold{0%,100%{opacity:1;transform:scaleY(1)}50%{opacity:.55;transform:scaleY(.7)}}
-@media(prefers-reduced-motion:reduce){.ri-mark-fold,.ri-loading-track:after{animation:none}.ri-loading-track:after{transform:none;width:40%;inset-inline-start:30%}}
+@media(prefers-reduced-motion:reduce){.ri-loading-track:after{animation:none}.ri-loading-track:after{transform:none;width:40%;inset-inline-start:30%}}

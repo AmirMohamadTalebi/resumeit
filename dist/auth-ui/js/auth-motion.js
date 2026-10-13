@@ -26,34 +26,4 @@
     form.addEventListener('change',update);
     update();
   };
-  function travel(mark, from, to) {
-    if (RIA.reduce() || !from.width || !from.height || !to.width || !to.height) return Promise.resolve();
-    const animation = mark.animate([
-      { transform: 'translate(' + (from.left-to.left) + 'px,' + (from.top-to.top) + 'px) scale(' + from.width/to.width + ')' },
-      { transform: 'none' }
-    ], { duration:760, easing:'cubic-bezier(.16,1,.3,1)' });
-    return animation.finished.catch(() => {});
-  }
-  RIA.centerMark = message => {
-    const mark = document.querySelector('.auth-assembly'), home = mark.parentElement;
-    const before = mark.getBoundingClientRect(), focus = document.activeElement;
-    const root = document.querySelector('#auth-root'), oldOverflow = document.body.style.overflow;
-    root.inert = true; document.body.style.overflow = 'hidden';
-    const overlay = document.createElement('div');
-    overlay.className = 'auth-transit'; overlay.setAttribute('role','status'); overlay.setAttribute('aria-live','polite');
-    overlay.innerHTML = '<div class="auth-loading-content"><div class="auth-loading-slot"></div><strong>لودینگ</strong><span class="auth-loading-line" aria-hidden="true"></span><p>منتظر باشید</p><small>' + RIA.esc(message) + '</small></div>';
-    document.body.appendChild(overlay);
-    overlay.querySelector('.auth-loading-slot').appendChild(mark);
-    RIA.setMark(3);
-    const arrival = travel(mark,before,mark.getBoundingClientRect());
-    return { async done() {
-      await arrival;
-      const from = mark.getBoundingClientRect();
-      home.appendChild(mark);
-      overlay.classList.add('is-leaving');
-      await travel(mark,from,mark.getBoundingClientRect());
-      overlay.remove(); root.inert=false; document.body.style.overflow=oldOverflow;
-      if(focus?.isConnected)focus.focus({preventScroll:true});
-    } };
-  };
 })();

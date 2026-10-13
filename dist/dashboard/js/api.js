@@ -7,7 +7,9 @@
   RI.loadDashboard=async(owner)=>{
     RI.statsRows=null; RI.statsLoading=['home','links','stats'].includes(document.body.dataset.page);
     if(RI.statsLoading) RI.dashboardRequest('stats').then(r=>r.rows).catch(()=>null).then(rows=>{RI.statsRows=rows; RI.statsLoading=false; RI.emit('stats');});
-    const doc=await RI.dashboardRequest('document');
+    const doc=window.resumeitDocument?await window.resumeitDocument:await RI.dashboardRequest('document');
+    if(doc.error)throw new Error(doc.error);
+    if(doc.ownerId&&doc.ownerId!==owner)throw new Error('حساب فعال تغییر کرده؛ صفحه را دوباره باز کن');
     let legacy=false;try{legacy=!!sessionStorage.getItem('resumeit-draft-v1:'+owner);}catch{}
     if(!doc.revision && legacy) await RI.loadTemplates(['vista','satiar']);
     RI.restoreDraft(owner,doc.revision>0);

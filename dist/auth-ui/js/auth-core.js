@@ -28,7 +28,6 @@
       root.innerHTML = html;
       const h = $('[data-focus]', root) || $('h1', root);
       if (h) { h.setAttribute('tabindex', '-1'); h.focus({ preventScroll: true }); }
-      if (!RIA.reduce()) root.animate([{ opacity: 0, transform: 'translateY(10px)' }, { opacity: 1, transform: 'none' }], { duration: 320, easing: 'cubic-bezier(.22,.8,.28,1)' });
       if (init) init(root);
     };
     run();
@@ -72,15 +71,10 @@
   RIA.run = async function(card,promiseFn,msg,btn,final=false) {
     if(card.dataset.pending)throw new Error('یه لحظه صبر کن تا درخواست قبلی تموم بشه');
     let loading;
-    if(final){card.dataset.pending='true';card.setAttribute('aria-busy','true');loading=RIA.centerMark(msg);}
-    else loading=RIA.busy(card,msg);
+    loading=RIA.busy(card,msg);
     if(btn)btn.disabled=true;
     try {
-      // Start the request immediately; reserve only enough display time for the R journey.
-      if(!final)return await promiseFn();
-      const [result]=await Promise.allSettled([Promise.resolve().then(promiseFn),new Promise(r=>setTimeout(r,RIA.reduce()?700:2400))]);
-      if(result.status==='rejected')throw result.reason;
-      return result.value;
+      return await promiseFn();
     }finally{if(btn)btn.disabled=false;await loading.done();delete card.dataset.pending;card.removeAttribute('aria-busy');}
   };
 

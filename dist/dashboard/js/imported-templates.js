@@ -7,7 +7,7 @@
   RI.loadTemplates = ids => Promise.all(ids.filter(id=>['vista','satiar'].includes(id)).map(id=>{
     if(RI.IMPORTED_TEMPLATES[id]) return Promise.resolve();
     if(!templateLoads.has(id)) templateLoads.set(id,new Promise((resolve,reject)=>{
-      const script=document.createElement('script');script.src='/dashboard/js/template-'+id+'.js';
+      const script=document.createElement('script');script.src='/dashboard/js/template-'+id+'.js'+(document.documentElement.dataset.assetVersion?'?v='+document.documentElement.dataset.assetVersion:'');
       script.onload=()=>{ if(RI.IMPORTED_TEMPLATES[id]) resolve(); else { templateLoads.delete(id); reject(new Error('قالب بارگذاری نشد؛ دوباره تلاش کن')); } };
       script.onerror=()=>{ templateLoads.delete(id); script.remove(); reject(new Error('قالب بارگذاری نشد؛ اتصال اینترنت را بررسی کن')); };
       document.head.append(script);

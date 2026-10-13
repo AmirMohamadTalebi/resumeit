@@ -10,7 +10,6 @@
   RI.$$ = (s, r) => Array.from((r || document).querySelectorAll(s));
   RI.esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   RI.uid = () => Math.random().toString(36).slice(2, 9);
-  RI.sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   RI.clamp = (n, a, b) => Math.min(b, Math.max(a, n));
   RI.reduceMotion = () => window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   RI.clone = (o) => JSON.parse(JSON.stringify(o));

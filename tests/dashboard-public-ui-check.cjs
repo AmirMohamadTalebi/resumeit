@@ -7,7 +7,7 @@ try{browser=await chromium.launch({channel:process.platform==='win32'?'msedge':u
    let release;const gate=new Promise(r=>release=r);
    await page.route('**/api/dashboard/document',async r=>{await gate;await r.continue();});
    await page.goto(base+'/dashboard/'+route,{waitUntil:'domcontentloaded'});
-   await page.locator('.ri-page-loading').waitFor({state:'visible'});assert.equal(await page.locator('body').getAttribute('aria-busy'),'true');
+   await page.locator('.ri-page-loading').waitFor({state:'visible'});assert.equal(await page.locator('body').getAttribute('aria-busy'),null);assert(await page.locator('.ri-page-loading').evaluate(e=>e.clientHeight)<=3);assert.equal(await page.locator('.ri-page-loading').evaluate(e=>getComputedStyle(e).pointerEvents),'none');await page.locator('#sidebar [data-route=links]').waitFor({state:'visible'});
    release();await page.locator('.ri-page-loading').waitFor({state:'detached'});assert.equal(await page.locator('body').getAttribute('aria-busy'),null);
    await page.unroute('**/api/dashboard/document');
  }

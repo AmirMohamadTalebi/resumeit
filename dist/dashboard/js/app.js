@@ -11,7 +11,7 @@
   const BOTTOM = [['home', 'خانه', 'home'], ['resume', 'رزومه', 'resume'], ['links', 'لینک‌ها', 'link'], ['themes', 'ظاهر', 'palette'], ['publish', 'انتشار', 'globe']];
   const LOGO = '<span class="ri-logo"><img src="/brand/resumeit-logo-v1.png" alt="ResumeIt" width="2172" height="724"></span>';
 
-  let current = null, cleanup = null, navToken = 0;
+  let current = null, cleanup = null, navToken = 0, bootstrapping = true;
 
   /* ---------- ساخت پوسته ---------- */
   function buildShell() {
@@ -73,6 +73,7 @@
   };
   async function navigate(id, opts) {
     if (!NAV.some(g => g.items.some(i => i[0] === id))) return;
+    if(bootstrapping){location.assign(RI.routeUrl(id,opts));return;}
     if (!(await RI.leaveGuard()) || !RI.keepDraft()) return;
     window.resumeitPageLoading?.start(true);
     location.assign(RI.routeUrl(id, opts));
@@ -93,16 +94,7 @@
     const opts = RI.routeOpts; RI.routeOpts = null;
     const ctx = { opts: opts || {} };
 
-    view.classList.remove('view');
-    void view.offsetWidth;
-    view.classList.add('view');
 
-    if (page.loadMs) {
-      const ms = RI.state.ui.sim.slow ? page.loadMs * 4 : page.loadMs;
-      view.innerHTML = page.skeleton ? page.skeleton() : '<div class="skeleton" style="height:320px"></div>';
-      await RI.sleep(ms);
-      if (token !== navToken) return;
-    }
     view.innerHTML = page.render(ctx);
     RI.$$('a[data-go]', view).forEach(a => { a.href = RI.routeUrl(a.dataset.go, a.dataset); });
     cleanup = page.mount ? page.mount(view, ctx) : null;
@@ -120,9 +112,15 @@
   async function boot() {
     const user = await window.resumeitSession;
     if (!user) return;
+    RI.applyAccount(user);buildShell();
+    RI.$('#view').innerHTML='<p role="status">در حال دریافت اطلاعات این بخش…</p>';
+    RI.$('#topPreview').disabled=true;
+    RI.delegate(document,'click','[data-route]',(e,b)=>{if(!bootstrapping||e.ctrlKey||e.metaKey||e.shiftKey||e.altKey||e.button!==0)return;e.preventDefault();navigate(b.dataset.route);});
+    RI.$('#menuBtn').addEventListener('click',openDrawer);
+    RI.$('#scrim').addEventListener('click',closeDrawer);
     try{await RI.loadDashboard(user.id); const page=document.body.dataset.page; await RI.loadTemplates(page==='resume'?[RI.C().theme.resume]:[]);}catch(e){RI.$('#view').textContent=e.message;const retry=document.createElement('button');retry.className='btn';retry.textContent='تلاش دوباره';retry.addEventListener('click',()=>location.reload());RI.$('#view').appendChild(retry);document.dispatchEvent(new Event('ri:dashboard-ready'));return;}
     RI.applyAccount(user);
-    buildShell();
+    paintAccount();bootstrapping=false;RI.$('#topPreview').disabled=false;
     if(user.is_admin&&sessionStorage.getItem('ri-panel-choice')!==user.id){
       const choice=RI.modal({title:'کدام پنل را باز کنیم؟',body:'<p>با این حساب به پنل کاربری و مدیریت دسترسی داری. هر زمان خواستی از منوی پنل می‌توانی جابه‌جا شوی.</p>',size:'sm'});
       choice.setActions([{label:'پنل کاربری',kind:'ghost',onClick:()=>sessionStorage.setItem('ri-panel-choice',user.id)},{label:'پنل مدیریت',kind:'primary',onClick:()=>{sessionStorage.setItem('ri-panel-choice',user.id);location.assign('/admin/');}}]);
@@ -133,8 +131,6 @@
     RI.on('change', paintAccount);
     RI.on('demo', paintAccount);
 
-    RI.$('#menuBtn').addEventListener('click', openDrawer);
-    RI.$('#scrim').addEventListener('click', closeDrawer);
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') closeDrawer();
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); if (RI.state.ui.dirty&&RI.manualSave()) RI.doSave(); }

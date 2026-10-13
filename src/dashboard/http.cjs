@@ -33,13 +33,13 @@ function dashboardHandler(database,auth){return async(req,res,pathname,origin)=>
     }
     res.writeHead(200,{'Content-Type':'text/html; charset=utf-8'});res.end(req.method==='HEAD'?undefined:html);return true;
   }
-  if(assets.has(pathname)&&(pathname.startsWith('/public-assets/')||pathname.endsWith('.woff2'))&&req.method==='GET'){res.writeHead(200,{'Content-Type':pathname.endsWith('.woff2')?'font/woff2':'text/css; charset=utf-8'});res.end(fs.readFileSync(path.join(__dirname,'../../dist',assets.get(pathname))));return true;}
+  if(assets.has(pathname)&&(pathname.startsWith('/public-assets/')||pathname.endsWith('.woff2'))&&req.method==='GET'){if(new URL(req.url,origin).searchParams.get('v')===require('../http/static.cjs').assetRevision)res.setHeader('Cache-Control','private, max-age=31536000, immutable');res.writeHead(200,{'Content-Type':pathname.endsWith('.woff2')?'font/woff2':'text/css; charset=utf-8'});res.end(fs.readFileSync(path.join(__dirname,'../../dist',assets.get(pathname))));return true;}
   if(!pathname.startsWith('/api/dashboard/'))return false;
   try{
     if(req.headers.host!==root.host)model.fail('مبدأ درخواست معتبر نیست',403);
     const user=await auth.account(req);if(!user)model.fail('دوباره وارد حسابت شو',401);
     if(req.method==='GET'){
-      if(pathname==='/api/dashboard/document'){const [doc,billing]=await Promise.all([database.loadDashboard(user.id),database.billing?database.billing(user.id):{}]);reply(200,{...doc,billing});}
+      if(pathname==='/api/dashboard/document'){const [doc,billing]=await Promise.all([database.loadDashboard(user.id),database.billing?database.billing(user.id):{}]);reply(200,{...doc,billing,ownerId:user.id});}
       else if(pathname==='/api/dashboard/wallet')reply(200,await database.wallet(user.id));
       else if(pathname==='/api/dashboard/stats')reply(200,{rows:await database.dashboardStats(user.id)});
       else if(pathname==='/api/dashboard/slug'){const slug=new URL(req.url,origin).searchParams.get('value');reply(200,{available:model.slugValid(slug)&&await database.slugAvailable(slug,user.id)});}
