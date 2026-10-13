@@ -8,6 +8,7 @@
     const old=RI.C(),doc=await RI.dashboardRequest('document');
     RI.state.content=doc.content;RI.state.pub=doc.pub;RI.revision=doc.revision;RI.savedSlug=doc.slug||'';RI.saved=JSON.stringify(doc.content);
     Object.assign(RI.state.account,doc.preferences);RI.state.billing=Object.assign(RI.seedBilling('free'),doc.billing||{});
+    RI.savedIndexing=RI.state.account.indexing; RI.resetEdits();
     if(!doc.revision&&old.profile.name){const importOld=await RI.choice({title:'پیش‌نویس قبلی این تب',text:'یک پیش‌نویس موقت از نسخهٔ قبلی پیدا شد. آن را روی حساب ذخیره کنیم؟',options:[{label:'انتقال به حساب',kind:'primary',value:true},{label:'شروع خالی',kind:'ghost',value:false}]});if(importOld){RI.state.content=old;RI.touch();await RI.save();}}
     try{RI.statsRows=(await RI.dashboardRequest('stats')).rows;}catch{RI.statsRows=null;}
   };

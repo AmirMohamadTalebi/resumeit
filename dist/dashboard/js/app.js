@@ -32,19 +32,21 @@
   /* ---------- نوار بالا و وضعیت ذخیره ---------- */
   function paintSave() {
     const ui = RI.state.ui, el = RI.$('#saveState'), btn = RI.$('#saveBtn');
-    let st = 'saved', txt = 'در حساب ذخیره شده', ic = 'check';
+    let st = 'saved', txt = 'همهٔ تغییرات ذخیره شد', ic = 'check';
     if (ui.saving) { st = 'saving'; txt = 'در حال ذخیره…'; ic = 'refresh'; }
     else if (ui.saveError) { st = 'error'; txt = 'ذخیره نشد'; ic = 'alert'; }
-    else if (ui.dirty) { st = 'dirty'; txt = 'تغییرات ذخیره‌نشده'; ic = 'edit'; }
+    else if (ui.dirty) { st = 'dirty'; txt = 'در انتظار ذخیره…'; ic = 'edit'; }
     el.dataset.state = st;
+    el.setAttribute('aria-label',txt); el.title=txt;
     el.innerHTML = RI.icon(ic, st === 'saving' ? 'spin' : '') + '<span class="save-state__txt">' + txt + '</span>';
     btn.disabled = ui.saving || (!ui.dirty && !ui.saveError);
     btn.innerHTML = ui.saveError ? RI.icon('refresh') + '<span class="hide-sm">تلاش دوباره</span>' : RI.icon('save') + '<span class="hide-sm">ذخیره</span>';
+    RI.$('#undoBtn').disabled = !RI.canUndo();
     el.setAttribute('role', 'status');
   }
   RI.doSave = async function () {
     const ok = await RI.save();
-    if (ok) RI.toast('تغییرات در حساب ذخیره شد');
+    if (ok) RI.toast('تغییرات ذخیره شد');
     return ok;
   };
 
@@ -126,7 +128,7 @@
     });
     RI.$('#saveBtn').addEventListener('click', RI.doSave);
     RI.$('#topPreview').addEventListener('click', () => RI.openPreview(current === 'links' ? 'links' : 'resume'));
-    RI.$('#topPublish').addEventListener('click', () => RI.go('publish'));
+    RI.$('#undoBtn').addEventListener('click', RI.undo);
     RI.$('#accountBtn').addEventListener('click', (e) => {
       RI.menu(e.currentTarget, [
         { label: 'تنظیمات حساب', icon: 'settings', onClick: () => RI.go('settings') },

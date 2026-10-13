@@ -8,7 +8,7 @@
   RI.registerPage('themes', {
     title: 'ظاهر و قالب',
     render() {
-      return RI.pageHead({ eyebrow: 'استودیو', eyebrowIcon: 'palette', title: 'ظاهر صفحه‌هایت', desc: 'قالب، فونت و رنگ را انتخاب کن قبل از اعمال، پیش‌نمایش کامل را می‌بینی و چیزی تا ذخیره نکنی منتشر نمی‌شود' }) +
+      return RI.pageHead({ eyebrow: 'استودیو', eyebrowIcon: 'palette', title: 'ظاهر صفحه‌هایت', desc: 'قالب، فونت و رنگ را انتخاب کن؛ انتخابت خودکار ذخیره می‌شود. برای نمایش تغییرات در سایت، نسخهٔ عمومی را از بخش آدرس و انتشار به‌روزرسانی کن.' }) +
         '<div class="tabs" role="tablist" id="ttabs">' + [['rt', 'قالب رزومه'], ['lt', 'قالب صفحهٔ لینک'], ['font', 'فونت'], ['pal', 'رنگ‌ها و شکل']].map((t, i) => '<button type="button" role="tab" data-tab="' + t[0] + '" aria-selected="' + (i === 0) + '">' + t[1] + '</button>').join('') + '</div>' +
         '<div id="tbody"></div>';
     },
@@ -17,7 +17,7 @@
       const body = RI.$('#tbody', root);
       const th = () => RI.C().theme;
 
-      function applyTheme(patch, msg) { Object.assign(th(), patch); RI.touch('theme'); RI.toast(msg || 'ظاهر اعمال شد؛ فراموش نکن ذخیره کنی'); paint(); }
+      function applyTheme(patch, msg) { Object.assign(th(), patch); RI.touch('theme'); RI.toast(msg || 'ظاهر انتخاب شد'); paint(); }
 
       /* پیش‌نمایش پیش از اعمال */
       async function tryAndApply(kind, override, it, ref, patch, label) {

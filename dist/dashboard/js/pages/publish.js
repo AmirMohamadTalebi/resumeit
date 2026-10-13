@@ -89,7 +89,7 @@
         if (t.id === 'sh_d') { C().share.desc = t.value; RI.touch('share'); counts(); paintCard(); }
       });
       function paintCard() { const s = C().share, p = C().profile, card = RI.$('.sharecard__body', body); if (!card) return; card.querySelector('b').textContent = s.title.trim() || p.name || 'عنوان صفحهٔ شما'; card.querySelector('p').textContent = s.desc.trim() || p.bio || 'توضیح کوتاه صفحه این‌جا نمایش داده می‌شود'; }
-      body.addEventListener('change', (e) => { if (e.target.id === 'idx') { RI.state.account.indexing = e.target.checked; RI.touch('preferences'); RI.toast('تنظیم را ذخیره کن تا روی صفحهٔ عمومی اعمال شود',{kind:'info'}); } });
+      body.addEventListener('change', (e) => { if (e.target.id === 'idx') { RI.state.account.indexing = e.target.checked; RI.touch('preferences'); RI.toast('تنظیم به‌صورت خودکار ذخیره می‌شود',{kind:'info'}); } });
       RI.delegate(body, 'click', '[data-sug]', (e, b) => { C().slug = b.dataset.sug; RI.touch('slug'); paint(); });
 
       RI.delegate(body, 'click', '[data-fix]', (e, b) => {
@@ -99,7 +99,7 @@
       RI.delegate(body, 'click', '[data-pv]', (e, b) => RI.openPreview(b.dataset.pv, { title: 'پیش‌نمایش قبل از انتشار' }));
       RI.delegate(body, 'click', '[data-pub]', async (e, b) => {
         const k = b.dataset.pub;
-        if (RI.state.ui.dirty) { const c = await RI.choice({ title: 'ابتدا ذخیره کن', text: 'تغییرات ذخیره‌نشده داری انتشار از آخرین نسخهٔ ذخیره‌شده ساخته می‌شود', options: [{ label: 'ذخیره و ادامهٔ انتشار', kind: 'primary', value: 'save' }, { label: 'انصراف', kind: 'ghost', value: null }] }); if (c !== 'save') return; if (!(await RI.save())) return; }
+        if ((RI.state.ui.dirty || RI.state.ui.saving) && !(await RI.save())) return;
         runPublish(k);
       });
       function runPublish(k) {

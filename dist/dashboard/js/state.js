@@ -60,47 +60,81 @@
   RI.clearDraft = () => { try { sessionStorage.removeItem(draftKey); } catch {} };
 
   /* ---------- تغییر و ذخیره ---------- */
+  let saveTimer, savingPromise, observed, lastScope, lastEdit = 0;
+  const history = [];
+  const editSnapshot = () => JSON.stringify({content:RI.C(),indexing:RI.state.account.indexing});
+  RI.resetEdits = function () { clearTimeout(saveTimer); history.length=0; observed=editSnapshot(); lastScope=null; };
+  RI.canUndo = () => history.length > 0;
+  function scheduleSave(scope) {
+    clearTimeout(saveTimer);
+    saveTimer=setTimeout(() => { if(RI.state.ui.dirty) RI.save(); },scope==='theme'?0:800);
+  }
   RI.touch = function (scope) {
+    const next=editSnapshot(), now=Date.now();
+    if(next!==observed){
+      if(observed && (scope==='theme' || scope!==lastScope || now-lastEdit>800 || !history.length)){
+        history.push(observed); if(history.length>10) history.shift();
+      }
+      observed=next; lastScope=scope; lastEdit=now;
+    }
     RI.state.ui.dirty = true;
     RI.state.ui.saveError = false;
-    RI.emit('change', { scope: scope });
-    RI.emit('save');
+    RI.emit('change', { scope }); RI.emit('save'); scheduleSave(scope);
   };
 
-  RI.save = async function () {
-    const ui = RI.state.ui;
-    if (ui.saving) return false;
-    ui.saving = true; ui.saveError = false; RI.emit('save');
-    const snapshot=JSON.stringify(RI.C()),indexing=RI.state.account.indexing;
-    try {
-      const doc=await RI.dashboardRequest('save',{revision:RI.revision,content:JSON.parse(snapshot),preferences:RI.state.account});
-      RI.revision=doc.revision;RI.saved=JSON.stringify(doc.content);RI.savedSlug=doc.slug||'';
-      if(snapshot===JSON.stringify(RI.C())&&indexing===RI.state.account.indexing){RI.state.content=doc.content;Object.assign(RI.state.account,doc.preferences);ui.dirty=false;}
-      ui.savedAt=Date.now();RI.keepDraft();return true;
-    }catch(e){ui.saveError=true;RI.toast(e.message,{kind:'error'});return false;}
-    finally{ui.saving=false;RI.emit('save');}
+  RI.save = function () {
+    clearTimeout(saveTimer);
+    if(savingPromise) return savingPromise;
+    const ui=RI.state.ui;
+    savingPromise=(async()=>{
+      ui.saving=true; ui.saveError=false; RI.emit('save');
+      try {
+        do {
+          const snapshot=JSON.stringify(RI.C()), indexing=RI.state.account.indexing;
+          const doc=await RI.dashboardRequest('save',{revision:RI.revision,content:JSON.parse(snapshot),preferences:{...RI.state.account}});
+          RI.revision=doc.revision; RI.saved=JSON.stringify(doc.content); RI.savedSlug=doc.slug||''; RI.savedIndexing=doc.preferences.indexing;
+          if(snapshot===JSON.stringify(RI.C())&&indexing===RI.state.account.indexing){
+            Object.assign(RI.state.account,doc.preferences); ui.dirty=false; observed=editSnapshot();
+          }
+          ui.savedAt=Date.now(); RI.keepDraft();
+        } while(ui.dirty);
+        return true;
+      } catch(e) { ui.saveError=true; RI.toast(e.message,{kind:'error'}); return false; }
+      finally { ui.saving=false; savingPromise=null; clearTimeout(saveTimer); RI.emit('save'); }
+    })();
+    return savingPromise;
   };
 
+  RI.undo = function () {
+    if(!history.length) return;
+    const previous=JSON.parse(history.pop());
+    RI.state.content=previous.content; RI.state.account.indexing=previous.indexing;
+    observed=editSnapshot(); lastScope=null;
+    RI.state.ui.dirty=true; RI.state.ui.saveError=false;
+    RI.emit('change'); RI.emit('save'); RI.rerender(); scheduleSave('theme');
+  };
   RI.revert = function () {
-    RI.state.content = JSON.parse(RI.saved);
-    RI.state.ui.dirty = false; RI.state.ui.saveError = false;
-    RI.emit('save');
+    clearTimeout(saveTimer);
+    RI.state.content=JSON.parse(RI.saved);
+    RI.state.account.indexing=RI.savedIndexing;
+    RI.state.ui.dirty=false; RI.state.ui.saveError=false;
+    RI.resetEdits(); RI.emit('change'); RI.emit('save');
   };
 
-  /* قبل از ترک صفحه یا تعویض حالت: اگر ذخیره‌نشده داریم از کاربر بپرس */
   RI.leaveGuard = async function () {
-    if (!RI.state.ui.dirty) return true;
-    const c = await RI.choice({
-      title: 'تغییرات ذخیره‌نشده دارید',
-      text: 'اگر بدون ذخیره خارج شوید، ویرایش‌های اخیرتان از بین می‌رود.',
-      options: [
-        { label: 'ذخیره و ادامه', kind: 'primary', icon: 'save', value: 'save' },
-        { label: 'دور انداختن تغییرات', kind: 'danger', value: 'discard' },
-        { label: 'ماندن در صفحه', kind: 'ghost', value: 'stay' },
-      ],
+    if (!RI.state.ui.dirty && !RI.state.ui.saving) return true;
+    if(await RI.save()) return true;
+    const c=await RI.choice({
+      title:'تغییرات هنوز ذخیره نشده‌اند',
+      text:'ذخیره انجام نشد. اگر خارج شوی، تغییرات اخیرت از بین می‌روند.',
+      options:[
+        {label:'تلاش دوباره و ادامه',kind:'primary',icon:'save',value:'save'},
+        {label:'دور انداختن تغییرات',kind:'danger',value:'discard'},
+        {label:'ماندن در صفحه',kind:'ghost',value:'stay'}
+      ]
     });
-    if (c === 'save') return await RI.save();
-    if (c === 'discard') { RI.revert(); return true; }
+    if(c==='save') return await RI.save();
+    if(c==='discard'){ RI.revert(); return true; }
     return false;
   };
 
