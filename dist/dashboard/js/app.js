@@ -19,8 +19,8 @@
     RI.$('#sidebar').innerHTML =
       '<div class="sidebar__glass"><div class="brand">' + LOGO + '</div>' +
       '<nav class="nav" aria-label="بخش‌های داشبورد">' + NAV.map((g) => '<div class="nav__group"><div class="nav__label">' + g.group + '</div>' + g.items.map((i) => '<a class="nav__item" href="' + RI.routeUrl(i[0]) + '" data-route="' + i[0] + '">' + RI.icon(i[2]) + '<span>' + i[1] + '</span></a>').join('') + '</div>').join('') + '</nav>' +
-      '<div class="sidebar__foot"><div class="ri-support-links"><a href="https://t.me/resumeit_ir" target="_blank" rel="noopener">کانال تلگرام</a><a href="https://t.me/amirtalebi_x" target="_blank" rel="noopener">تلگرام پشتیبانی</a></div>' +
-      '<button type="button" class="account-btn" id="accountBtn" aria-haspopup="menu"><img class="avatar" id="accAvatar" alt="" src=""><span><span class="account-btn__name" id="accName"></span><br><span class="account-btn__sub">حساب من</span></span></button></div></div>';
+      '<div class="sidebar__foot">'+(acc.isAdmin?'<a class="btn btn--soft btn--sm" href="/admin/">پنل مدیریت</a>':'')+'<small data-site-version></small><div class="ri-support-links"><a href="https://t.me/resumeit_ir" target="_blank" rel="noopener">کانال تلگرام</a><a href="https://t.me/amirtalebi_x" target="_blank" rel="noopener">تلگرام پشتیبانی</a></div>' +
+      '<button type="button" class="account-btn" id="accountBtn" aria-haspopup="menu"><img class="avatar" id="accAvatar" alt="" src="/brand/resumeit-mark-v1.png"><span><span class="account-btn__name" id="accName"></span><br><span class="account-btn__sub">حساب من</span></span></button></div></div>';
     RI.$('#bottomNav').innerHTML = BOTTOM.map((i) => '<a href="' + RI.routeUrl(i[0]) + '" data-route="' + i[0] + '">' + RI.icon(i[2]) + '<span>' + i[1] + '</span></a>').join('');
     paintAccount();
   }
@@ -123,6 +123,11 @@
     try{await RI.loadDashboard(user.id); const page=document.body.dataset.page; await RI.loadTemplates(page==='resume'?[RI.C().theme.resume]:[]);}catch(e){RI.$('#view').textContent=e.message;const retry=document.createElement('button');retry.className='btn';retry.textContent='تلاش دوباره';retry.addEventListener('click',()=>location.reload());RI.$('#view').appendChild(retry);document.dispatchEvent(new Event('ri:dashboard-ready'));return;}
     RI.applyAccount(user);
     buildShell();
+    if(user.is_admin&&sessionStorage.getItem('ri-panel-choice')!==user.id){
+      const choice=RI.modal({title:'کدام پنل را باز کنیم؟',body:'<p>با این حساب به پنل کاربری و مدیریت دسترسی داری. هر زمان خواستی از منوی پنل می‌توانی جابه‌جا شوی.</p>',size:'sm'});
+      choice.setActions([{label:'پنل کاربری',kind:'ghost',onClick:()=>sessionStorage.setItem('ri-panel-choice',user.id)},{label:'پنل مدیریت',kind:'primary',onClick:()=>{sessionStorage.setItem('ri-panel-choice',user.id);location.assign('/admin/');}}]);
+    }
+    fetch('/api/version',{cache:'no-store'}).then(r=>r.json()).then(v=>{RI.$$('[data-site-version]').forEach(el=>el.textContent='نسخهٔ '+v.version);}).catch(()=>{});
     paintSave();
     RI.on('save', paintSave);
     RI.on('change', paintAccount);
@@ -148,6 +153,10 @@
       ], { up: true });
     });
     RI.delegate(document, 'click', '[data-copy]', (e, b) => RI.copy(b.dataset.copy));
+    RI.delegate(document,'click','a[href="/admin/"]',async e=>{
+      if(e.ctrlKey||e.metaKey||e.shiftKey||e.altKey||e.button!==0)return;
+      e.preventDefault();if(await RI.leaveGuard()&&RI.keepDraft())location.assign('/admin/');
+    });
     RI.delegate(document, 'click', '[data-open-url]', (e, b) => {const k=/\/links$/.test(b.dataset.openUrl)?'links':'resume';if(RI.state.pub[k].status!=='published'){RI.toast('ابتدا این صفحه را منتشر کن',{kind:'info'});return;}window.open('https://'+(b.dataset.openUrl.replace(/^https?:\/\//,'')),'_blank','noopener,noreferrer');});
     RI.delegate(document, 'click', '[data-go], [data-route]', (e, b) => {
       if (e.ctrlKey || e.metaKey || e.shiftKey || e.altKey || e.button !== 0) return;

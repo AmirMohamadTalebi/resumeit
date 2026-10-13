@@ -129,6 +129,27 @@ try { process.loadEnvFile(); } catch (error) { if (error.code !== 'ENOENT') thro
     const race=await Promise.allSettled(['rt:vista','rt:satiar'].map(ref=>database.purchaseWithWallet(emptyAccount,ref,randomUUID())));assert.equal(race.filter(r=>r.status==='fulfilled').length,1);assert.equal((await database.wallet(emptyAccount)).balance,0);
     await database.purchaseWithWallet(owner,'subscription:q',randomUUID());assert((await database.billing(owner)).plan.end>Date.now());assert.equal((await database.wallet(owner)).balance,297);
     for(const ref of ['font:estedad','font:naskh','font:lalezar'])await database.purchaseWithWallet(owner,ref,randomUUID());assert.equal((await database.wallet(owner)).balance,218);
+    const manager=await database.provisionAccount('09047045951',hash);await database.markPhoneVerified(manager);
+    await database.close();database=await openDatabase(config);await database.createSession('c'.repeat(64),manager,Date.now()+600000);
+    assert.equal((await database.session('c'.repeat(64))).is_admin,1);
+    const adminCredit={requestId:randomUUID().replace(/-/g,''),reason:'Database admin credit test',toman:10000};
+    const previousBalance=(await database.wallet(owner)).balance;
+    await Promise.all(Array.from({length:4},()=>database.adminAction(manager,owner,'credit',adminCredit)));
+    assert.equal((await database.wallet(owner)).balance,previousBalance+5);
+    await assert.rejects(database.adminAction(manager,owner,'credit',{...adminCredit,toman:12000}),e=>e.status===409);
+    await assert.rejects(database.adminAction(manager,owner,'credit',{...adminCredit,requestId:randomUUID(),toman:45000}));
+    await assert.rejects(database.adminAction(owner,owner,'credit',{...adminCredit,requestId:randomUUID()}),e=>e.status===403);
+    const runAction=action=>database.adminAction(manager,owner,action,{requestId:randomUUID().replace(/-/g,''),reason:'Database moderation test'});
+    await runAction('block-publication');assert.equal(await database.publicPage('mysql-profile','links'),null);
+    await runAction('unblock-publication');assert(await database.publicPage('mysql-profile','links'));
+    await database.createSession('d'.repeat(64),owner,Date.now()+600000);await runAction('suspend');assert.equal(await database.session('d'.repeat(64)),undefined);assert.equal(await database.createSession('e'.repeat(64),owner,Date.now()+600000),false);assert.equal(await database.publicPage('mysql-profile','links'),null);
+    await runAction('restore');assert(await database.createSession('e'.repeat(64),owner,Date.now()+600000));assert(await database.publicPage('mysql-profile','links'));
+    await runAction('revoke-sessions');assert.equal(await database.session('e'.repeat(64)),undefined);
+    await assert.rejects(database.adminAction(manager,manager,'suspend',{requestId:randomUUID(),reason:'Protected manager test'}),e=>e.status===409);
+    const adminStats=await database.adminOverview(Date.now()-365*86400000);assert(Number(adminStats.otp.accepted)>=1);assert(Number(adminStats.otp.verified)>=1);
+    for(const kind of ['users','pages','transactions','purchases','otp','audit']){const list=await database.adminList(kind,{page:1,q:'',from:0,status:''});assert(list.total>=1,kind);assert(list.rows.length<=25);assert(!JSON.stringify(list).includes('code_hash'));}
+    assert.equal((await database.adminUser(owner)).balance_units,(await database.wallet(owner)).balance*2000);
+    await database.adminList('users',{page:1,q:'%_=test',from:0,status:'suspended'});
     await database.deleteAccount(rival);assert.equal(await database.accountByPhone('09120000008'),undefined);
     const { DatabaseSync } = require('node:sqlite');
     const filename = require('node:path').join(require('node:os').tmpdir(),name + '.sqlite');

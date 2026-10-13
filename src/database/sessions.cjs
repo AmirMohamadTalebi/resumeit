@@ -14,13 +14,14 @@ module.exports = ({execute,transaction}) => {
     async createSession(tokenHash, userId, expiresAt, expectedHash, expectedPhone) {
       await execute('DELETE FROM sessions WHERE expires_at<=?', [Date.now()]);
       return transaction(async connection=>{
-        const [[user]]=await connection.execute('SELECT password_hash,phone FROM users WHERE id=? FOR UPDATE',[userId]);
+        const [[user]]=await connection.execute('SELECT u.password_hash,u.phone,COALESCE(c.suspended,0) suspended FROM users u LEFT JOIN admin_controls c ON c.user_id=u.id WHERE u.id=? FOR UPDATE',[userId]);
+        if(user?.suspended)return false;
         if(!user||(expectedHash!==undefined&&user.password_hash!==expectedHash)||(expectedPhone!==undefined&&user.phone!==expectedPhone))return false;
         await connection.execute('INSERT INTO sessions(token_hash,user_id,expires_at) VALUES(?,?,?)', [tokenHash, userId, expiresAt]);
         return true;
       });
     },
-    async session(tokenHash) { return (await execute("SELECT u.id,u.phone,u.phone_verified,p.first_name,p.last_name,EXISTS(SELECT 1 FROM social_identities WHERE user_id=u.id AND provider='google') AS google,EXISTS(SELECT 1 FROM social_identities WHERE user_id=u.id AND provider='github') AS github FROM sessions s JOIN users u ON u.id=s.user_id JOIN profiles p ON p.user_id=u.id WHERE s.token_hash=? AND s.expires_at>?", [tokenHash, Date.now()]))[0]; },
+    async session(tokenHash) { return (await execute("SELECT u.id,u.phone,u.phone_verified,p.first_name,p.last_name,EXISTS(SELECT 1 FROM admin_accounts WHERE user_id=u.id) AS is_admin,EXISTS(SELECT 1 FROM social_identities WHERE user_id=u.id AND provider='google') AS google,EXISTS(SELECT 1 FROM social_identities WHERE user_id=u.id AND provider='github') AS github FROM sessions s JOIN users u ON u.id=s.user_id JOIN profiles p ON p.user_id=u.id LEFT JOIN admin_controls c ON c.user_id=u.id WHERE s.token_hash=? AND s.expires_at>? AND COALESCE(c.suspended,FALSE)=FALSE", [tokenHash, Date.now()]))[0]; },
     async deleteSession(tokenHash) { await execute('DELETE FROM sessions WHERE token_hash=?', [tokenHash]); },
     async claimLoginAttempts(phone, ipHash) {
       const now = Date.now();

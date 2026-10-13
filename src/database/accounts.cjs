@@ -53,6 +53,7 @@ module.exports = ({execute,transaction}) => {
           await connection.execute('DELETE FROM otp_challenges WHERE phone=?',[user.phone]);
         }
         await connection.execute("UPDATE otp_challenges SET status='consumed' WHERE challenge_id=?",[id]);
+        await connection.execute('UPDATE otp_events SET verified_at=? WHERE id=?',[now,id]);
         return {phone:row.phone};
       }).catch(error=>{if(error.code==='ER_DUP_ENTRY')return {existing:true};throw error;});
     },

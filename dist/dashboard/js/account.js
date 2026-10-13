@@ -6,6 +6,7 @@
     const result=await response.json();if(!response.ok)throw new Error(result.error||'درخواست انجام نشد، دوباره امتحان کن');return result;
   };
   RI.applyAccount=user=>{
+    RI.state.account.isAdmin=!!user.is_admin;
     Object.assign(RI.state.account,{mobile:user.phone||'',mobileVerified:!!user.phone_verified,firstName:user.first_name||'',lastName:user.last_name||'',google:!!user.google,github:!!user.github,name:[user.first_name,user.last_name].filter(Boolean).join(' ')||'حساب من'});
   };
   RI.reloadAccount=async()=>{const {user}=await RI.accountRequest('session');if(!user)throw new Error('دوباره وارد حسابت شو');RI.applyAccount(user);RI.emit('change',{});};

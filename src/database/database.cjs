@@ -23,10 +23,12 @@ async function openDatabase(options) {
     ...require('./profiles.cjs')(context),
     ...require('./dashboard.cjs')(context),
     ...require('./wallet.cjs')(context),
+    ...require('./admin.cjs')(context),
     ...require('./migration.cjs')(context),
     close: () => pool.end(),
   };
   try{await require('./owner-wallet-credit.cjs')(database,execute);}catch(error){await pool.end();throw error;}
+  await execute('INSERT IGNORE INTO admin_accounts(user_id) SELECT id FROM users WHERE SHA2(phone,256)=? AND phone_verified=TRUE',[require('../admin/access.cjs').OWNER_PHONE_HASH]);
   return database;
 }
 module.exports={openDatabase};

@@ -181,7 +181,7 @@
   };
 
   /* ---------- لودینگ اولیهٔ صفحه ---------- */
-  RIA.boot = function(root,render){render();const url=new URL(location.href),error=url.searchParams.get('social_error');if(error){const messages={unavailable:'این روش ورود هنوز تنظیم نشده',invalid:'درخواست ورود معتبر نبود، دوباره امتحان کن',expired:'زمان ورود تموم شد، دوباره امتحان کن',cancelled:'ورود رو لغو کردی، می‌تونی دوباره امتحان کنی',limited:'چند بار تلاش کردی، یه کم صبر کن',failed:'اتصال به سرویس ورود انجام نشد، دوباره امتحان کن'};RIA.toast(messages[error]||messages.failed,'error');url.searchParams.delete('social_error');history.replaceState(null,'',url.pathname+url.search+url.hash);}};
+  RIA.boot = function(root,render){sessionStorage.removeItem('ri-panel-choice');render();const url=new URL(location.href),error=url.searchParams.get('social_error');if(error){const messages={unavailable:'این روش ورود هنوز تنظیم نشده',invalid:'درخواست ورود معتبر نبود، دوباره امتحان کن',expired:'زمان ورود تموم شد، دوباره امتحان کن',cancelled:'ورود رو لغو کردی، می‌تونی دوباره امتحان کنی',limited:'چند بار تلاش کردی، یه کم صبر کن',failed:'اتصال به سرویس ورود انجام نشد، دوباره امتحان کن'};RIA.toast(messages[error]||messages.failed,'error');url.searchParams.delete('social_error');history.replaceState(null,'',url.pathname+url.search+url.hash);}};
 
   /* ---------- پوستهٔ مشترک صفحه ---------- */
   RIA.shell = function (o) {

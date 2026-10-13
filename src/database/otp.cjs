@@ -17,10 +17,11 @@ module.exports = ({execute,transaction}) => {
         if (old && old.sent_at + 60000 > now) return false;
         for (const [key] of limits) await connection.execute('UPDATE login_attempts SET count=count+1 WHERE attempt_key=?',[key]);
         await connection.execute(`INSERT INTO otp_challenges(phone,challenge_id,purpose,code_hash,status,sent_at,expires_at,owner_id) VALUES(?,?,?,?,'pending',?,?,?) ON DUPLICATE KEY UPDATE challenge_id=VALUES(challenge_id),purpose=VALUES(purpose),code_hash=VALUES(code_hash),status='pending',attempts=0,sent_at=VALUES(sent_at),expires_at=VALUES(expires_at),registration_token=NULL,owner_id=VALUES(owner_id)`,[record.phone,record.id,record.purpose,record.hash,now,now+120000,record.ownerId||null]);
+        await connection.execute("INSERT INTO otp_events(id,phone,purpose,status,created_at) VALUES(?,?,?,'pending',?)",[record.id,record.phone,record.purpose,now]);
         return true;
       });
     },
-    async finishOtpSend(id, success) { await execute('UPDATE otp_challenges SET status=? WHERE challenge_id=? AND status=?',[success?'ready':'consumed',id,'pending']); },
+    async finishOtpSend(id, success) { await transaction(async con=>{await con.execute('UPDATE otp_challenges SET status=? WHERE challenge_id=? AND status=?',[success?'ready':'consumed',id,'pending']);await con.execute('UPDATE otp_events SET status=? WHERE id=?',[success?'accepted':'failed',id]);}); },
     async verifyOtp(id, hash, purpose, grantHash, now) {
       return transaction(async connection => {
         const [[row]] = await connection.execute('SELECT * FROM otp_challenges WHERE challenge_id=? FOR UPDATE',[id]);
@@ -28,6 +29,7 @@ module.exports = ({execute,transaction}) => {
         await connection.execute('UPDATE otp_challenges SET attempts=attempts+1 WHERE challenge_id=?',[id]);
         if (!timingSafeEqual(Buffer.from(row.code_hash,'hex'),Buffer.from(hash,'hex'))) return null;
         await connection.execute('UPDATE otp_challenges SET status=?,registration_token=?,expires_at=? WHERE challenge_id=?',[purpose!=='login'?'verified':'consumed',grantHash,now+300000,id]);
+        await connection.execute('UPDATE otp_events SET verified_at=? WHERE id=?',[now,id]);
         return {phone:row.phone,ownerId:row.owner_id};
       });
     },

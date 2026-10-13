@@ -39,6 +39,8 @@ async function serveStatic(req, res, pathname, origin, account) {
   let file = path.resolve(root, '.' + pathname);
   try {
     // Authenticate the resolved file as well as the URL (case aliases and symlinks included).
+    const adminPath=pathname.toLowerCase()==='/admin'||pathname.toLowerCase().startsWith('/admin/');
+    if(adminPath){const user=account&&await account(req);if(!user){res.writeHead(303,{Location:'/login/'});res.end();return;}if(!require('../admin/access.cjs').isAdmin(user)){send(403,'Forbidden');return;}}
     const guarded = pathname.toLowerCase() === '/dashboard' || pathname.toLowerCase().startsWith('/dashboard/');
     if (guarded) {
       res.setHeader('Cache-Control', 'no-store');
@@ -51,6 +53,7 @@ async function serveStatic(req, res, pathname, origin, account) {
     const realFile = await fs.realpath(file), realRoot = await fs.realpath(root);
     if (!realFile.startsWith(realRoot + path.sep)) { send(403, 'Forbidden'); return; }
     const relative = path.relative(realRoot, realFile);
+    if(!adminPath&&relative.toLowerCase().startsWith('admin'+path.sep)){const user=account&&await account(req);if(!user){res.writeHead(303,{Location:'/login/'});res.end();return;}if(!require('../admin/access.cjs').isAdmin(user)){send(403,'Forbidden');return;}}
     if (relative.split(path.sep).some(p => p.startsWith('.')) || !mime[path.extname(realFile).toLowerCase()]) { send(403, 'Forbidden'); return; }
     if (!guarded && relative.toLowerCase().startsWith('dashboard' + path.sep)) {
       res.setHeader('Cache-Control', 'no-store');
