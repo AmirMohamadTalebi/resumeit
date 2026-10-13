@@ -111,8 +111,7 @@
   async function boot() {
     const user = await window.resumeitSession;
     if (!user) return;
-    RI.restoreDraft(user.id);
-    try{await RI.loadDashboard();}catch(e){RI.$('#view').textContent=e.message;const retry=document.createElement('button');retry.className='btn';retry.textContent='تلاش دوباره';retry.addEventListener('click',()=>location.reload());RI.$('#view').appendChild(retry);document.dispatchEvent(new Event('ri:dashboard-ready'));return;}
+    try{await RI.loadDashboard(user.id); const page=document.body.dataset.page; await RI.loadTemplates(page==='themes'?['vista','satiar']:['home','resume','publish'].includes(page)?[RI.C().theme.resume]:[]);}catch(e){RI.$('#view').textContent=e.message;const retry=document.createElement('button');retry.className='btn';retry.textContent='تلاش دوباره';retry.addEventListener('click',()=>location.reload());RI.$('#view').appendChild(retry);document.dispatchEvent(new Event('ri:dashboard-ready'));return;}
     RI.applyAccount(user);
     buildShell();
     paintSave();
@@ -127,7 +126,7 @@
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); if (RI.state.ui.dirty) RI.doSave(); }
     });
     RI.$('#saveBtn').addEventListener('click', RI.doSave);
-    RI.$('#topPreview').addEventListener('click', () => RI.openPreview(current === 'links' ? 'links' : 'resume'));
+    RI.$('#topPreview').addEventListener('click', async () => {try{if(current!=='links') await RI.loadTemplates([RI.C().theme.resume]); RI.openPreview(current === 'links' ? 'links' : 'resume');}catch(e){RI.toast(e.message,{kind:'error'});}});
     RI.$('#undoBtn').addEventListener('click', RI.undo);
     RI.$('#accountBtn').addEventListener('click', (e) => {
       RI.menu(e.currentTarget, [

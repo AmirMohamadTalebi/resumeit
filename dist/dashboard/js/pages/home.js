@@ -46,6 +46,7 @@
   }
 
   function sampleStrip() {
+    if(RI.statsLoading)return '<p role="status">در حال دریافت آمار…</p>';
     if(RI.statsRows===null)return '<p>آمار بارگذاری نشد؛ در <a href="/dashboard/stats/">بخش آمار</a> دوباره تلاش کن.</p>';
     const ser = RI.metricSeries(7);
     const sum = (a) => a.reduce((x, y) => x + y, 0);
@@ -100,7 +101,7 @@
         '<section class="block"><div class="block__head"><h2>وضعیت صفحه‌ها</h2><p>دو صفحهٔ مستقل با هویت بصری مشترک</p></div><div class="pstat-grid">' + pageStatus('resume') + pageStatus('links') + '</div></section>' +
         '<section class="block"><div class="block__head"><h2>دسترسی سریع</h2></div><ul class="quick">' +
         [['resume', 'ویرایش رزومه', 'resume'], ['links', 'مدیریت لینک‌ها', 'link'], ['themes', 'ظاهر و قالب', 'palette'], ['publish', 'آدرس و انتشار', 'globe']].map((q) => '<li><a href="' + RI.routeUrl(q[0]) + '" data-go="' + q[0] + '"><span>' + RI.icon(q[2]) + '</span><b>' + q[1] + '</b>' + RI.icon('chevL', 'quick__arrow') + '</a></li>').join('') + '</ul></section>' +
-        '<section class="block">' + sampleStrip() + '</section>' +
+        '<section class="block" id="homeStats">' + sampleStrip() + '</section>' +
         '<section class="block">' + guide(empty || comp.pct < 40) + '</section>';
     },
     mount(root) {
@@ -109,7 +110,8 @@
       ro.observe(root);
       RI.delegate(root, 'click', '[data-preview]', (e, b) => RI.openPreview(b.dataset.preview));
       RI.delegate(root, 'click', '[data-publish]', () => RI.go('publish'));
-      return () => ro.disconnect();
+      const offStats=RI.on('stats',()=>{ RI.$('#homeStats',root).innerHTML=sampleStrip(); });
+      return () => {offStats(); ro.disconnect();};
     },
   });
 })();

@@ -37,8 +37,9 @@
     if (key === 'id' && !/^[a-z0-9_-]{1,64}$/i.test(value)) throw new Error('Invalid identifier');
     return value;
   }
-  RI.restoreDraft = function (owner) {
+  RI.restoreDraft = function (owner, serverSaved) {
     draftKey = 'resumeit-draft-v1:' + owner;
+    if(serverSaved) return;
     try {
       const draft = JSON.parse(sessionStorage.getItem(draftKey));
       if (draft && draft.content && draft.content.profile && draft.pub) {

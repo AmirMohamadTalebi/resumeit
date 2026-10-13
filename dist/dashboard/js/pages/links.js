@@ -38,7 +38,7 @@
             (div ? '<span class="row__ico">' + RI.icon('divider') + '</span>' : x.image ? '<span class="row__thumb" style="' + esc(RI.bg(x.image)) + '"></span>' : '<span class="row__ico">' + RI.icon(x.icon || 'link') + '</span>') +
             '<div class="row__main"><div class="row__title">' + esc(x.title) + (div ? ' <span class="chip">جداکننده</span>' : '') + '</div>' +
             (div ? '' : '<div class="row__sub ltr">' + esc(x.url) + '</div>') + '</div>' +
-            (div ? '' : '<span class="clicks" title="تعداد کلیک ثبت‌شده در ۹۰ روز اخیر">' + RI.icon('cursor') + '<b class="num">' + RI.fa(RI.linkClicks(x.id)) + '</b><small>کلیک</small></span>') +
+            (div ? '' : '<span class="clicks" data-clicks="' + x.id + '" title="تعداد کلیک ثبت‌شده در ۹۰ روز اخیر">' + RI.icon('cursor') + '<b class="num">' + (RI.statsLoading?'…':RI.fa(RI.linkClicks(x.id))) + '</b><small>کلیک</small></span>') +
             '<div class="row__actions">' + (div ? '' : '<button type="button" class="btn btn--icon btn--sm ' + (x.featured ? 'btn--primary' : 'btn--ghost') + '" data-feat="' + x.id + '" aria-pressed="' + !!x.featured + '" aria-label="برجسته" title="لینک برجسته">' + RI.icon('star') + '</button>') +
             '<button type="button" class="btn btn--icon btn--ghost btn--sm" data-up="' + x.id + '" aria-label="بالا" ' + (i === 0 ? 'disabled' : '') + '>' + RI.icon('up') + '</button><button type="button" class="btn btn--icon btn--ghost btn--sm" data-down="' + x.id + '" aria-label="پایین" ' + (i === items.length - 1 ? 'disabled' : '') + '>' + RI.icon('down') + '</button>' +
             '<button type="button" class="btn btn--icon btn--ghost btn--sm" data-edit="' + x.id + '" aria-label="ویرایش">' + RI.icon('edit') + '</button><button type="button" class="btn btn--icon btn--ghost btn--sm" data-del="' + x.id + '" aria-label="حذف">' + RI.icon('trash') + '</button></div>' +
@@ -97,7 +97,8 @@
       RI.delegate(root, 'click', '[data-tab]', (e, b) => { tab = b.dataset.tab; paint(); });
       RI.delegate(root, 'click', '[data-live]', () => RI.openPreview('links', { device: 'mobile' }));
       paint();
-      return () => { off(); pv.destroy(); };
+      const offStats=RI.on('stats',()=>RI.$$('[data-clicks]',body).forEach(el=>{RI.$('b',el).textContent=RI.statsRows===null?'—':RI.fa(RI.linkClicks(el.dataset.clicks));}));
+      return () => { offStats(); off(); pv.destroy(); };
     },
   });
 })();

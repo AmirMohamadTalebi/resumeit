@@ -5,7 +5,6 @@
 
   RI.registerPage('billing', {
     title: 'اشتراک و خریدها',
-    loadMs: 380,
     skeleton: () => '<div class="skeleton" style="height:56px;width:50%;margin-bottom:24px"></div><div class="skeleton" style="height:220px;margin-bottom:20px"></div><div class="skeleton" style="height:320px"></div>',
     render() {
       const b = RI.state.billing, sub = RI.hasSub();

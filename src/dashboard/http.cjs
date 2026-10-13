@@ -1,6 +1,6 @@
 const {readJson,securityHeaders}=require('../http/security.cjs');
 const model=require('./model.cjs'),{render,RI}=require('./render.cjs');
-const fs=require('node:fs'),path=require('node:path');
+const fs=require('node:fs'),path=require('node:path'),{gzipSync}=require('node:zlib');
 const assets=new Map([['/public-assets/tokens.css','dashboard/css/tokens.css'],['/public-assets/base.css','dashboard/css/base.css'],['/public-assets/preview.css','dashboard/css/preview.css'],['/assets/fonts/Vazirmatn.woff2','dashboard/assets/fonts/Vazirmatn.woff2'],['/brand/resumeit-logo-v1.png','brand/resumeit-logo-v1.png'],['/brand/favicon.svg','brand/favicon.svg']]);
 const pubData=(c,k)=>k==='resume'?{slug:c.slug,profile:c.profile,contacts:c.contacts,skills:c.skills,experience:c.experience,education:c.education,projects:c.projects,certs:c.certs,languages:c.languages,socials:c.socials,sections:c.sections,resumeTemplates:c.resumeTemplates,theme:{resume:c.theme.resume,font:c.theme.font,palette:c.theme.palette,radius:c.theme.radius},share:c.share}:{slug:c.slug,links:c.links,name:c.profile.name,bio:c.profile.bio,avatar:c.profile.avatar,theme:{links:c.theme.links,font:c.theme.font,linksPalette:c.theme.linksPalette}};
 function dashboardHandler(database,auth){return async(req,res,pathname,origin)=>{
@@ -8,7 +8,7 @@ function dashboardHandler(database,auth){return async(req,res,pathname,origin)=>
   const root=new URL(origin),host=(req.headers.host||'').toLowerCase(),domain=root.hostname.startsWith('127.')||root.hostname==='localhost'?'resumeit.ir':root.hostname;
   const sub=host.endsWith('.'+domain)?host.slice(0,-domain.length-1):null;
   const local=/^\/u\/([a-z0-9-]+)(\/.*)?$/.exec(pathname);
-  const reply=(status,body)=>{res.writeHead(status,{'Content-Type':'application/json; charset=utf-8'});res.end(JSON.stringify(body));};
+  const reply=(status,body)=>{let output=Buffer.from(JSON.stringify(body));if(output.length>1024 && /\bgzip\b/.test(req.headers['accept-encoding']||'')){output=gzipSync(output);res.setHeader('Content-Encoding','gzip');res.setHeader('Vary','Accept-Encoding');}res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Content-Length':output.length});res.end(output);};
   if(sub!==null||local){
     const slug=sub||local[1],route=local?local[2]||'/':pathname,base=local?'/u/'+slug:'';
     if(!model.slugValid(slug)){res.writeHead(404);res.end('صفحه پیدا نشد');return true;}
@@ -39,7 +39,7 @@ function dashboardHandler(database,auth){return async(req,res,pathname,origin)=>
     if(req.headers.host!==root.host)model.fail('مبدأ درخواست معتبر نیست',403);
     const user=await auth.account(req);if(!user)model.fail('دوباره وارد حسابت شو',401);
     if(req.method==='GET'){
-      if(pathname==='/api/dashboard/document')reply(200,{...await database.loadDashboard(user.id),billing:database.billing?await database.billing(user.id):{}});
+      if(pathname==='/api/dashboard/document'){const [doc,billing]=await Promise.all([database.loadDashboard(user.id),database.billing?database.billing(user.id):{}]);reply(200,{...doc,billing});}
       else if(pathname==='/api/dashboard/wallet')reply(200,await database.wallet(user.id));
       else if(pathname==='/api/dashboard/stats')reply(200,{rows:await database.dashboardStats(user.id)});
       else if(pathname==='/api/dashboard/slug'){const slug=new URL(req.url,origin).searchParams.get('value');reply(200,{available:model.slugValid(slug)&&await database.slugAvailable(slug,user.id)});}

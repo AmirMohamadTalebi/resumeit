@@ -3,6 +3,17 @@
   'use strict';
   const RI = window.RI, esc = RI.esc;
   RI.IMPORTED_TEMPLATES = Object.create(null);
+  const templateLoads = new Map();
+  RI.loadTemplates = ids => Promise.all(ids.filter(id=>['vista','satiar'].includes(id)).map(id=>{
+    if(RI.IMPORTED_TEMPLATES[id]) return Promise.resolve();
+    if(!templateLoads.has(id)) templateLoads.set(id,new Promise((resolve,reject)=>{
+      const script=document.createElement('script');script.src='/dashboard/js/template-'+id+'.js';
+      script.onload=()=>{ if(RI.IMPORTED_TEMPLATES[id]) resolve(); else { templateLoads.delete(id); reject(new Error('قالب بارگذاری نشد؛ دوباره تلاش کن')); } };
+      script.onerror=()=>{ templateLoads.delete(id); script.remove(); reject(new Error('قالب بارگذاری نشد؛ اتصال اینترنت را بررسی کن')); };
+      document.head.append(script);
+    }));
+    return templateLoads.get(id);
+  }));
   const types = ['text', 'textarea', 'image', 'url', 'link', 'icon', 'percent', 'contact', 'color', 'checkbox', 'select', 'order'];
   RI.importedSpec = function (id) {
     const t = RI.IMPORTED_TEMPLATES[id];

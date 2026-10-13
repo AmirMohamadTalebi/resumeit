@@ -1,6 +1,7 @@
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const {gzipSync}=require('node:zlib');
+const {createHash}=require('node:crypto');
 const { securityHeaders } = require('./security.cjs');
 const root = path.resolve(__dirname, '../../dist');
 const compressedTemplates=new Map();
@@ -21,6 +22,14 @@ async function serveStatic(req, res, pathname, origin, account) {
     if (pathname.startsWith('/dashboard/js/template-') && /\bgzip\b/.test(req.headers['accept-encoding'] || '') && body.length>1024) {
       let cached=compressedTemplates.get(pathname);if(!cached||!cached.source.equals(body)){cached={source:body,body:gzipSync(body)};if(compressedTemplates.size>=4)compressedTemplates.delete(compressedTemplates.keys().next().value);compressedTemplates.set(pathname,cached);}
       body=cached.body;res.setHeader('Content-Encoding','gzip');res.setHeader('Vary','Accept-Encoding');
+    }
+    if(status===200 && !type.startsWith('text/html')) {
+      const etag='"'+createHash('sha256').update(body).digest('hex')+'"';
+      res.setHeader('Cache-Control','private, max-age=0, must-revalidate');
+      res.setHeader('ETag',etag);
+      if((req.headers['if-none-match']||'').split(',').map(v=>v.trim()).includes(etag)) {
+        res.removeHeader('Content-Encoding'); res.writeHead(304); res.end(); return;
+      }
     }
     res.writeHead(status, { 'Content-Type': type, 'Content-Length': Buffer.byteLength(body) });
     res.end(req.method === 'HEAD' ? undefined : body);
