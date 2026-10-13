@@ -61,49 +61,104 @@
   RI.clearDraft = () => { try { sessionStorage.removeItem(draftKey); } catch {} };
 
   /* ---------- تغییر و ذخیره ---------- */
-  let saveTimer, savingPromise, observed, lastScope, lastEdit = 0;
-  const history = [];
-  const editSnapshot = () => JSON.stringify({content:RI.C(),indexing:RI.state.account.indexing});
-  RI.resetEdits = function () { clearTimeout(saveTimer); history.length=0; observed=editSnapshot(); lastScope=null; };
-  RI.canUndo = () => history.length > 0;
-  function scheduleSave(scope) {
-    clearTimeout(saveTimer);
-    saveTimer=setTimeout(() => { if(RI.state.ui.dirty) RI.save(); },scope==='theme'?0:800);
-  }
-  RI.touch = function (scope) {
-    const next=editSnapshot(), now=Date.now();
-    if(next!==observed){
-      if(observed && (scope==='theme' || scope!==lastScope || now-lastEdit>800 || !history.length)){
-        history.push(observed); if(history.length>10) history.shift();
-      }
-      observed=next; lastScope=scope; lastEdit=now;
+  let saveTimer, savingPromise, saveAgain=false, observed, lastScope, lastEdit=0;
+  const history=[];
+  RI.manualSave=()=>document.body.dataset.page==='resume';
+  const editSnapshot=()=>JSON.stringify({content:RI.C(),indexing:RI.state.account.indexing});
+  function cancelCountdown(){clearTimeout(saveTimer);RI.state.ui.saveDue=0;}
+  RI.resetEdits=function(){cancelCountdown();history.length=0;observed=editSnapshot();lastScope=null;};
+  RI.canUndo=()=>history.length>0;
+  function scheduleSave(){
+    cancelCountdown();
+    if(RI.manualSave() || RI.conflict)return;
+    RI.state.ui.saveDue=Date.now()+2000;
+    function tick(){
+      RI.emit('save');
+      if(Date.now()>=RI.state.ui.saveDue){RI.save();return;}
+      saveTimer=setTimeout(tick,100);
     }
-    RI.state.ui.dirty = true;
-    RI.state.ui.saveError = false;
-    RI.emit('change', { scope }); RI.emit('save'); scheduleSave(scope);
+    saveTimer=setTimeout(tick,100);RI.emit('save');
+  }
+  RI.touch=function(scope){
+    const next=editSnapshot(),now=Date.now();
+    if(next!==observed){
+      if(observed&&(scope==='theme'||scope!==lastScope||now-lastEdit>800||!history.length)){
+        history.push(observed);if(history.length>10)history.shift();
+      }
+      observed=next;lastScope=scope;lastEdit=now;
+    }
+    RI.state.ui.dirty=true;RI.state.ui.saveError=!!RI.conflict;
+    RI.emit('change',{scope});scheduleSave();RI.emit('save');
   };
 
-  RI.save = function () {
-    clearTimeout(saveTimer);
-    if(savingPromise) return savingPromise;
+  // Different fields merge; overlapping edits require a deliberate choice.
+  RI.mergeEdits=function(base,local,remote,preferLocal=false){
+    const equal=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
+    if(equal(local,remote)||equal(base,remote))return local;
+    if(equal(base,local))return remote;
+    if(base&&local&&remote&&typeof base==='object'&&typeof local==='object'&&typeof remote==='object'){
+      if(Array.isArray(base)&&Array.isArray(local)&&Array.isArray(remote)){
+        const ids=a=>a.map(x=>x?.id||x?.key);
+        if(equal(ids(base),ids(local))&&equal(ids(base),ids(remote)))return local.map((x,i)=>RI.mergeEdits(base[i],x,remote[i],preferLocal));
+      }else if(!Array.isArray(base)&&!Array.isArray(local)&&!Array.isArray(remote)){
+        return Object.fromEntries([...new Set([...Object.keys(base),...Object.keys(local),...Object.keys(remote)])].map(k=>[k,RI.mergeEdits(base[k],local[k],remote[k],preferLocal)]).filter(([,v])=>v!==undefined));
+      }
+    }
+    if(preferLocal)return local;
+    throw Object.assign(new Error('این بخش در تب دیگری هم تغییر کرده؛ برای انتخاب نسخه روی «بررسی تداخل» بزن.'),{code:'EDIT_CONFLICT'});
+  };
+  function applyMerged(target,source){
+    for(const key of Object.keys(target))if(!Object.hasOwn(source,key))delete target[key];
+    for(const [key,value]of Object.entries(source)){
+      if(Array.isArray(value)&&Array.isArray(target[key])&&value.every(row=>row&&typeof row==='object'&&(row.id||row.key))){
+        const previous=new Map(target[key].map(row=>[row.id||row.key,row]));
+        const rows=value.map(row=>{const old=previous.get(row.id||row.key);if(old){applyMerged(old,row);return old;}return row;});
+        target[key].splice(0,target[key].length,...rows);
+      }else if(value&&typeof value==='object'&&!Array.isArray(value)&&target[key]&&typeof target[key]==='object'&&!Array.isArray(target[key]))applyMerged(target[key],value);
+      else target[key]=value;
+    }
+  }
+  async function recoverVersion(error){
+    const doc=await RI.dashboardRequest('document');
+    if(error.code==='NETWORK_ERROR'&&doc.revision===RI.revision)throw error;
+    const base={content:JSON.parse(RI.saved),indexing:RI.savedIndexing},local=JSON.parse(editSnapshot()),remote={content:doc.content,indexing:doc.preferences.indexing};
+    let merged;
+    try{merged=RI.mergeEdits(base,local,remote);}catch(e){RI.conflict={base,doc};throw e;}
+    applyMerged(RI.C(),merged.content);RI.state.account.indexing=merged.indexing;
+    RI.saved=JSON.stringify(doc.content);RI.savedIndexing=doc.preferences.indexing;RI.revision=doc.revision;RI.state.pub=doc.pub;
+    history.length=0;observed=editSnapshot();RI.emit('change');
+  }
+  RI.resolveConflict=async function(){
+    if(!RI.conflict)return RI.save();
+    const pick=await RI.choice({title:'ویرایش هم‌زمان در دو تب',text:'اطلاعات تغییرکرده در بخش‌های دیگر حفظ می‌شود. برای بخش مشترک، کدام نسخه را نگه داریم؟',options:[{label:'تغییرات این صفحه',kind:'primary',value:'local'},{label:'نسخهٔ ذخیره‌شده',kind:'soft',value:'remote'},{label:'بعداً تصمیم می‌گیرم',kind:'ghost',value:null}]});
+    if(!pick)return false;
+    const {base,doc}=RI.conflict,remote={content:doc.content,indexing:doc.preferences.indexing},local=JSON.parse(editSnapshot());
+    const merged=pick==='local'?RI.mergeEdits(base,local,remote,true):RI.mergeEdits(base,remote,local,true);
+    applyMerged(RI.C(),merged.content);RI.state.account.indexing=merged.indexing;RI.saved=JSON.stringify(doc.content);RI.savedIndexing=doc.preferences.indexing;RI.revision=doc.revision;RI.state.pub=doc.pub;RI.conflict=null;observed=editSnapshot();RI.rerender();return RI.save();
+  };
+  RI.save=function(){
+    cancelCountdown();
+    if(savingPromise){saveAgain=true;return savingPromise;}
+    if(RI.conflict)return Promise.resolve(false);
     const ui=RI.state.ui;
     savingPromise=(async()=>{
-      ui.saving=true; ui.saveError=false; RI.emit('save');
-      try {
-        do {
-          const snapshot=JSON.stringify(RI.C()), indexing=RI.state.account.indexing;
-          const doc=await RI.dashboardRequest('save',{revision:RI.revision,content:JSON.parse(snapshot),preferences:{...RI.state.account}});
-          RI.revision=doc.revision; RI.saved=JSON.stringify(doc.content); RI.savedSlug=doc.slug||''; RI.savedIndexing=doc.preferences.indexing;
-          if(snapshot===JSON.stringify(RI.C())&&indexing===RI.state.account.indexing){
-            Object.assign(RI.state.account,doc.preferences); ui.dirty=false; observed=editSnapshot();
-          }
-          ui.savedAt=Date.now(); RI.keepDraft();
-        } while(ui.dirty);
-        return true;
-      } catch(e) { ui.saveError=true; RI.toast(e.message,{kind:'error'}); return false; }
-      finally { ui.saving=false; savingPromise=null; clearTimeout(saveTimer); RI.emit('save'); }
-    })();
-    return savingPromise;
+      ui.saving=true;ui.saveError=false;RI.emit('save');let recovered=false;
+      try{
+        do{
+          saveAgain=false;
+          const snapshot=JSON.stringify(RI.C()),indexing=RI.state.account.indexing;
+          let doc;const base=JSON.parse(RI.saved),content=JSON.parse(snapshot),patch=Object.fromEntries(Object.entries(content).filter(([key,value])=>JSON.stringify(value)!==JSON.stringify(base[key])));
+          try{doc=await RI.dashboardRequest('save',{revision:RI.revision,patch,preferences:{indexing},compact:true});}
+          catch(e){if(!recovered&&['REVISION_CONFLICT','NETWORK_ERROR'].includes(e.code)){recovered=true;await recoverVersion(e);saveAgain=true;continue;}throw e;}
+          RI.revision=doc.revision;RI.saved=JSON.stringify(doc.content||JSON.parse(snapshot));RI.savedSlug=doc.slug||'';RI.savedIndexing=doc.preferences.indexing;
+          ui.dirty=snapshot!==JSON.stringify(RI.C())||indexing!==RI.state.account.indexing;
+          if(!ui.dirty){Object.assign(RI.state.account,doc.preferences);observed=editSnapshot();}
+          ui.savedAt=Date.now();RI.keepDraft();
+        }while(ui.dirty&&(saveAgain||!RI.manualSave()&&(!ui.saveDue||Date.now()>=ui.saveDue)));
+        return !ui.dirty;
+      }catch(e){ui.saveError=true;ui.saveMessage=e.message;cancelCountdown();RI.toast(e.message,{kind:'error'});return false;}
+      finally{ui.saving=false;savingPromise=null;RI.emit('save');}
+    })();return savingPromise;
   };
 
   RI.undo = function () {
@@ -112,10 +167,10 @@
     RI.state.content=previous.content; RI.state.account.indexing=previous.indexing;
     observed=editSnapshot(); lastScope=null;
     RI.state.ui.dirty=true; RI.state.ui.saveError=false;
-    RI.emit('change'); RI.emit('save'); RI.rerender(); scheduleSave('theme');
+    RI.emit('change'); RI.emit('save'); RI.rerender(); scheduleSave();
   };
   RI.revert = function () {
-    clearTimeout(saveTimer);
+    cancelCountdown();RI.conflict=null;
     RI.state.content=JSON.parse(RI.saved);
     RI.state.account.indexing=RI.savedIndexing;
     RI.state.ui.dirty=false; RI.state.ui.saveError=false;
@@ -124,10 +179,10 @@
 
   RI.leaveGuard = async function () {
     if (!RI.state.ui.dirty && !RI.state.ui.saving) return true;
-    if(await RI.save()) return true;
+    if(!RI.manualSave()&&await RI.save()) return true;
     const c=await RI.choice({
-      title:'تغییرات هنوز ذخیره نشده‌اند',
-      text:'ذخیره انجام نشد. اگر خارج شوی، تغییرات اخیرت از بین می‌روند.',
+      title:RI.manualSave()?'تغییرات رزومه ذخیره نشده‌اند':'تغییرات هنوز ذخیره نشده‌اند',
+      text:'قبل از رفتن، تغییرات را ذخیره کنیم؟ خروج بدون ذخیره ویرایش‌های اخیرت را از بین می‌برد.',
       options:[
         {label:'تلاش دوباره و ادامه',kind:'primary',icon:'save',value:'save'},
         {label:'دور انداختن تغییرات',kind:'danger',value:'discard'},

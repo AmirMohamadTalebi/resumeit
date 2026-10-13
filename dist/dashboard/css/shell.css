@@ -149,3 +149,8 @@
   .hide-sm { display: none !important; }
 }
 .topbar__title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+
+.save-countdown { min-width: 68px; text-align: center; font-size: 12px; font-weight: 700; color: var(--bro-700); padding: 6px 8px; font-variant-numeric: tabular-nums; }
+.save-error { margin: 12px clamp(12px, 2.4vw, 32px) 0; padding: 10px 14px; border-radius: var(--r-md); background: var(--err-bg); color: var(--err); display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.save-error[hidden], .save-countdown[hidden] { display: none; }
+.save-error span { flex: 1; min-width: 160px; }

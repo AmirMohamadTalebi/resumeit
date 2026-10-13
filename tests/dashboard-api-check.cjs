@@ -34,6 +34,11 @@ try{
  c.profile.title='PRIVATE DRAFT';assert.equal((await request('save',{revision:3,content:c,preferences:{indexing:false}})).status,200);
  html=await(await fetch(base+'/u/amir/')).text();assert(!html.includes('PRIVATE DRAFT'));assert(html.includes('noindex,nofollow'));
  assert.equal((await request('unpublish',{revision:4,kind:'links'})).status,200);assert.equal((await fetch(base+'/u/amir/links')).status,404);
+ const compact=await(await request('save',{revision:5,patch:{theme:{...c.theme,font:'sahel'}},preferences:{indexing:false},compact:true})).json();assert.equal(compact.revision,6);assert(!Object.hasOwn(compact,'content'));assert((await(await request('document')).json()).content.profile.title==='PRIVATE DRAFT');
+ assert.equal((await request('save',{revision:6,patch:{theme:{...c.theme,font:'lalezar'}},compact:true})).status,403);
+ assert.equal((await request('save',{revision:6,patch:JSON.parse('{"__proto__":{}}'),compact:true})).status,400);
+ assert.equal((await request('save',{revision:6,patch:{contacts:[{...c.contacts[0],value:'invalid'}]},compact:true})).status,400);
+ const stale=await request('save',{revision:5,patch:{theme:c.theme},compact:true});assert.equal(stale.status,409);assert.equal((await stale.json()).code,'REVISION_CONFLICT');
  assert.equal((await request('delete',{confirm:'no'})).status,400);assert.equal((await request('delete',{confirm:'DELETE'})).status,200);assert.equal((await fetch(base+'/u/amir/')).status,404);assert.equal((await request('document')).status,401);
  console.log('PASS: dashboard persistence, account isolation, revision conflicts, slug ownership, validated free themes/URLs, snapshot publishing, private fields, subdomain routing/assets, real counts, unpublish and account deletion.');
 }finally{if(old===undefined)delete process.env.PUBLIC_ORIGIN;else process.env.PUBLIC_ORIGIN=old;await new Promise(r=>server.close(r));}})().catch(e=>{console.error(e);process.exitCode=1;});

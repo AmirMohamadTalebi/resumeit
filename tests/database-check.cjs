@@ -109,6 +109,8 @@ try { process.loadEnvFile(); } catch (error) { if (error.code !== 'ENOENT') thro
     assert.equal((await database.loadDashboard(rival)).revision,0);
     await database.mutateDashboard(owner,1,d=>{d.published.links=structuredClone(d.content);d.pub.links.status='published';});
     assert.equal((await database.publicPage('mysql-profile','links')).content.links.items[0].title,'Site');
+    await database.mutateDashboard(owner,2,d=>{d.content.profile.title='Private change';},{draftOnly:true});
+    assert.equal((await database.loadDashboard(owner)).content.profile.title,'Private change');assert.equal((await database.publicPage('mysql-profile','links')).content.links.items[0].title,'Site');assert.equal((await database.loadDashboard(owner)).pub.links.status,'published');
     await database.recordMetric(owner,'links');await database.recordMetric(owner,'click','one');assert.equal((await database.dashboardStats(owner)).length,2);
     const creditKey='test-credit-'+owner;
     assert.equal((await Promise.all(Array.from({length:4},()=>database.creditWallet(owner,1000000,creditKey)))).filter(Boolean).length,1);

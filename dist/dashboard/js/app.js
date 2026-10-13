@@ -39,13 +39,22 @@
     el.dataset.state = st;
     el.setAttribute('aria-label',txt); el.title=txt;
     el.innerHTML = RI.icon(ic, st === 'saving' ? 'spin' : '') + '<span class="save-state__txt">' + txt + '</span>';
-    btn.disabled = ui.saving || (!ui.dirty && !ui.saveError);
-    btn.innerHTML = ui.saveError ? RI.icon('refresh') + '<span class="hide-sm">تلاش دوباره</span>' : RI.icon('save') + '<span class="hide-sm">ذخیره</span>';
+    if(RI.manualSave()){
+      btn.disabled=ui.saving||(!ui.dirty&&!ui.saveError);
+      btn.innerHTML=RI.icon(ui.saving?'refresh':'save')+'<span class="hide-sm">'+(ui.saving?'در حال ذخیره…':'ذخیره')+'</span>';
+    }else{
+      const remaining=Math.max(0,(ui.saveDue||0)-Date.now());
+      btn.hidden=!remaining&&!ui.saving;
+      btn.textContent=remaining?RI.fa(Math.ceil(remaining/1000))+' ثانیه': 'در حال ذخیره…';
+      btn.title=remaining?'ذخیره پس از آخرین تغییر':'ذخیره در پس‌زمینه';
+    }
+    const error=RI.$('#saveError');error.hidden=!ui.saveError;
+    if(ui.saveError){error.innerHTML='<span>'+RI.esc(ui.saveMessage||'ذخیره انجام نشد؛ تغییراتت در این صفحه باقی است.')+'</span><button type="button" class="btn btn--soft btn--sm" data-save-retry>'+ (RI.conflict?'بررسی تداخل':'تلاش دوباره')+'</button>';}
     RI.$('#undoBtn').disabled = !RI.canUndo();
     el.setAttribute('role', 'status');
   }
   RI.doSave = async function () {
-    const ok = await RI.save();
+    const ok = await (RI.conflict?RI.resolveConflict():RI.save());
     if (ok) RI.toast('تغییرات ذخیره شد');
     return ok;
   };
@@ -123,9 +132,11 @@
     RI.$('#scrim').addEventListener('click', closeDrawer);
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') closeDrawer();
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); if (RI.state.ui.dirty) RI.doSave(); }
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); if (RI.state.ui.dirty&&RI.manualSave()) RI.doSave(); }
     });
-    RI.$('#saveBtn').addEventListener('click', RI.doSave);
+    if(RI.manualSave()) RI.$('#saveBtn').addEventListener('click',RI.doSave);
+    RI.delegate(document,'click','[data-save-retry]',RI.doSave);
+    window.addEventListener('online',()=>{if(!RI.manualSave()&&RI.state.ui.saveError&&!RI.conflict)RI.save();});
     RI.$('#topPreview').addEventListener('click', async () => {try{if(current!=='links') await RI.loadTemplates([RI.C().theme.resume]); RI.openPreview(current === 'links' ? 'links' : 'resume');}catch(e){RI.toast(e.message,{kind:'error'});}});
     RI.$('#undoBtn').addEventListener('click', RI.undo);
     RI.$('#accountBtn').addEventListener('click', (e) => {

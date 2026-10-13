@@ -31,12 +31,13 @@
         <span class="topbar__title" id="topTitle">خانه</span>
         <span class="topbar__spacer"></span>
         <div class="topbar__actions">
-          <span class="save-state" id="saveState" data-state="saved" title="تغییرات به‌صورت خودکار ذخیره می‌شوند"></span>
+          <span class="save-state" id="saveState" data-state="saved" title="ذخیرهٔ دستی رزومه"></span>
           <button type="button" class="btn btn--soft btn--sm" id="topPreview" aria-label="پیش‌نمایش"></button>
           <button type="button" class="btn btn--soft btn--sm" id="saveBtn" aria-label="ذخیره"></button>
           <button type="button" class="btn btn--soft btn--sm" id="undoBtn" aria-label="واگرد آخرین تغییر" title="واگرد آخرین تغییر" disabled></button>
         </div>
       </header>
+      <div class="save-error" id="saveError" role="alert" hidden></div>
       <main id="view" class="view" tabindex="-1"></main>
     </div>
   </div>

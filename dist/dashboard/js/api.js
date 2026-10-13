@@ -1,8 +1,8 @@
 (() => {
   'use strict';const RI=window.RI;
   RI.dashboardRequest=async(route,data)=>{
-    let r;try{r=await fetch('/api/dashboard/'+route,{method:data?'POST':'GET',credentials:'same-origin',headers:data?{'Content-Type':'application/json'}:{},body:data?JSON.stringify(data):undefined,signal:AbortSignal.timeout(20000)});}catch{throw new Error('ارتباط با سرور برقرار نشد؛ تغییراتت را نگه دار و دوباره تلاش کن');}
-    const result=await r.json();if(!r.ok)throw new Error(result.error||'درخواست انجام نشد');return result;
+    let r;try{r=await fetch('/api/dashboard/'+route,{method:data?'POST':'GET',credentials:'same-origin',headers:data?{'Content-Type':'application/json'}:{},body:data?JSON.stringify(data):undefined,signal:AbortSignal.timeout(20000)});}catch{throw Object.assign(new Error('ارتباط با سرور برقرار نشد؛ تغییراتت را نگه دار و دوباره تلاش کن'),{code:'NETWORK_ERROR'});}
+    const result=await r.json();if(!r.ok)throw Object.assign(new Error(result.error||'درخواست انجام نشد'),{status:r.status,code:result.code});return result;
   };
   RI.loadDashboard=async(owner)=>{
     RI.statsRows=null; RI.statsLoading=['home','links','stats'].includes(document.body.dataset.page);

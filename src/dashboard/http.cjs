@@ -53,14 +53,15 @@ function dashboardHandler(database,auth){return async(req,res,pathname,origin)=>
     if(!Number.isSafeInteger(input.revision)||input.revision<0)model.fail('نسخهٔ اطلاعات معتبر نیست');
     if(!['/api/dashboard/save','/api/dashboard/publish','/api/dashboard/unpublish'].includes(pathname))model.fail('مسیر پیدا نشد',404);
     const billing=database.billing?await database.billing(user.id):{};
-    const c=pathname.endsWith('/save')?model.content(input.content,billing):null;
+    const saving=pathname.endsWith('/save'),patch=saving&&input.patch!==undefined?model.validatePatch(input.patch):null;
+    const c=saving&&!patch?model.content(input.content,billing):null;
     const result=await database.mutateDashboard(user.id,input.revision,doc=>{
-      if(c){doc.content=c;doc.preferences=model.preferences(input.preferences);doc.slug=c.slug||null;return;}
+      if(saving){doc.content=patch?model.content({...doc.content,...patch},billing):c;doc.preferences=model.preferences(input.preferences);doc.slug=doc.content.slug||null;return;}
       const k=input.kind;if(!['resume','links'].includes(k))model.fail('نوع صفحه معتبر نیست');
       if(pathname.endsWith('/unpublish')){doc.pub[k].status='draft';doc.pub[k].snap=null;delete doc.published[k];return;}
       if(!user.first_name||!user.last_name||!user.phone_verified||!user.phone)model.fail('نام، نام خانوادگی و شمارهٔ تأییدشده را در تنظیمات کامل کن');
       model.ready(doc.content,k,billing);doc.slug=doc.content.slug;doc.published[k]=structuredClone(doc.content);doc.pub[k]={status:'published',version:doc.pub[k].version+1,at:Date.now(),snap:JSON.stringify(pubData(doc.content,k))};
-    });reply(200,result);
-  }catch(e){reply(e.status||503,{error:e.status?e.message:'درخواست انجام نشد؛ دوباره تلاش کن'});}return true;
+    },{draftOnly:saving});reply(200,saving&&input.compact===true?{revision:result.revision,slug:result.slug,preferences:result.preferences}:result);
+  }catch(e){reply(e.status||503,{error:e.status?e.message:'درخواست انجام نشد؛ دوباره تلاش کن',code:e.code==='REVISION_CONFLICT'?e.code:undefined});}return true;
 };}
 module.exports={dashboardHandler};
