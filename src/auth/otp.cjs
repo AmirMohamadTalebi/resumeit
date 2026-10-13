@@ -5,8 +5,9 @@ function createOtpService({ database, send = sendVerificationSms, now = Date.now
   async function request(phone, purpose, ipHash, ownerId=null) {
     const id = randomUUID(), code = String(randomInt(100000,1000000));
     if (!await database.reserveOtp({ id, phone, purpose, hash:digest(id+code), ownerId },ipHash,now())) return null;
-    try { await send(phone,code); await database.finishOtpSend(id,true); }
+    try { await send(phone,code); }
     catch { await database.finishOtpSend(id,false); throw new Error('SMS submission failed'); }
+    await database.finishOtpSend(id,true);
     return { challengeId:id, expiresIn:120, retryAfter:60 };
   }
   async function verify(id,code,purpose) {

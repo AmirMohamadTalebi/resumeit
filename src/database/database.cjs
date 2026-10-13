@@ -27,8 +27,10 @@ async function openDatabase(options) {
     ...require('./migration.cjs')(context),
     close: () => pool.end(),
   };
-  try{await require('./owner-wallet-credit.cjs')(database,execute);}catch(error){await pool.end();throw error;}
-  await execute('INSERT IGNORE INTO admin_accounts(user_id) SELECT id FROM users WHERE SHA2(phone,256)=? AND phone_verified=TRUE',[require('../admin/access.cjs').OWNER_PHONE_HASH]);
+  try{
+    await require('./owner-wallet-credit.cjs')(database,execute);
+    await execute('INSERT IGNORE INTO admin_accounts(user_id) SELECT id FROM users WHERE SHA2(phone,256)=? AND phone_verified=TRUE',[require('../admin/access.cjs').OWNER_PHONE_HASH]);
+  }catch(error){await pool.end();throw error;}
   return database;
 }
 module.exports={openDatabase};

@@ -3,6 +3,10 @@ const {createOtpService}=require('../src/auth/otp.cjs');
 const {testStore}=require('./auth-test-store.cjs');
 const {createServer}=require('../src/http/server.cjs');
 (async()=>{
+ const recorded=[];
+ const recordFailure={reserveOtp:async()=>true,finishOtpSend:async(id,success)=>{recorded.push(success);throw new Error('Database unavailable');}};
+ await assert.rejects(createOtpService({database:recordFailure,send:async()=>{}}).request('09120000001','login','ip'));
+ assert.deepEqual(recorded,[true],'A database acknowledgment failure is not an SMS submission failure');
  let time=Date.now(),sent=[];const database=testStore();
  const send=async(phone,code)=>sent.push({phone,code});
  const otp=createOtpService({database,send,now:()=>time}), second=createOtpService({database,send,now:()=>time});
