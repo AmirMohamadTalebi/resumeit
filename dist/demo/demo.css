@@ -1,0 +1,1 @@
+.demo-topbar{flex-wrap:wrap;gap:12px}.demo-topbar .ri-logo{width:140px}.demo-topbar .btn{max-width:100%}@media(max-width:480px){.demo-topbar{padding:12px 16px}.demo-topbar .ri-logo{width:120px}.demo-note{margin-inline-start:auto}.demo-topbar .btn{font-size:11px;min-height:36px}.demo-heading h1{font-size:clamp(26px,8vw,38px)}}

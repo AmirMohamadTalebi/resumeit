@@ -33,6 +33,7 @@ function authHandler(database, options = {}) {
     if(['/api/auth/account/names','/api/auth/social/unlink','/api/auth/phone/request','/api/auth/phone/verify'].includes(pathname)) {
       try {
         const user=await account(req);if(!user){reply(401,{error:'اول وارد حسابت شو'});return true;}
+        if(req.headers['x-resumeit-owner']&&req.headers['x-resumeit-owner']!==user.id){reply(409,{error:'حساب فعال عوض شده است؛ صفحه را دوباره باز کن'});return true;}
         const input=await readJson(req);
         if(pathname.endsWith('/names')) {
           const {firstName,lastName}=input;

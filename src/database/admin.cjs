@@ -1,6 +1,7 @@
 const { randomUUID } = require("node:crypto");
 const { fail } = require("../dashboard/model.cjs");
 const { RI } = require("../dashboard/render.cjs");
+const publicationSummary="JSON_OBJECT('resume',JSON_OBJECT('status',JSON_UNQUOTE(JSON_EXTRACT(pub,'$.resume.status'))),'links',JSON_OBJECT('status',JSON_UNQUOTE(JSON_EXTRACT(pub,'$.links.status')))) AS pub";
 module.exports = ({ execute, transaction }) => ({
   async adminOverview(from) {
     const results = await Promise.all([
@@ -9,7 +10,7 @@ module.exports = ({ execute, transaction }) => ({
         [from],
       ),
       execute(
-        "SELECT COUNT(*) total,SUM(JSON_UNQUOTE(JSON_EXTRACT(pub,'$.resume.status'))='published') resumes,SUM(JSON_UNQUOTE(JSON_EXTRACT(pub,'$.links.status'))='published') links FROM dashboard_documents",
+        "SELECT COUNT(*) total,SUM(JSON_UNQUOTE(JSON_EXTRACT(d.pub,'$.resume.status'))='published' AND COALESCE(c.suspended,0)=0 AND COALESCE(c.publication_blocked,0)=0) resumes,SUM(JSON_UNQUOTE(JSON_EXTRACT(d.pub,'$.links.status'))='published' AND COALESCE(c.suspended,0)=0 AND COALESCE(c.publication_blocked,0)=0) links FROM dashboard_documents d LEFT JOIN admin_controls c ON c.user_id=d.user_id",
       ),
       execute(
         "SELECT COUNT(*) total,SUM(status='accepted') accepted,SUM(status='failed') failed,SUM(verified_at IS NOT NULL) verified,MIN(created_at) started FROM otp_events WHERE created_at>=?",
@@ -68,7 +69,7 @@ module.exports = ({ execute, transaction }) => ({
         table:
           "dashboard_documents d JOIN profiles p ON p.user_id=d.user_id LEFT JOIN admin_controls c ON c.user_id=d.user_id",
         fields:
-          "d.user_id id,d.slug,d.pub,d.revision,p.name,COALESCE(c.publication_blocked,0) publication_blocked",
+          `d.user_id id,d.slug,${publicationSummary},d.revision,p.name,COALESCE(c.publication_blocked,0) publication_blocked,COALESCE(c.suspended,0) suspended`,
         search: "CONCAT_WS(' ',d.slug,p.name)",
         order: "d.user_id",
       },
@@ -157,7 +158,7 @@ module.exports = ({ execute, transaction }) => ({
     const [document, wallet, access, sessions, social, traffic] =
       await Promise.all([
         execute(
-          "SELECT slug,pub,revision,JSON_UNQUOTE(JSON_EXTRACT(draft,'$.theme.resume')) template FROM dashboard_documents WHERE user_id=?",
+          `SELECT slug,${publicationSummary},revision,JSON_UNQUOTE(JSON_EXTRACT(draft,'$.theme.resume')) template FROM dashboard_documents WHERE user_id=?`,
           [id],
         ),
         execute("SELECT balance_units FROM wallets WHERE user_id=?", [id]),

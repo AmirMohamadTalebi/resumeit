@@ -61,7 +61,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_PATH || 'playwright');
       const routePath = route === 'home' ? '/dashboard/' : '/dashboard/' + route + '/';
       assert.equal(new URL(page.url()).pathname, routePath);
       assert.equal(new URL(page.url()).hash, '');
-      assert.deepEqual(await page.evaluate(() => Object.keys(RI.pages)), [route]);
+      assert(await page.evaluate(route=>!!RI.pages[route],route));
       await page.reload(); await page.waitForSelector('#page-title');
       if (route === 'billing') {
         assert(!(await page.locator('#view').innerText()).includes('مبلغ نمایشی'));

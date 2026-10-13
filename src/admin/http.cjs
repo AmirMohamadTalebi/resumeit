@@ -19,6 +19,7 @@ function adminHandler(database, auth) {
     };
     res.setHeader("Vary", "Cookie");
     try {
+      if(req.headers.host!==new URL(origin).host){reply(404,{error:"بخش پیدا نشد"});return true;}
       const user = await auth.account(req);
       if (!user) {
         reply(401, { error: "برای ادامه وارد حساب شوید" });
@@ -28,6 +29,7 @@ function adminHandler(database, auth) {
         reply(403, { error: "این بخش فقط برای مدیر است" });
         return true;
       }
+      if(req.headers["x-resumeit-owner"] && req.headers["x-resumeit-owner"]!==user.id){reply(409,{error:"حساب فعال عوض شده است؛ این صفحه را دوباره باز کنید"});return true;}
       const url = new URL(req.url, origin),
         page = Number(url.searchParams.get("page") || 1),
         days = Number(url.searchParams.get("days") || 30),

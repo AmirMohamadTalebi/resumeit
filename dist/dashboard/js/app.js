@@ -8,20 +8,19 @@
     { group: 'انتشار', items: [['publish', 'آدرس و انتشار', 'globe'], ['stats', 'آمار', 'chart']] },
     { group: 'حساب', items: [['wallet', 'کیف پول It', 'card'], ['billing', 'اشتراک و خریدها', 'card'], ['settings', 'تنظیمات حساب', 'settings']] },
   ];
-  const BOTTOM = [['home', 'خانه', 'home'], ['resume', 'رزومه', 'resume'], ['links', 'لینک‌ها', 'link'], ['themes', 'ظاهر', 'palette'], ['publish', 'انتشار', 'globe']];
+  const BOTTOM = [['home', 'خانه', 'home'], ['resume', 'رزومه', 'resume'], ['links', 'لینک‌ها', 'link'], ['themes', 'قالب‌ها', 'palette']];
   const LOGO = '<span class="ri-logo"><img src="/brand/resumeit-logo-v1.png" alt="ResumeIt" width="2172" height="724"></span>';
 
-  let current = null, cleanup = null, navToken = 0, bootstrapping = true;
+  let current = null, cleanup = null, bootstrapping = true;
 
   /* ---------- ساخت پوسته ---------- */
   function buildShell() {
     const acc = RI.state.account;
     RI.$('#sidebar').innerHTML =
-      '<div class="sidebar__glass"><div class="brand">' + LOGO + '</div>' +
-      '<nav class="nav" aria-label="بخش‌های داشبورد">' + NAV.map((g) => '<div class="nav__group"><div class="nav__label">' + g.group + '</div>' + g.items.map((i) => '<a class="nav__item" href="' + RI.routeUrl(i[0]) + '" data-route="' + i[0] + '">' + RI.icon(i[2]) + '<span>' + i[1] + '</span></a>').join('') + '</div>').join('') + '</nav>' +
-      '<div class="sidebar__foot">'+(acc.isAdmin?'<a class="btn btn--soft btn--sm" href="/admin/">پنل مدیریت</a>':'')+'<small data-site-version></small><div class="ri-support-links"><a href="https://t.me/resumeit_ir" target="_blank" rel="noopener">کانال تلگرام</a><a href="https://t.me/amirtalebi_x" target="_blank" rel="noopener">تلگرام پشتیبانی</a></div>' +
-      '<button type="button" class="account-btn" id="accountBtn" aria-haspopup="menu"><img class="avatar" id="accAvatar" alt="" src="/brand/resumeit-mark-v1.png"><span><span class="account-btn__name" id="accName"></span><br><span class="account-btn__sub">حساب من</span></span></button></div></div>';
-    RI.$('#bottomNav').innerHTML = BOTTOM.map((i) => '<a href="' + RI.routeUrl(i[0]) + '" data-route="' + i[0] + '">' + RI.icon(i[2]) + '<span>' + i[1] + '</span></a>').join('');
+      '<div class="sidebar__glass"><div class="brand"><a href="/" aria-label="خانهٔ ResumeIt">' + LOGO + '</a><button type="button" class="btn btn--icon btn--ghost drawer-close" id="drawerClose" aria-label="بستن منو">'+RI.icon('close')+'</button></div>' +
+      '<nav class="nav" aria-label="بخش‌های داشبورد">' + NAV.map(g => '<ul class="menu nav__group"><li class="menu-title nav__label">'+g.group+'</li>'+g.items.map(i=>'<li><a class="nav__item" href="'+RI.routeUrl(i[0])+'" data-route="'+i[0]+'">'+RI.icon(i[2])+'<span>'+i[1]+'</span></a></li>').join('')+'</ul>').join('')+'</nav>' +
+      '<div class="sidebar__foot">'+(acc.isAdmin?'<a class="panel-switch" href="/admin/">'+RI.icon('shield')+'<span>ورود به مدیریت</span>'+RI.icon('chevL')+'</a>':'')+'<a class="panel-help" href="/contact/">'+RI.icon('help')+'راهنما و پشتیبانی</a><button type="button" class="account-btn" id="accountBtn" aria-haspopup="menu"><img class="avatar" id="accAvatar" alt="" src="/brand/resumeit-mark-v1.png"><span><span class="account-btn__name" id="accName"></span><br><span class="account-btn__sub">تنظیمات و خروج</span></span>'+RI.icon('chevL')+'</button><small data-site-version></small></div></div>';
+    RI.$('#bottomNav').innerHTML = BOTTOM.map(i=>'<a href="'+RI.routeUrl(i[0])+'" data-route="'+i[0]+'">'+RI.icon(i[2])+'<span>'+i[1]+'</span></a>').join('')+'<button type="button" data-all-pages aria-label="همهٔ بخش‌ها">'+RI.icon('menu')+'<span>بیشتر</span></button>';
     paintAccount();
   }
   function paintAccount() {
@@ -31,7 +30,9 @@
 
   /* ---------- نوار بالا و وضعیت ذخیره ---------- */
   function paintSave() {
-    const ui = RI.state.ui, el = RI.$('#saveState'), btn = RI.$('#saveBtn');
+    const ui = RI.state.ui, el = RI.$('#saveState');let btn=RI.$('#saveBtn');
+    const tag=RI.manualSave()?'BUTTON':'SPAN';
+    if(btn.tagName!==tag){const replacement=document.createElement(tag.toLowerCase());replacement.id='saveBtn';replacement.setAttribute('aria-live','off');btn.replaceWith(replacement);btn=replacement;if(tag==='BUTTON')btn.type='button';}
     let st = 'saved', txt = 'همهٔ تغییرات ذخیره شد', ic = 'check';
     if (ui.saving) { st = 'saving'; txt = 'در حال ذخیره…'; ic = 'refresh'; }
     else if (ui.saveError) { st = 'error'; txt = 'ذخیره نشد'; ic = 'alert'; }
@@ -39,10 +40,13 @@
     el.dataset.state = st;
     el.setAttribute('aria-label',txt); el.title=txt;
     el.innerHTML = RI.icon(ic, st === 'saving' ? 'spin' : '') + '<span class="save-state__txt">' + txt + '</span>';
+    btn.hidden=false;btn.setAttribute('role',RI.manualSave()?'button':'timer');
     if(RI.manualSave()){
+      btn.className='btn btn--soft btn--sm';
       btn.disabled=ui.saving||(!ui.dirty&&!ui.saveError);
       btn.innerHTML=RI.icon(ui.saving?'refresh':'save')+'<span class="hide-sm">'+(ui.saving?'در حال ذخیره…':'ذخیره')+'</span>';
     }else{
+      btn.className='save-countdown';btn.disabled=true;
       const remaining=Math.max(0,(ui.saveDue||0)-Date.now());
       btn.hidden=!remaining&&!ui.saving;
       btn.textContent=remaining?RI.fa(Math.ceil(remaining/1000))+' ثانیه': 'در حال ذخیره…';
@@ -71,17 +75,44 @@
     for (const key of ['step', 'tab', 'anchor']) if (opts && opts[key]) url.searchParams.set(key, opts[key]);
     return url.pathname + url.search;
   };
-  async function navigate(id, opts) {
+  let navigating=false,pendingNavigation=null,currentUrl=location.pathname+location.search;
+  const pageLoads=new Map();
+  function loadScript(path) {
+    if(!pageLoads.has(path)) pageLoads.set(path,new Promise((resolve,reject)=>{
+      const script=document.createElement('script');
+      script.src=path+'?v='+document.documentElement.dataset.assetVersion;
+      script.onload=resolve;script.onerror=()=>{pageLoads.delete(path);script.remove();reject(new Error('این بخش دریافت نشد؛ اتصال اینترنت را بررسی کن و دوباره بزن'));};
+      document.head.append(script);
+    }));
+    return pageLoads.get(path);
+  }
+  async function navigate(id, opts, back=false) {
     if (!NAV.some(g => g.items.some(i => i[0] === id))) return;
+    if(navigating){pendingNavigation=[id,opts,back];return;}
     if(bootstrapping){location.assign(RI.routeUrl(id,opts));return;}
-    if (!(await RI.leaveGuard()) || !RI.keepDraft()) return;
-    window.resumeitPageLoading?.start(true);
-    location.assign(RI.routeUrl(id, opts));
+    navigating=true;
+    const previous=currentUrl;
+    try {
+      if (!(await RI.leaveGuard())) { if(back)history.replaceState(null,'',previous);return; }
+      window.resumeitPageLoading?.start(true);
+      if(id==='resume') {
+        if(!RI.mountImportedEditor) await loadScript('/dashboard/js/template-editor.js');
+        await RI.loadTemplates([RI.C().theme.resume]);
+      }
+      if(!RI.pages[id]) await loadScript('/dashboard/js/pages/'+id+'.js');
+      if(!RI.pages[id])throw new Error('بارگذاری بخش کامل نشد؛ صفحه را دوباره باز کن');
+      if(!back)history.pushState(null,'',RI.routeUrl(id,opts));
+      document.body.dataset.page=id;
+      RI.routeOpts=opts||{};
+      await render(id);currentUrl=location.pathname+location.search;
+      paintSave();
+      if(['home','links','stats'].includes(id)&&RI.statsRows===null&&!RI.statsLoading)RI.loadStats();
+    } catch(e) { if(back)history.replaceState(null,'',previous);RI.toast(e.message,{kind:'error'}); }
+    finally { navigating=false;window.resumeitPageLoading?.finish();if(pendingNavigation){const next=pendingNavigation;pendingNavigation=null;navigate(...next);} }
   }
 
   async function render(id, force) {
     const page = RI.pages[id];
-    const token = ++navToken;
     const previousView = RI.$('#view');
     if (cleanup) { try { cleanup(); } catch (e) { /* ok */ } cleanup = null; }
     // Each mount owns its listeners; replacing the root discards the previous mount's handlers.
@@ -105,8 +136,16 @@
   RI.rerender = () => { if (current) render(current, true); };
 
   /* ---------- کشو (موبایل) ---------- */
-  function openDrawer() { RI.$('#sidebar').dataset.open = 'true'; RI.$('#scrim').dataset.open = 'true'; RI.$('#menuBtn').setAttribute('aria-expanded', 'true'); }
-  function closeDrawer() { RI.$('#sidebar').dataset.open = 'false'; RI.$('#scrim').dataset.open = 'false'; const b = RI.$('#menuBtn'); if (b) b.setAttribute('aria-expanded', 'false'); }
+  const mobile=matchMedia('(max-width:960px)');
+  function setDrawer(open){
+    RI.$('#sidebar').dataset.open=String(open);RI.$('#scrim').dataset.open=String(open);
+    RI.$('#menuBtn').setAttribute('aria-expanded',String(open));
+    RI.$('.main').inert=open&&mobile.matches;RI.$('#bottomNav').inert=open&&mobile.matches;
+    RI.$('#sidebar').inert=!open&&mobile.matches;
+    if(open)RI.$('#drawerClose').focus();
+  }
+  function openDrawer(){setDrawer(true);}
+  function closeDrawer(){setDrawer(false);}
 
   /* ---------- راه‌اندازی ---------- */
   async function boot() {
@@ -117,7 +156,9 @@
     RI.$('#topPreview').disabled=true;
     RI.delegate(document,'click','[data-route]',(e,b)=>{if(!bootstrapping||e.ctrlKey||e.metaKey||e.shiftKey||e.altKey||e.button!==0)return;e.preventDefault();navigate(b.dataset.route);});
     RI.$('#menuBtn').addEventListener('click',openDrawer);
-    RI.$('#scrim').addEventListener('click',closeDrawer);
+    RI.$('#scrim').addEventListener('click',()=>{closeDrawer();RI.$('#menuBtn').focus();});
+    RI.$('#drawerClose').addEventListener('click',()=>{closeDrawer();RI.$('#menuBtn').focus();});
+    RI.delegate(document,'click','[data-all-pages]',openDrawer);mobile.addEventListener('change',closeDrawer);closeDrawer();
     try{await RI.loadDashboard(user.id); const page=document.body.dataset.page; await RI.loadTemplates(page==='resume'?[RI.C().theme.resume]:[]);}catch(e){RI.$('#view').textContent=e.message;const retry=document.createElement('button');retry.className='btn';retry.textContent='تلاش دوباره';retry.addEventListener('click',()=>location.reload());RI.$('#view').appendChild(retry);document.dispatchEvent(new Event('ri:dashboard-ready'));return;}
     RI.applyAccount(user);
     paintAccount();bootstrapping=false;RI.$('#topPreview').disabled=false;
@@ -132,10 +173,10 @@
     RI.on('demo', paintAccount);
 
     document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') closeDrawer();
+      if (e.key === 'Escape'&&RI.$('#sidebar').dataset.open==='true') {closeDrawer();RI.$('#menuBtn').focus();}
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); if (RI.state.ui.dirty&&RI.manualSave()) RI.doSave(); }
     });
-    if(RI.manualSave()) RI.$('#saveBtn').addEventListener('click',RI.doSave);
+    RI.delegate(document,'click','#saveBtn',()=>{if(RI.manualSave())RI.doSave();});
     RI.delegate(document,'click','[data-save-retry]',RI.doSave);
     window.addEventListener('online',()=>{if(!RI.manualSave()&&RI.state.ui.saveError&&!RI.conflict)RI.save();});
     RI.$('#topPreview').addEventListener('click', async () => {try{if(current!=='links') await RI.loadTemplates([RI.C().theme.resume]); RI.openPreview(current === 'links' ? 'links' : 'resume');}catch(e){RI.toast(e.message,{kind:'error'});}});
@@ -159,6 +200,8 @@
       e.preventDefault();
       RI.go(b.dataset.go || b.dataset.route, { step: b.dataset.step, tab: b.dataset.tab, anchor: b.dataset.anchor });
     });
+    window.addEventListener('popstate',()=>{const match=/^\/dashboard\/(?:([a-z]+)\/)?$/.exec(location.pathname);if(match)navigate(match[1]||'home',Object.fromEntries(new URLSearchParams(location.search)),true);});
+    RI.delegate(document,'click','a[href]',async(e,a)=>{const u=new URL(a.href,location.origin);if(e.defaultPrevented||u.origin!==location.origin||a.target||e.ctrlKey||e.metaKey||e.shiftKey||e.altKey||e.button!==0)return;const match=/^\/dashboard\/(?:([a-z]+)\/)?$/.exec(u.pathname);if(match){e.preventDefault();navigate(match[1]||'home',Object.fromEntries(u.searchParams));}else if(!u.pathname.startsWith('/admin/')){e.preventDefault();if(await RI.leaveGuard())location.assign(u.href);}});
     window.addEventListener('beforeunload', (e) => { if (RI.state.ui.dirty) { e.preventDefault(); e.returnValue = ''; } });
     const legacy = /^#\/([a-z]+)$/.exec(location.hash);
     if (legacy && NAV.some(g => g.items.some(i => i[0] === legacy[1]))) { location.replace(RI.routeUrl(legacy[1])); return; }

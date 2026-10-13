@@ -75,6 +75,7 @@
         : "—",
     icon = (n) => window.RI.icon(n),
     parse = (v) => (typeof v === "string" ? JSON.parse(v) : v);
+  let ownerId;
   let page = 1,
     rows = [],
     total = 0,
@@ -106,7 +107,7 @@
     const response = await fetch("/api/admin/" + route, {
       cache: "no-store",
       method: data ? "POST" : "GET",
-      headers: data ? { "Content-Type": "application/json" } : {},
+      headers: { ...(data ? { "Content-Type": "application/json" } : {}), ...(ownerId ? { "X-ResumeIt-Owner": ownerId } : {}) },
       body: data ? JSON.stringify(data) : undefined,
       signal: AbortSignal.timeout(15000),
     });
@@ -214,9 +215,9 @@
             "</small></div>",
         )
         .join("") +
-      '</div><div class="admin-grid"><section class="panel"><h2>روند بازدید و کلیک</h2>' +
+      '</div><div class="admin-grid"><section class="panel"><h2>روند بازدید و کلیک<a class="section-link" href="/admin/traffic/">گزارش بازدید</a></h2>' +
       chart(d.traffic) +
-      '</section><section class="panel"><h2>وضعیت حساب‌ها و صفحات</h2>' +
+      '</section><section class="panel"><h2>حساب‌ها و صفحات<a class="section-link" href="/admin/users/">کاربران</a></h2>' +
       summary([
         ["شماره‌های تأییدشده", fa(d.users.verified)],
         ["کاربران دارای نشست فعال", fa(d.sessions.total)],
@@ -225,7 +226,7 @@
         ["اشتراک‌های فعال", fa(d.subscriptions.total)],
         ["موجودی کل کیف پول‌ها", fa(Number(d.wallet.balance) / 2000) + " It"],
       ]) +
-      '</section><section class="panel"><h2>ارسال پیامک</h2>' +
+      '</section><section class="panel"><h2>ارسال پیامک<a class="section-link" href="/admin/otp/">گزارش OTP</a></h2>' +
       chart(d.otpDaily, true) +
       '</section><section class="panel"><h2>تأیید و کنترل دسترسی</h2>' +
       summary([
@@ -285,8 +286,8 @@
             : "بدون آدرس",
           esc(publication(r.pub)),
           badge(
-            !r.publication_blocked,
-            r.publication_blocked ? "متوقف‌شده" : "مجاز",
+            !r.publication_blocked && !r.suspended,
+            r.suspended ? "حساب تعلیق‌شده" : r.publication_blocked ? "متوقف‌شده" : "مجاز",
           ),
           fa(r.revision),
         ],
@@ -667,6 +668,7 @@
       location.replace("/dashboard/");
       return;
     }
+    ownerId=user.id;
     const info = sections[section];
     $("#page-title").textContent = info[0];
     $("#page-desc").textContent = info[2];
@@ -674,20 +676,8 @@
     $("#admin-name").textContent =
       [user.first_name, user.last_name].filter(Boolean).join(" ") ||
       "مدیر ResumeIt";
-    $("#admin-nav").innerHTML = Object.entries(sections)
-      .map(
-        ([id, [title, ic]]) =>
-          '<a href="' +
-          (id === "overview" ? "/admin/" : "/admin/" + id + "/") +
-          '" ' +
-          (id === section ? 'aria-current="page"' : "") +
-          ">" +
-          icon(ic) +
-          "<span>" +
-          title +
-          "</span></a>",
-      )
-      .join("");
+    const groups=[['پیگیری و رشد',['overview','users','pages','traffic']],['اعتبار و دسترسی',['transactions','purchases','catalog']],['نظارت و سرویس‌ها',['otp','audit','health']]];
+    $("#admin-nav").innerHTML=groups.map(([label,ids])=>'<ul class="menu"><li class="menu-title">'+label+'</li>'+ids.map(id=>'<li><a href="'+(id==='overview'?'/admin/':'/admin/'+id+'/')+'" '+(id===section?'aria-current="page"':'')+'>'+icon(sections[id][1])+'<span>'+sections[id][0]+'</span></a></li>').join('')+'</ul>').join('');
     $("#admin-menu").innerHTML = icon("menu");
     $("#search-wrap").hidden = ![
       "users",

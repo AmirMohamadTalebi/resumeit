@@ -287,8 +287,7 @@
   };
 
   /* ---------- نسخهٔ منتشرشده ---------- */
-  RI.pubData = function (k) {
-    const c = RI.C();
+  RI.pubData = function (k, c = RI.C()) {
     if (k === 'resume') return { slug: c.slug, profile: c.profile, contacts: c.contacts, skills: c.skills, experience: c.experience, education: c.education, projects: c.projects, certs: c.certs, languages: c.languages, socials: c.socials, sections: c.sections, resumeTemplates: c.resumeTemplates, theme: { resume: c.theme.resume, font: c.theme.font, palette: c.theme.palette, radius: c.theme.radius }, share: c.share };
     return { slug: c.slug, links: c.links, name: c.profile.name, bio: c.profile.bio, avatar: c.profile.avatar, theme: { links: c.theme.links, font: c.theme.font, linksPalette: c.theme.linksPalette } };
   };

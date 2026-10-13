@@ -6,6 +6,7 @@ const request=(route,data,owner='a',origin=base)=>fetch(base+'/api/dashboard/'+r
 const subRequest=route=>new Promise((resolve,reject)=>{require('node:http').get(base+route,{headers:{Host:'amir.resumeit.ir',Cookie:'ri_session='+'a'.repeat(64)}},r=>{let body='';r.on('data',c=>body+=c);r.on('end',()=>resolve({status:r.statusCode,body}));}).on('error',reject);});
 try{
  assert.equal((await request('document',null,'c')).status,401);
+ const switched=await fetch(base+'/api/dashboard/save',{method:'POST',headers:{Cookie:'ri_session='+'b'.repeat(64),Origin:base,'Content-Type':'application/json','X-ResumeIt-Owner':a},body:JSON.stringify({revision:0,patch:{profile:{name:'must not write'}}})});assert.equal(switched.status,409);assert.equal((await switched.json()).code,'ACCOUNT_CHANGED');assert.equal((await db.loadDashboard(b)).revision,0);
  const initial=await(await request('document')).json();assert.equal(initial.revision,0);assert.equal(initial.content.profile.name,'');
  const c=initial.content;c.slug='amir';c.profile.name='امیر <script>alert(1)</script>';c.profile.title='توسعه‌دهنده';c.contacts[0].value='public@example.com';c.contacts[0].public=true;c.contacts[1].value='09129999999';c.contacts[1].public=false;c.skills=[{id:'skill1',name:'جاوااسکریپت',level:3}];c.links.items=[{id:'link1',type:'link',title:'گیت‌هاب',url:'https://github.com/test',icon:'github',active:true,featured:true},{id:'hidden',type:'link',title:'SECRET_LINK',url:'https://private.example.com',icon:'link',active:false}];
  assert.equal((await request('save',{revision:0,content:c},'a','https://evil.example')).status,403);
@@ -19,6 +20,7 @@ try{
  assert.equal((await fetch(base+'/u/amir/')).status,404);
  assert.equal((await request('publish',{revision:1,kind:'resume'})).status,200);
  assert.equal((await request('publish',{revision:2,kind:'links'})).status,200);
+ const small=await(await request('document')).json();assert.equal(small.pub.resume.snap,null);assert.equal(small.pub.resume.snapCurrent,true);assert.equal(small.pub.links.snapCurrent,true);assert((await db.loadDashboard(a)).pub.resume.snap,'stored snapshot retained');
  let r=await fetch(base+'/u/amir/'),html=await r.text();assert.equal(r.status,200);assert(html.includes('public@example.com'));assert(!html.includes('09129999999'));assert(!html.includes('<script>alert'));assert(html.includes('&lt;script&gt;'));
  r=await fetch(base+'/u/amir/links');html=await r.text();assert.equal(r.status,200);assert(html.includes('/u/amir/out/link1'));assert(!html.includes('SECRET_LINK'));
  const seenCookie=r.headers.get('set-cookie');assert.match(seenCookie,/ri_seen_links=1; Path=\/u\/amir; HttpOnly; SameSite=Lax; Max-Age=86400/);
@@ -32,6 +34,7 @@ try{
  await fetch(base+'/u/amir/',{method:'HEAD'});
  let rows=(await(await request('stats')).json()).rows;assert.equal(rows.find(x=>x.event==='resume').total,2);assert.equal(rows.find(x=>x.event==='click').total,1);
  c.profile.title='PRIVATE DRAFT';assert.equal((await request('save',{revision:3,content:c,preferences:{indexing:false}})).status,200);
+ const changed=await(await request('document')).json();assert(!changed.pub.resume.snapCurrent);assert(changed.pub.resume.snap.includes('توسعه‌دهنده'),'changed snapshot retained');
  html=await(await fetch(base+'/u/amir/')).text();assert(!html.includes('PRIVATE DRAFT'));assert(html.includes('noindex,nofollow'));
  assert.equal((await request('unpublish',{revision:4,kind:'links'})).status,200);assert.equal((await fetch(base+'/u/amir/links')).status,404);
  const compact=await(await request('save',{revision:5,patch:{theme:{...c.theme,font:'sahel'}},preferences:{indexing:false},compact:true})).json();assert.equal(compact.revision,6);assert(!Object.hasOwn(compact,'content'));assert((await(await request('document')).json()).content.profile.title==='PRIVATE DRAFT');
@@ -39,6 +42,7 @@ try{
  assert.equal((await request('save',{revision:6,patch:JSON.parse('{"__proto__":{}}'),compact:true})).status,400);
  assert.equal((await request('save',{revision:6,patch:{contacts:[{...c.contacts[0],value:'invalid'}]},compact:true})).status,400);
  const stale=await request('save',{revision:5,patch:{theme:c.theme},compact:true});assert.equal(stale.status,409);assert.equal((await stale.json()).code,'REVISION_CONFLICT');
+ await db.mutateDashboard(b,0,d=>{d.content.theme.resume='vista';d.content.resumeTemplates.vista={fields:{},settings:{reviewed:true},collections:{}};});assert.equal((await request('save',{revision:1,patch:{profile:{...initial.content.profile,title:'edit expired draft'}}},'b')).status,200);assert.equal((await request('save',{revision:2,patch:{theme:{...(await db.loadDashboard(b)).content.theme,resume:'satiar'}}},'b')).status,403);
  assert.equal((await request('delete',{confirm:'no'})).status,400);assert.equal((await request('delete',{confirm:'DELETE'})).status,200);assert.equal((await fetch(base+'/u/amir/')).status,404);assert.equal((await request('document')).status,401);
  console.log('PASS: dashboard persistence, account isolation, revision conflicts, slug ownership, validated free themes/URLs, snapshot publishing, private fields, subdomain routing/assets, real counts, unpublish and account deletion.');
 }finally{if(old===undefined)delete process.env.PUBLIC_ORIGIN;else process.env.PUBLIC_ORIGIN=old;await new Promise(r=>server.close(r));}})().catch(e=>{console.error(e);process.exitCode=1;});

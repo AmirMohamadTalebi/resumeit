@@ -2,10 +2,11 @@
   'use strict';
   const RI=window.RI;
   RI.accountRequest=async(route,data)=>{
-    const response=await fetch('/api/auth/'+route,{method:data?'POST':'GET',credentials:'same-origin',headers:data?{'Content-Type':'application/json'}:{},body:data?JSON.stringify(data):undefined,signal:AbortSignal.timeout(15000)});
+    const response=await fetch('/api/auth/'+route,{method:data?'POST':'GET',credentials:'same-origin',headers:{...(data?{'Content-Type':'application/json'}:{}),...(RI.ownerId?{'X-ResumeIt-Owner':RI.ownerId}:{})},body:data?JSON.stringify(data):undefined,signal:AbortSignal.timeout(15000)});
     const result=await response.json();if(!response.ok)throw new Error(result.error||'درخواست انجام نشد، دوباره امتحان کن');return result;
   };
   RI.applyAccount=user=>{
+    RI.ownerId=user.id;
     RI.state.account.isAdmin=!!user.is_admin;
     Object.assign(RI.state.account,{mobile:user.phone||'',mobileVerified:!!user.phone_verified,firstName:user.first_name||'',lastName:user.last_name||'',google:!!user.google,github:!!user.github,name:[user.first_name,user.last_name].filter(Boolean).join(' ')||'حساب من'});
   };

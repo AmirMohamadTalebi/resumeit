@@ -1,3 +1,3 @@
 # Admin
-Mode: Operate. Extend the established ResumeIt dashboard identity.
-Persian RTL, Vazirmatn, existing ice/brown tokens and logo. Fixed compact typography; paginated tables, a collapsible mobile sidebar, private role-guarded pages. Data is real in production; visual test fixtures are isolated local data. Primary work: inspect usage and account details, credit wallets, suspend accounts, control publication and inspect OTP outcomes. Critical operations require a reason and visible confirmation.
+Mode: Operate. Replace the previous admin composition within the established ResumeIt brand.
+Compact grouped navigation; a slim command header; metrics as a flat summary, charts beside readable account summaries; white work surfaces, restrained ice and brown, Vazirmatn. Paginated tables, visible filter labels, mobile focus-safe drawer. Preserve all real data and guarded operations. No invented revenue or provider-delivery claims.

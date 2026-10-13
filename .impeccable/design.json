@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-13T20:31:22.061038+00:00",
+  "title": "Design System: ResumeIt",
+  "extensions": {
+    "breakpoints": [
+      {
+        "name": "admin-drawer",
+        "value": "760px"
+      },
+      {
+        "name": "workspace-drawer",
+        "value": "960px"
+      }
+    ]
+  },
+  "components": [],
+  "narrative": {
+    "northStar": "ResumeIt workspace",
+    "overview": "Compact Persian workspaces with icy surfaces and warm actions.",
+    "keyCharacteristics": [
+      "Persian RTL",
+      "Readable compact administration",
+      "Persistent user workspace"
+    ],
+    "rules": [],
+    "dos": [
+      "Preserve identity assets and focus visibility."
+    ],
+    "donts": [
+      "Do not add blocking animation delays."
+    ]
+  }
+}

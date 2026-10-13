@@ -50,8 +50,8 @@
       const ta = document.createElement('textarea');
       ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
       document.body.appendChild(ta); ta.select();
-      try { document.execCommand('copy'); } catch (er) { /* نمایشی */ }
-      ta.remove();
+      let copied=false;try { copied=document.execCommand('copy'); } catch {}
+      ta.remove();if(!copied){RI.toast('کپی انجام نشد؛ متن را انتخاب و دستی کپی کن.',{kind:'error'});return;}
     }
     RI.toast(msg || 'کپی شد');
   };
@@ -172,7 +172,7 @@
   /* ---------- منوی کشویی ---------- */
   RI.menu = function (anchor, items, opts) {
     opts = opts || {};
-    RI.$$('.menu').forEach((m) => m.remove());
+    RI.$$('.menu[role="menu"]').forEach((m) => m.remove());
     const m = document.createElement('div');
     m.className = 'menu';
     m.setAttribute('role', 'menu');

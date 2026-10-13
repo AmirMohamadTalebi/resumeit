@@ -1,0 +1,121 @@
+/* Public shell shares the brand without spreading contact details across every page. */
+.header.public-header  {
+  padding-inline:24px;
+  gap:20px;
+}
+.public-header nav  {
+  gap:24px;
+}
+.public-header .enter  {
+  white-space:nowrap;
+  min-height:40px;
+  font-size:13px;
+}
+.public-header a:focus-visible,.site-footer a:focus-visible  {
+  outline:2px solid #875a36;
+  outline-offset:5px;
+}
+.site-footer  {
+  margin-top:32px;
+  padding:44px max(24px,calc((100vw - 1180px)/2)) 22px;
+  background:#e3ecf1;
+  color:#2b4251;
+}
+.site-footer__main  {
+  display:grid;
+  grid-auto-flow:row;
+  grid-template-columns:minmax(260px,1.6fr) repeat(2,minmax(150px,1fr));
+  gap:48px;
+  padding-bottom:34px;
+}
+.site-footer .ri-logo  {
+  display:block;
+  width:158px;
+}
+.site-footer__identity p  {
+  font-size:13px;
+  line-height:1.9;
+  max-width:34ch;
+  margin-top:16px;
+}
+.site-footer nav  {
+  display:flex;
+  flex-direction:column;
+  gap:11px;
+  align-items:start;
+}
+.site-footer .footer-title  {
+  margin:0 0 5px;
+  opacity:1;
+  font-size:12px;
+  font-weight:650;
+  color:#2b4251;
+  text-transform:none;
+  letter-spacing:normal;
+}
+.site-footer nav a  {
+  font-size:12px;
+  color:#435867;
+  text-decoration:none;
+}
+.site-footer nav a:hover  {
+  color:#6b4629;
+  text-decoration:underline;
+  text-underline-offset:4px;
+}
+.site-footer__bottom  {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  flex-wrap:wrap;
+  gap:16px;
+  border-top:1px solid #bfd3dd;
+  padding-top:20px;
+  font-size:11px;
+  color:#435867;
+}
+.site-footer__bottom small  {
+  font-size:11px;
+}
+@media(max-width:1050px)  {
+  .public-header nav  {
+    gap:14px;
+    font-size:12px;
+  }
+}
+@media(max-width:760px)  {
+  .header.public-header  {
+    padding-inline:14px;
+    gap:10px;
+  }
+  .public-header .ri-logo  {
+    width:120px;
+  }
+  .public-header .enter  {
+    font-size:11px;
+    padding:8px 10px;
+    min-height:36px;
+  }
+  .public-header nav  {
+    gap:0;
+  }
+  .public-header nav a  {
+    padding:12px 18px;
+    font-size:13px;
+  }
+  .site-footer  {
+    padding:32px 24px 22px;
+  }
+  .site-footer__main  {
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:30px 20px;
+  }
+  .site-footer .site-footer__identity  {
+    grid-column:1/-1;
+  }
+  .site-footer__bottom  {
+    align-items:start;
+    flex-direction:column;
+    gap:10px;
+  }
+}

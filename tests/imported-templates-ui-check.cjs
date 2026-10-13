@@ -30,14 +30,23 @@ const {chromium}=require('playwright'),{createServer}=require('../src/http/serve
    await page.goto(base+'/dashboard/resume/');await page.locator('[data-step="template"]').click();await page.locator('#template-page').waitFor();
    const groups=await page.locator('#template-section option').evaluateAll(options=>options.map(x=>({value:x.value,text:x.textContent})));assert(groups.length>1);
    const group=RI.IMPORTED_TEMPLATES[template].collections.find(x=>x.group.startsWith('home:')).group;await page.locator('#template-section').selectOption(group);
-   const fieldKey=RI.IMPORTED_TEMPLATES[template].fields.find(f=>f.group===group&&!f.bind&&['text','textarea'].includes(f.type)&&f.label===f.default.slice(0,70)).key;
-   const field=page.locator('#template-controls [data-tfield="'+fieldKey+'"]').first();await field.fill('متن شخصی‌سازی‌شده');
+   const collection=RI.IMPORTED_TEMPLATES[template].collections.find(x=>x.group===group);
+   await page.locator('#template-collection').selectOption(collection.key);
+   const field=page.locator('#template-controls input[data-ttype="text"],#template-controls textarea[data-ttype="textarea"]').first();
+   const fieldKey=await field.getAttribute('data-tfield');await field.fill('متن شخصی‌سازی‌شده');
    assert.equal(await page.locator('[data-tfield="reviewed"]').isChecked(),false);
-   const add=page.locator('[data-tadd]').first(),key=await add.getAttribute('data-tadd');await add.click();assert.equal(await page.locator('[data-tremove="'+key+'"]').count(),2);await page.locator('[data-tremove="'+key+'"]').last().click();assert.equal(await page.locator('[data-tremove="'+key+'"]').count(),1);
+   assert((await page.locator('#template-controls > .field').count())<=8,'bounded fields');
+   await page.locator('[data-tadd]').click();assert.equal(await page.locator('#template-row option').count(),2);
+   await page.locator('[data-tmove="-1"]').click();assert.equal(await page.locator('#template-row').inputValue(),'0');
+   await page.locator('[data-tremove]').click();assert.equal(await page.locator('#template-row option').count(),1);
+   await page.locator('[data-tcategory="media"]').click();assert.equal(await page.locator('#template-controls [data-ttype="text"]').count(),0);
+   await page.locator('[data-tcategory="all"]').click();
    await page.locator('[data-tfield="reviewed"]').check();await page.locator('#saveBtn').click();await page.locator('#saveState[data-state="saved"]').waitFor();
-   await page.screenshot({path:'artifacts/imported-templates/editor-'+template+'.png',fullPage:false});
+   await page.evaluate(()=>scrollTo(0,0));await page.screenshot({path:'artifacts/imported-templates/editor-'+template+'.png',fullPage:false});
+   for(const width of [320,390]){await page.setViewportSize({width,height:850});assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'editor overflow');await page.screenshot({path:'artifacts/imported-templates/editor-'+template+'-'+width+'.png'});}
+   await page.setViewportSize({width:1440,height:1000});
    const frame=page.frameLocator('.device__vp iframe');assert((await frame.locator('body').innerText()).includes('متن شخصی‌سازی‌شده'));
-   await page.reload();await page.locator('[data-step="template"]').click();await page.locator('#template-section').selectOption(group);assert.equal(await page.locator('#template-controls [data-tfield="'+fieldKey+'"]').first().inputValue(),'متن شخصی‌سازی‌شده');
+   await page.reload();await page.locator('[data-step="template"]').click();await page.locator('#template-section').selectOption(group);await page.locator('#template-collection').selectOption(collection.key);assert.equal(await page.locator('#template-controls [data-tfield="'+fieldKey+'"]').first().inputValue(),'متن شخصی‌سازی‌شده');
   }
   assert.deepEqual(errors,[]);assert.deepEqual(failed,[]);console.log('PASS: all pages load, responsive designs, local assets, isolated live preview, per-section editing, repeated-item add/remove, review reset and saved reload.');
  }finally{await browser?.close();await new Promise(r=>server.close(r));}

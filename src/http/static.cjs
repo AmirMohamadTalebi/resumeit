@@ -15,6 +15,16 @@ function fingerprint(directory){
 }
 fingerprint(root);
 const assetRevision=version+'-'+assetHash.digest('hex').slice(0,16);
+// Bundle only shared workspace files; editable source modules remain independent.
+const bundles=new Map();
+for(const [url,files] of [
+  ['/dashboard/js/workspace.js',['icons','core','ui','data','imported-templates','resume-templates','state','api','account','preview','commerce','app','toolbar'].map(n=>'dashboard/js/'+n+'.js')],
+  ['/dashboard/css/workspace.css',['tokens','base','shell','components','preview','pages'].map(n=>'dashboard/css/'+n+'.css')]
+])bundles.set(url,Buffer.from(files.map(file=>{
+  let source=localFiles.readFileSync(path.join(root,file),'utf8');
+  if(file.endsWith('.css'))source=source.replace(/url\((["']?)(?!data:|https?:|\/\/)([^)"'?#]+)\1\)/g,(_,quote,url)=>`url(${quote}${path.posix.resolve('/',path.posix.dirname(file),url)}${quote})`);
+  return source;
+}).join(url.endsWith('.css')?'\n':'\n;\n')));
 const compressedAssets=new Map();
 const mime = { '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8', '.js': 'application/javascript', '.mjs': 'application/javascript', '.woff2': 'font/woff2', '.svg': 'image/svg+xml', '.txt': 'text/plain; charset=utf-8', '.xml': 'application/xml; charset=utf-8', '.jpg': 'image/jpeg', '.png': 'image/png', '.webp': 'image/webp', '.ico': 'image/x-icon' };
 Object.assign(mime,{'.jpeg':'image/jpeg','.gif':'image/gif','.woff':'font/woff','.ttf':'font/ttf'});
@@ -58,11 +68,11 @@ async function serveStatic(req, res, pathname, origin, account) {
       res.setHeader('Cache-Control', 'no-store');
       if (account && !await account(req)) { res.writeHead(303, { Location: '/login/' }); res.end(); return; }
     }
-    if ((await fs.stat(file)).isDirectory()) {
+    if(!bundles.has(pathname)&& (await fs.stat(file)).isDirectory()) {
       if (!pathname.endsWith('/')) { res.writeHead(308, { Location: pathname + '/' + (req.url.includes('?') ? '?' + req.url.split('?').slice(1).join('?') : '') }); res.end(); return; }
       file = path.join(file, 'index.html');
     }
-    const realFile = await fs.realpath(file), realRoot = await fs.realpath(root);
+    const realFile = bundles.has(pathname)?file:await fs.realpath(file), realRoot = await fs.realpath(root);
     if (!realFile.startsWith(realRoot + path.sep)) { send(403, 'Forbidden'); return; }
     const relative = path.relative(realRoot, realFile);
     if(!adminPath&&relative.toLowerCase().startsWith('admin'+path.sep)){const user=account&&await account(req);if(!user){res.writeHead(303,{Location:'/login/'});res.end();return;}if(!require('../admin/access.cjs').isAdmin(user)){send(403,'Forbidden');return;}}
@@ -71,7 +81,7 @@ async function serveStatic(req, res, pathname, origin, account) {
       res.setHeader('Cache-Control', 'no-store');
       if (account && !await account(req)) { res.writeHead(303, { Location: '/login/' }); res.end(); return; }
     }
-    const type=mime[path.extname(realFile).toLowerCase()];let body=await fs.readFile(realFile);
+    const type=mime[path.extname(realFile).toLowerCase()];let body=bundles.get(pathname)||await fs.readFile(realFile);
     if(type.startsWith('text/html'))body=Buffer.from(body.toString('utf8').replace(/<html\b([^>]*)>/i,`<html$1 data-asset-version="${assetRevision}">`).replace(/\b(src|href)=(["'])(\/[^"'?#]+\.(?:js|css|woff2|png|svg))\2/g,(_,attr,quote,url)=>`${attr}=${quote}${url}?v=${assetRevision}${quote}`));
     if(type.startsWith('text/css'))body=Buffer.from(body.toString('utf8').replace(/url\((["']?)(?!data:|https?:|\/\/)([^)"'?#]+\.(?:woff2|woff|ttf|png|svg|webp|jpg))\1\)/g,(_,quote,url)=>`url(${quote}${url}?v=${assetRevision}${quote})`));
     send(200,body,type);

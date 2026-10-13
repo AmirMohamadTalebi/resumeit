@@ -11,7 +11,7 @@ Persian-speaking users create personal resumes and link pages. The owner manages
 Node and MySQL on Runflare; GitHub source is authoritative. Resume templates and fonts can be purchased with It (2,000 toman per It), and premium templates also support subscription access. Online payment is not active. Admin access is granted to the owner's explicitly approved account. OTP reports must count provider submissions without claiming handset delivery or exposing codes.
 
 ## Brand Commitments
-Preserve the established Persian RTL interface, Vazirmatn, icy blue/off-white surfaces and warm brown actions. New admin screens inherit the current dashboard rather than replace its identity.
+Preserve the established Persian RTL interface, Vazirmatn, icy blue/off-white surfaces and warm brown actions. The admin workspace is redesigned with compact grouped navigation, readable data tables and restrained ice/brown surfaces; preserve the brand, not the previous admin composition.
 
 ## Operating Context
 The admin chooses between user and admin panels after sign-in and can switch in either panel. Tables must be paginated and pages usable on low-resolution screens.

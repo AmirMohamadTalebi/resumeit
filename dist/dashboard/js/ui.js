@@ -75,7 +75,7 @@
       '<div class="imgfield__presets" role="group" aria-label="تصویر آماده">' +
       RI.presets.map((p, i) => '<button type="button" data-preset="' + p + '" style="' + esc(RI.bg(p)) + '" aria-label="تصویر آمادهٔ ' + RI.fa(i + 1) + '"></button>').join('') +
       '</div><div class="field__error" role="alert" hidden></div>' +
-      '<div class="field__hint">PNG یا JPG، حداکثر ۲ مگابایت فقط در مرورگر نگه‌داری می‌شود (نمایشی).</div></div></div>';
+      '<div class="field__hint">PNG، JPEG یا WebP تا ۲ مگابایت؛ با ذخیره، تصویر به اطلاعات رزومه اضافه می‌شود.</div></div></div>';
   };
   RI.bindImageField = function (root, name, io) {
     const el = RI.$('[data-img="' + name + '"]', root);

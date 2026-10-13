@@ -8,7 +8,10 @@ function dashboardHandler(database,auth){return async(req,res,pathname,origin)=>
   const root=new URL(origin),host=(req.headers.host||'').toLowerCase(),domain=root.hostname.startsWith('127.')||root.hostname==='localhost'?'resumeit.ir':root.hostname;
   const sub=host.endsWith('.'+domain)?host.slice(0,-domain.length-1):null;
   const local=/^\/u\/([a-z0-9-]+)(\/.*)?$/.exec(pathname);
-  const reply=(status,body)=>{let output=Buffer.from(JSON.stringify(body));if(output.length>1024 && /\bgzip\b/.test(req.headers['accept-encoding']||'')){output=gzipSync(output);res.setHeader('Content-Encoding','gzip');res.setHeader('Vary','Accept-Encoding');}res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Content-Length':output.length});res.end(output);};
+  const reply=(status,body)=>{
+    // The client can reconstruct identical publication snapshots from the draft it already receives.
+    if(body.content&&body.pub){body={...body,pub:structuredClone(body.pub)};for(const k of ['resume','links'])if(body.pub[k]?.snap===JSON.stringify(pubData(body.content,k))){body.pub[k].snap=null;body.pub[k].snapCurrent=true;}}
+    let output=Buffer.from(JSON.stringify(body));if(output.length>1024 && /\bgzip\b/.test(req.headers['accept-encoding']||'')){output=gzipSync(output);res.setHeader('Content-Encoding','gzip');res.setHeader('Vary','Accept-Encoding');}res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Content-Length':output.length});res.end(output);};
   if(sub!==null||local){
     const slug=sub||local[1],route=local?local[2]||'/':pathname,base=local?'/u/'+slug:'';
     if(!model.slugValid(slug)){res.writeHead(404);res.end('صفحه پیدا نشد');return true;}
@@ -38,6 +41,7 @@ function dashboardHandler(database,auth){return async(req,res,pathname,origin)=>
   try{
     if(req.headers.host!==root.host)model.fail('مبدأ درخواست معتبر نیست',403);
     const user=await auth.account(req);if(!user)model.fail('دوباره وارد حسابت شو',401);
+    if(req.headers['x-resumeit-owner']&&req.headers['x-resumeit-owner']!==user.id)model.fail('حساب فعال عوض شده است؛ این صفحه را دوباره باز کن',409,'ACCOUNT_CHANGED');
     if(req.method==='GET'){
       if(pathname==='/api/dashboard/document'){const [doc,billing]=await Promise.all([database.loadDashboard(user.id),database.billing?database.billing(user.id):{}]);reply(200,{...doc,billing,ownerId:user.id});}
       else if(pathname==='/api/dashboard/wallet')reply(200,await database.wallet(user.id));
@@ -54,14 +58,13 @@ function dashboardHandler(database,auth){return async(req,res,pathname,origin)=>
     if(!['/api/dashboard/save','/api/dashboard/publish','/api/dashboard/unpublish'].includes(pathname))model.fail('مسیر پیدا نشد',404);
     const billing=database.billing?await database.billing(user.id):{};
     const saving=pathname.endsWith('/save'),patch=saving&&input.patch!==undefined?model.validatePatch(input.patch):null;
-    const c=saving&&!patch?model.content(input.content,billing):null;
     const result=await database.mutateDashboard(user.id,input.revision,doc=>{
-      if(saving){doc.content=patch?model.content({...doc.content,...patch},billing):c;doc.preferences=model.preferences(input.preferences);doc.slug=doc.content.slug||null;return;}
+      if(saving){doc.content=model.content(patch?{...doc.content,...patch}:input.content,billing,doc.content);doc.preferences=model.preferences(input.preferences);doc.slug=doc.content.slug||null;return;}
       const k=input.kind;if(!['resume','links'].includes(k))model.fail('نوع صفحه معتبر نیست');
       if(pathname.endsWith('/unpublish')){doc.pub[k].status='draft';doc.pub[k].snap=null;delete doc.published[k];return;}
       if(!user.first_name||!user.last_name||!user.phone_verified||!user.phone)model.fail('نام، نام خانوادگی و شمارهٔ تأییدشده را در تنظیمات کامل کن');
       model.ready(doc.content,k,billing);doc.slug=doc.content.slug;doc.published[k]=structuredClone(doc.content);doc.pub[k]={status:'published',version:doc.pub[k].version+1,at:Date.now(),snap:JSON.stringify(pubData(doc.content,k))};
     },{draftOnly:saving});reply(200,saving&&input.compact===true?{revision:result.revision,slug:result.slug,preferences:result.preferences}:result);
-  }catch(e){reply(e.status||503,{error:e.status?e.message:'درخواست انجام نشد؛ دوباره تلاش کن',code:e.code==='REVISION_CONFLICT'?e.code:undefined});}return true;
+  }catch(e){reply(e.status||503,{error:e.status?e.message:'درخواست انجام نشد؛ دوباره تلاش کن',code:['REVISION_CONFLICT','ACCOUNT_CHANGED'].includes(e.code)?e.code:undefined});}return true;
 };}
 module.exports={dashboardHandler};

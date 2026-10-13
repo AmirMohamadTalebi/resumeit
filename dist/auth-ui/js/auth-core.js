@@ -181,7 +181,7 @@
   RIA.shell = function (o) {
     document.getElementById('auth-root').innerHTML =
       '<a class="skip" href="#view">رفتن به محتوا</a><main class="auth"><section class="auth__main"><header class="auth__top"><a class="brand" href="' + (o.home || '/') + '" aria-label="ResumeIt"><span class="ri-logo"><img src="/brand/resumeit-logo-v1.png" alt="ResumeIt" width="2172" height="724"></span></a><a class="link link--sm" href="/">بازگشت به سایت</a></header>' +
-      '<div class="card" id="card"><div id="view"></div></div><footer class="auth__foot">' + (o.foot || '') + '<div class="ri-support-links"><a href="/about/">درباره ما</a><a href="/terms/">شرایط و حریم خصوصی</a><a href="/contact/">ارتباط با ما</a><a href="https://t.me/resumeit_ir" target="_blank" rel="noopener">کانال تلگرام</a><a href="https://t.me/amirtalebi_x" target="_blank" rel="noopener">تلگرام پشتیبانی</a></div></footer></section>' +
+      '<div class="card" id="card"><div id="view"></div></div><footer class="auth__foot">' + (o.foot || '') + '<div class="ri-support-links"><a href="/about/">درباره ما</a><a href="/terms/">قوانین و شرایط</a><a href="/contact/">ارتباط با ما</a><a href="/privacy/">حریم خصوصی</a></div></footer></section>' +
       '<aside class="auth__art" aria-hidden="true"><div class="art"><div class="art__glow"></div>' + RIA.markHtml() + '<div class="art__copy"><h2>' + o.artTitle + '</h2><p>' + o.artText + '</p></div></div></aside></main><div id="toast-root" class="toast-root" aria-live="polite"></div>';
     return { card: $('#card'), view: $('#view') };
   };

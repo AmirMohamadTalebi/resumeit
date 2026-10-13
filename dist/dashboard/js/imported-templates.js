@@ -18,6 +18,8 @@
   RI.importedSpec = function (id) {
     const t = RI.IMPORTED_TEMPLATES[id];
     if (!t) return ['vista','satiar'].includes(id) ? {sections:['contacts','socials'],bodySections:[],requiredSections:[],fields:[],settings:[{key:'reviewed',label:'متن‌ها، تصاویر، آمار و لینک‌های نمونه را بررسی و برای انتشار تأیید کرده‌ام',type:'checkbox',required:true,default:false}]} : null;
+    const groupName=g=>{const key=g.key.split(':')[1];const names={body:'سربرگ، منو و پابرگ',intro:'معرفی و تصویر اصلی',about:'دربارهٔ من',services:'خدمات',resume:'سوابق، مهارت‌ها و آمار',portfolio:'نمونه‌کارها',blog:'مقالات',contact:'تماس'};return names[key]||g.label.replace(/\s+/g,' ').trim();};
+    const groups=t.groups.map(g=>({...g,label:groupName(g)}));
     const compose = [['compose_title','عنوان فرم تماس','نوشتن پیام'],['compose_name','برچسب نام فرستنده','نام شما'],['compose_email','برچسب ایمیل فرستنده','ایمیل شما'],['compose_message','برچسب پیام','پیام شما'],['compose_submit','متن دکمهٔ تماس','باز کردن برنامهٔ ایمیل']].map(([key,label,defaultValue])=>({key,label,default:defaultValue,type:'text',max:120,public:true,group:'home:compose'}));
     return { sections: ['contacts', 'socials'], bodySections: [], requiredSections: [], fields: t.fields.concat(compose),
       settings: [{ key: 'reviewed', label: 'متن‌ها، تصاویر، آمار و لینک‌های نمونه را بررسی و برای انتشار تأیید کرده‌ام', type: 'checkbox', required: true, default: false },
@@ -27,7 +29,7 @@
         { key: 'section_order', label: 'ترتیب بخش‌ها', type: 'order', keys: t.groups.map(g=>g.key), default: '', max: 50000 },
         ...Object.entries(t.colors).map(([color, key]) => ({ key, label: 'رنگ ' + color, type: 'color', default: color })),
         ...Object.entries(t.backgrounds || {}).map(([url, key]) => ({ key, label: 'تصویر زمینه ' + key.replace('background', ''), type: 'image', default: url, max: 3 * 1024 * 1024 })),
-        ...t.groups.map(g => ({ key: 'show_' + g.key.replace(/:/g, '_'), label: 'نمایش ' + g.label, type: 'checkbox', default: true, group: g.key }))], collections: t.collections, groups: t.groups.concat({key:'home:compose',label:'فرم تماس از طریق ایمیل',page:'home'}), pages: t.pages };
+        ...groups.map(g => ({ key: 'show_' + g.key.replace(/:/g, '_'), label: 'نمایش ' + g.label, type: 'checkbox', default: true, group: g.key }))], collections: t.collections, groups: groups.concat({key:'home:compose',label:'فرم تماس از طریق ایمیل',page:'home'}), pages: t.pages };
   };
   RI.bindImportedPage = function (doc, openPage) {
     const root = doc.querySelector('.ri-imported');

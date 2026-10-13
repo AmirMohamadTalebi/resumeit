@@ -22,6 +22,7 @@ const { createServer } = require("../src/http/server.cjs");
       assert.equal((await get(route, "b")).status, 403);
       assert.equal((await get(route, "a")).status, 200);
     }
+    assert.equal((await fetch(base+"/api/admin/overview",{headers:{Cookie:"ri_session="+"a".repeat(64),"X-ResumeIt-Owner":fixture.target}})).status,409);
     for (const kind of [
       "users",
       "pages",
@@ -54,6 +55,7 @@ const { createServer } = require("../src/http/server.cjs");
         },
         body: JSON.stringify(body),
       });
+    const priorOrigin=process.env.PUBLIC_ORIGIN;process.env.PUBLIC_ORIGIN=base;try{assert.equal(await new Promise((resolve,reject)=>{require("node:http").get(base+"/api/admin/overview",{headers:{Host:"private.resumeit.ir",Cookie:"ri_session="+"a".repeat(64)}},r=>{r.resume();r.on("end",()=>resolve(r.statusCode));}).on("error",reject);}),404);}finally{if(priorOrigin===undefined)delete process.env.PUBLIC_ORIGIN;else process.env.PUBLIC_ORIGIN=priorOrigin;}
     const input = {
       action: "credit",
       reason: "شارژ آزمون مدیریت",

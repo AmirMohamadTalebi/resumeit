@@ -17,6 +17,8 @@ src/auth/                Password, authentication routes, OAuth, OTP
 src/database/            MySQL connection, schema and store modules
 src/services/            SMS.ir adapter
 src/dashboard/           Dashboard validation, API and shared public rendering
+src/admin/               Guarded administration endpoints and access
+DESIGN.md                Implemented visual system
 dist/                    Public pages and frontend assets
   auth-ui/               Shared authentication components
   dashboard/js/pages/    Independent dashboard page modules
@@ -30,7 +32,7 @@ docs/                    Setup, design and review reports
 
 Dashboard content and publication snapshots use MySQL with per-account revision checks and unique usernames. Published résumé and links pages render independently at `username.resumeit.ir` and `/links`; `/u/username/` on the main domain is also available. Public visits and link clicks feed daily request counts. Runflare wildcard DNS, project routing and HTTPS must be configured before subdomains work. Payment, independent custom domains and automatic notifications remain unavailable. See [dashboard implementation](docs/DASHBOARD-IMPLEMENTATION.fa.md).
 
-Current proposed plans: 3 months at 95,000 toman/month (285,000 total), 6 months at 85,000 (510,000 total), 12 months at 75,000 (900,000 total). Individual items start at 45,000 toman. Gallery preview profiles are illustrative; dashboard statistics use stored request counts.
+Current proposed plans: 3 months at 96,000 toman/month (288,000 total), 6 months at 85,000 (510,000 total), 12 months at 75,000 (900,000 total). Individual items start at 46,000 toman. Gallery preview profiles are illustrative; dashboard statistics use stored request counts.
 
 The Persian RTL visual identity remains icy blue, off-white and warm brown. Cards form the signature R. Reduced motion and responsive layouts are retained.
 
@@ -47,4 +49,4 @@ npm audit --omit=dev     Dependency advisories
 
 Database tests create and remove a randomly named database; use a test MySQL instance and an account allowed to create databases. Tests do not send real SMS or call real OAuth providers. `.github/workflows/checks.yml` runs the suite with MySQL 8.4 and Chromium.
 
-See the [Persian security and change report](docs/SECURITY-REVIEW.fa.md) for fixes, evidence and unverified production conditions. Local checks and a GitHub branch do not confirm a live deployment.
+See the [current Persian review and change report](docs/REVIEW-21.1.fa.md) for fixes, evidence and unverified production conditions. Local checks and a GitHub branch do not confirm a live deployment.

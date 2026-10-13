@@ -12,7 +12,7 @@ const {createServer}=require('../src/http/server.cjs'),{testStore}=require('./au
   await page.addInitScript(()=>document.addEventListener('ri:dashboard-ready',()=>window.readyAt=performance.now()));
   await page.goto(base+'/dashboard/wallet/',{waitUntil:'domcontentloaded'});await page.locator('#sidebar [data-route=home]').waitFor();assert.equal(await page.locator('#topPreview').isDisabled(),true);
   assert((await page.locator('#view').textContent()).includes('در حال دریافت'));assert.equal(await page.locator('body').getAttribute('aria-busy'),null);
-  release();hold=false;await page.waitForFunction(()=>window.readyAt);await page.waitForLoadState('networkidle');const cold=assetRequests;assert(cold>10);
+  release();hold=false;await page.waitForFunction(()=>window.readyAt);await page.waitForLoadState('networkidle');const cold=assetRequests;assert(cold<=5,'Shared modules must be bundled on cold load');
   const times=[];
   for(const path of ['links/','wallet/','links/']){const before=assetRequests;await page.goto(base+'/dashboard/'+path,{waitUntil:'domcontentloaded'});await page.waitForFunction(()=>window.readyAt);await page.waitForLoadState('networkidle');times.push({path,ready:Math.round(await page.evaluate(()=>readyAt)),assetRequests:assetRequests-before});}
   assert(times[0].assetRequests<=2,JSON.stringify(times));assert.equal(times[1].assetRequests,0);assert.equal(times[2].assetRequests,0);

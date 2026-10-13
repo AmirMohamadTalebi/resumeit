@@ -38,7 +38,7 @@
             aria-expanded="false"
           ></button
           ><strong>مدیریت / <span id="section-title">نمای کلی</span></strong
-          ><a class="btn" href="/dashboard/" id="user-panel">پنل کاربری</a
+          ><span class="admin-payment">پرداخت آنلاین غیرفعال</span><a class="btn" href="/dashboard/" id="user-panel">پنل کاربری</a
           ><button class="btn" id="refresh">به‌روزرسانی</button>
         </header>
         <main class="admin-view">
@@ -47,11 +47,11 @@
               <h1 id="page-title">مدیریت ResumeIt</h1>
               <p id="page-desc"></p>
             </div>
-          </div>
           <form class="filters" id="filters">
             <label id="search-wrap"
-              ><span class="sr-only">جست‌وجو</span
+              ><span>جست‌وجو</span
               ><input
+                type="search"
                 class="input"
                 id="search"
                 placeholder="جست‌وجو در این بخش…"
@@ -69,6 +69,7 @@
               خروجی CSV این صفحه
             </button>
           </form>
+          </div>
           <div class="filters catalog-controls" id="catalog-controls" hidden>
             <label
               >محصول<select id="catalog-kind">
