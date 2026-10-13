@@ -16,14 +16,17 @@ async function openDatabase(options) {
   }
   await require('./schema.cjs').initializeSchema(execute,pool);
   const context={execute,transaction};
-  return {
+  const database = {
     ...require('./accounts.cjs')(context),
     ...require('./otp.cjs')(context),
     ...require('./sessions.cjs')(context),
     ...require('./profiles.cjs')(context),
     ...require('./dashboard.cjs')(context),
+    ...require('./wallet.cjs')(context),
     ...require('./migration.cjs')(context),
     close: () => pool.end(),
   };
+  try{await require('./owner-wallet-credit.cjs')(database,execute);}catch(error){await pool.end();throw error;}
+  return database;
 }
 module.exports={openDatabase};

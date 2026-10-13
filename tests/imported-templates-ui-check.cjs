@@ -4,7 +4,8 @@ const {chromium}=require('playwright'),{createServer}=require('../src/http/serve
  delete process.env.PUBLIC_ORIGIN;const db=testStore(),id=await db.provisionAccount('09120000950',null);await db.setAccountNames(id,'آزمایش','قالب');await db.markPhoneVerified(id);await db.createSession(digest('a'.repeat(64)),id,Date.now()+600000);
  const c=model.initial().content;c.slug='design-test';c.theme.resume='vista';c.profile.name='آزمایش قالب';c.profile.title='طراح و توسعه‌دهنده';c.profile.bio='متن معرفی برای بررسی هماهنگی رزومه و قالب.';c.contacts[0].value='hello@example.com';c.contacts[0].public=true;
  for(const template of ['vista','satiar'])c.resumeTemplates[template]={fields:{},settings:{reviewed:true},collections:{}};
- await db.mutateDashboard(id,0,d=>{d.content=model.content(c);d.slug=c.slug;d.published.resume=structuredClone(d.content);d.pub.resume={status:'published',version:1,at:Date.now(),snap:JSON.stringify(c)};});
+ await db.mutateDashboard(id,0,d=>{d.content=model.content(c,{purchases:[{ref:'rt:vista'}]});d.slug=c.slug;d.published.resume=structuredClone(d.content);d.pub.resume={status:'published',version:1,at:Date.now(),snap:JSON.stringify(c)};});
+ db.billing=async()=>({plan:{id:'q',end:Date.now()+600000},purchases:[],payments:[]});
  const server=createServer(db);await new Promise(r=>server.listen(0,'127.0.0.1',r));const base='http://127.0.0.1:'+server.address().port;let browser;
  try{
   browser=await chromium.launch({channel:process.platform==='win32'?'msedge':undefined,headless:true});const context=await browser.newContext({viewport:{width:1440,height:1000},reducedMotion:'reduce'});await context.addCookies([{name:'ri_session',value:'a'.repeat(64),url:base}]);

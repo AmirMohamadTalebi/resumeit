@@ -70,6 +70,7 @@
     function update(el, value) {
       const f = [...spec.fields, ...spec.settings].find(x => x.key === (el.dataset.tfield || el.dataset.tupload));
       if (!f) return;
+      if(f.key==='font'&&el.dataset.tgroup==='settings'){const font=RI.FONTS.find(x=>x.id===value);if(font&&!RI.canUse('font:'+font.id,font)){RI.lockedExplain(Object.assign({kind:'font'},font));paint();return;}}
       const error = root.querySelector('#' + el.id.replace(/-file$/, '') + '-error');
       if (!RI.templateFieldValid(f, value)) { el.setAttribute('aria-invalid', 'true'); if (error) { error.hidden = false; error.textContent = 'مقدار معتبر نیست؛ آدرس تصویر باید HTTPS یا تصویر بارگذاری‌شده باشد.'; } return; }
       el.removeAttribute('aria-invalid'); if (error) error.hidden = true;

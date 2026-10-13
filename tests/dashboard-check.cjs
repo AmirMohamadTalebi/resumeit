@@ -65,7 +65,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_PATH || 'playwright');
       await page.reload(); await page.waitForSelector('#page-title');
       if (route === 'billing') {
         assert(!(await page.locator('#view').innerText()).includes('مبلغ نمایشی'));
-        assert.deepEqual(await page.evaluate(() => Object.values(RI.PLANS).map(p => p.price / p.months)), [95000,85000,75000]);
+        assert.deepEqual(await page.evaluate(() => Object.values(RI.PLANS).map(p => p.price / p.months)), [96000,85000,75000]);
         await page.locator('[data-sub="q"]').click();
         assert((await page.getByRole('dialog').innerText()).includes('پرداخت هنوز فعال نیست'));
         await page.getByRole('dialog').getByRole('button', {name:'بستن',exact:true}).last().click();

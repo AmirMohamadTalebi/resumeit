@@ -25,7 +25,7 @@
         const locked = !RI.canUse(ref, it);
         const m = RI.openPreview(kind, {
           title: 'پیش‌نمایش «' + esc(label) + '»', device: kind === 'links' ? 'mobile' : 'desktop', theme: () => override,
-          actions: [{ label: 'بستن', kind: 'ghost' }, locked ? { label: it.access === 'buy' ? 'خرید و استفاده' : 'مشاهدهٔ اشتراک', kind: 'primary', icon: 'lock', push: true, onClick: () => { applied = 'unlock'; } } : { label: 'اعمال این ظاهر', kind: 'primary', icon: 'check', push: true, onClick: () => { applied = true; } }],
+          actions: [{ label: 'بستن', kind: 'ghost' }, locked ? { label: it.subscription ? 'خرید یا اشتراک' : it.access === 'buy' ? 'خرید و استفاده' : 'مشاهدهٔ اشتراک', kind: 'primary', icon: 'lock', push: true, onClick: () => { applied = 'unlock'; } } : { label: 'اعمال این ظاهر', kind: 'primary', icon: 'check', push: true, onClick: () => { applied = true; } }],
           device_: 0,
         });
         const origClose = m.close; m.close = (v) => origClose(v);
@@ -46,14 +46,14 @@
       }
 
       function gallery(kind) {
-        const list = (kind === 'rt' ? RI.RESUME_TEMPLATES : RI.LINK_TEMPLATES).filter((t) => (cat === 'all' || t.cats.indexOf(cat) > -1) && (acc === 'all' || t.access === acc));
+        const list = (kind === 'rt' ? RI.RESUME_TEMPLATES : RI.LINK_TEMPLATES).filter((t) => (cat === 'all' || t.cats.indexOf(cat) > -1) && (acc === 'all' || t.access === acc || (acc === 'sub' && t.subscription)));
         const curId = kind === 'rt' ? th().resume : th().links;
         const cur = RI.findTemplate(kind === 'rt' ? 'resume' : 'links', curId);
         const cards = list.map((t) => {
           const ref = kind + ':' + t.id, on = t.id === curId, usable = RI.canUse(ref, t);
           return '<article class="tcard' + (on ? ' is-current' : '') + '" data-id="' + t.id + '"><div class="tcard__thumb">' + RI.thumbHtml(kind === 'rt' ? 'resume' : 'links', t.id) + (!usable ? '<span class="tcard__lock">' + RI.icon('lock') + '</span>' : '') + (on ? '<span class="tcard__on">' + RI.icon('check') + 'در حال استفاده</span>' : '') + '</div>' +
             '<div class="tcard__body"><div class="tcard__title"><h3>' + t.name + '</h3>' + RI.accessBadge(ref, t) + '</div><p>' + t.desc + '</p><div class="tcard__cats">' + t.cats.map((c) => '<span class="chip">' + CATS.find((x) => x[0] === c)[1] + '</span>').join('') + '</div>' +
-            '<div class="tcard__actions"><button type="button" class="btn btn--soft btn--sm" data-try="' + t.id + '">' + RI.icon('eye') + 'پیش‌نمایش</button>' + (on ? '<button type="button" class="btn btn--sm" disabled>' + RI.icon('check') + 'انتخاب‌شده</button>' : '<button type="button" class="btn btn--sm ' + (usable ? 'btn--primary' : 'btn--ice') + '" data-use="' + t.id + '">' + (usable ? 'استفاده' : RI.icon('lock') + (t.access === 'buy' ? 'خرید' : 'اشتراک')) + '</button>') + '</div></div></article>';
+            '<div class="tcard__actions"><button type="button" class="btn btn--soft btn--sm" data-try="' + t.id + '">' + RI.icon('eye') + 'پیش‌نمایش</button>' + (on ? '<button type="button" class="btn btn--sm" disabled>' + RI.icon('check') + 'انتخاب‌شده</button>' : '<button type="button" class="btn btn--sm ' + (usable ? 'btn--primary' : 'btn--ice') + '" data-use="' + t.id + '">' + (usable ? 'استفاده' : RI.icon('lock') + (t.subscription ? 'خرید یا اشتراک' : t.access === 'buy' ? 'خرید' : 'اشتراک')) + '</button>') + '</div></div></article>';
         }).join('');
         return '<div class="current"><div><span class="eyebrow">' + RI.icon('check') + 'قالب انتخاب‌شده</span><b>' + cur.name + '</b> ' + RI.accessBadge(kind + ':' + cur.id, cur) + '</div></div>' + filters() +
           (list.length ? '<div class="tgrid">' + cards + '</div>' : RI.empty({ icon: 'search', title: 'قالبی با این فیلتر پیدا نشد', text: 'فیلتر دسته یا دسترسی را عوض کن', action: '<button type="button" class="btn btn--soft" data-reset>پاک کردن فیلترها</button>' }));
@@ -63,7 +63,7 @@
         const cur = th().font;
         return '<div class="fgrid">' + RI.FONTS.map((f) => {
           const ref = 'font:' + f.id, on = cur === f.id, usable = RI.canUse(ref, f);
-          return '<article class="fcard' + (on ? ' is-current' : '') + '"><div class="fcard__sample" style="font-family:' + f.stack + ';font-weight:' + f.hw + ';letter-spacing:' + (f.spacing || 0) + '"><b>من می‌سازم، پس هستم</b><span>نمونه‌کار، مهارت، پروژه ۰۱۲۳۴۵</span></div>' +
+          return '<article class="fcard' + (on ? ' is-current' : '') + '"><div class="fcard__sample" style="font-family:' + f.stack + ';font-weight:' + f.hw + ';letter-spacing:' + (f.spacing || 0) + '"><b style="font-family:' + (f.heading || f.stack) + '">من می‌سازم، پس هستم</b><span>نمونه‌کار، مهارت، پروژه ۰۱۲۳۴۵</span></div>' +
             '<div class="tcard__title"><h3>' + f.name + '</h3>' + RI.accessBadge(ref, f) + '</div><p class="field__hint">' + f.note + '</p><div class="tcard__actions"><button type="button" class="btn btn--soft btn--sm" data-ftry="' + f.id + '">' + RI.icon('eye') + 'پیش‌نمایش</button>' +
             (on ? '<button class="btn btn--sm" disabled type="button">' + RI.icon('check') + 'انتخاب‌شده</button>' : '<button type="button" class="btn btn--sm ' + (usable ? 'btn--primary' : 'btn--ice') + '" data-fuse="' + f.id + '">' + (usable ? 'استفاده' : RI.icon('lock') + (f.access === 'buy' ? 'خرید' : 'اشتراک')) + '</button>') + '</div></article>';
         }).join('') + '</div>';

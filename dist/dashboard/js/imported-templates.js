@@ -11,7 +11,7 @@
     return { sections: ['contacts', 'socials'], bodySections: [], requiredSections: [], fields: t.fields.concat(compose),
       settings: [{ key: 'reviewed', label: 'متن‌ها، تصاویر، آمار و لینک‌های نمونه را بررسی و برای انتشار تأیید کرده‌ام', type: 'checkbox', required: true, default: false },
         { key: 'mode', label: 'حالت پیش‌فرض قالب', type: 'select', options: [['dark','تیره'],['light','روشن']], default: 'dark' },
-        { key: 'font', label: 'فونت نوشته‌ها', type: 'select', options: [['original','فونت اصلی قالب'],['vazir','وزیرمتن'],['system','سیستمی']], default: 'original' },
+        { key: 'font', label: 'فونت نوشته‌ها', type: 'select', options: [['theme','طبق انتخاب ظاهر و قالب'],['original','فونت اصلی قالب'],...RI.FONTS.map(f=>[f.id,f.name+(f.access==='buy'?' · '+RI.it(f.price):' · رایگان')])], default: 'theme' },
         { key: 'compose', label: 'نمایش فرم تماس با برنامهٔ ایمیل', type: 'checkbox', default: true, group: 'home:compose' },
         { key: 'section_order', label: 'ترتیب بخش‌ها', type: 'order', keys: t.groups.map(g=>g.key), default: '', max: 50000 },
         ...Object.entries(t.colors).map(([color, key]) => ({ key, label: 'رنگ ' + color, type: 'color', default: color })),
@@ -119,9 +119,10 @@
       if(f.type==='color' && !Object.hasOwn(settings,f.key) && accent>=0 && palette && palette.colors) v=palette.colors[accent];
       return '--ri-' + f.key + ':' + (f.type==='image'?'url("'+v+'")':v);
     }).join(';');
-    const font = settings.font || (options.theme.font === 'system' ? 'system' : 'original');
+    const font = settings.font && settings.font !== 'theme' ? settings.font : options.theme.font;
+    const selectedFont = RI.FONTS.find(f=>f.id===font) || RI.FONTS[0];
     const radius = { sharp: '6px', soft: '16px', round: '28px' }[options.theme.radius] || '16px';
-    const fontCss = font === 'original' ? '' : (font === 'vazir' ? '@font-face{font-family:RITemplateVazir;src:url(/assets/fonts/Vazirmatn.woff2) format("woff2");font-display:swap}' : '') + '.ri-imported h1,.ri-imported h2,.ri-imported h3,.ri-imported h4,.ri-imported p,.ri-imported a,.ri-imported button,.ri-imported span,.ri-imported label{font-family:' + (font === 'vazir' ? 'RITemplateVazir,Tahoma,sans-serif' : 'Tahoma,system-ui,sans-serif') + '!important}';
+    const fontCss = font === 'original' ? '' : '.ri-imported{font-family:'+selectedFont.stack+'!important}.ri-imported p,.ri-imported a,.ri-imported button,.ri-imported span,.ri-imported label,.ri-imported input,.ri-imported textarea{font-family:'+selectedFont.stack+'!important}.ri-imported h1,.ri-imported h2,.ri-imported h3,.ri-imported h4,.ri-imported h5,.ri-imported h6{font-family:'+(selectedFont.heading||selectedFont.stack)+'!important}';
     const contactsVisible = c.sections.some(s => s.key === 'contacts' && s.visible);
     const contacts = contactsVisible ? c.contacts.filter(x => x.public && x.value.trim()) : [];
     const socialUrls = { github: 'https://github.com/', linkedin: 'https://linkedin.com/in/', telegram: 'https://t.me/', instagram: 'https://instagram.com/', twitter: 'https://x.com/', youtube: 'https://youtube.com/@' };
@@ -133,7 +134,7 @@
       (pageId !== 'home' ? '<a href="' + esc(base + '/') + '">صفحه اصلی</a>' : '') + '</nav>';
     const brand = '<footer class="ri-template-brand">ساخته‌شده با <a href="https://resumeit.ir" data-pv-link="1">ResumeIt</a></footer>';
     return '<div class="ri-imported" data-template="' + id + '" data-template-mode="' + (settings.mode==='light'?'light':'dark') + '" data-template-page="' + pageId + '" style="' + esc(vars) + '">' +
-      page.css.map(url => '<link rel="stylesheet" href="' + url + '">').join('') + '<link rel="stylesheet" href="/templates/template-support.css">' +
+      '<link rel="stylesheet" href="/fonts/fonts.css">' + page.css.map(url => '<link rel="stylesheet" href="' + url + '">').join('') + '<link rel="stylesheet" href="/templates/template-support.css">' +
       '<style>:root{' + vars + '}' + page.inline.replace(/<\/style/gi, '') + fontCss + '.ri-imported .pf-card,.ri-imported .blog-card,.ri-imported .tech-card,.ri-imported .soc-card{border-radius:' + radius + '}</style>' + nav + renderNode(page.node) + contact + brand + '</div>';
   };
 })();

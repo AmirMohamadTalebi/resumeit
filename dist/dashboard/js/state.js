@@ -110,7 +110,7 @@
   /* ref: rt:id | lt:id | font:id | pal:id */
   RI.accessOf = function (ref, item) {
     if (item.access === 'free') return 'free';
-    if (item.access === 'buy') return RI.owns(ref) ? 'owned' : 'locked-buy';
+    if (item.access === 'buy') return RI.owns(ref) ? 'owned' : item.subscription && RI.hasSub() ? 'sub-ok' : item.subscription ? 'locked-special' : 'locked-buy';
     return RI.hasSub() ? 'sub-ok' : 'locked-sub';
   };
   RI.canUse = (ref, item) => ['free', 'owned', 'sub-ok'].indexOf(RI.accessOf(ref, item)) > -1;

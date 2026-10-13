@@ -259,3 +259,7 @@
 .toplinks__n { width: 30px; height: 30px; border-radius: 50%; background: var(--bro-100); color: var(--bro-700); display: grid; place-items: center; font-weight: 800; font-size: 13px; flex: none; }
 .toplinks__main { flex: 1; display: grid; gap: 6px; } .toplinks__t { display: flex; justify-content: space-between; gap: 10px; } .toplinks__main small { color: var(--ink-3); }
 @media (prefers-reduced-motion: reduce) { .chart .draw { animation: none; stroke-dashoffset: 0; } }
+
+.wallet-balance{display:flex;align-items:center;gap:24px}.wallet-balance h2{font-size:36px;margin:8px 0}.wallet-balance img{flex:none}#wallet-topup{display:block;max-width:360px;margin-top:10px}.wallet-feedback{color:var(--danger)}@media(max-width:480px){.wallet-balance{gap:14px}.wallet-balance h2{font-size:28px}}
+.wallet-balance div>span{display:block}#wallet-content .panel>.btn{margin-inline-end:8px;margin-top:8px}
+.tcard__title{flex-wrap:wrap}

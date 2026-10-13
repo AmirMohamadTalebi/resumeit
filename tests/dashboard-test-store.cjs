@@ -1,5 +1,6 @@
 const {initial,fail}=require('../src/dashboard/model.cjs');
 module.exports=function dashboardStore(byId,remove){const docs=new Map(),metrics=[];return {
+  async wallet(){return {balance:0,rate:2000,transactions:[]};},
   async loadDashboard(id){const {published,...doc}=docs.get(id)||initial();return structuredClone(doc);},
   async slugAvailable(slug,id){return ![...docs].some(([owner,d])=>owner!==id&&d.slug===slug);},
   async mutateDashboard(id,revision,action){if(!byId(id))fail('Missing account',401);const doc=structuredClone(docs.get(id)||{...initial(),slug:null,published:{}});if(doc.revision!==revision)fail('نسخهٔ جدیدتری ذخیره شده است',409);action(doc);if(doc.slug&&[...docs].some(([owner,d])=>owner!==id&&d.slug===doc.slug))fail('نام گرفته شده',409);doc.revision++;docs.set(id,doc);const {published,...result}=doc;return structuredClone(result);},

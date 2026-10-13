@@ -4,24 +4,26 @@
   const RI = (window.RI = window.RI || {});
   const esc = RI.esc;
 
-  // shortcut: connect a payment gateway before enabling purchases or subscriptions.
-  RI.purchaseFlow = function (it) {
-    return new Promise(resolve => RI.modal({
-      title: 'خرید «' + it.name + '»', size: 'sm',
-      body: '<dl class="kv"><dt>مورد</dt><dd>' + esc(it.name) + '</dd><dt>نوع خرید</dt><dd>یک‌بار برای همیشه</dd><dt>مبلغ</dt><dd class="num">' + RI.toman(it.price) + '</dd></dl><p>پرداخت هنوز فعال نیست. برای راهنمایی با پشتیبانی تماس بگیرید.</p>',
-      actions: [{ label: 'بستن', kind: 'ghost' }, { label: 'پشتیبانی', kind: 'soft', onClick: () => location.assign('/contact/') }],
-      onClose: () => resolve(false),
-    }));
+  const pending = new Map();
+  RI.walletPurchase = async function (ref, name, price) {
+    let wallet;
+    try { wallet = await RI.dashboardRequest('wallet'); } catch(e) { RI.toast(e.message,{kind:'error'});return false; }
+    const enough = wallet.balance * RI.IT_RATE >= price;
+    return new Promise(resolve => {
+      let bought=false,busy=false;
+      const modal=RI.modal({title:'خرید «'+name+'» با It',size:'sm',
+        body:'<dl class="kv"><dt>مبلغ</dt><dd>'+RI.it(price)+' · '+RI.toman(price)+'</dd><dt>موجودی</dt><dd>'+RI.fa(wallet.balance)+' It</dd></dl><p>هر It برابر ۲٬۰۰۰ تومان است. '+(enough?'پس از تأیید، اعتبار از کیف پول کم می‌شود.':'موجودی کافی نیست. پرداخت هنوز فعال نیست؛ شارژ آنلاین تا اتصال درگاه غیرفعال است.')+'</p><p class="wallet-feedback" role="status" aria-live="polite"></p>',
+        actions:[{label:'بستن',kind:'ghost'},enough?{label:'تأیید خرید با It',kind:'primary',keepOpen:true,onClick:async()=>{
+          if(busy)return;busy=true;
+          if(!pending.has(ref))pending.set(ref,crypto.randomUUID());
+          try{const result=await RI.dashboardRequest('wallet/purchase',{ref,requestId:pending.get(ref)});RI.state.billing=result.billing;RI.wallet=result.wallet;pending.delete(ref);bought=true;modal.close();RI.toast('خرید ثبت شد؛ موجودی '+RI.fa(result.wallet.balance)+' It');}
+          catch(e){const feedback=document.querySelector('.wallet-feedback');if(feedback)feedback.textContent=e.message;}
+          finally{busy=false;}
+        }}:{label:'کیف پول',kind:'soft',onClick:()=>RI.go('wallet')}],onClose:()=>resolve(bought)});
+    });
   };
-  RI.subscribeFlow = function (planId) {
-    const plan = RI.PLANS[planId];
-    return new Promise(resolve => RI.modal({
-      title: 'اشتراک ' + plan.name, size: 'sm',
-      body: '<dl class="kv"><dt>دوره</dt><dd>' + RI.fa(plan.months) + ' ماه</dd><dt>ماهانه</dt><dd class="num">' + RI.toman(plan.price / plan.months) + '</dd><dt>مبلغ کل دوره</dt><dd class="num">' + RI.toman(plan.price) + '</dd></dl><p>پرداخت هنوز فعال نیست. برای راهنمایی با پشتیبانی تماس بگیرید.</p>',
-      actions: [{ label: 'بستن', kind: 'ghost' }, { label: 'پشتیبانی', kind: 'soft', onClick: () => location.assign('/contact/') }],
-      onClose: () => resolve(false),
-    }));
-  };
+  RI.purchaseFlow = it => RI.walletPurchase((it.kind||'rt')+':'+it.id,it.name,it.price);
+  RI.subscribeFlow = id => RI.walletPurchase('subscription:'+id,'اشتراک '+RI.PLANS[id].name,RI.PLANS[id].price);
 
   RI.receiptModal = function (pay) {
     const no = 'RI-' + String(pay.id).replace(/\D/g, '').padEnd(6, '7').slice(0, 6);
@@ -44,6 +46,7 @@
 
   /* توضیح روشن برای موردی که قفل است */
   RI.lockedExplain = async function (it) {
+    if(it.subscription){const choice=await RI.choice({title:'فعال‌سازی «'+it.name+'»',text:'خرید یک‌باره '+RI.it(it.price)+' ('+RI.toman(it.price)+') یا استفاده در مدت اشتراک فعال.',options:[{label:'خرید یک‌باره با It',kind:'primary',value:'buy'},{label:'مشاهدهٔ اشتراک‌ها',kind:'soft',value:'sub'},{label:'فعلاً نه',kind:'ghost',value:null}]});if(choice==='buy')return RI.purchaseFlow(it);if(choice==='sub')RI.go('billing');return false;}
     if (it.access === 'buy') return RI.purchaseFlow(it);
     const c = await RI.choice({
       title: '«' + it.name + '» با اشتراک باز می‌شود',
@@ -59,7 +62,8 @@
     if (a === 'free') return '<span class="chip chip--ok">رایگان</span>';
     if (a === 'owned') return '<span class="chip chip--ok">' + RI.icon('check') + 'خریده‌اید</span>';
     if (a === 'sub-ok') return '<span class="chip chip--brown">' + RI.icon('crown') + 'با اشتراک شما</span>';
-    if (a === 'locked-buy') return '<span class="chip chip--brown">' + RI.icon('lock') + 'خرید یک‌بار · ' + RI.fa(it.price) + ' تومان</span>';
+    if(a==='locked-special')return '<span class="chip chip--brown">ویژه · '+RI.it(it.price)+' · '+RI.toman(it.price)+' یا اشتراک</span>';
+    if (a === 'locked-buy') return '<span class="chip chip--brown">' + RI.icon('lock') + 'خرید یک‌بار · ' + RI.it(it.price) + ' · ' + RI.toman(it.price) + '</span>';
     return '<span class="chip chip--brown">' + RI.icon('lock') + 'با اشتراک</span>';
   };
 })();

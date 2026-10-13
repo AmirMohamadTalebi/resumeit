@@ -1,0 +1,12 @@
+(function(){'use strict';const RI=window.RI;
+ RI.registerPage('wallet',{title:'کیف پول It',render(){return RI.pageHead({eyebrow:'حساب',title:'کیف پول It',desc:'اعتبار ResumeIt برای خرید قالب و اشتراک؛ هر It برابر ۲٬۰۰۰ تومان است.'})+'<div id="wallet-content" aria-busy="true"><p role="status">در حال دریافت موجودی…</p></div>';},mount(root){
+  const host=root.querySelector('#wallet-content');let active=true;
+  async function load(){try{const wallet=await RI.dashboardRequest('wallet');if(!active)return;RI.wallet=wallet;host.setAttribute('aria-busy','false');host.innerHTML=
+   '<section class="panel wallet-balance"><img src="/brand/it-coin.svg" width="104" height="104" alt="سکهٔ It"><div><span>موجودی قابل استفاده</span><h2 class="ltr-inline">'+RI.fa(wallet.balance)+' It</h2><p>معادل '+RI.toman(wallet.balance*wallet.rate)+'</p></div></section>'+
+   '<section class="panel"><h2>شارژ کیف پول</h2><label for="wallet-topup">مبلغ شارژ (تومان)</label><input class="input" id="wallet-topup" type="number" inputmode="numeric" min="2000" max="100000000" step="2000" value="100000"><p id="wallet-conversion" role="status" aria-live="polite">۵۰ It دریافت می‌کنی</p><p>شارژ آنلاین هنوز فعال نیست. موجودی فعلی برای خرید قابل استفاده است.</p><button type="button" class="btn btn--soft" data-wallet-support>پشتیبانی شارژ</button><a class="btn btn--primary" href="/dashboard/themes/">انتخاب قالب</a></section>'+
+   '<section class="panel"><h2>تاریخچهٔ کیف پول</h2><p class="field__hint">آخرین ۵۰ تراکنش؛ مبلغ‌ها برحسب It هستند.</p>'+(wallet.transactions.length?'<ul class="rows">'+wallet.transactions.map(t=>'<li class="row"><div class="row__main"><b>'+RI.esc(t.label)+'</b><p>'+RI.date(t.at)+' · موجودی پس از تراکنش: '+RI.fa(t.balance)+' It</p></div><strong class="ltr-inline">'+(t.amount>0?'+':'')+RI.fa(t.amount)+' It</strong></li>').join('')+'</ul>':'<p>هنوز تراکنشی ثبت نشده است.</p>')+'</section>';
+  }catch(e){if(active){host.setAttribute('aria-busy','false');host.innerHTML='<p role="alert">'+RI.esc(e.message)+'</p><button class="btn" type="button" data-wallet-retry>تلاش دوباره</button>';}}}
+  root.addEventListener('input',e=>{if(e.target.id==='wallet-topup'){const value=Number(e.target.value);root.querySelector('#wallet-conversion').textContent=e.target.validity.valid&&Number.isFinite(value)?RI.fa(value/RI.IT_RATE)+' It دریافت می‌کنی':'مبلغ معتبر با گام ۲٬۰۰۰ تومان وارد کن';}});
+  RI.delegate(root,'click','[data-wallet-retry]',load);RI.delegate(root,'click','[data-wallet-support]',()=>location.assign('/contact/'));load();return()=>{active=false;};
+ }});
+})();

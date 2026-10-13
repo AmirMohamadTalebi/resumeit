@@ -18,10 +18,10 @@
   RI.LANG_LEVELS = ['مقدماتی', 'محاوره‌ای', 'حرفه‌ای', 'مسلط', 'زبان مادری'];
 
   /* ---------- قالب‌ها ---------- */
-  /* access: free | buy (خرید یک‌بارهٔ نمایشی) | sub (با اشتراک) */
+  /* access: free | buy (خرید یک‌باره) | sub (با اشتراک) */
   RI.RESUME_TEMPLATES = [
-    { id: 'vista', name: 'ویستا', cats: ['dev', 'creator'], access: 'free', layout: 'hero', desc: 'قالب ویستای ارسالی؛ رزومه، نمونه‌کار، مقاله و صفحات اختصاصی قابل ویرایش.', v: { bg: '#0c1117', surface: '#131b25', ink: '#f5f7fa', muted: '#a2adbb', accent: '#9bf27d', accent2: '#85d3ef', hero: '#131b25', line: '#25303f' } },
-    { id: 'satiar', name: 'ساتیار', cats: ['creator', 'dev'], access: 'free', layout: 'hero', desc: 'قالب ساتیار ارسالی؛ معرفی، خدمات، رزومه، تعرفه‌ها و بخش‌های قابل شخصی‌سازی.', v: { bg: '#001035', surface: '#142b56', ink: '#ffffff', muted: '#adb8d0', accent: '#fe8b45', accent2: '#905bf5', hero: '#142b56', line: '#304365' } },
+    { id: 'vista', name: 'ویستا', cats: ['dev', 'creator'], access: 'buy', subscription: true, price: 118000, layout: 'hero', desc: 'قالب ویستای ارسالی؛ رزومه، نمونه‌کار، مقاله و صفحات اختصاصی قابل ویرایش.', v: { bg: '#0c1117', surface: '#131b25', ink: '#f5f7fa', muted: '#a2adbb', accent: '#9bf27d', accent2: '#85d3ef', hero: '#131b25', line: '#25303f' } },
+    { id: 'satiar', name: 'ساتیار', cats: ['creator', 'dev'], access: 'buy', subscription: true, price: 118000, layout: 'hero', desc: 'قالب ساتیار ارسالی؛ معرفی، خدمات، رزومه، تعرفه‌ها و بخش‌های قابل شخصی‌سازی.', v: { bg: '#001035', surface: '#142b56', ink: '#ffffff', muted: '#adb8d0', accent: '#fe8b45', accent2: '#905bf5', hero: '#142b56', line: '#304365' } },
     { id: 'glacier', name: 'یخچال', cats: ['student', 'dev', 'creator'], access: 'free', layout: 'side', desc: 'دو ستونی، روشن و منظم؛ انتخاب امن برای شروع.',
       v: { bg: '#eef4f7', surface: '#ffffff', ink: '#1d2c36', muted: '#5a7080', accent: '#52788d', accent2: '#a47248', hero: 'linear-gradient(135deg,#cfe0e8,#eef4f7)', line: '#d5e3ea' } },
     { id: 'campus', name: 'پردیس', cats: ['student'], access: 'free', layout: 'stack', desc: 'تک‌ستونی و گرم، مناسب دانشجو و دانش‌آموز.',
@@ -30,9 +30,9 @@
       v: { bg: '#f5f6f7', surface: '#ffffff', ink: '#111417', muted: '#5d6670', accent: '#111417', accent2: '#52788d', hero: 'linear-gradient(135deg,#e8ebee,#f5f6f7)', line: '#dde1e5' } },
     { id: 'journal', name: 'دفترچه', cats: ['student', 'creator'], access: 'free', layout: 'stack', serif: true, desc: 'حال‌وهوای نوشتاری برای بلاگرها و دانشجویان.',
       v: { bg: '#f7f3ec', surface: '#fffdf9', ink: '#2e2a24', muted: '#756c5f', accent: '#8a5f3c', accent2: '#3d5c6f', hero: 'linear-gradient(135deg,#eadfce,#f7f3ec)', line: '#e5dac7' } },
-    { id: 'terminal', name: 'ترمینال', cats: ['dev'], access: 'buy', price: 49000, layout: 'side', mono: true, desc: 'تیره با حال‌وهوای خط فرمان برای برنامه‌نویس‌ها.',
+    { id: 'terminal', name: 'ترمینال', cats: ['dev'], access: 'buy', price: 50000, layout: 'side', mono: true, desc: 'تیره با حال‌وهوای خط فرمان برای برنامه‌نویس‌ها.',
       v: { bg: '#10181e', surface: '#17232b', ink: '#e6eef2', muted: '#8fa6b3', accent: '#7fd1b9', accent2: '#d2ae89', hero: 'linear-gradient(135deg,#17232b,#10181e)', line: '#25353f' } },
-    { id: 'spotlight', name: 'نورافکن', cats: ['creator'], access: 'buy', price: 59000, layout: 'hero', desc: 'جلوهٔ تصویری بزرگ برای اینفلوئنسر و تولیدکنندهٔ محتوا.',
+    { id: 'spotlight', name: 'نورافکن', cats: ['creator'], access: 'buy', price: 60000, layout: 'hero', desc: 'جلوهٔ تصویری بزرگ برای اینفلوئنسر و تولیدکنندهٔ محتوا.',
       v: { bg: '#1f1710', surface: '#2b2016', ink: '#fbf1e6', muted: '#c9b49c', accent: '#e0a56f', accent2: '#97b5c5', hero: 'linear-gradient(135deg,#6b4629,#1f1710)', line: '#3d2e20' } },
     { id: 'blueprint', name: 'نقشه', cats: ['dev', 'student'], access: 'sub', layout: 'hero', mono: true, desc: 'آبی فنی با شبکهٔ ظریف؛ ویژهٔ اشتراک.',
       v: { bg: '#16304a', surface: '#1d3d5c', ink: '#eaf3fb', muted: '#9fbad2', accent: '#8fd0ff', accent2: '#f2c48d', hero: 'linear-gradient(135deg,#1d3d5c,#16304a)', line: '#2c5174' } },
@@ -47,7 +47,7 @@
       v: { bg: 'linear-gradient(160deg,#f2e6da,#faf4ee)', ink: '#3b2a1d', muted: '#7a6552', btnBg: '#875a36', btnInk: '#ffffff', btnBd: 'transparent', accent: '#52788d' } },
     { id: 'graphite', name: 'گرافیت', cats: ['dev'], access: 'free', desc: 'ساده و خطی برای صفحهٔ کاری.', btn: 'outline',
       v: { bg: '#f3f5f6', ink: '#111417', muted: '#5d6670', btnBg: 'transparent', btnInk: '#111417', btnBd: '#111417', accent: '#52788d' } },
-    { id: 'midnight', name: 'نیمه‌شب', cats: ['dev', 'creator'], access: 'buy', price: 45000, desc: 'تیره با درخشش ملایم آبی.', btn: 'glass',
+    { id: 'midnight', name: 'نیمه‌شب', cats: ['dev', 'creator'], access: 'buy', price: 46000, desc: 'تیره با درخشش ملایم آبی.', btn: 'glass',
       v: { bg: 'linear-gradient(160deg,#10181e,#1d3d5c)', ink: '#eaf3fb', muted: '#9fbad2', btnBg: 'rgba(255,255,255,.1)', btnInk: '#eaf3fb', btnBd: 'rgba(255,255,255,.22)', accent: '#8fd0ff' } },
     { id: 'paper', name: 'کاغذ', cats: ['student', 'creator'], access: 'sub', desc: 'برگه‌ای با سایهٔ نرم؛ ویژهٔ اشتراک.', btn: 'paper',
       v: { bg: '#f7f3ec', ink: '#2e2a24', muted: '#756c5f', btnBg: '#ffffff', btnInk: '#2e2a24', btnBd: '#e5dac7', accent: '#8a5f3c' } },
@@ -55,12 +55,18 @@
       v: { bg: 'linear-gradient(160deg,#f6dcb8,#e4cdb6 50%,#97b5c5)', ink: '#3b2a1d', muted: '#6b5842', btnBg: 'rgba(59,42,29,.88)', btnInk: '#fff7ee', btnBd: 'transparent', accent: '#fff7ee' } },
   ];
 
+  RI.IT_RATE = 2000;
+  RI.it = amount => RI.fa(amount / RI.IT_RATE) + ' It';
+  RI.allowed = (ref, item, billing = {}, now = Date.now()) => item.access === 'free' ||
+    (item.access === 'buy' && (billing.purchases || []).some(p => p.ref === ref)) ||
+    ((item.access === 'sub' || item.subscription) && billing.plan && billing.plan.end > now);
   RI.FONTS = [
-    { id: 'vazir', name: 'وزیرمتن', access: 'free', stack: "'Vazirmatn', Tahoma, sans-serif", hw: 800, note: 'فونت پیش‌فرض و رایگان' },
-    { id: 'system', name: 'سیستمی', access: 'free', stack: "Tahoma, 'Segoe UI', system-ui, sans-serif", hw: 700, note: 'سبک و سریع' },
-    { id: 'naskh', name: 'نسخ کلاسیک', access: 'sub', stack: "'Noto Naskh Arabic','Scheherazade New','Times New Roman',serif", hw: 700, note: 'ویژهٔ اشتراک' },
-    { id: 'display', name: 'تیتر درشت', access: 'buy', price: 45000, stack: "'Vazirmatn', Tahoma, sans-serif", hw: 900, spacing: '-0.02em', note: 'خرید یک‌بارهٔ نمایشی' },
-    { id: 'code', name: 'کد و متن', access: 'buy', price: 45000, stack: "'Vazirmatn', ui-monospace, Consolas, monospace", hw: 700, note: 'خرید یک‌بارهٔ نمایشی' },
+    { id: 'vazir', name: 'وزیرمتن', access: 'free', stack: "'Vazirmatn', Tahoma, sans-serif", hw: 800, note: 'انتخاب پیشنهادی؛ خوانا و متعادل برای بیشتر رزومه‌ها' },
+    { id: 'sahel', name: 'ساحل', access: 'free', stack: "'Sahel', Tahoma, sans-serif", hw: 700, note: 'نرم و دوستانه؛ مناسب معرفی شخصی و متن‌های طولانی' },
+    { id: 'estedad', name: 'استعداد', access: 'buy', price: 46000, stack: "'Estedad', Tahoma, sans-serif", hw: 800, note: 'هندسی و محکم؛ مناسب رزومهٔ فنی و حرفه‌ای' },
+    { id: 'naskh', name: 'نسخ', access: 'buy', price: 52000, stack: "'Noto Naskh Arabic', Tahoma, serif", hw: 700, note: 'کلاسیک و نوشتاری؛ مناسب مقاله و رزومهٔ رسمی' },
+    { id: 'lalezar', name: 'لاله‌زار', access: 'buy', price: 60000, stack: "'Vazirmatn', Tahoma, sans-serif", heading: "'Lalezar', Tahoma, sans-serif", hw: 400, note: 'تیترهای نمایشی و پررنگ؛ متن اصلی با وزیرمتن خوانا می‌ماند' },
+    { id: 'system', name: 'سیستمی', access: 'free', stack: "Tahoma, 'Segoe UI', system-ui, sans-serif", hw: 700, note: 'بدون دانلود فونت؛ مناسب سرعت و سادگی' },
   ];
 
   RI.PALETTES = [
@@ -69,12 +75,12 @@
     { id: 'cocoa', name: 'قهوه‌ای گرم', access: 'free', colors: ['#875a36', '#52788d'] },
     { id: 'sage', name: 'سبز مات', access: 'sub', colors: ['#5e8b7e', '#b08457'] },
     { id: 'navy', name: 'سرمه‌ای', access: 'sub', colors: ['#34508a', '#c79a6b'] },
-    { id: 'sand', name: 'شنی', access: 'buy', price: 45000, colors: ['#b08457', '#5b7482'] },
+    { id: 'sand', name: 'شنی', access: 'buy', price: 46000, colors: ['#b08457', '#5b7482'] },
   ];
 
-  /* ---------- پلن‌ها (مبلغ‌ها نمایشی‌اند) ---------- */
+  /* ---------- پلن‌ها (خرید با It، شارژ آنلاین غیرفعال) ---------- */
   RI.PLANS = {
-    q: { id: 'q', name: 'سه‌ماهه', months: 3, price: 285000 },
+    q: { id: 'q', name: 'سه‌ماهه', months: 3, price: 288000 },
     h: { id: 'h', name: 'شش‌ماهه', months: 6, price: 510000, badge: 'محبوب' },
     y: { id: 'y', name: 'سالانه', months: 12, price: 900000, badge: 'دامنهٔ ir رایگان' },
   };
@@ -82,7 +88,7 @@
     ['یک رزومه و یک صفحهٔ لینک', true, true],
     ['قالب‌ها و فونت‌های استارتی', true, true],
     ['فضای میزبانی تصاویر', '۲۰۰ مگابایت', '۲ گیگابایت'],
-    ['مجموعهٔ قالب‌ها و فونت‌های اشتراکی', false, true],
+    ['قالب‌های اشتراکی و ویژه', false, true],
     ['حذف نشان «ساخته‌شده با ResumeIt»', false, true],
     ['اتصال دامنهٔ شخصی', true, true],
     ['دامنهٔ .ir رایگان', false, 'فقط اشتراک سالانه'],
@@ -170,7 +176,7 @@
     const b = { plan: null, purchases: [], payments: [] };
     if (kind === 'sub') {
       b.plan = { id: 'y', start: RI.daysFromNow(-48).getTime(), end: RI.daysFromNow(317).getTime(), autoRenew: false };
-      b.purchases = [{ id: 'pu1', kind: 'template', ref: 'rt:terminal', name: 'قالب ترمینال', price: 49000, at: RI.daysFromNow(-30).getTime() }];
+      b.purchases = [{ id: 'pu1', kind: 'template', ref: 'rt:terminal', name: 'قالب ترمینال', price: 50000, at: RI.daysFromNow(-30).getTime() }];
       b.payments = [
         { id: 'r2', title: 'اشتراک سالانه', amount: 289000, at: RI.daysFromNow(-48).getTime(), status: 'ok' },
         { id: 'r1', title: 'قالب ترمینال', amount: 49000, at: RI.daysFromNow(-30).getTime(), status: 'ok' },

@@ -35,7 +35,7 @@
     const r = (RI.RADII[theme.radius] || RI.RADII.soft)[1];
     return '--pv-bg:' + v.bg + ';--pv-surface:' + v.surface + ';--pv-ink:' + v.ink + ';--pv-muted:' + v.muted + ';--pv-accent:' + v.accent + ';--pv-accent2:' + v.accent2 +
       ';--pv-on:' + onColor(v.accent) + ';--pv-hero:' + v.hero + ';--pv-line:' + v.line + ';--pv-r:' + r + ';--pv-font:' + (t.mono && f.id === 'vazir' ? "'Vazirmatn', ui-monospace, Consolas, monospace" : f.stack) +
-      ';--pv-hw:' + f.hw + ';--pv-ls:' + (f.spacing || '0') + ';--pv-hfont:' + (t.serif ? "'Noto Naskh Arabic','Times New Roman',serif" : 'inherit');
+      ';--pv-hw:' + f.hw + ';--pv-ls:' + (f.spacing || '0') + ';--pv-hfont:' + (f.heading || (t.serif ? "'Noto Naskh Arabic','Times New Roman',serif" : 'inherit'));
   };
   RI.linksVars = function (t, theme, style) {
     const v = Object.assign({}, t.v), pc = palColors(theme.linksPalette);
