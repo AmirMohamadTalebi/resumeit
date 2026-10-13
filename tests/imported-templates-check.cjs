@@ -2,6 +2,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
 const {RI,blank,render}=require('../src/dashboard/render.cjs'),model=require('../src/dashboard/model.cjs');
 for(const id of ['vista','satiar']){
  const billing={purchases:[{ref:'rt:'+id}]};const t=RI.IMPORTED_TEMPLATES[id],spec=RI.resumeSpec(id),c=blank();c.slug='template-test';c.theme.resume=id;c.profile.name='نام واقعی';c.profile.title='توسعه‌دهنده';c.contacts[0].value='PRIVATE@example.com';c.contacts[1].value='09129999999';
+ const fullRequirements=JSON.stringify(RI.resumeRequirements(c));delete RI.IMPORTED_TEMPLATES[id];assert.equal(JSON.stringify(RI.resumeRequirements(c)),fullRequirements,'Lightweight requirements must match the full contract');RI.IMPORTED_TEMPLATES[id]=t;
  assert.equal(new Set(t.fields.map(x=>x.key)).size,t.fields.length);assert.equal(new Set(t.collections.map(x=>x.key)).size,t.collections.length);
  for(const f of spec.fields.concat(spec.settings))assert(RI.templateFieldValid(f,f.default),id+' invalid default '+f.key);
  assert.throws(()=>model.ready(c,'resume',billing));c.contacts[1].public=true;c.resumeTemplates[id]={fields:{},settings:{reviewed:true},collections:{}};model.ready(c,'resume',billing);

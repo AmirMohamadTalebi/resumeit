@@ -13,7 +13,7 @@
         '<div id="tbody"></div>';
     },
     mount(root) {
-      let tab = 'rt', cat = 'all', acc = 'all';
+      let tab = 'rt', cat = 'all', acc = 'all', galleryPage = 0;
       const body = RI.$('#tbody', root);
       const th = () => RI.C().theme;
 
@@ -21,6 +21,7 @@
 
       /* پیش‌نمایش پیش از اعمال */
       async function tryAndApply(kind, override, it, ref, patch, label) {
+        try { if(kind==='resume') await RI.loadTemplates([override.resume || th().resume]); } catch(e) { RI.toast(e.message,{kind:'error'}); return; }
         let applied = false;
         const locked = !RI.canUse(ref, it);
         const m = RI.openPreview(kind, {
@@ -49,14 +50,16 @@
         const list = (kind === 'rt' ? RI.RESUME_TEMPLATES : RI.LINK_TEMPLATES).filter((t) => (cat === 'all' || t.cats.indexOf(cat) > -1) && (acc === 'all' || t.access === acc || (acc === 'sub' && t.subscription)));
         const curId = kind === 'rt' ? th().resume : th().links;
         const cur = RI.findTemplate(kind === 'rt' ? 'resume' : 'links', curId);
-        const cards = list.map((t) => {
+        const pageCount = Math.ceil(list.length / 6);
+        galleryPage = Math.min(galleryPage, Math.max(0, pageCount - 1));
+        const cards = list.slice(galleryPage * 6, (galleryPage + 1) * 6).map((t) => {
           const ref = kind + ':' + t.id, on = t.id === curId, usable = RI.canUse(ref, t);
           return '<article class="tcard' + (on ? ' is-current' : '') + '" data-id="' + t.id + '"><div class="tcard__thumb">' + RI.thumbHtml(kind === 'rt' ? 'resume' : 'links', t.id) + (!usable ? '<span class="tcard__lock">' + RI.icon('lock') + '</span>' : '') + (on ? '<span class="tcard__on">' + RI.icon('check') + 'در حال استفاده</span>' : '') + '</div>' +
             '<div class="tcard__body"><div class="tcard__title"><h3>' + t.name + '</h3>' + RI.accessBadge(ref, t) + '</div><p>' + t.desc + '</p><div class="tcard__cats">' + t.cats.map((c) => '<span class="chip">' + CATS.find((x) => x[0] === c)[1] + '</span>').join('') + '</div>' +
             '<div class="tcard__actions"><button type="button" class="btn btn--soft btn--sm" data-try="' + t.id + '">' + RI.icon('eye') + 'پیش‌نمایش</button>' + (on ? '<button type="button" class="btn btn--sm" disabled>' + RI.icon('check') + 'انتخاب‌شده</button>' : '<button type="button" class="btn btn--sm ' + (usable ? 'btn--primary' : 'btn--ice') + '" data-use="' + t.id + '">' + (usable ? 'استفاده' : RI.icon('lock') + (t.subscription ? 'خرید یا اشتراک' : t.access === 'buy' ? 'خرید' : 'اشتراک')) + '</button>') + '</div></div></article>';
         }).join('');
         return '<div class="current"><div><span class="eyebrow">' + RI.icon('check') + 'قالب انتخاب‌شده</span><b>' + cur.name + '</b> ' + RI.accessBadge(kind + ':' + cur.id, cur) + '</div></div>' + filters() +
-          (list.length ? '<div class="tgrid">' + cards + '</div>' : RI.empty({ icon: 'search', title: 'قالبی با این فیلتر پیدا نشد', text: 'فیلتر دسته یا دسترسی را عوض کن', action: '<button type="button" class="btn btn--soft" data-reset>پاک کردن فیلترها</button>' }));
+          (list.length ? '<div class="tgrid">' + cards + '</div>' + (pageCount > 1 ? '<nav class="btnrow gallery-pages" aria-label="صفحه‌های قالب‌ها"><button type="button" class="btn btn--soft" data-gallery-page="'+(galleryPage-1)+'" '+(galleryPage===0?'disabled':'')+'>قبلی</button><span role="status">صفحهٔ '+RI.fa(galleryPage+1)+' از '+RI.fa(pageCount)+'</span><button type="button" class="btn btn--soft" data-gallery-page="'+(galleryPage+1)+'" '+(galleryPage===pageCount-1?'disabled':'')+'>بعدی</button></nav>' : '') : RI.empty({ icon: 'search', title: 'قالبی با این فیلتر پیدا نشد', text: 'فیلتر دسته یا دسترسی را عوض کن', action: '<button type="button" class="btn btn--soft" data-reset>پاک کردن فیلترها</button>' }));
       }
 
       function fonts() {
@@ -85,10 +88,11 @@
       }
       const ro = new ResizeObserver(() => RI.fitThumbs(body)); ro.observe(body);
 
-      RI.delegate(root, 'click', '[data-tab]', (e, b) => { tab = b.dataset.tab; paint(); });
-      RI.delegate(body, 'click', '[data-cat]', (e, b) => { cat = b.dataset.cat; paint(); });
-      RI.delegate(body, 'click', '[data-acc]', (e, b) => { acc = b.dataset.acc; paint(); });
-      RI.delegate(body, 'click', '[data-reset]', () => { cat = 'all'; acc = 'all'; paint(); });
+      RI.delegate(root, 'click', '[data-tab]', (e, b) => { tab = b.dataset.tab; galleryPage = 0; paint(); });
+      RI.delegate(body, 'click', '[data-cat]', (e, b) => { cat = b.dataset.cat; galleryPage = 0; paint(); });
+      RI.delegate(body, 'click', '[data-acc]', (e, b) => { acc = b.dataset.acc; galleryPage = 0; paint(); });
+      RI.delegate(body, 'click', '[data-reset]', () => { cat = 'all'; acc = 'all'; galleryPage = 0; paint(); });
+      RI.delegate(body, 'click', '[data-gallery-page]', (e, b) => { galleryPage = Number(b.dataset.galleryPage); paint(); RI.$('.gallery-pages button:not([disabled])', body)?.focus(); });
       RI.delegate(body, 'click', '[data-use]', (e, b) => choose(tab, b.dataset.use));
       RI.delegate(body, 'click', '[data-try]', (e, b) => {
         const kind = tab === 'rt' ? 'resume' : 'links', list = tab === 'rt' ? RI.RESUME_TEMPLATES : RI.LINK_TEMPLATES, it = list.find((x) => x.id === b.dataset.try);

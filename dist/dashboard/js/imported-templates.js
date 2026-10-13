@@ -17,7 +17,7 @@
   const types = ['text', 'textarea', 'image', 'url', 'link', 'icon', 'percent', 'contact', 'color', 'checkbox', 'select', 'order'];
   RI.importedSpec = function (id) {
     const t = RI.IMPORTED_TEMPLATES[id];
-    if (!t) return null;
+    if (!t) return ['vista','satiar'].includes(id) ? {sections:['contacts','socials'],bodySections:[],requiredSections:[],fields:[],settings:[{key:'reviewed',label:'متن‌ها، تصاویر، آمار و لینک‌های نمونه را بررسی و برای انتشار تأیید کرده‌ام',type:'checkbox',required:true,default:false}]} : null;
     const compose = [['compose_title','عنوان فرم تماس','نوشتن پیام'],['compose_name','برچسب نام فرستنده','نام شما'],['compose_email','برچسب ایمیل فرستنده','ایمیل شما'],['compose_message','برچسب پیام','پیام شما'],['compose_submit','متن دکمهٔ تماس','باز کردن برنامهٔ ایمیل']].map(([key,label,defaultValue])=>({key,label,default:defaultValue,type:'text',max:120,public:true,group:'home:compose'}));
     return { sections: ['contacts', 'socials'], bodySections: [], requiredSections: [], fields: t.fields.concat(compose),
       settings: [{ key: 'reviewed', label: 'متن‌ها، تصاویر، آمار و لینک‌های نمونه را بررسی و برای انتشار تأیید کرده‌ام', type: 'checkbox', required: true, default: false },

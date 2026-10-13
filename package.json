@@ -17,7 +17,7 @@
     "check:oauth": "node tests/oauth-check.cjs",
     "check:security": "node tests/security-check.cjs",
     "test": "npm run check:security && npm run check:auth && npm run check:sms && npm run check:oauth && node tests/dashboard-api-check.cjs && node tests/resume-templates-check.cjs && node tests/imported-templates-check.cjs && node tests/wallet-check.cjs && node tests/dashboard-save-check.cjs",
-    "check:ui": "npm run check:dashboard && npm run check:auth-ui && npm run check:auth-mobile && npm run check:auth-motion && node tests/site-content-check.cjs && node tests/dashboard-public-ui-check.cjs && node tests/imported-templates-ui-check.cjs && node tests/wallet-ui-check.cjs && node tests/dashboard-loading-check.cjs && node tests/dashboard-save-ui-check.cjs"
+    "check:ui": "npm run check:dashboard && npm run check:auth-ui && npm run check:auth-mobile && npm run check:auth-motion && node tests/site-content-check.cjs && node tests/dashboard-public-ui-check.cjs && node tests/imported-templates-ui-check.cjs && node tests/wallet-ui-check.cjs && node tests/dashboard-loading-check.cjs && node tests/dashboard-performance-check.cjs && node tests/dashboard-responsive-check.cjs && node tests/dashboard-save-ui-check.cjs"
   },
   "dependencies": {
     "mysql2": "3.24.5"

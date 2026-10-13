@@ -103,7 +103,7 @@
 
 .page-head { display: flex; align-items: flex-end; gap: var(--s-5); flex-wrap: wrap; margin-bottom: var(--s-6); }
 .page-head__text { flex: 1; min-width: 240px; }
-.page-head h1 { font-size: clamp(24px, 3vw, 32px); font-weight: 800; }
+.page-head h1 { font-size: clamp(22px, 2.1vw, 30px); font-weight: 700; }
 .page-head p { color: var(--ink-2); margin-top: 6px; max-width: 62ch; }
 .page-head__actions { display: flex; gap: 10px; flex-wrap: wrap; }
 .eyebrow { font-size: 12.5px; font-weight: 700; color: var(--bro-600); letter-spacing: .02em; margin-bottom: 6px; display: flex; align-items: center; gap: 6px; }
@@ -154,3 +154,21 @@
 .save-error { margin: 12px clamp(12px, 2.4vw, 32px) 0; padding: 10px 14px; border-radius: var(--r-md); background: var(--err-bg); color: var(--err); display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .save-error[hidden], .save-countdown[hidden] { display: none; }
 .save-error span { flex: 1; min-width: 160px; }
+
+@media (min-width: 961px) { .topbar .topbar__menu { display: none; } }
+@media (max-width: 1366px) {
+  :root { --sidebar-w: 232px; --s-5: 20px; --s-6: 24px; --s-7: 36px; }
+  body { font-size: 14px; }
+  .sidebar { padding: 10px; }
+  .sidebar__glass { padding: 14px 10px 10px; }
+  .brand { padding-bottom: 12px; }
+  .nav__item { padding: 8px 10px; }
+  .view { padding-inline: clamp(16px, 2vw, 28px); }
+  .page-head h1 { font-size: clamp(21px, 2vw, 27px); }
+  .page-head p { font-size: 14px; }
+}
+@media (max-width: 560px) {
+  .page-head { gap: 12px; margin-bottom: 20px; }
+  .page-head h1 { font-size: 21px; }
+  .view { padding-top: 20px; }
+}

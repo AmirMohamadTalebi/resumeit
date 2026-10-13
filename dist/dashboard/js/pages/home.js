@@ -70,10 +70,11 @@
       steps.map((s) => '<li><a href="' + RI.routeUrl(s[3]) + '" data-go="' + s[3] + '"' + (s[4] ? ' data-step="' + s[4] + '"' : '') + '><span class="guide__n">' + s[0] + '</span><span class="guide__t"><b>' + s[1] + '</b><small>' + s[2] + '</small></span>' + RI.icon(s[5]) + '</a></li>').join('') + '</ol></details>';
   }
 
-  /* صحنهٔ استودیو: دو پیش‌نمایش زنده روی هم */
+  /* صحنهٔ استودیو؛ قالب‌های واردشده با تصویر سبک نمایش داده می‌شوند. */
   function stage() {
     const c = RI.C();
-    return '<div class="stage" aria-hidden="true"><div class="stage__desk"><div class="stage__chrome"><i></i><i></i><i></i></div><div class="mini" data-nat="1120" data-h="640"><div class="mini__in">' + RI.resumeHtml(c) + '</div></div></div>' +
+    const resume = ['vista','satiar'].includes(c.theme.resume) ? '<img src="/brand/template-'+c.theme.resume+'-thumb.png" alt="" width="1120" height="800" style="width:1120px;height:800px;object-fit:cover">' : RI.resumeHtml(c);
+    return '<div class="stage" aria-hidden="true"><div class="stage__desk"><div class="stage__chrome"><i></i><i></i><i></i></div><div class="mini" data-nat="1120" data-h="640"><div class="mini__in">' + resume + '</div></div></div>' +
       '<div class="stage__phone"><div class="mini" data-nat="390" data-h="700"><div class="mini__in">' + RI.linksHtml(c) + '</div></div></div></div>';
   }
   function fitMini(root) {
@@ -108,7 +109,7 @@
       fitMini(root);
       const ro = new ResizeObserver(() => fitMini(root));
       ro.observe(root);
-      RI.delegate(root, 'click', '[data-preview]', (e, b) => RI.openPreview(b.dataset.preview));
+      RI.delegate(root, 'click', '[data-preview]', async (e, b) => {try{if(b.dataset.preview==='resume')await RI.loadTemplates([RI.C().theme.resume]);RI.openPreview(b.dataset.preview);}catch(e){RI.toast(e.message,{kind:'error'});}});
       RI.delegate(root, 'click', '[data-publish]', () => RI.go('publish'));
       const offStats=RI.on('stats',()=>{ RI.$('#homeStats',root).innerHTML=sampleStrip(); });
       return () => {offStats(); ro.disconnect();};

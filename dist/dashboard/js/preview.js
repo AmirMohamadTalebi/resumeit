@@ -211,6 +211,7 @@
   let demoC = null;
   RI.demoContent = function () { if (!demoC) demoC = RI.seed('full'); return demoC; };
   RI.thumbHtml = function (kind, tplId, theme) {
+    if(kind==='resume' && ['vista','satiar'].includes(tplId)) return '<img src="/brand/template-'+tplId+'-thumb.png" alt="" loading="lazy" width="400" height="286" style="width:100%;height:100%;object-fit:cover;object-position:top">';
     const c = RI.demoContent();
     const html = kind === 'resume' ? RI.resumeHtml(c, { theme: Object.assign({ resume: tplId }, theme || {}) }) : RI.linksHtml(c, { theme: Object.assign({ links: tplId }, theme || {}) });
     const isolated = kind === 'resume' && RI.IMPORTED_TEMPLATES && RI.IMPORTED_TEMPLATES[tplId];

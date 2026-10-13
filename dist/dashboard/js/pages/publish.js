@@ -96,7 +96,7 @@
         const all = RI.readiness(); const it = all.resume.concat(all.links).find((x) => x.id === b.dataset.fix);
         if (it.route === 'publish') { tab = it.anchor === 'share' ? 'share' : 'address'; paint(); if (tab === 'address') RI.$('#slug', body).focus(); } else RI.go(it.route, { step: it.step, tab: it.tab });
       });
-      RI.delegate(body, 'click', '[data-pv]', (e, b) => RI.openPreview(b.dataset.pv, { title: 'پیش‌نمایش قبل از انتشار' }));
+      RI.delegate(body, 'click', '[data-pv]', async (e, b) => {try{if(b.dataset.pv==='resume')await RI.loadTemplates([RI.C().theme.resume]);RI.openPreview(b.dataset.pv, { title: 'پیش‌نمایش قبل از انتشار' });}catch(e){RI.toast(e.message,{kind:'error'});}});
       RI.delegate(body, 'click', '[data-pub]', async (e, b) => {
         const k = b.dataset.pub;
         if ((RI.state.ui.dirty || RI.state.ui.saving) && !(await RI.save())) return;
