@@ -116,7 +116,7 @@
 
 .pstat-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s-4); }
 @media (max-width: 800px) { .pstat-grid { grid-template-columns: 1fr; } }
-.pstat { display: grid; gap: 14px; padding: var(--s-5); border-radius: var(--r-lg); border: 1px solid #fff; box-shadow: var(--glass-sh); }
+.pstat { display: grid; grid-template-columns: minmax(0, 1fr); min-width: 0; gap: 14px; padding: var(--s-5); border-radius: var(--r-lg); border: 1px solid #fff; box-shadow: var(--glass-sh); }
 .pstat--ice { background: linear-gradient(160deg, rgba(219,231,237,.85), rgba(255,255,255,.7)); }
 .pstat--bro { background: linear-gradient(160deg, rgba(242,230,218,.9), rgba(255,255,255,.7)); }
 .pstat__head { display: flex; gap: 12px; align-items: center; }
