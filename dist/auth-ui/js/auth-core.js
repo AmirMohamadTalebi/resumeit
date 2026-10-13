@@ -167,9 +167,9 @@
   RIA.successHtml = (o) => '<div class="done"><div class="done__art">' + RIA.icon(o.icon || 'check') + '</div><h1 data-focus>' + o.title + '</h1><p>' + o.text + '</p>' + (o.note ? '<div class="note">' + RIA.icon('info') + '<span>' + o.note + '</span></div>' : '') + o.actions + '</div>';
   RIA.enterDashboard = function (card, view, o) {
     RIA.swap(view, RIA.successHtml({ icon: 'check', title: o.title, text: o.text, note: o.note, actions: '<button type="button" class="btn btn--primary btn--block" id="goDash">' + RIA.icon('rocket') + 'ورود به داشبورد</button>' }), (r) => {
-      $('#goDash', r).addEventListener('click', async (e) => {
-        const b = RIA.busy(card, 'در حال آماده‌سازی داشبورد…');
-        try { await RIA.api.enterDashboard(); b.done(); window.location.href = RIA.cfg.dashboardUrl; } catch (er) { b.done(); RIA.toast(er.message, 'error'); }
+      $('#goDash', r).addEventListener('click', (e) => {
+        e.currentTarget.disabled=true;
+        window.location.assign(RIA.cfg.dashboardUrl);
       });
     });
   };
