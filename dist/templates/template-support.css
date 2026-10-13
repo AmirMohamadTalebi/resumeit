@@ -1,0 +1,31 @@
+/* Keep the supplied designs, replacing plugin-dependent visibility and navigation. */
+.ri-imported { min-height:100vh; direction:rtl; }
+html,body{height:auto!important;min-height:100vh;overflow-y:auto!important}
+.ri-imported .preloader{display:none!important}
+.ri-imported .nav-menu.ri-menu-open{pointer-events:auto!important;opacity:1!important;transform:none!important}
+.ri-imported .mobile-nav-panel.ri-menu-open{transform:none!important;visibility:visible!important;opacity:1!important;pointer-events:auto!important}
+.ri-imported .header-nav li:focus-within>ul{display:block!important;visibility:visible!important;opacity:1!important}
+.ri-imported a:focus-visible,.ri-imported button:focus-visible{outline:3px solid #f7ac57!important}
+.ri-template-nav,.ri-template-contact,.ri-template-brand{position:relative;z-index:20;padding:16px 24px;background:#132039;color:#fff;font:14px Tahoma,sans-serif;display:flex;gap:18px;flex-wrap:wrap;align-items:center}
+.ri-template-nav a,.ri-template-contact a,.ri-template-brand a{color:inherit;text-decoration:underline;text-underline-offset:4px}
+.ri-template-contact h2{font-size:20px;width:100%;margin:0}
+.ri-compose{display:grid;gap:10px;width:100%;max-width:640px;margin-top:20px}
+.ri-compose input,.ri-compose textarea{font:inherit;padding:12px;border-radius:8px;border:1px solid #8194ae;background:#fff;color:#132039;min-width:0}
+.ri-compose button{font:inherit;padding:12px;border-radius:8px;border:1px solid #8194ae;background:#fff;color:#132039;cursor:pointer}
+.ri-imported a:focus-visible,.ri-imported button:focus-visible{outline:3px solid #f7ac57;outline-offset:4px}
+.ri-imported .elementor-invisible{visibility:visible!important}
+.ri-imported .owl-carousel{display:flex!important;overflow:auto;gap:20px;scroll-snap-type:x proximity}
+.ri-imported .owl-carousel>*{min-width:280px;scroll-snap-align:start}
+.ri-imported .swiper-wrapper{height:auto;overflow:auto}
+.ri-imported .swiper-slide{flex-shrink:0}
+.ri-imported .skeleton-bg{animation:none!important}
+.ri-imported .animated-placeholder{opacity:1!important;visibility:visible!important}
+.ri-imported .pages-stack{position:relative!important;height:auto!important;overflow:visible!important}
+.ri-imported .pages-stack>.page{position:relative!important;inset:auto!important;transform:none!important;visibility:visible!important;opacity:1!important;min-height:100vh;height:auto!important;overflow:visible!important;display:block!important}
+.ri-imported .pages-stack .page>.elementor{max-width:100%}
+.ri-imported .elementor-form{display:none}
+.ri-imported-body{height:auto!important;overflow:visible!important;position:relative!important}
+.ri-imported .pages-stack{pointer-events:auto!important;perspective:none!important;transform-style:flat!important}
+.ri-imported [hidden]{display:none!important}
+@media(max-width:767px){.ri-imported .pages-stack{margin-right:0!important}.ri-template-nav,.ri-template-contact{padding:12px 16px}.ri-imported .swiper-slide{max-width:90vw}}
+@media(prefers-reduced-motion:reduce){.ri-imported *{animation:none!important;transition:none!important;scroll-behavior:auto!important}}

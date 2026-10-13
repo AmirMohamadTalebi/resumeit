@@ -80,6 +80,7 @@
     const theme = Object.assign({}, c.theme, o.theme || {});
     const t = RI.findTemplate('resume', theme.resume);
     const spec = RI.resumeSpec(theme.resume), templateValues = RI.resumeValues(c, theme.resume);
+    if (RI.IMPORTED_TEMPLATES && RI.IMPORTED_TEMPLATES[theme.resume]) return RI.importedHtml(c, { theme, spec, values: templateValues, publicBase: o.publicBase, page: o.page });
     if (RI.RESUME_RENDERERS[theme.resume]) return RI.RESUME_RENDERERS[theme.resume](c, { theme, spec, values: templateValues, publicBase: o.publicBase });
     const p = c.profile;
     const vis = (k) => { const s = c.sections.find((x) => x.key === k); return spec.sections.includes(k) && (!s || s.visible); };
@@ -129,7 +130,7 @@
   const NAT = { mobile: [390, 780], desktop: [1120, 700] };
 
   RI.Preview = function (host, o) {
-    const st = { kind: o.kind || 'resume', device: o.device || 'mobile' };
+    const st = { kind: o.kind || 'resume', device: o.device || 'mobile', templatePage: 'home' };
     host.classList.add('pvhost');
     host.innerHTML =
       '<div class="pvhost__bar">' + (o.toolbar === false ? '' :
@@ -156,7 +157,15 @@
       const c = o.content ? o.content() : RI.C();
       const top = vp.scrollTop;
       const theme = o.theme ? o.theme() : null;
-      vp.innerHTML = st.kind === 'resume' ? RI.resumeHtml(c, { theme: theme }) : RI.linksHtml(c, { theme: theme });
+      const html = st.kind === 'resume' ? RI.resumeHtml(c, { theme: theme, page: st.templatePage }) : RI.linksHtml(c, { theme: theme });
+      const imported = st.kind === 'resume' && RI.IMPORTED_TEMPLATES && RI.IMPORTED_TEMPLATES[(theme || c.theme).resume];
+      if (imported) {
+        const frame = document.createElement('iframe'); frame.title = 'پیش‌نمایش قالب رزومه'; frame.setAttribute('sandbox', 'allow-same-origin');
+        frame.style.cssText = 'width:100%;height:100%;border:0;display:block;background:#fff';
+        frame.srcdoc = '<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body style="margin:0">' + html + '</body></html>';
+        frame.addEventListener('load', () => { const doc = frame.contentDocument; if (!doc) return; RI.bindImportedPage(doc, (id) => { frame.contentWindow.scrollTo(0, 0); frame.srcdoc = frame.srcdoc.replace(/<body[\s\S]*<\/body>/, '<body style="margin:0">' + RI.resumeHtml(c, { theme, page: id }) + '</body>'); }); });
+        vp.replaceChildren(frame);
+      } else vp.innerHTML = html;
       vp.scrollTop = top;
       const u = RI.urls();
       urlEl.textContent = st.kind === 'resume' ? u.resume : u.links;
@@ -173,6 +182,7 @@
     });
     const api = {
       refresh: render,
+      setTemplatePage(id) { st.templatePage = id; render(false); },
       setDevice(d) {
         if (d === st.device) return;
         st.device = d;
@@ -203,7 +213,9 @@
   RI.thumbHtml = function (kind, tplId, theme) {
     const c = RI.demoContent();
     const html = kind === 'resume' ? RI.resumeHtml(c, { theme: Object.assign({ resume: tplId }, theme || {}) }) : RI.linksHtml(c, { theme: Object.assign({ links: tplId }, theme || {}) });
-    return '<div class="thumb thumb--' + kind + '" aria-hidden="true"><div class="thumb__scaler">' + html + '</div></div>';
+    const isolated = kind === 'resume' && RI.IMPORTED_TEMPLATES && RI.IMPORTED_TEMPLATES[tplId];
+    const content = isolated ? '<iframe sandbox="" tabindex="-1" title="نمونه قالب" style="width:1120px;height:800px;border:0;pointer-events:none" srcdoc="' + esc('<!doctype html><html lang="fa" dir="rtl"><body style="margin:0">' + html + '</body></html>') + '"></iframe>' : html;
+    return '<div class="thumb thumb--' + kind + '" aria-hidden="true"><div class="thumb__scaler">' + content + '</div></div>';
   };
   RI.fitThumbs = function (root) {
     RI.$$('.thumb', root).forEach((t) => {

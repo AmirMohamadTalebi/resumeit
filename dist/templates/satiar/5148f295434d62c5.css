@@ -1,0 +1,29 @@
+.sidebar-posts {
+  gap: 8px;
+  margin-bottom: 0;
+}
+.sidebar-posts li {
+  display: flex;
+  gap: 8px;
+  list-style: none;
+}
+.sidebar-posts li img {
+  width: 50px;
+  height: 50px;
+  border-radius: 3px;
+}
+.sidebar-posts li .details a {
+  transition: all 0.3s;
+}
+.sidebar-posts li .details a h2 {
+  font-size: 14px;
+}
+.sidebar-posts li .details a:hover {
+  color: var(--satiar-color-main);
+}
+.sidebar-posts li .details .date {
+  font-size: 11px;
+  color: var(--satiar-color-white-gray);
+}
+
+/*# sourceMappingURL=satiar-sidebar-posts.css.map */

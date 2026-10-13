@@ -20,6 +20,8 @@
   /* ---------- قالب‌ها ---------- */
   /* access: free | buy (خرید یک‌بارهٔ نمایشی) | sub (با اشتراک) */
   RI.RESUME_TEMPLATES = [
+    { id: 'vista', name: 'ویستا', cats: ['dev', 'creator'], access: 'free', layout: 'hero', desc: 'قالب ویستای ارسالی؛ رزومه، نمونه‌کار، مقاله و صفحات اختصاصی قابل ویرایش.', v: { bg: '#0c1117', surface: '#131b25', ink: '#f5f7fa', muted: '#a2adbb', accent: '#9bf27d', accent2: '#85d3ef', hero: '#131b25', line: '#25303f' } },
+    { id: 'satiar', name: 'ساتیار', cats: ['creator', 'dev'], access: 'free', layout: 'hero', desc: 'قالب ساتیار ارسالی؛ معرفی، خدمات، رزومه، تعرفه‌ها و بخش‌های قابل شخصی‌سازی.', v: { bg: '#001035', surface: '#142b56', ink: '#ffffff', muted: '#adb8d0', accent: '#fe8b45', accent2: '#905bf5', hero: '#142b56', line: '#304365' } },
     { id: 'glacier', name: 'یخچال', cats: ['student', 'dev', 'creator'], access: 'free', layout: 'side', desc: 'دو ستونی، روشن و منظم؛ انتخاب امن برای شروع.',
       v: { bg: '#eef4f7', surface: '#ffffff', ink: '#1d2c36', muted: '#5a7080', accent: '#52788d', accent2: '#a47248', hero: 'linear-gradient(135deg,#cfe0e8,#eef4f7)', line: '#d5e3ea' } },
     { id: 'campus', name: 'پردیس', cats: ['student'], access: 'free', layout: 'stack', desc: 'تک‌ستونی و گرم، مناسب دانشجو و دانش‌آموز.',

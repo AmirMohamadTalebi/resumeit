@@ -1,8 +1,11 @@
 const fs = require('node:fs/promises');
 const path = require('node:path');
+const {gzipSync}=require('node:zlib');
 const { securityHeaders } = require('./security.cjs');
 const root = path.resolve(__dirname, '../../dist');
+const compressedTemplates=new Map();
 const mime = { '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8', '.js': 'application/javascript', '.mjs': 'application/javascript', '.woff2': 'font/woff2', '.svg': 'image/svg+xml', '.txt': 'text/plain; charset=utf-8', '.xml': 'application/xml; charset=utf-8', '.jpg': 'image/jpeg', '.png': 'image/png', '.webp': 'image/webp', '.ico': 'image/x-icon' };
+Object.assign(mime,{'.jpeg':'image/jpeg','.gif':'image/gif','.woff':'font/woff','.ttf':'font/ttf'});
 
 function requestPath(url) {
   const raw = url.split('?')[0];
@@ -15,6 +18,10 @@ function requestPath(url) {
 async function serveStatic(req, res, pathname, origin, account) {
   const send = (status, body, type = 'text/plain; charset=utf-8') => {
     if (type.startsWith('text/html')) securityHeaders(res, origin, body.toString('utf8'), pathname.startsWith('/demo/'));
+    if (pathname.startsWith('/dashboard/js/template-') && /\bgzip\b/.test(req.headers['accept-encoding'] || '') && body.length>1024) {
+      let cached=compressedTemplates.get(pathname);if(!cached||!cached.source.equals(body)){cached={source:body,body:gzipSync(body)};if(compressedTemplates.size>=4)compressedTemplates.delete(compressedTemplates.keys().next().value);compressedTemplates.set(pathname,cached);}
+      body=cached.body;res.setHeader('Content-Encoding','gzip');res.setHeader('Vary','Accept-Encoding');
+    }
     res.writeHead(status, { 'Content-Type': type, 'Content-Length': Buffer.byteLength(body) });
     res.end(req.method === 'HEAD' ? undefined : body);
   };

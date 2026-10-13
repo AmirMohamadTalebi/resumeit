@@ -1,0 +1,167 @@
+@font-face {
+    font-family: 'Emkan';
+    src: url("/templates/satiar/9b09c13229093172.woff2") format('woff2');
+    font-display: swap;
+    font-weight: 100;
+}
+
+@font-face {
+    font-family: 'Emkan';
+    src: url("/templates/satiar/34ebc8042bfc1207.woff2") format('woff2');
+    font-display: swap;
+    font-weight: 200;
+}
+
+@font-face {
+    font-family: 'Emkan';
+    src: url("/templates/satiar/3fab1906b5516427.woff2") format('woff2');
+    font-display: swap;
+    font-weight: 400;
+}
+
+@font-face {
+    font-family: 'Emkan';
+    src: url("/templates/satiar/9e4cf3489b0badab.woff2") format('woff2');
+    font-display: swap;
+    font-weight: 700;
+}
+
+@font-face {
+    font-family: 'Emkan';
+    src: url("/templates/satiar/79388cd944d6c9b2.woff2") format('woff2');
+    font-display: swap;
+    font-weight: 900;
+}
+@font-face {
+    font-display: swap;
+    font-family: Dana;
+    font-style: normal;
+    font-weight: 10;
+    src: url("/templates/satiar/e1606c51872685f7.woff2") format('woff2');
+}
+@font-face {
+    font-display: swap;
+    font-family: Dana;
+    font-style: normal;
+    font-weight: 100;
+    src: url("/templates/satiar/e0bf546bdfa506ec.woff2") format('woff2');
+}
+@font-face {
+    font-display: swap;
+    font-family: Dana;
+    font-style: normal;
+    font-weight: 200;
+    src: url("/templates/satiar/67853f6ff39c0188.woff2") format('woff2');
+}
+@font-face {
+    font-display: swap;
+    font-family: Dana;
+    font-style: normal;
+    font-weight: 300;
+    src: url("/templates/satiar/9ecc8af4e7b1844b.woff2") format('woff2');
+}
+@font-face {
+    font-display: swap;
+    font-family: Dana;
+    font-style: normal;
+    font-weight: 500;
+    src: url("/templates/satiar/3f367f12f1a9052a.woff2") format('woff2');
+}
+@font-face {
+    font-display: swap;
+    font-family: Dana;
+    font-style: normal;
+    font-weight: 600;
+    src: url("/templates/satiar/a7cec69854f12baf.woff2") format('woff2');
+}
+@font-face {
+    font-display: swap;
+    font-family: Dana;
+    font-style: normal;
+    font-weight: 800;
+    src: url("/templates/satiar/3ade7dddf8d462da.woff2") format('woff2');
+}
+@font-face {
+    font-display: swap;
+    font-family: Dana;
+    font-style: normal;
+    font-weight: 900;
+    src: url("/templates/satiar/097cfe86d832c73b.woff2") format('woff2');
+}
+@font-face {
+    font-display: swap;
+    font-family: Dana;
+    font-style: normal;
+    font-weight: bold;
+    src: url("/templates/satiar/b2f6441c42608d30.woff2") format('woff2');
+}
+@font-face {
+    font-display: swap;
+    font-family: Dana;
+    font-style: normal;
+    font-weight: normal;
+    src: url("/templates/satiar/3f8bb8471e71f77c.woff2") format('woff2');
+}
+
+
+@font-face {
+    font-family: 'IranSans';
+    src: url("/templates/satiar/941408b9bbc70697.woff2") format('woff2');
+    font-display: swap;
+    font-weight: normal;
+}
+@font-face {
+    font-family: 'IranSans';
+    src: url("/templates/satiar/eec502e9eae4f2b2.woff2") format('woff2');
+    font-display: swap;
+    font-weight: bold;
+}
+
+@font-face {
+    font-family: 'IRANYekan';
+    src: url("/templates/satiar/47eb7f0af00a4122.woff2") format('woff2');
+    font-display: swap;
+    font-weight: normal;
+}
+@font-face {
+    font-family: 'IRANYekan';
+    src: url("/templates/satiar/c3ddd2c4f2ef5ef3.woff2") format('woff2');
+    font-display: swap;
+    font-weight: bold;
+}
+
+@font-face {
+    font-display: swap;
+    font-family: Morabba;
+    font-style: normal;
+    font-weight: 200;
+    src: url("/templates/satiar/9cad6903d19f2ffa.woff") format('woff'),
+    url("/templates/satiar/91ba5f74b08c4931.woff2") format('woff2');
+}
+
+@font-face {
+    font-display: swap;
+    font-family: Morabba;
+    font-style: normal;
+    font-weight: 900;
+    src: url("/templates/satiar/1f01b43753e14aea.woff") format('woff'),
+    url("/templates/satiar/267b57106cccc62b.woff2") format('woff2');
+}
+
+@font-face {
+    font-display: swap;
+    font-family: Morabba;
+    font-style: normal;
+    font-weight: bold;
+    src: url("/templates/satiar/b7b793fb9afe33dc.woff") format('woff'),
+    url("/templates/satiar/eeb9c637ad46d35f.woff2") format('woff2');
+}
+
+@font-face {
+    font-display: swap;
+    font-family: Morabba;
+    font-style: normal;
+    font-weight: normal;
+    src: url("/templates/satiar/bde412b0def39fa5.woff") format('woff'),
+    url("/templates/satiar/5279be4b2d89d5b5.woff2") format('woff2');
+}

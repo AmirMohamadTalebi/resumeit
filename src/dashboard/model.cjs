@@ -16,7 +16,12 @@ function shape(value,sample,key=''){
   if(typeof value!==typeof sample||(typeof value==='number'&&!Number.isFinite(value))||(typeof value==='string'&&(value.length>10000||/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/.test(value))))fail('مقدار واردشده معتبر نیست');
   if(key==='id'&&!/^[a-z0-9_-]{1,64}$/i.test(value))fail('شناسه معتبر نیست');if(key==='level'&&(!Number.isInteger(value)||value<1||value>5))fail('سطح باید بین ۱ و ۵ باشد');return value;
 }
-function content(input){const c=shape(input,blank());c.resumeTemplates=RI.validateResumeValues(input.resumeTemplates||{});if(c.slug&&!slugValid(c.slug))fail('نام صفحه معتبر نیست یا رزرو شده است');
+function content(input){const c=shape(input,blank());c.resumeTemplates=RI.validateResumeValues(input.resumeTemplates||{});
+  for(const [id,entry] of Object.entries(c.resumeTemplates)){
+    const spec=RI.resumeSpec(id),check=values=>{for(const [key,value]of Object.entries(values)){const f=spec.fields.concat(spec.settings).find(x=>x.key===key);if(f?.type==='image'&&value&&!/^\/templates\/(vista|satiar)\/[a-f0-9]{16}\.(png|jpg|jpeg|webp|svg|gif)$/.test(value))image(value,'avatar');}};
+    check(entry.fields);check(entry.settings);for(const rows of Object.values(entry.collections||{}))for(const row of rows)check(row.fields);
+  }
+  if(c.slug&&!slugValid(c.slug))fail('نام صفحه معتبر نیست یا رزرو شده است');
   for(const key of Object.keys(templates)){const list=key==='items'?c.links.items:c[key];if(new Set(list.map(x=>x.id||x.key)).size!==list.length)fail('شناسه‌های تکراری در فهرست');}
   if(c.sections.some(s=>!blank().sections.some(x=>x.key===s.key)))fail('بخش ناشناخته');
   if(c.contacts.some(x=>!['email','phone','website'].includes(x.type)))fail('نوع تماس معتبر نیست');

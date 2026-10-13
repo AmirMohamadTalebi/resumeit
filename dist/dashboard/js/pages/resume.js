@@ -93,6 +93,7 @@
       }
 
       function templatePanel() {
+        if (RI.IMPORTED_TEMPLATES && RI.IMPORTED_TEMPLATES[RI.C().theme.resume]) return RI.importedEditorHtml();
         const t = RI.findTemplate('resume', RI.C().theme.resume), values = RI.resumeValues(RI.C());
         return '<div class="panel"><div class="panel__head"><h2>اطلاعات و تنظیمات «' + esc(t.name) + '»</h2><p>اطلاعات هر قالب جدا ذخیره می‌شود؛ با تغییر قالب از بین نمی‌رود. فقط فیلدهایی که «عمومی» هستند نمایش داده می‌شوند.</p></div>' + ['fields', 'settings'].map(group => spec[group].map(f => {
           const value = RI.resumeValue(values[group] || {}, f), id = 'template-' + group + '-' + f.key;
@@ -130,6 +131,7 @@
 
       function bindPanel() {
         const c = RI.C(), p = c.profile;
+        if (step === 'template' && RI.IMPORTED_TEMPLATES && RI.IMPORTED_TEMPLATES[c.theme.resume]) RI.mountImportedEditor(body, pv);
         if (step === 'profile') {
           const panel = RI.$('#panel', root);
           RI.delegate(panel,'click','[data-account-phone]',()=>RI.phoneDialog());
