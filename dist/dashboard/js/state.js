@@ -147,7 +147,7 @@
         do{
           saveAgain=false;
           const snapshot=JSON.stringify(RI.C()),indexing=RI.state.account.indexing;
-          let doc;const base=JSON.parse(RI.saved),content=JSON.parse(snapshot),patch=Object.fromEntries(Object.entries(content).filter(([key,value])=>JSON.stringify(value)!==JSON.stringify(base[key])));
+          let doc;const base=JSON.parse(RI.saved),content=JSON.parse(snapshot),patch=RI.revision===0?content:Object.fromEntries(Object.entries(content).filter(([key,value])=>JSON.stringify(value)!==JSON.stringify(base[key])));
           try{doc=await RI.dashboardRequest('save',{revision:RI.revision,patch,preferences:{indexing},compact:true});}
           catch(e){if(!recovered&&['REVISION_CONFLICT','NETWORK_ERROR'].includes(e.code)){recovered=true;await recoverVersion(e);saveAgain=true;continue;}throw e;}
           RI.revision=doc.revision;RI.saved=JSON.stringify(doc.content||JSON.parse(snapshot));RI.savedSlug=doc.slug||'';RI.savedIndexing=doc.preferences.indexing;
