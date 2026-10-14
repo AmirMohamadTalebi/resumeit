@@ -89,4 +89,4 @@
 @media(prefers-reduced-motion:reduce){.letter-r{opacity:1;transform:none}}
 
 .footer-enamad{flex:0 0 120px}.footer-enamad a{display:inline-flex;align-items:center;justify-content:center;width:120px;min-height:120px}.footer-enamad img{display:block;max-width:120px;height:auto}
-@media(max-width:760px){.footer-note{flex-wrap:wrap}.footer-identity{min-width:0}.footer-bottom>div{flex-wrap:wrap}}
+@media(max-width:760px){.footer-note{flex-wrap:wrap}.footer-identity{min-width:0;padding-left:0}.footer-enamad{order:4}.footer-bottom>div{flex-wrap:wrap}}
