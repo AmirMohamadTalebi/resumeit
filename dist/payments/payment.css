@@ -21,3 +21,5 @@
 @media print{body{background:white}.payment-panel--invoice{max-width:none;margin:0;padding:0;border:0;background:white}.invoice-top,.invoice-payment,.result-actions,script,.payment-result:not(.payment-result--success){display:none}.invoice-layout,.result-details{display:block}.invoice-bank{break-inside:avoid}.invoice-paper{border:1px solid #ddd;break-inside:avoid}.payment-brand{margin-bottom:12px}.checkout-title{margin:18px 0}.payment-result{padding:12px}.invoice-meta dd{font-size:12px}.payment-panel p{color:#333}}
 
 .invoice-consent .checkbox{border-radius:4px}.invoice-badge--paid{background:#e8f3ec;color:#236447}
+
+.payment-version{margin-top:24px;text-align:center;font-size:11px;color:var(--ink-2)}@media print{.payment-version{display:none}}

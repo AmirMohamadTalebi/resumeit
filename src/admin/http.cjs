@@ -1,13 +1,13 @@
 const { readJson } = require("../http/security.cjs");
 const { isAdmin } = require("./access.cjs");
 const { RI } = require("../dashboard/render.cjs");
-const { version } = require("../version.cjs");
+const { version,displayVersion } = require("../version.cjs");
 const started = Date.now();
 function adminHandler(database, auth) {
   return async (req, res, path, origin) => {
     if (path === "/api/version" && req.method === "GET") {
       res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
-      res.end(JSON.stringify({ version }));
+      res.end(JSON.stringify({ version,displayVersion }));
       return true;
     }
     if (!path.startsWith("/api/admin/")) return false;
@@ -64,6 +64,7 @@ function adminHandler(database, auth) {
         else if (path === "/api/admin/health")
           reply(200, {
             version,
+            displayVersion,
             uptime: Date.now() - started,
             origin: process.env.PUBLIC_ORIGIN || origin,
             database: "متصل",

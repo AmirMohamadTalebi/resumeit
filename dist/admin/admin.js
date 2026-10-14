@@ -524,7 +524,7 @@
       ]) +
       '</section><section class="panel"><h2>نسخه و محدودیت‌ها</h2>' +
       summary([
-        ["نسخه", '<span class="ltr">' + esc(d.version) + "</span>"],
+        ["نسخه", '<span class="ltr">' + esc(d.displayVersion||d.version) + "</span>"],
         ["زمان فعالیت سرور", fa(Math.floor(d.uptime / 60000)) + " دقیقه"],
         ["سقف روزانهٔ OTP", fa(d.limits.otpDaily)],
         ["سقف روزانهٔ هر شماره", fa(d.limits.phoneDaily)],

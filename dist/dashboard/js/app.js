@@ -166,7 +166,7 @@
       const choice=RI.modal({title:'کدام پنل را باز کنیم؟',body:'<p>با این حساب به پنل کاربری و مدیریت دسترسی داری. هر زمان خواستی از منوی پنل می‌توانی جابه‌جا شوی.</p>',size:'sm'});
       choice.setActions([{label:'پنل کاربری',kind:'ghost',onClick:()=>sessionStorage.setItem('ri-panel-choice',user.id)},{label:'پنل مدیریت',kind:'primary',onClick:()=>{sessionStorage.setItem('ri-panel-choice',user.id);location.assign('/admin/');}}]);
     }
-    fetch('/api/version',{cache:'no-store'}).then(r=>r.json()).then(v=>{RI.$$('[data-site-version]').forEach(el=>el.textContent='نسخهٔ '+v.version);}).catch(()=>{});
+    fetch('/api/version',{cache:'no-store'}).then(r=>r.json()).then(v=>{RI.$$('[data-site-version]').forEach(el=>el.textContent='نسخهٔ '+(v.displayVersion||v.version));}).catch(()=>{});
     paintSave();
     RI.on('save', paintSave);
     RI.on('change', paintAccount);
