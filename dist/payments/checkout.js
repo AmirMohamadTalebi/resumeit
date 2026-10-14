@@ -2,7 +2,7 @@
   'use strict';
   const error=document.querySelector('#invoice-error'),form=document.querySelector('#invoice-pay'),result=document.querySelector('[data-order]');
   const show=message=>{error.textContent=message;error.hidden=false;};
-  async function request(path,body){const response=await fetch('/api/payments/'+path,{method:body?'POST':'GET',credentials:'same-origin',headers:body?{'Content-Type':'application/json'}:{},body:body?JSON.stringify(body):undefined,signal:AbortSignal.timeout(20000)});const data=await response.json();if(!response.ok)throw Error(data.error||'درخواست انجام نشد');return data;}
+  async function request(path,body){const response=await fetch('/api/payments/'+path,{method:body?'POST':'GET',credentials:'same-origin',headers:body?{'Content-Type':'application/json'}:{},body:body?JSON.stringify(body):undefined,signal:AbortSignal.timeout(20000)});if(!response.headers.get('content-type')?.includes('application/json'))throw Error('پاسخ معتبر از سرویس پرداخت دریافت نشد؛ پیش از تلاش دوباره، وضعیت پرداخت را در کیف پول بررسی کن');let data;try{data=await response.json();}catch{throw Error('پاسخ سرویس پرداخت ناقص است؛ وضعیت پرداخت را در کیف پول بررسی کن');}if(!response.ok)throw Error(data.error||'درخواست انجام نشد');return data;}
   document.querySelector('[data-print]')?.addEventListener('click',()=>window.print());
   form?.addEventListener('submit',async event=>{
     event.preventDefault();const button=document.querySelector('#invoice-submit');if(button.disabled||!form.reportValidity())return;

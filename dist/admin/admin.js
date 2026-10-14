@@ -682,9 +682,15 @@
     $("#admin-name").textContent =
       [user.first_name, user.last_name].filter(Boolean).join(" ") ||
       "مدیر ResumeIt";
-    const groups=[['پیگیری و رشد',['overview','users','pages','traffic']],['اعتبار و دسترسی',['transactions','payments','purchases','catalog']],['نظارت و سرویس‌ها',['otp','audit','health']]];
+    const groups=[['دید کلی',['overview','traffic']],['حساب‌ها و محتوا',['users','pages']],['مالی و فروش',['payments','transactions','purchases']],['محصول و ظاهر',['catalog']],['امنیت و سرویس‌ها',['otp','audit','health']]];
     $("#admin-nav").innerHTML=groups.map(([label,ids])=>'<ul class="menu"><li class="menu-title">'+label+'</li>'+ids.map(id=>'<li><a href="'+(id==='overview'?'/admin/':'/admin/'+id+'/')+'" '+(id===section?'aria-current="page"':'')+'>'+icon(sections[id][1])+'<span>'+sections[id][0]+'</span></a></li>').join('')+'</ul>').join('');
     $("#admin-menu").innerHTML = icon("menu");
+    const topnav=document.createElement('nav');topnav.className='admin-topnav';topnav.setAttribute('aria-label','دسترسی سریع مدیریت');topnav.append($('#admin-menu'));
+    for(const id of ['overview','users','pages','payments','health']){const a=document.createElement('a');a.href=id==='overview'?'/admin/':'/admin/'+id+'/';a.innerHTML=icon(sections[id][1])+'<span>'+sections[id][0]+'</span>';if(id===section)a.setAttribute('aria-current','page');topnav.append(a);}
+    $('.admin-head').after(topnav);$('#admin-menu').setAttribute('aria-controls','admin-side');$('#admin-menu').title='باز و بسته کردن منوی مدیریت';
+    $('#admin-close').innerHTML=icon('close');
+    $('.admin-payment').textContent='درگاه‌های بانکی';
+    api('health').then(data=>{const gateways=data.gateways||data.data?.gateways||[];const enabled=gateways.filter(g=>g.enabled);$('.admin-payment').textContent=enabled.length?'درگاه تنظیم‌شده: '+enabled.map(g=>g.id==='zibal'?'زیبال':'سپ').join('، '):'درگاه بانکی تنظیم نشده';}).catch(()=>{});
     $("#search-wrap").hidden = ![
       "users",
       "pages",
@@ -750,11 +756,13 @@
       $("#admin-side").dataset.open = open;
       $("#admin-backdrop").dataset.open = open;
       $("#admin-menu").setAttribute("aria-expanded", String(open));
-      if (open) $("#admin-close").focus();
+      $('.admin-shell').classList.toggle('admin-compact',!open&&!mobile.matches);
+      $('#admin-menu').setAttribute('aria-label',open?'جمع کردن منوی مدیریت':'باز کردن منوی مدیریت');
+      if (open&&mobile.matches) $("#admin-close").focus();
       else if (mobile.matches && wasOpen) $("#admin-menu").focus();
     };
-    drawer(false);
-    mobile.addEventListener("change", () => drawer(false));
+    drawer(!mobile.matches);
+    mobile.addEventListener("change", () => drawer(!mobile.matches));
     $("#admin-close").onclick = () => drawer(false);
     $("#admin-menu").onclick = () =>
       drawer($("#admin-side").dataset.open !== "true");

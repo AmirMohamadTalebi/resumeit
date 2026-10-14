@@ -21,11 +21,11 @@
       '<nav class="nav" aria-label="بخش‌های داشبورد">' + NAV.map(g => '<ul class="menu nav__group"><li class="menu-title nav__label">'+g.group+'</li>'+g.items.map(i=>'<li><a class="nav__item" href="'+RI.routeUrl(i[0])+'" data-route="'+i[0]+'">'+RI.icon(i[2])+'<span>'+i[1]+'</span></a></li>').join('')+'</ul>').join('')+'</nav>' +
       '<div class="sidebar__foot">'+(acc.isAdmin?'<a class="panel-switch" href="/admin/">'+RI.icon('shield')+'<span>ورود به مدیریت</span>'+RI.icon('chevL')+'</a>':'')+'<a class="panel-help" href="/contact/">'+RI.icon('help')+'راهنما و پشتیبانی</a><button type="button" class="account-btn" id="accountBtn" aria-haspopup="menu"><img class="avatar" id="accAvatar" alt="" src="/brand/resumeit-mark-v1.png"><span><span class="account-btn__name" id="accName"></span><br><span class="account-btn__sub">تنظیمات و خروج</span></span>'+RI.icon('chevL')+'</button><small data-site-version></small></div></div>';
     RI.$('#bottomNav').innerHTML = BOTTOM.map(i=>'<a href="'+RI.routeUrl(i[0])+'" data-route="'+i[0]+'">'+RI.icon(i[2])+'<span>'+i[1]+'</span></a>').join('')+'<button type="button" data-all-pages aria-label="همهٔ بخش‌ها">'+RI.icon('menu')+'<span>بیشتر</span></button>';
-    paintAccount();
+    paintAccount();RI.polishShell?.();
   }
   function paintAccount() {
     RI.$('#accName').textContent = RI.state.account.name;
-    RI.$('#accAvatar').src = RI.avatarOf(RI.C().profile);
+    RI.$('#accAvatar').src = RI.avatarOf(RI.C().profile);RI.$('#accAvatar').alt='تصویر پروفایل '+RI.state.account.name;
   }
 
   /* ---------- نوار بالا و وضعیت ذخیره ---------- */
@@ -129,6 +129,7 @@
     view.innerHTML = page.render(ctx);
     RI.$$('a[data-go]', view).forEach(a => { a.href = RI.routeUrl(a.dataset.go, a.dataset); });
     cleanup = page.mount ? page.mount(view, ctx) : null;
+    RI.polishView?.(view,id);
     RI.animateRings(view); RI.animateBars(view);
     window.scrollTo({ top: 0, behavior: 'instant' in window ? 'instant' : 'auto' });
     if (!force) { const h = RI.$('#page-title', view); if (h) h.focus({ preventScroll: true }); }
