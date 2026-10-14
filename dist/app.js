@@ -1,4 +1,6 @@
 const menu=document.querySelector('.mobile-menu');menu?.addEventListener('click',()=>{const open=menu.getAttribute('aria-expanded')!=='true';menu.setAttribute('aria-expanded',String(open));document.querySelector('.header nav').classList.toggle('open',open)});
+const enamadSeal=document.querySelector('[data-enamad-seal]');
+if(enamadSeal){const image=enamadSeal.querySelector('img'),fallback=document.querySelector('.footer-enamad-fallback');const update=()=>{const loaded=image.complete&&image.naturalWidth>0;enamadSeal.hidden=!loaded;fallback.hidden=loaded;};image.addEventListener('load',update);image.addEventListener('error',update);update();}
 document.querySelectorAll('.header nav a').forEach(a=>a.addEventListener('click',()=>{menu?.setAttribute('aria-expanded','false');document.querySelector('.header nav').classList.remove('open')}));
 const galleryThemes={studio:['استودیو','برای ذهن‌هایی که خلق می‌کنند','sara'],terminal:['ترمینال','برای آدم‌هایی که با کد می‌سازند','amir'],journal:['ژورنال','برای اولین قدم‌های بزرگ','nika']};
 function selectGallery(theme){

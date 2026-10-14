@@ -88,5 +88,5 @@
 @media(max-width:760px){.pricing-stage{padding-top:85px}.letter-r{display:none}}
 @media(prefers-reduced-motion:reduce){.letter-r{opacity:1;transform:none}}
 
-.footer-enamad{flex:0 0 120px}.footer-enamad a{display:inline-flex;align-items:center;justify-content:center;width:120px;min-height:120px}.footer-enamad img{display:block;max-width:120px;height:auto}
+.footer-enamad{flex:0 0 170px;max-width:100%}.footer-enamad a{display:inline-flex;align-items:center;justify-content:center;width:170px;max-width:100%;min-height:120px}.footer-enamad img{display:block;max-width:120px;height:auto}.footer-enamad .footer-enamad-fallback{display:block;padding:24px 0;font-size:12px;line-height:2;text-align:center;color:var(--ice-muted)}.footer-enamad [hidden]{display:none}.footer-enamad-fallback bdi{font-weight:700}
 @media(max-width:760px){.footer-note{flex-wrap:wrap}.footer-identity{min-width:0;padding-left:0}.footer-enamad{order:4}.footer-bottom>div{flex-wrap:wrap}}
