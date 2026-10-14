@@ -56,6 +56,7 @@ module.exports = async () => {
     ],
   });
   db.adminList = async (kind, { page, q }) => {
+    if(kind==='payments')return {rows:[],total:0,page,pageSize:25};
     const all =
       kind === "users"
         ? users

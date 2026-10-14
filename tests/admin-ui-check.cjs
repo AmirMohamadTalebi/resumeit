@@ -32,6 +32,7 @@ const { createServer } = require("../src/http/server.cjs");
         "pages/",
         "traffic/",
         "transactions/",
+        "payments/",
         "purchases/",
         "catalog/",
         "otp/",

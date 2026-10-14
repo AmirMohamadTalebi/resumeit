@@ -6,6 +6,10 @@
     const result=await r.json();if(!r.ok)throw Object.assign(new Error(result.error||'درخواست انجام نشد'),{status:r.status,code:result.code});return RI.restorePublication(result);
   };
   RI.loadStats=()=>{RI.statsLoading=true;return RI.dashboardRequest('stats').then(r=>r.rows).catch(()=>null).then(rows=>{RI.statsRows=rows;RI.statsLoading=false;RI.emit('stats');});};
+  RI.paymentRequest=async(route,data)=>{
+    let r;try{r=await fetch('/api/payments/'+route,{method:data?'POST':'GET',credentials:'same-origin',headers:{...(data?{'Content-Type':'application/json'}:{}),...(RI.ownerId?{'X-ResumeIt-Owner':RI.ownerId}:{})},body:data?JSON.stringify(data):undefined,signal:AbortSignal.timeout(20000)});}catch{throw new Error('ارتباط پرداخت قطع شد؛ وضعیت کیف پول را بررسی کن و دوباره تلاش کن');}
+    const result=await r.json();if(!r.ok)throw new Error(result.error||'درخواست پرداخت انجام نشد');return result;
+  };
   RI.loadDashboard=async(owner)=>{
     RI.statsRows=null; RI.statsLoading=false;
     if(['home','links','stats'].includes(document.body.dataset.page))RI.loadStats();

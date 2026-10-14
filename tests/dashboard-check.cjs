@@ -67,7 +67,8 @@ const { chromium } = require(process.env.PLAYWRIGHT_PATH || 'playwright');
         assert(!(await page.locator('#view').innerText()).includes('مبلغ نمایشی'));
         assert.deepEqual(await page.evaluate(() => Object.values(RI.PLANS).map(p => p.price / p.months)), [96000,85000,75000]);
         await page.locator('[data-sub="q"]').click();
-        assert((await page.getByRole('dialog').innerText()).includes('پرداخت هنوز فعال نیست'));
+  assert((await page.getByRole('dialog').innerText()).includes('موجودی کافی نیست'));
+  assert.equal(await page.getByRole('dialog').getByRole('button',{name:'کیف پول',exact:true}).count(),1);
         await page.getByRole('dialog').getByRole('button', {name:'بستن',exact:true}).last().click();
         assert.equal(await page.evaluate(() => RI.hasSub()), false);
       }

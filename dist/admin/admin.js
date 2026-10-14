@@ -26,6 +26,7 @@
       "card",
       "گردش It، شارژهای مدیریتی و خریدهای انجام‌شده.",
     ],
+    payments: ["پرداخت‌های بانکی", "card", "درخواست‌های شارژ، نتیجهٔ تأیید بانک و موارد نیازمند بررسی؛ اطلاعات کارت ذخیره نمی‌شود."],
     purchases: [
       "خریدها و اشتراک‌ها",
       "star",
@@ -312,6 +313,10 @@
           date(r.created_at),
         ],
       ],
+      payments: [
+        ["مالک", "درگاه", "مبلغ تومان", "وضعیت", "شماره مرجع", "رهگیری", "بررسی‌ها", "آخرین خطا", "زمان"],
+        r => [r.user_id?userLink(r.user_id,r.name||r.phone):'حساب حذف‌شده',r.provider==='sep'?'سپ':'زیبال',fa(r.amount_toman),esc(({creating:'آماده‌سازی',pending:'تأیید نشده',verifying:'در حال تأیید',paid:'شارژ انجام شد',review:'نیاز به بررسی',failed:'ناموفق',reversed:'برگشت به کارت',cancelled:'انصراف',expired:'مهلت تمام‌شده'})[r.status]||r.status),esc(r.rrn||'—'),esc(r.trace||'—'),fa(r.attempts),esc(r.last_error||'—'),date(r.created_at)],
+      ],
       otp: [
         ["شماره", "کاربرد", "نتیجهٔ ارسال", "زمان درخواست", "تأیید کد"],
         (r) => [
@@ -513,7 +518,8 @@
             d.githubConfigured ? "پیکربندی‌شده" : "تنظیم نشده",
           ),
         ],
-        ["درگاه پرداخت", "فعلاً فعال نیست"],
+        ["درگاه سپ", d.paymentConfigured?"فعال در تنظیمات؛ نیازمند تأیید اتصال واقعی":"در انتظار فعال‌سازی"],
+        ["درگاه زیبال", "هنوز متصل نشده"],
         ["دامنه", esc(d.origin)],
       ]) +
       '</section><section class="panel"><h2>نسخه و محدودیت‌ها</h2>' +
@@ -676,13 +682,14 @@
     $("#admin-name").textContent =
       [user.first_name, user.last_name].filter(Boolean).join(" ") ||
       "مدیر ResumeIt";
-    const groups=[['پیگیری و رشد',['overview','users','pages','traffic']],['اعتبار و دسترسی',['transactions','purchases','catalog']],['نظارت و سرویس‌ها',['otp','audit','health']]];
+    const groups=[['پیگیری و رشد',['overview','users','pages','traffic']],['اعتبار و دسترسی',['transactions','payments','purchases','catalog']],['نظارت و سرویس‌ها',['otp','audit','health']]];
     $("#admin-nav").innerHTML=groups.map(([label,ids])=>'<ul class="menu"><li class="menu-title">'+label+'</li>'+ids.map(id=>'<li><a href="'+(id==='overview'?'/admin/':'/admin/'+id+'/')+'" '+(id===section?'aria-current="page"':'')+'>'+icon(sections[id][1])+'<span>'+sections[id][0]+'</span></a></li>').join('')+'</ul>').join('');
     $("#admin-menu").innerHTML = icon("menu");
     $("#search-wrap").hidden = ![
       "users",
       "pages",
       "transactions",
+      "payments",
       "purchases",
       "otp",
       "audit",
@@ -690,10 +697,12 @@
     $("#days-wrap").hidden = ["users", "pages", "catalog", "health"].includes(
       section,
     );
-    $("#status-wrap").hidden = !["users", "otp"].includes(section);
+    $("#status-wrap").hidden = !["users", "otp", "payments"].includes(section);
     $("#status").innerHTML =
       '<option value="">همهٔ وضعیت‌ها</option>' +
-      (section === "users"
+      (section === "payments"
+        ? '<option value="paid">شارژ انجام شد</option><option value="pending">تأیید نشده</option><option value="verifying">در حال تأیید</option><option value="review">نیاز به بررسی</option><option value="failed">ناموفق</option><option value="reversed">برگشت به کارت</option><option value="cancelled">انصراف</option><option value="expired">مهلت تمام‌شده</option>'
+        : section === "users"
         ? '<option value="active">فعال</option><option value="suspended">تعلیق‌شده</option>'
         : '<option value="accepted">پذیرفته‌شده</option><option value="failed">ناموفق</option><option value="pending">در انتظار</option>');
     $("#catalog-controls").hidden = section !== "catalog";

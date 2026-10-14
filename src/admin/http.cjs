@@ -41,7 +41,7 @@ function adminHandler(database, auth) {
         page > 100000 ||
         ![7, 30, 90, 365].includes(days) ||
         q.length > 100 ||
-        !["", "accepted", "pending", "failed", "suspended", "active"].includes(
+        !["", "accepted", "pending", "failed", "suspended", "active", "creating", "verifying", "paid", "review", "reversed", "cancelled", "expired"].includes(
           status,
         )
       ) {
@@ -74,7 +74,8 @@ function adminHandler(database, auth) {
             githubConfigured: !!(
               process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET
             ),
-            paymentConfigured: false,
+            paymentConfigured: require('../payments/sep.cjs').configuration().enabled,
+            gateways: [{id:'sep',enabled:require('../payments/sep.cjs').configuration().enabled},{id:'zibal',enabled:false}],
             limits: {
               otpDaily: 100,
               phoneDaily: 5,
@@ -87,7 +88,7 @@ function adminHandler(database, auth) {
         else if (/^\/api\/admin\/users\/[a-f0-9-]{36}$/.test(path))
           reply(200, await database.adminUser(path.split("/").pop()));
         else if (
-          /^\/api\/admin\/(users|pages|transactions|purchases|otp|audit)$/.test(
+          /^\/api\/admin\/(users|pages|transactions|payments|purchases|otp|audit)$/.test(
             path,
           )
         )

@@ -23,6 +23,7 @@ async function openDatabase(options) {
     ...require('./profiles.cjs')(context),
     ...require('./dashboard.cjs')(context),
     ...require('./wallet.cjs')(context),
+    ...require('./payments.cjs')(context),
     ...require('./admin.cjs')(context),
     ...require('./migration.cjs')(context),
     close: () => pool.end(),

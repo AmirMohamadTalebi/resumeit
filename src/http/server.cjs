@@ -7,6 +7,7 @@ function createServer(database, options) {
   const auth = authHandler(database, options);
   const dashboard=require('../dashboard/http.cjs').dashboardHandler(database,auth);
   const admin=require('../admin/http.cjs').adminHandler(database,auth);
+  const payments=require('../payments/http.cjs').paymentHandler(database,auth,options?.payments);
   const server = http.createServer({ requestTimeout: 15000, headersTimeout: 10000, maxHeaderSize: 16384 }, async (req, res) => {
     res.setHeader('Cache-Control', 'no-store');
     securityHeaders(res, '');
@@ -15,6 +16,7 @@ function createServer(database, options) {
       try { origin = publicOrigin(req); pathname = requestPath(req.url); }
       catch { res.writeHead(400); res.end('Invalid request'); return; }
       securityHeaders(res, origin);
+      if (await payments(req,res,pathname,origin)) return;
       if (await admin(req,res,pathname,origin)) return;
       if (await dashboard(req,res,pathname,origin)) return;
       if (await auth.handle(req, res, pathname)) return;
@@ -27,6 +29,7 @@ function createServer(database, options) {
   });
   server.setTimeout(20000);
   server.maxRequestsPerSocket = 100;
+  server.on('close',payments.stop);
   return server;
 }
 module.exports = { createServer };

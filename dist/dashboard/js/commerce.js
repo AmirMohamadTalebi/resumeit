@@ -12,7 +12,7 @@
     return new Promise(resolve => {
       let bought=false,busy=false;
       const modal=RI.modal({title:'خرید «'+name+'» با It',size:'sm',
-        body:'<dl class="kv"><dt>مبلغ</dt><dd>'+RI.it(price)+' · '+RI.toman(price)+'</dd><dt>موجودی</dt><dd>'+RI.fa(wallet.balance)+' It</dd></dl><p>هر It برابر ۲٬۰۰۰ تومان است. '+(enough?'پس از تأیید، اعتبار از کیف پول کم می‌شود.':'موجودی کافی نیست. پرداخت هنوز فعال نیست؛ شارژ آنلاین تا اتصال درگاه غیرفعال است.')+'</p><p class="wallet-feedback" role="status" aria-live="polite"></p>',
+        body:'<dl class="kv"><dt>مبلغ</dt><dd>'+RI.it(price)+' · '+RI.toman(price)+'</dd><dt>موجودی</dt><dd>'+RI.fa(wallet.balance)+' It</dd></dl><p>هر It برابر ۲٬۰۰۰ تومان است. '+(enough?'پس از تأیید، اعتبار از کیف پول کم می‌شود.':'موجودی کافی نیست. از صفحهٔ کیف پول، وضعیت شارژ آنلاین را بررسی کن.')+'</p><p class="wallet-feedback" role="status" aria-live="polite"></p>',
         actions:[{label:'بستن',kind:'ghost'},enough?{label:'تأیید خرید با It',kind:'primary',keepOpen:true,onClick:async()=>{
           if(busy)return;busy=true;
           if(!pending.has(ref))pending.set(ref,crypto.randomUUID());
@@ -25,23 +25,9 @@
   RI.purchaseFlow = it => RI.walletPurchase((it.kind||'rt')+':'+it.id,it.name,it.price);
   RI.subscribeFlow = id => RI.walletPurchase('subscription:'+id,'اشتراک '+RI.PLANS[id].name,RI.PLANS[id].price);
 
-  RI.receiptModal = function (pay) {
-    const no = 'RI-' + String(pay.id).replace(/\D/g, '').padEnd(6, '7').slice(0, 6);
-    RI.modal({
-      title: 'رسید نمونه', size: 'sm',
-      body: '<div class="receipt"><div class="receipt__mark" aria-hidden="true">نمونه</div><div class="receipt__head"><b class="ltr-inline">ResumeIt</b><span>رسید پرداخت نمایشی</span></div>' +
-        '<dl class="kv"><dt>شمارهٔ رسید</dt><dd class="ltr-inline mono">' + no + '</dd><dt>شرح</dt><dd>' + esc(pay.title) + '</dd><dt>تاریخ</dt><dd>' + RI.date(pay.at) + '</dd><dt>روش</dt><dd>درگاه نمایشی</dd><dt>وضعیت</dt><dd>' + (pay.status === 'ok' ? 'موفق' : 'ناموفق') + '</dd></dl>' +
-        '<div class="receipt__total"><span>مبلغ (نمایشی)</span><b class="num">' + RI.toman(pay.amount) + '</b></div></div>',
-      actions: [
-        { label: 'دانلود رسید نمونه', kind: 'soft', icon: 'download', keepOpen: true, onClick: () => {
-          const txt = 'رسید نمونه ResumeIt\nشماره: ' + no + '\nشرح: ' + pay.title + '\nمبلغ نمایشی: ' + pay.amount + ' تومان\nتاریخ: ' + RI.date(pay.at) + '\n\nاین فایل صرفاً نمونه است.';
-          const a = document.createElement('a');
-          a.href = URL.createObjectURL(new Blob([txt], { type: 'text/plain;charset=utf-8' })); a.download = 'resumeit-sample-receipt.txt'; a.click();
-          setTimeout(() => URL.revokeObjectURL(a.href), 500);
-        } },
-        { label: 'بستن', kind: 'ghost', push: true },
-      ],
-    });
+  RI.receiptModal = function(pay) {
+    const no=String(pay.id),status=pay.status==='paid'?'موفق؛ کیف پول شارژ شد':'تأیید نشده';
+    RI.modal({title:'رسید پرداخت',size:'sm',body:'<div class="receipt"><div class="receipt__head"><b class="ltr-inline">ResumeIt</b><span>رسید شارژ کیف پول</span></div><dl class="kv"><dt>شناسهٔ پرداخت</dt><dd class="ltr-inline mono">'+esc(no)+'</dd><dt>شرح</dt><dd>'+esc(pay.title||'شارژ کیف پول')+'</dd><dt>تاریخ</dt><dd>'+RI.date(pay.updatedAt||pay.at)+'</dd><dt>درگاه</dt><dd>'+esc(pay.provider==='sep'?'سپ':'زیبال')+'</dd><dt>وضعیت</dt><dd>'+status+'</dd><dt>شمارهٔ مرجع</dt><dd class="ltr-inline">'+esc(pay.rrn||'—')+'</dd><dt>کد رهگیری</dt><dd class="ltr-inline">'+esc(pay.trace||'—')+'</dd></dl><div class="receipt__total"><span>مبلغ</span><b class="num">'+RI.toman(pay.amount)+'</b></div></div>',actions:[{label:'دانلود رسید',kind:'soft',icon:'download',keepOpen:true,onClick:()=>{const text='رسید پرداخت ResumeIt\nشناسه: '+no+'\nمبلغ: '+pay.amount+' تومان\nوضعیت: '+status+'\nشماره مرجع: '+(pay.rrn||'—')+'\nکد رهگیری: '+(pay.trace||'—')+'\nتاریخ: '+RI.date(pay.updatedAt||pay.at);const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type:'text/plain;charset=utf-8'}));a.download='resumeit-payment-'+no+'.txt';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),500);}},{label:'بستن',kind:'ghost',push:true}]});
   };
 
   /* توضیح روشن برای موردی که قفل است */

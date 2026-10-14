@@ -91,6 +91,13 @@ module.exports = ({ execute, transaction }) => ({
         date: "a.created_at",
         order: "a.created_at DESC,a.user_id,a.ref",
       },
+      payments: {
+        table: "payment_orders o LEFT JOIN users u ON u.id=o.user_id LEFT JOIN profiles p ON p.user_id=o.user_id",
+        fields: "o.id,o.user_id,o.provider,o.amount_toman,o.status,o.rrn,o.trace,o.last_error,o.attempts,o.created_at,o.updated_at,u.phone,p.name",
+        search: "CONCAT_WS(' ',o.id,u.phone,p.name,o.rrn,o.trace)",
+        date: "o.created_at",
+        order: "o.created_at DESC,o.id",
+      },
       otp: {
         table: "otp_events",
         fields: "id,phone,purpose,status,created_at,verified_at",
@@ -119,6 +126,7 @@ module.exports = ({ execute, transaction }) => ({
       where.push("status=?");
       params.push(status);
     }
+    if(kind==='payments'&&status){where.push('o.status=?');params.push(status);}
     if (kind === "users" && status) {
       where.push("COALESCE(c.suspended,0)=?");
       params.push(status === "suspended" ? 1 : 0);

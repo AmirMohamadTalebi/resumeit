@@ -1,0 +1,18 @@
+const assert=require('node:assert/strict'),sep=require('../src/payments/sep.cjs');
+(async()=>{
+  assert.equal(sep.configuration({SEP_ENABLED:'false',SEP_TERMINAL_ID:'2015'}).enabled,false);
+  assert.equal(sep.configuration({SEP_ENABLED:'true',SEP_TERMINAL_ID:'2015'}).enabled,true);
+  for(const id of ['','0','2015/path','1e3','9999999999999999999'])assert.equal(sep.configuration({SEP_ENABLED:'true',SEP_TERMINAL_ID:id}).enabled,false);
+  const order={id:'a'.repeat(36),terminal_id:2015,amount_toman:100000,ref_num:'Bank/Reference+1'},requests=[];
+  const provider=sep.createSep({fetch:async(url,input)=>{requests.push({url,input,body:JSON.parse(input.body)});return new Response(JSON.stringify(url===sep.TOKEN_URL?{status:1,token:'b'.repeat(32)}:{ResultCode:0,Success:true,TransactionDetail:{RefNum:order.ref_num,TerminalNumber:2015,OrginalAmount:1000000,RRN:'1',StraceNo:'2'}}));}});
+  assert.equal(await provider.token(order,'https://resumeit.ir/api/payments/sep/callback?key=abc','09120000123'),'b'.repeat(32));
+  assert.deepEqual(requests[0].body,{Action:'Token',TerminalId:2015,Amount:1000000,ResNum:order.id,RedirectURL:'https://resumeit.ir/api/payments/sep/callback?key=abc',CellNumber:'09120000123',TokenExpiryInMin:20});
+  assert.equal(requests[0].input.redirect,'error');assert(requests[0].input.signal);
+  const response=await provider.verify(order);assert.equal(sep.verifiedProof(response,order).amountRial,1000000);assert.deepEqual(requests[1].body,{RefNum:order.ref_num,TerminalNumber:2015});
+  await provider.reverse(order);assert.equal(requests[2].url,sep.REVERSE_URL);
+  for(const invalid of [{Success:true,ResultCode:0},{...response,Success:false},{...response,TransactionDetail:{...response.TransactionDetail,RefNum:'OTHER'}},{...response,TransactionDetail:{...response.TransactionDetail,TerminalNumber:2016}},{...response,TransactionDetail:{...response.TransactionDetail,OrginalAmount:-1}}])assert.throws(()=>sep.verifiedProof(invalid,order));
+  assert(sep.verifiedProof({...response,Success:false,ResultCode:2},order));
+  for(const result of ['not JSON',JSON.stringify({status:-1,token:'x'.repeat(32)}),'x'.repeat(17000)])await assert.rejects(sep.createSep({fetch:async()=>new Response(result)}).token(order,'https://resumeit.ir/callback','09120000123'));
+  await assert.rejects(sep.createSep({fetch:async()=>new Response('{}',{status:503})}).verify(order));
+  console.log('PASS: SEP documented wire format, rial conversion, fixed HTTPS endpoints, timeouts, bounded responses, confirmed proof and reverse; no real bank request.');
+})().catch(e=>{console.error(e);process.exitCode=1;});
