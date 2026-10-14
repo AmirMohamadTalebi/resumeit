@@ -6,7 +6,8 @@ try{process.loadEnvFile();}catch(e){if(e.code!=='ENOENT')throw e;}
   const admin=await mysql.createConnection(options);let db;
   try{
     await admin.query('CREATE DATABASE `'+name+'`');const config={...options,database:name,connectionLimit:4};db=await openDatabase(config);
-    const owner=await db.provisionAccount('09120000711',null),other=await db.provisionAccount('09120000712',null),now=Date.now();
+    const passwordHash='scrypt$'+randomBytes(16).toString('hex')+'$'+randomBytes(64).toString('hex');
+    const owner=await db.provisionAccount('09120000711',passwordHash),other=await db.provisionAccount('09120000712',passwordHash),now=Date.now();
     const make=(user=owner)=>({id:randomUUID(),user_id:user,provider:'sep',terminal_id:2015,amount_toman:100000,request_id:randomUUID(),secret_hash:createHash('sha256').update(randomBytes(32)).digest('hex'),created_at:now,expires_at:now+1200000});
     const order=make(),starts=await Promise.all(Array.from({length:4},()=>db.createPayment(order)));assert.equal(starts.filter(r=>r.created).length,1);assert.equal(new Set(starts.map(r=>r.order.id)).size,1);
     await assert.rejects(db.createPayment({...order,amount_toman:102000}),e=>e.status===409);await assert.rejects(db.createPayment({...make(),amount_toman:45000}));
