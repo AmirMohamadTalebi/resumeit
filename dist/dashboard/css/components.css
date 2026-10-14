@@ -71,7 +71,7 @@
 }
 .switch input:checked ~ .switch__track { background: var(--bro-500); }
 .switch input:checked ~ .switch__thumb { transform: translateX(-18px); }
-.switch input:focus-visible ~ .switch__track { outline: 3px solid var(--bro-400); outline-offset: 2px; }
+.switch input:focus-visible ~ .switch__track { outline: 3px solid var(--bro-600); outline-offset: 2px; }
 .switch input:disabled { cursor: not-allowed; }
 .switch input:disabled ~ .switch__track { opacity: .5; }
 

@@ -1,10 +1,10 @@
 const {readJson,securityHeaders}=require('../http/security.cjs');
 const model=require('./model.cjs'),{render,RI}=require('./render.cjs');
-const fs=require('node:fs'),path=require('node:path'),{gzipSync}=require('node:zlib');
-const assets=new Map([['/public-assets/tokens.css','dashboard/css/tokens.css'],['/public-assets/base.css','dashboard/css/base.css'],['/public-assets/preview.css','dashboard/css/preview.css'],['/assets/fonts/Vazirmatn.woff2','dashboard/assets/fonts/Vazirmatn.woff2'],['/brand/resumeit-logo-v1.png','brand/resumeit-logo-v1.png'],['/brand/favicon.svg','brand/favicon.svg']]);
+const {gzipSync}=require('node:zlib');
+const {serveStatic,publicAssets}=require('../http/static.cjs');
 const pubData=(c,k)=>k==='resume'?{slug:c.slug,profile:c.profile,contacts:c.contacts,skills:c.skills,experience:c.experience,education:c.education,projects:c.projects,certs:c.certs,languages:c.languages,socials:c.socials,sections:c.sections,resumeTemplates:c.resumeTemplates,theme:{resume:c.theme.resume,font:c.theme.font,palette:c.theme.palette,radius:c.theme.radius},share:c.share}:{slug:c.slug,links:c.links,name:c.profile.name,bio:c.profile.bio,avatar:c.profile.avatar,theme:{links:c.theme.links,font:c.theme.font,linksPalette:c.theme.linksPalette}};
 function dashboardHandler(database,auth){return async(req,res,pathname,origin)=>{
-  if(pathname.startsWith('/templates/')||pathname.startsWith('/fonts/')){await require('../http/static.cjs').serveStatic(req,res,pathname,origin);return true;}
+  if(publicAssets.has(pathname)||pathname.startsWith('/templates/')||pathname.startsWith('/fonts/')){await serveStatic(req,res,pathname,origin);return true;}
   const root=new URL(origin),host=(req.headers.host||'').toLowerCase(),domain=root.hostname.startsWith('127.')||root.hostname==='localhost'?'resumeit.ir':root.hostname;
   const sub=host.endsWith('.'+domain)?host.slice(0,-domain.length-1):null;
   const local=/^\/u\/([a-z0-9-]+)(\/.*)?$/.exec(pathname);
@@ -15,7 +15,6 @@ function dashboardHandler(database,auth){return async(req,res,pathname,origin)=>
   if(sub!==null||local){
     const slug=sub||local[1],route=local?local[2]||'/':pathname,base=local?'/u/'+slug:'';
     if(!model.slugValid(slug)){res.writeHead(404);res.end('صفحه پیدا نشد');return true;}
-    if(assets.has(pathname)&&req.method==='GET'){const file=assets.get(pathname);res.writeHead(200,{'Content-Type':file.endsWith('.css')?'text/css; charset=utf-8':file.endsWith('.woff2')?'font/woff2':file.endsWith('.svg')?'image/svg+xml':'image/png'});res.end(fs.readFileSync(path.join(__dirname,'../../dist',file)));return true;}
     if(!['GET','HEAD'].includes(req.method)){res.writeHead(405);res.end();return true;}
     const outgoing=/^\/out\/([a-z0-9_-]+)$/i.exec(route),kind=route==='/links'||route==='/links/'||route==='/links/share-image'||outgoing?'links':'resume';
     if(!['/','/links','/links/','/share-image','/links/share-image'].includes(route)&&!outgoing){res.writeHead(404);res.end('صفحه پیدا نشد');return true;}
@@ -36,7 +35,6 @@ function dashboardHandler(database,auth){return async(req,res,pathname,origin)=>
     }
     res.writeHead(200,{'Content-Type':'text/html; charset=utf-8'});res.end(req.method==='HEAD'?undefined:html);return true;
   }
-  if(assets.has(pathname)&&(pathname.startsWith('/public-assets/')||pathname.endsWith('.woff2'))&&req.method==='GET'){if(new URL(req.url,origin).searchParams.get('v')===require('../http/static.cjs').assetRevision)res.setHeader('Cache-Control','private, max-age=31536000, immutable');res.writeHead(200,{'Content-Type':pathname.endsWith('.woff2')?'font/woff2':'text/css; charset=utf-8'});res.end(fs.readFileSync(path.join(__dirname,'../../dist',assets.get(pathname))));return true;}
   if(!pathname.startsWith('/api/dashboard/'))return false;
   try{
     if(req.headers.host!==root.host)model.fail('مبدأ درخواست معتبر نیست',403);

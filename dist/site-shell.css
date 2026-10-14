@@ -6,6 +6,7 @@
 .public-header nav  {
   gap:24px;
 }
+.public-header nav a { display:inline-flex; align-items:center; min-height:32px; }
 .public-header .enter  {
   white-space:nowrap;
   min-height:40px;
@@ -41,7 +42,7 @@
 .site-footer nav  {
   display:flex;
   flex-direction:column;
-  gap:11px;
+  gap:3px;
   align-items:start;
 }
 .site-footer .footer-title  {
@@ -57,6 +58,9 @@
   font-size:12px;
   color:#435867;
   text-decoration:none;
+  display:inline-flex;
+  align-items:center;
+  min-height:32px;
 }
 .site-footer nav a:hover  {
   color:#6b4629;
@@ -77,6 +81,7 @@
 .site-footer__bottom small  {
   font-size:11px;
 }
+.site-footer__bottom a { display:inline-flex; align-items:center; min-height:32px; }
 @media(max-width:1050px)  {
   .public-header nav  {
     gap:14px;

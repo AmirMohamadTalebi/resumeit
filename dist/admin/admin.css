@@ -410,6 +410,12 @@ p {
   max-width: 100%;
   scrollbar-color: var(--ice-400) transparent;
 }
+.table-hint { display:none; color:var(--ink-3); font-size:11px; line-height:1.8; margin:0 0 12px; }
+@media(max-width:760px) {
+  .table-hint { display:block; }
+  .table td:first-child { min-width:140px; width:160px; max-width:180px; white-space:normal; overflow-wrap:anywhere; }
+  .table td:first-child a { max-width:156px; white-space:normal; overflow-wrap:anywhere; }
+}
 .table  {
   border-collapse: collapse;
   width: 100%;
@@ -778,6 +784,7 @@ body[data-section=overview] .page-intro .filters,body[data-section=traffic] .pag
 .table th {
   color:var(--ink-2)
 }
+.table td a,.section-link { display:inline-flex; align-items:center; min-height:32px; }
 .btn {
   box-shadow:none;
   border:1px solid var(--glass-line);

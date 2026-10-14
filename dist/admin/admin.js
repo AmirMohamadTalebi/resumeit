@@ -129,7 +129,7 @@
   }
   function table(headers, data) {
     return (
-      '<div class="table-scroll"><table class="table"><thead><tr>' +
+      '<p class="table-hint">اگر همهٔ ستون‌ها دیده نمی‌شوند، جدول را افقی جابه‌جا کنید.</p><div class="table-scroll" tabindex="0" role="region" aria-label="جدول ' + esc(headers.join('، ')) + '"><table class="table"><thead><tr>' +
       headers.map((h) => '<th scope="col">' + esc(h) + "</th>").join("") +
       "</tr></thead><tbody>" +
       data
@@ -735,13 +735,14 @@
     });
     const mobile = matchMedia("(max-width:760px)");
     const drawer = (open) => {
+      const wasOpen = $("#admin-side").dataset.open === "true";
       $(".admin-main").inert = open && mobile.matches;
       $("#admin-side").inert = !open && mobile.matches;
       $("#admin-side").dataset.open = open;
       $("#admin-backdrop").dataset.open = open;
       $("#admin-menu").setAttribute("aria-expanded", String(open));
       if (open) $("#admin-close").focus();
-      else if (mobile.matches) $("#admin-menu").focus();
+      else if (mobile.matches && wasOpen) $("#admin-menu").focus();
     };
     drawer(false);
     mobile.addEventListener("change", () => drawer(false));
@@ -750,7 +751,7 @@
       drawer($("#admin-side").dataset.open !== "true");
     $("#admin-backdrop").onclick = () => drawer(false);
     document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape") drawer(false);
+      if (e.key === "Escape" && $("#admin-side").dataset.open === "true") drawer(false);
     });
     $("#user-panel").onclick = () => {
       sessionStorage.setItem("ri-panel-choice", user.id);

@@ -5,6 +5,7 @@ const {createHash}=require('node:crypto');
 const { securityHeaders } = require('./security.cjs');
 const {version}=require('../version.cjs');
 const root = path.resolve(__dirname, '../../dist');
+const publicAssets=new Map([['/public-assets/tokens.css','dashboard/css/tokens.css'],['/public-assets/base.css','dashboard/css/base.css'],['/public-assets/preview.css','dashboard/css/preview.css'],['/assets/fonts/Vazirmatn.woff2','dashboard/assets/fonts/Vazirmatn.woff2'],['/brand/resumeit-logo-v1.png','brand/resumeit-logo-v1.png'],['/brand/favicon.svg','brand/favicon.svg']]);
 const assetHash=createHash('sha256'),localFiles=require('node:fs');
 function fingerprint(directory){
   for(const item of localFiles.readdirSync(directory,{withFileTypes:true}).sort((a,b)=>a.name.localeCompare(b.name,'en'))){
@@ -60,7 +61,8 @@ async function serveStatic(req, res, pathname, origin, account) {
     res.end(req.method === 'HEAD' ? undefined : body);
   };
   if (!['GET', 'HEAD'].includes(req.method)) { res.setHeader('Allow', 'GET, HEAD'); send(405, 'Method not allowed'); return; }
-  let file = path.resolve(root, '.' + pathname);
+  const publicAsset=publicAssets.has(pathname);
+  let file = path.resolve(root, publicAssets.get(pathname) || '.' + pathname);
   try {
     // Authenticate the resolved file as well as the URL (case aliases and symlinks included).
     const adminPath=pathname.toLowerCase()==='/admin'||pathname.toLowerCase().startsWith('/admin/');
@@ -79,7 +81,7 @@ async function serveStatic(req, res, pathname, origin, account) {
     const relative = path.relative(realRoot, realFile);
     if(!adminPath&&relative.toLowerCase().startsWith('admin'+path.sep)){const user=account&&await account(req);if(!user){res.writeHead(303,{Location:'/login/'});res.end();return;}if(!require('../admin/access.cjs').isAdmin(user)){send(403,'Forbidden');return;}}
     if (relative.split(path.sep).some(p => p.startsWith('.')) || !mime[path.extname(realFile).toLowerCase()]) { send(403, 'Forbidden'); return; }
-    if (!guarded && relative.toLowerCase().startsWith('dashboard' + path.sep)) {
+    if (!guarded && !publicAsset && relative.toLowerCase().startsWith('dashboard' + path.sep)) {
       res.setHeader('Cache-Control', 'no-store');
       if (account && !await account(req)) { res.writeHead(303, { Location: '/login/' }); res.end(); return; }
     }
@@ -100,4 +102,4 @@ async function serveStatic(req, res, pathname, origin, account) {
   }
 }
 
-module.exports = { requestPath, serveStatic, assetRevision };
+module.exports = { requestPath, serveStatic, assetRevision, publicAssets };

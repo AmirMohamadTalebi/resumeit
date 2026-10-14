@@ -39,10 +39,18 @@ const {createServer}=require('../src/http/server.cjs'),{assetRevision}=require('
       assert.equal((await get(asset,headers)).status,200);
       assert.equal(reads.get(asset.slice(1)),1);
     }
+    for(const [url,file] of [['/public-assets/preview.css','dashboard/css/preview.css'],['/assets/fonts/Vazirmatn.woff2','dashboard/assets/fonts/Vazirmatn.woff2']]) {
+      const first=await get(url+'?v='+assetRevision);assert.equal(first.status,200);assert(first.headers.etag);assert(first.headers['cache-control'].includes('immutable'));
+      assert.equal((await get(url)).status,200);assert.equal(reads.get(file),1,'public aliases use the shared file cache');
+      assert.equal((await get(url,{'If-None-Match':first.headers.etag})).status,304);
+      assert.equal((await get('/'+file)).status,303,'the source dashboard path remains private');
+      const head=await fetch('http://127.0.0.1:'+server.address().port+url,{method:'HEAD'});assert.equal(head.status,200);assert.equal((await head.text()).length,0);
+    }
+    const zipped=await get('/public-assets/preview.css',{'Accept-Encoding':'gzip'});assert.equal(zipped.headers['content-encoding'],'gzip');
     for(const file of large)assert.equal((await get('/'+file)).status,200);
     assert.equal(reads.get(large[0]),1);await get('/'+large[0]);assert.equal(reads.get(large[0]),2,'old entries are evicted at the byte limit');
     await get('/brand/it-coin.svg');await get('/brand/it-coin.svg');assert.equal(reads.get('brand/it-coin.svg'),2,'oversized files bypass the cache');
     assert.equal((await get('/../.env')).status,400);
-    console.log('PASS: warm and concurrent static reads, ETag, populated info pages, byte-budget eviction, oversized bypass and private asset authorization.');
+    console.log('PASS: warm/concurrent static reads, public alias font/CSS cache/ETag/gzip/HEAD, source path authorization, info pages, byte-budget eviction and oversized bypass.');
   }finally{fs.readFile=originalRead;await new Promise(r=>server.close(r));await fixture.db.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});

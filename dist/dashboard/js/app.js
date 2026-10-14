@@ -175,6 +175,18 @@
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape'&&RI.$('#sidebar').dataset.open==='true') {closeDrawer();RI.$('#menuBtn').focus();}
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); if (RI.state.ui.dirty&&RI.manualSave()) RI.doSave(); }
+      const list=e.target.closest('[role="tablist"]');
+      if(!list||e.altKey||e.ctrlKey||e.metaKey||!['ArrowLeft','ArrowRight','Home','End'].includes(e.key))return;
+      const tabs=[...list.querySelectorAll('[role="tab"]')].filter(b=>!b.disabled),index=tabs.indexOf(e.target.closest('[role="tab"]'));
+      if(index<0)return;
+      e.preventDefault();
+      const rtl=getComputedStyle(list).direction==='rtl',direction=((e.key==='ArrowLeft')===rtl)?1:-1;
+      const next=e.key==='Home'?0:e.key==='End'?tabs.length-1:(index+direction+tabs.length)%tabs.length;
+      const label=list.getAttribute('aria-label'),id=list.id;
+      tabs[next].click();
+      const selected=(id?document.getElementById(id):[...document.querySelectorAll('[role="tablist"]')].find(el=>el.getAttribute('aria-label')===label))?.querySelector('[role="tab"][aria-selected="true"]');
+      selected?.focus({preventScroll:true});
+      selected?.scrollIntoView({block:'nearest',inline:'nearest',behavior:'instant'});
     });
     RI.delegate(document,'click','#saveBtn',()=>{if(RI.manualSave())RI.doSave();});
     RI.delegate(document,'click','[data-save-retry]',RI.doSave);

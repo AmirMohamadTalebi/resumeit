@@ -127,7 +127,7 @@
         const i = STEPS.findIndex((s) => s.id === step), prev = STEPS[i - 1], next = STEPS[i + 1];
         return '<div class="stepnav">' + (prev ? '<button type="button" class="btn btn--ghost" data-step="' + prev.id + '">' + RI.icon('chevR') + prev.label + '</button>' : '<span></span>') + (next ? '<button type="button" class="btn btn--ice" data-step="' + next.id + '">' + next.label + RI.icon('chevL') + '</button>' : '<button type="button" class="btn btn--primary" data-go="publish">' + RI.icon('rocket') + 'به مرحلهٔ انتشار' + '</button>') + '</div>';
       }
-      function setStep(s) { step = s; paint(); if (!RI.reduceMotion()) RI.$('#panel', root).animate([{ opacity: 0, transform: 'translateY(8px)' }, { opacity: 1, transform: 'none' }], { duration: 280, easing: 'cubic-bezier(.22,.8,.28,1)' }); }
+      function setStep(s) { step = s; paint(); RI.$('.schip[aria-selected="true"]',root)?.scrollIntoView({block:'nearest',inline:'nearest',behavior:'instant'}); if (!RI.reduceMotion()) RI.$('#panel', root).animate([{ opacity: 0, transform: 'translateY(8px)' }, { opacity: 1, transform: 'none' }], { duration: 180, easing: 'cubic-bezier(.22,.8,.28,1)' }); }
 
       function bindPanel() {
         const c = RI.C(), p = c.profile;

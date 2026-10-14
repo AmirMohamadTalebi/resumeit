@@ -31,7 +31,7 @@ img, svg { display: block; max-width: 100%; }
 .num { font-feature-settings: 'tnum'; }
 
 :focus-visible {
-  outline: 3px solid var(--bro-400);
+  outline: 3px solid var(--bro-600);
   outline-offset: 2px;
   border-radius: var(--r-xs);
 }

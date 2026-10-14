@@ -19,7 +19,7 @@
 #view > p, #view > .steps + h1 + p { color: var(--ink-2); margin-top: -10px; }
 #view p b { color: var(--ink); }
 .auth__foot { width: min(100%, 460px); text-align: center; color: var(--ink-2); font-size: 14.5px; padding-bottom: 8px; }
-.link { color: var(--bro-600); font-weight: 700; text-decoration: underline; text-underline-offset: 4px; background: none; border: 0; padding: 0; font-size: inherit; }
+.link { color: var(--bro-600); font-weight: 700; text-decoration: underline; text-underline-offset: 4px; background: none; border: 0; padding: 2px 0; font-size: inherit; display:inline-block; min-height:24px; }
 .link:hover { color: var(--bro-700); } .link--sm { font-size: 12.5px; font-weight: 600; }
 .ltr-inline { direction: ltr; unicode-bidi: isolate; display: inline-block; } .mono { font-family: var(--font-mono); direction: ltr; unicode-bidi: isolate; display: inline-block; }
 .num { font-feature-settings: 'tnum'; }

@@ -28,7 +28,6 @@
   /* ---------- قطعات HTML ---------- */
   RI.pageHead = (o) =>
     '<header class="page-head"><div class="page-head__text">' +
-    (o.eyebrow ? '<div class="eyebrow">' + (o.eyebrowIcon ? RI.icon(o.eyebrowIcon) : '') + esc(o.eyebrow) + '</div>' : '') +
     '<h1 tabindex="-1" id="page-title">' + esc(o.title) + '</h1>' + (o.desc ? '<p>' + o.desc + '</p>' : '') +
     '</div>' + (o.actions ? '<div class="page-head__actions">' + o.actions + '</div>' : '') + '</header>';
 
