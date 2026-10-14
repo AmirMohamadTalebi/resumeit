@@ -1,6 +1,6 @@
 {
   "name": "resumeit",
-  "version": "21.2.0",
+  "version": "21.3.0",
   "private": true,
   "engines": {
     "node": ">=24.15.0"
@@ -18,7 +18,7 @@
     "check:security": "node tests/security-check.cjs && node tests/static-cache-check.cjs",
     "test": "npm run check:security && npm run check:auth && npm run check:sms && npm run check:oauth && node tests/dashboard-api-check.cjs && node tests/resume-templates-check.cjs && node tests/imported-templates-check.cjs && node tests/wallet-check.cjs && node tests/dashboard-save-check.cjs && node tests/admin-api-check.cjs && npm run check:payments",
     "check:ui": "npm run check:dashboard && npm run check:auth-ui && npm run check:auth-mobile && npm run check:auth-motion && node tests/site-content-check.cjs && node tests/dashboard-public-ui-check.cjs && node tests/imported-templates-ui-check.cjs && node tests/wallet-ui-check.cjs && node tests/dashboard-loading-check.cjs && node tests/dashboard-performance-check.cjs && node tests/dashboard-responsive-check.cjs && node tests/browser-audit-check.cjs && node tests/dashboard-save-ui-check.cjs && node tests/admin-ui-check.cjs && node tests/dashboard-warm-cache-check.cjs && node tests/workspace-navigation-check.cjs && node tests/ui-polish-check.cjs && node tests/payments-ui-check.cjs",
-    "check:payments": "node tests/sep-check.cjs && node tests/payments-api-check.cjs"
+    "check:payments": "node tests/sep-check.cjs && node tests/zibal-check.cjs && node tests/payments-api-check.cjs && node tests/invoice-api-check.cjs"
   },
   "dependencies": {
     "mysql2": "3.24.5"

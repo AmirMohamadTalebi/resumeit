@@ -3,13 +3,25 @@ const { fail } = require('../dashboard/model.cjs');
 const { RI } = require('../dashboard/render.cjs');
 
 module.exports = ({ execute, transaction }) => ({
+  async invoice(id){return (await execute('SELECT * FROM payment_invoices WHERE id=?',[id]))[0]||null;},
+  async createInvoice(invoice){
+    if(!Number.isSafeInteger(invoice.amount_toman)||invoice.amount_toman<2000||invoice.amount_toman>100000000||invoice.amount_toman%RI.IT_RATE||!/^[a-z0-9_-]{16,64}$/i.test(invoice.request_id||''))fail('پیش‌فاکتور معتبر نیست');
+    return transaction(async con=>{
+      const [[user]]=await con.execute('SELECT id FROM users WHERE id=? FOR UPDATE',[invoice.user_id]);if(!user)fail('حساب پیدا نشد',401);
+      const [[prior]]=await con.execute('SELECT * FROM payment_invoices WHERE user_id=? AND request_id=?',[invoice.user_id,invoice.request_id]);if(prior){if(Number(prior.amount_toman)!==invoice.amount_toman)fail('مبلغ پیش‌فاکتور مطابقت ندارد',409);return prior;}
+      const [[count]]=await con.execute('SELECT COUNT(*) total FROM payment_invoices WHERE user_id=? AND created_at>?',[invoice.user_id,invoice.created_at-15*60000]);if(Number(count.total)>=10)fail('چند دقیقه بعد پیش‌فاکتور تازه بساز',429);
+      await con.execute('INSERT INTO payment_invoices(id,user_id,amount_toman,request_id,created_at,expires_at) VALUES(?,?,?,?,?,?)',[invoice.id,invoice.user_id,invoice.amount_toman,invoice.request_id,invoice.created_at,invoice.expires_at]);return invoice;
+    });
+  },
   async payment(id) { return (await execute('SELECT * FROM payment_orders WHERE id=?', [id]))[0] || null; },
   async paymentsForUser(id) { return execute('SELECT id,provider,amount_toman,status,rrn,trace,created_at,updated_at FROM payment_orders WHERE user_id=? ORDER BY created_at DESC,id DESC LIMIT 50', [id]); },
   async createPayment(order) {
-    if(!Number.isSafeInteger(order.amount_toman)||order.amount_toman<2000||order.amount_toman>100000000||order.amount_toman%RI.IT_RATE!==0||order.provider!=='sep'||!/^[a-f0-9]{64}$/.test(order.secret_hash))fail('درخواست پرداخت معتبر نیست');
+    if(!Number.isSafeInteger(order.amount_toman)||order.amount_toman<2000||order.amount_toman>100000000||order.amount_toman%RI.IT_RATE!==0||!['sep','zibal'].includes(order.provider)||!/^[a-f0-9]{64}$/.test(order.secret_hash))fail('درخواست پرداخت معتبر نیست');
     return transaction(async con => {
       const [[user]] = await con.execute('SELECT id FROM users WHERE id=? FOR UPDATE', [order.user_id]);
       if (!user) fail('حساب پیدا نشد',401);
+      const [[sameId]]=await con.execute('SELECT * FROM payment_orders WHERE id=?',[order.id]);
+      if(sameId){if(sameId.user_id!==order.user_id||sameId.provider!==order.provider||Number(sameId.amount_toman)!==order.amount_toman)fail('برای این پیش‌فاکتور درگاه دیگری انتخاب شده است؛ نتیجهٔ پرداخت را بررسی کن',409);return {order:sameId,created:false};}
       const [[prior]] = await con.execute('SELECT * FROM payment_orders WHERE user_id=? AND provider=? AND request_id=?', [order.user_id,order.provider,order.request_id]);
       if (prior) { if (Number(prior.amount_toman)!==order.amount_toman) fail('شناسهٔ درخواست برای مبلغ دیگری استفاده شده است',409); return { order: prior, created: false }; }
       const [[count]] = await con.execute('SELECT COUNT(*) total FROM payment_orders WHERE user_id=? AND created_at>?', [order.user_id,order.created_at-15*60000]);
@@ -32,6 +44,7 @@ module.exports = ({ execute, transaction }) => ({
         await con.execute("UPDATE payment_orders SET ref_num=?,status='pending',verify_until=?,next_attempt_at=?,updated_at=? WHERE id=?",[ref,now+25*60000,now,now,id]);
         Object.assign(order,{ref_num:ref,status:'pending',verify_until:now+25*60000,next_attempt_at:now});
       }
+      else if(order.provider==='zibal'&&['pending','cancelled','expired'].includes(order.status))await con.execute("UPDATE payment_orders SET status='pending',next_attempt_at=?,verify_until=? WHERE id=?",[now,Math.max(Number(order.verify_until),now+25*60000),id]);
       return order;
     }); } catch(e) { if(e.code==='ER_DUP_ENTRY')fail('این رسید قبلاً برای پرداخت دیگری ثبت شده است',409);throw e; }
   },
@@ -48,6 +61,7 @@ module.exports = ({ execute, transaction }) => ({
   async releasePayment(id, lease, status, code, now, delay=30000) {
     await execute('UPDATE payment_orders SET status=?,last_error=?,next_attempt_at=?,lease_until=0,lease_key=NULL,updated_at=? WHERE id=? AND status=\'verifying\' AND lease_key=?',[status,code,now+delay,now,id,lease]);
   },
+  async paymentUnpaid(id,lease,now){await execute("UPDATE payment_orders SET status='pending',attempts=GREATEST(attempts-1,0),last_error=NULL,next_attempt_at=?,lease_until=0,lease_key=NULL,updated_at=? WHERE id=? AND status='verifying' AND lease_key=?",[now+60000,now,id,lease]);},
   async completePayment(order, proof, now) {
     return transaction(async con => {
       const [[user]] = order.user_id ? await con.execute('SELECT id FROM users WHERE id=? FOR UPDATE',[order.user_id]) : [[]];
@@ -63,7 +77,7 @@ module.exports = ({ execute, transaction }) => ({
       if(!Number.isSafeInteger(balance))fail('موجودی بیش از حد مجاز است');
       await con.execute('INSERT INTO wallet_credit_claims(reference,user_id,delta_units) VALUES(?,?,?)',[reference,current.user_id,amount]);
       await con.execute('UPDATE wallets SET balance_units=? WHERE user_id=?',[balance,current.user_id]);
-      await con.execute('INSERT INTO wallet_transactions(id,user_id,delta_units,balance_units,label,reference,created_at) VALUES(?,?,?,?,?,?,?)',[randomUUID(),current.user_id,amount,balance,'شارژ کیف پول با سپ',reference,now]);
+      await con.execute('INSERT INTO wallet_transactions(id,user_id,delta_units,balance_units,label,reference,created_at) VALUES(?,?,?,?,?,?,?)',[randomUUID(),current.user_id,amount,balance,'شارژ کیف پول با '+(current.provider==='sep'?'سپ':'زیبال'),reference,now]);
       await con.execute("UPDATE payment_orders SET status='paid',rrn=?,trace=?,last_error=NULL,lease_key=NULL,lease_until=0,updated_at=? WHERE id=?",[proof.rrn,proof.trace,now,current.id]);
       return {...current,status:'paid',rrn:proof.rrn,trace:proof.trace,updated_at:now};
     });
@@ -71,6 +85,6 @@ module.exports = ({ execute, transaction }) => ({
   async duePayments(now) {
     await execute("UPDATE payment_orders SET status='failed',last_error='TOKEN_INTERRUPTED',updated_at=? WHERE status='creating' AND created_at<?",[now,now-60000]);
     await execute("UPDATE payment_orders SET status='expired',last_error='PAYMENT_EXPIRED',updated_at=? WHERE status='pending' AND ref_num IS NULL AND expires_at<=?",[now,now]);
-    return execute("SELECT id FROM payment_orders WHERE provider='sep' AND ref_num IS NOT NULL AND status IN ('pending','verifying') AND next_attempt_at<=? AND lease_until<=? ORDER BY next_attempt_at LIMIT 10",[now,now]);
+    return execute("SELECT id FROM payment_orders WHERE provider IN ('sep','zibal') AND ref_num IS NOT NULL AND status IN ('pending','verifying') AND next_attempt_at<=? AND lease_until<=? ORDER BY next_attempt_at LIMIT 10",[now,now]);
   },
 });

@@ -9,16 +9,7 @@ function configuration(env = process.env) {
 }
 
 function createSep({ fetch: request = global.fetch } = {}) {
-  async function post(url, body) {
-    const response = await request(url, { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify(body), signal: AbortSignal.timeout(8000), redirect: 'error' });
-    if (!response.ok) throw new Error('SEP_UNAVAILABLE');
-    const chunks=[];let bytes=0;
-    for await(const chunk of response.body){bytes+=chunk.length;if(bytes>16384)throw new Error('SEP_INVALID_RESPONSE');chunks.push(chunk);}
-    const text=Buffer.concat(chunks).toString('utf8');
-    const result = JSON.parse(text);
-    if (!result || typeof result !== 'object' || Array.isArray(result)) throw new Error('SEP_INVALID_RESPONSE');
-    return result;
-  }
+  const post=require('./transport.cjs')(request);
   return {
     payUrl: PAY_URL,
     async token(order, redirectUrl, phone) {

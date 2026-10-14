@@ -8,8 +8,12 @@ module.exports=async()=>{
     proof(order){return {ResultCode:this.mode==='duplicate'?2:0,Success:this.mode!=='duplicate',TransactionDetail:{RefNum:order.ref_num,TerminalNumber:order.terminal_id,OrginalAmount:order.amount_toman*10+(this.mode==='wrong-amount'?20000:0),RRN:'1200012345',StraceNo:'100123'}};},
     async reverse(order){this.reverseCalls++;if(this.mode==='reverse-error')throw Error('reverse failed');return this.proof(order);},
   };
+  const zibal={tokens:new Map(),paid:new Set(),tokenCalls:0,verifyCalls:0,mode:'ok',
+    async token(order,url){this.tokenCalls++;const token=String(15966442233311+this.tokenCalls);this.tokens.set(order.id,{url,order,token});return token;},
+    async verify(order){this.verifyCalls++;if(this.mode==='network')throw Error('network failed');return {result:100,status:this.mode==='cancelled'?3:this.mode==='reversed'?15:this.paid.has(order.token)?1:-1,orderId:this.mode==='wrong-order'?'OTHER':order.id,amount:order.amount_toman*10+(this.mode==='wrong-amount'?2000:0),refNumber:12312121};}
+  };
   const previousList=f.db.adminList;
   f.db.adminList=async(kind,opts)=>{if(kind!=='payments')return previousList(kind,opts);const all=[...f.db.paymentOrders.values()].filter(o=>!opts.status||o.status===opts.status).filter(o=>!opts.q||o.id.includes(opts.q));return {rows:all.slice((opts.page-1)*25,opts.page*25).map(({secret_hash,token,lease_key,...o})=>o),total:all.length,page:opts.page,pageSize:25};};
-  const options={payments:{env:{SEP_ENABLED:'true',SEP_TERMINAL_ID:'2015'},provider:bank,now:()=>time}};
-  return {...f,bank,options,advance:ms=>time+=ms};
+  const options={payments:{env:{SEP_ENABLED:'true',SEP_TERMINAL_ID:'2015'},provider:bank,providers:{zibal},now:()=>time}};
+  return {...f,bank,zibal,options,advance:ms=>time+=ms};
 };

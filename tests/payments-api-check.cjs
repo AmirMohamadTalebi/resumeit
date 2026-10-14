@@ -33,7 +33,7 @@ const waitPaid=async(db,id,status='paid')=>{for(let i=0;i<100;i++){const o=await
     f.bank.mode='token-error';const failed=await request('/api/payments/sep/start',{amount:100000,requestId:randomUUID()});assert.equal(failed.status,503);
     const listing=await(await request('/api/admin/payments')).json();assert(listing.total>=5);assert(!JSON.stringify(listing).includes('secret_hash'));assert(!JSON.stringify(listing).includes('token'));assert.equal((await request('/api/admin/payments',null,'b')).status,403);
     const enabled=await(await request('/api/payments/options')).json();assert.equal(enabled.gateways.find(g=>g.id==='sep').enabled,true);assert.equal(enabled.gateways.find(g=>g.id==='zibal').enabled,false);
-    assert.equal((await request('/api/payments/zibal/start',{},'a')).status,404);
+    assert.equal((await request('/api/payments/zibal/start',{},'a')).status,503);
     const limited=await Promise.all(Array.from({length:12},()=>request('/api/payments/sep/start',{amount:100000,requestId:randomUUID()})));assert(limited.some(r=>r.status===429));
     console.log('PASS: authenticated/CSRF checkout, owner isolation, secret callback, duplicate/concurrent receipts, exact amounts, one credit, retry after lost response, reversal, expiry review, admin journal and rate limit; bank mocked.');
   }finally{await new Promise(r=>server.close(r));await f.db.close();}

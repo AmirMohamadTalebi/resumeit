@@ -74,8 +74,8 @@ function adminHandler(database, auth) {
             githubConfigured: !!(
               process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET
             ),
-            paymentConfigured: require('../payments/sep.cjs').configuration().enabled,
-            gateways: [{id:'sep',enabled:require('../payments/sep.cjs').configuration().enabled},{id:'zibal',enabled:false}],
+            paymentConfigured: require('../payments/sep.cjs').configuration().enabled||require('../payments/zibal.cjs').configuration().enabled,
+            gateways: [{id:'sep',enabled:require('../payments/sep.cjs').configuration().enabled},{id:'zibal',enabled:require('../payments/zibal.cjs').configuration().enabled}],
             limits: {
               otpDaily: 100,
               phoneDaily: 5,
