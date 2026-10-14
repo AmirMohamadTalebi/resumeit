@@ -1,7 +1,7 @@
 const assert=require('node:assert/strict'),zibal=require('../src/payments/zibal.cjs');
 (async()=>{
   const env={ZIBAL_ENABLED:'true',ZIBAL_MERCHANT_ID:'m'.repeat(36)},order={id:'invoice-test',amount_toman:100000,token:'15966442233311'},calls=[];
-  assert.equal(zibal.configuration(env).enabled,true);for(const merchant of ['', 'zibal','https://evil.example','m'.repeat(129)])assert.equal(zibal.configuration({...env,ZIBAL_MERCHANT_ID:merchant}).enabled,false);
+  assert.equal(zibal.configuration(env).enabled,true);assert.equal(zibal.configuration({ZIBAL_MERCHANT_ID:env.ZIBAL_MERCHANT_ID}).enabled,true);for(const flag of ['false','0','invalid'])assert.equal(zibal.configuration({...env,ZIBAL_ENABLED:flag}).enabled,false);for(const merchant of ['', 'zibal','https://evil.example','m'.repeat(129)])assert.equal(zibal.configuration({...env,ZIBAL_MERCHANT_ID:merchant}).enabled,false);
   let verified=false,duplicate=false,wrong=false;
   const provider=zibal.createZibal({env,fetch:async(url,input)=>{
     const body=JSON.parse(input.body);calls.push({url,body,input});

@@ -1,7 +1,7 @@
 const ROOT='https://gateway.zibal.ir';
 function configuration(env=process.env){
   const merchant=String(env.ZIBAL_MERCHANT_ID||'').trim();
-  return {enabled:['true','1'].includes(env.ZIBAL_ENABLED)&&/^[A-Za-z0-9_-]{16,128}$/.test(merchant),merchant};
+  return {enabled:['','true','1'].includes(String(env.ZIBAL_ENABLED||'').trim().toLowerCase())&&/^[A-Za-z0-9_-]{16,128}$/.test(merchant),merchant};
 }
 function createZibal({fetch:request=global.fetch,env}={}){
   const post=require('./transport.cjs')(request),{merchant}=configuration(env);

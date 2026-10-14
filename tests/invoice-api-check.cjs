@@ -18,7 +18,15 @@ const wait=async(db,id,status)=>{for(let i=0;i<100;i++){const row=await db.payme
     const redirect=await request((await start.json()).url);assert.equal(redirect.status,303);assert(redirect.headers.get('location').startsWith('https://gateway.zibal.ir/start/'));
     const target=new URL(f.zibal.tokens.get(second.id).url);target.searchParams.set('orderId',second.id);target.searchParams.set('trackId','1');target.searchParams.set('success','1');assert.equal((await fetch(target)).status,400);
     const unpaid=await callback(second.id);assert.equal(unpaid.status,303);await wait(f.db,second.id,'pending');assert.equal((await f.db.wallet(f.owner)).balance,0,'success query alone cannot credit');
-    f.zibal.paid.add(f.zibal.tokens.get(second.id).token);const callbacks=await Promise.all(Array.from({length:4},()=>callback(second.id)));assert(callbacks.every(r=>r.status===303));await wait(f.db,second.id,'paid');assert.equal(f.db.paymentCredits.length,1);assert.equal((await f.db.wallet(f.owner)).balance,50);
+    f.zibal.paid.add(f.zibal.tokens.get(second.id).token);
+    const originalSession=f.db.session;f.db.session=async()=>{assert.fail('Zibal callback must never check user session');};
+    try{
+      const callbacks=await Promise.all(Array.from({length:4},()=>callback(second.id)));assert(callbacks.every(r=>r.status===303));
+      const token=f.zibal.tokens.get(second.id),postUrl=new URL(token.url);
+      const serverPost=await fetch(postUrl,{method:'POST',redirect:'manual',headers:{'Content-Type':'application/x-www-form-urlencoded',Cookie:'ri_session=expired'},body:new URLSearchParams({trackId:token.token,orderId:second.id,success:'1'})});assert.equal(serverPost.status,303);
+      await wait(f.db,second.id,'paid');
+    }finally{f.db.session=originalSession;}
+assert.equal(f.db.paymentCredits.length,1);assert.equal((await f.db.wallet(f.owner)).balance,50);
     const paidPage=await request('/payments/result?id='+second.id);const paidHtml=await paidPage.text();assert(paidHtml.includes('فاکتور شارژ کیف پول'));assert(paidHtml.includes('12312121'));assert(paidHtml.includes('۵۰ It'));assert(!paidHtml.includes('secret_hash'));assert(!paidHtml.includes('merchant'));assert.equal((await request('/payments/result?id='+second.id,null,'b')).status,404);assert.equal((await request(second.url)).status,303);
     const third=await invoice();await pay(third.id,'zibal');f.zibal.paid.add(f.zibal.tokens.get(third.id).token);f.advance(60000);await require('../src/payments/service.cjs').createPayments(f.db,f.options.payments).reconcile();await wait(f.db,third.id,'paid');assert.equal((await f.db.wallet(f.owner)).balance,100,'inquiry recovers payment without browser callback');
     const fourth=await invoice();await pay(fourth.id,'zibal');f.zibal.mode='cancelled';await callback(fourth.id);await wait(f.db,fourth.id,'cancelled');assert.equal((await f.db.wallet(f.owner)).balance,100);
