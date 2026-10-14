@@ -69,6 +69,7 @@ module.exports = ({ execute, transaction }) => ({
     });
   },
   async duePayments(now) {
+    await execute("UPDATE payment_orders SET status='failed',last_error='TOKEN_INTERRUPTED',updated_at=? WHERE status='creating' AND created_at<?",[now,now-60000]);
     await execute("UPDATE payment_orders SET status='expired',last_error='PAYMENT_EXPIRED',updated_at=? WHERE status='pending' AND ref_num IS NULL AND expires_at<=?",[now,now]);
     return execute("SELECT id FROM payment_orders WHERE provider='sep' AND ref_num IS NOT NULL AND status IN ('pending','verifying') AND next_attempt_at<=? AND lease_until<=? ORDER BY next_attempt_at LIMIT 10",[now,now]);
   },
