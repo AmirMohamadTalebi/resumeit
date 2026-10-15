@@ -5,6 +5,7 @@ window.resumeitSession = fetch('/api/auth/session', { cache: 'no-store' }).then(
   return user;
 }).catch(() => { location.replace('/login/'); return null; });
 // Fetch the document alongside the session rather than adding a second network round trip.
-window.resumeitDocument = fetch('/api/dashboard/document',{cache:'no-store',signal:AbortSignal.timeout(20000)}).then(async response=>{
+let workspace=1;try{const value=Number(new URLSearchParams(location.search).get('workspace')||sessionStorage.getItem('ri-workspace')||1);if([1,2,3].includes(value))workspace=value;sessionStorage.setItem('ri-workspace',String(workspace));}catch{}
+window.resumeitDocument = fetch('/api/dashboard/document?workspace='+workspace,{cache:'no-store',signal:AbortSignal.timeout(20000)}).then(async response=>{
   const doc=await response.json();return response.ok?doc:{error:doc.error||'اطلاعات صفحه دریافت نشد؛ دوباره تلاش کن'};
 }).catch(()=>({error:'ارتباط با سرور برقرار نشد؛ دوباره تلاش کن'}));

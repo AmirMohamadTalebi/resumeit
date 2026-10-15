@@ -40,9 +40,9 @@
   RI.registerPage('resume', {
     title: 'ساخت و ویرایش رزومه',
     render(ctx) {
-      return RI.pageHead({ eyebrow: 'استودیو', eyebrowIcon: 'resume', title: 'رزومهٔ تو', desc: 'قدم‌به‌قدم پیش برو؛ هر تغییر همان لحظه در پیش‌نمایش سمت چپ دیده می‌شود',
+      return RI.pageHead({ title: 'طراحی رزومه', desc:esc(RI.findTemplate('resume',RI.C().theme.resume).name)+' · '+RI.fa(RI.completion().pct)+'٪ تکمیل',
         actions: '<button type="button" class="btn btn--soft btn--sm show-sm" data-live>' + RI.icon('eye') + 'پیش‌نمایش زنده</button><a class="btn btn--ghost btn--sm" href="/dashboard/themes/" data-go="themes">' + RI.icon('palette') + 'ظاهر و قالب</a>' }) +
-        '<div class="editor"><div class="editor__main"><div class="segmented" role="tablist" aria-label="حالت ویرایش" id="rtabs"><button type="button" role="tab" data-tab="content" aria-selected="true">' + RI.icon('edit') + 'محتوا</button><button type="button" role="tab" data-tab="layout" aria-selected="false">' + RI.icon('section') + 'چیدمان بخش‌ها</button></div><div id="rbody"></div></div>' +
+        RI.completionStrip('resume')+'<div class="resume-tabs-host"></div><div class="editor"><div class="editor__main"><div class="segmented" role="tablist" aria-label="حالت ویرایش" id="rtabs"><button type="button" role="tab" data-tab="content" aria-selected="true">' + RI.icon('edit') + 'محتوا</button><button type="button" role="tab" data-tab="layout" aria-selected="false">' + RI.icon('section') + 'چیدمان بخش‌ها</button></div><div id="rbody"></div></div>' +
         '<aside class="editor__side" aria-label="پیش‌نمایش زندهٔ رزومه"><div class="sticky"><div id="rpv"></div></div></aside></div>';
     },
     mount(root, ctx) {
@@ -51,34 +51,45 @@
       let tab = 'content', step = (ctx.opts && ctx.opts.step) || 'profile';
       if (!STEPS.some((s) => s.id === step)) step = 'profile';
       const body = RI.$('#rbody', root);
+      const tabsHost = RI.$('.resume-tabs-host', root), desktop = matchMedia('(min-width:1101px)');
+      function placeOutline() {
+        const outline = RI.$('.resume-outline', root); if (!outline) return;
+        if (desktop.matches) { tabsHost.append(outline); outline.open = true; }
+        else if (outline.parentElement !== body) { body.prepend(outline); outline.open = false; }
+      }
+      desktop.addEventListener('change', placeOutline);
+      RI.bindBranding(root);
       const pv = new RI.Preview(RI.$('#rpv', root), { kind: 'resume', device: 'mobile', fitHeight: 200 });
       let raf = 0;
       const refresh = () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(() => pv.refresh(false)); };
       const off = RI.on('change', refresh);
 
       function stepper() {
-        const done = STEPS.filter((s) => s.id === 'template' ? RI.resumeRequirements(RI.C()).filter(x => x.step === 'template').every(x => x.done) : stepDone(s.id)).length;
-        return '<div class="stepper"><div class="stepper__top"><b>' + RI.fa(done) + ' از ' + RI.fa(STEPS.length) + ' بخش پر شده</b><span class="chip chip--brown">' + RI.fa(RI.completion().pct) + '٪ کامل</span></div><div class="bar" aria-hidden="true"><i style="width:' + done / STEPS.length * 100 + '%"></i></div>' +
-          '<div class="stepper__chips" role="tablist" aria-label="بخش‌های رزومه">' + STEPS.map((s) => '<button type="button" role="tab" class="schip' + (stepDone(s.id) ? ' is-done' : '') + '" data-step="' + s.id + '" aria-selected="' + (s.id === step) + '">' + RI.icon(stepDone(s.id) ? 'check' : s.icon) + '<span>' + s.label + '</span>' + (s.req ? '<em title="ضروری">*</em>' : '') + '</button>').join('') + '</div></div>';
+        const groups=[['هویت و ارتباط',['profile','contacts','socials']],['مسیر حرفه‌ای',['experience','education','skills','languages']],['کارها و دستاوردها',['projects','certs']],['جزئیات قالب',['template']]],current=STEPS.find(s=>s.id===step);
+        const done=s=>s.id==='template'?RI.resumeRequirements(RI.C()).filter(x=>x.step==='template').every(x=>x.done):stepDone(s.id);
+        return '<details class="resume-outline" '+(innerWidth>1100?'open':'')+'><summary><span>'+RI.icon('section')+'نقشهٔ رزومه</span><small>'+esc(current.label)+'</small>'+RI.icon('chevD')+'</summary><nav role="tablist" aria-label="بخش‌های رزومه">'+groups.map(([label,ids])=>{
+          const items=ids.map(id=>STEPS.find(s=>s.id===id)).filter(Boolean);if(!items.length)return '';
+          return '<div class="outline-group"><h3>'+label+'</h3>'+items.map(s=>'<button type="button" role="tab" class="outline-item" data-step="'+s.id+'" aria-selected="'+(s.id===step)+'" aria-controls="panel"><span class="outline-item__icon">'+RI.icon(s.icon)+'</span><span class="outline-item__label">'+s.label+'<small>'+(done(s)?'تکمیل‌شده':s.req?'برای انتشار':'به انتخاب تو')+'</small></span><span class="outline-item__state" aria-label="'+(done(s)?'تکمیل‌شده':s.req?'نیازمند تکمیل':'افزودنی')+'">'+RI.icon(done(s)?'check':s.req?'edit':'plus')+'</span></button>').join('')+'</div>';
+        }).join('')+'</nav></details>';
       }
 
       function profilePanel() {
         const p = RI.C().profile;
-        return '<div class="panel"><div class="panel__head"><h2>خودت را معرفی کن</h2><p>اولین چیزی که بازدیدکننده می‌بیند <span class="field__req">ضروری</span> برای انتشار: نام و عنوان</p></div>' +
-          '<div class="profile-media"><div class="field"><div class="field__label">تصویر کاور<span class="field__opt">اختیاری</span></div>' + RI.imageFieldHtml('cover', { value: p.cover, wide: true, label: 'کاور' }) + '</div>' +
-          '<div class="field"><div class="field__label">عکس پروفایل<span class="field__opt">اختیاری</span></div>' + RI.imageFieldHtml('avatar', { value: p.avatar, round: true, label: 'عکس پروفایل' }) + '</div></div><hr class="divider">' +
+        return '<div class="panel"><div class="panel__head"><h2>خودت را معرفی کن</h2><p>اولین چیزی که بازدیدکننده می‌بیند <span class="field__req">پایهٔ انتشار</span> برای انتشار: نام و عنوان</p></div>' +
+          '<div class="profile-media"><div class="field"><div class="field__label">تصویر کاور<span class="field__opt">به انتخاب تو</span></div>' + RI.imageFieldHtml('cover', { value: p.cover, wide: true, label: 'کاور' }) + '</div>' +
+          '<div class="field"><div class="field__label">عکس پروفایل<span class="field__opt">به انتخاب تو</span></div>' + RI.imageFieldHtml('avatar', { value: p.avatar, round: true, label: 'عکس پروفایل' }) + '</div></div><hr class="divider">' +
           '<div class="syncrow"><div><b>مشخصات حساب برای انتشار</b><div class="field__hint">نام، نام خانوادگی و شماره تأییدشده رو در حساب کامل کن</div></div><a class="btn btn--soft btn--sm" href="/dashboard/settings/" data-go="settings">تکمیل مشخصات</a></div><div class="syncrow"><div><b>شماره حساب</b><div class="field__hint"><span class="ltr-inline">'+esc(RI.state.account.mobile||'اضافه نشده')+'</span> — '+(RI.state.account.mobileVerified?'تأیید شده':'نیاز به تأیید')+'</div><div class="field__hint">این شماره خودکار در صفحه عمومی نمایش داده نمی‌شه</div></div><button type="button" class="btn btn--soft btn--sm" data-account-phone>تأیید شماره</button></div><hr class="divider">' +
-          '<div class="form-grid" id="pform"><div class="field" data-field="name"><label class="field__label" for="p_name">نام و نام خانوادگی<span class="field__req">ضروری</span></label><input class="input" id="p_name" data-p="name" value="' + esc(p.name) + '" maxlength="50" autocomplete="off"><div class="field__error" role="alert" hidden></div></div>' +
-          '<div class="field" data-field="location"><label class="field__label" for="p_loc">شهر<span class="field__opt">اختیاری</span></label><input class="input" id="p_loc" data-p="location" value="' + esc(p.location) + '" maxlength="30"></div>' +
-          '<div class="field span-2" data-field="title"><label class="field__label" for="p_title">عنوان حرفه‌ای یا تحصیلی<span class="field__req">ضروری</span></label><input class="input" id="p_title" data-p="title" value="' + esc(p.title) + '" maxlength="90" placeholder="مثلاً دانشجوی کامپیوتر | طراح رابط کاربری"><div class="field__hint">یک خط که بگوید کی هستی و چه می‌کنی</div><div class="field__error" role="alert" hidden></div></div>' +
-          '<div class="field span-2" data-field="bio"><label class="field__label" for="p_bio">معرفی کوتاه<span class="field__opt">اختیاری</span><span class="field__count" id="bioCount"></span></label><textarea class="textarea" id="p_bio" data-p="bio" maxlength="300" rows="4" placeholder="دو سه جمله دربارهٔ آنچه دوست داری و می‌سازی">' + esc(p.bio) + '</textarea><div class="field__hint">با ۴۰ نویسه به بالا، نشان «پروفایل جان‌دار» نزدیک‌تر می‌شود</div></div></div></div>';
+          '<div class="form-grid" id="pform"><div class="field" data-field="name"><label class="field__label" for="p_name">نام و نام خانوادگی<span class="field__req">پایهٔ انتشار</span></label><input class="input" id="p_name" data-p="name" value="' + esc(p.name) + '" maxlength="50" autocomplete="off"><div class="field__error" role="alert" hidden></div></div>' +
+          '<div class="field" data-field="location"><label class="field__label" for="p_loc">شهر<span class="field__opt">به انتخاب تو</span></label><input class="input" id="p_loc" data-p="location" value="' + esc(p.location) + '" maxlength="30"></div>' +
+          '<div class="field span-2" data-field="title"><label class="field__label" for="p_title">عنوان حرفه‌ای یا تحصیلی<span class="field__req">پایهٔ انتشار</span></label><input class="input" id="p_title" data-p="title" value="' + esc(p.title) + '" maxlength="90" placeholder="مثلاً دانشجوی کامپیوتر | طراح رابط کاربری"><div class="field__hint">یک خط که بگوید کی هستی و چه می‌کنی</div><div class="field__error" role="alert" hidden></div></div>' +
+          '<div class="field span-2" data-field="bio"><label class="field__label" for="p_bio">معرفی کوتاه<span class="field__opt">به انتخاب تو</span><span class="field__count" id="bioCount"></span></label><textarea class="textarea" id="p_bio" data-p="bio" maxlength="300" rows="4" placeholder="دو سه جمله دربارهٔ آنچه دوست داری و می‌سازی">' + esc(p.bio) + '</textarea></div></div>'+RI.brandingHtml('resume')+'</div>';
       }
 
       function contactsPanel() {
         const ic = { email: 'mail', phone: 'phone', website: 'globe' };
         const rows = RI.C().contacts.map((x) => '<div class="crow" data-id="' + x.id + '"><span class="row__ico">' + RI.icon(ic[x.type]) + '</span><div class="field" data-field="' + x.id + '"><label class="field__label" for="c_' + x.id + '">' + esc(x.label) + '</label><input class="input" id="c_' + x.id + '" data-c="' + x.id + '" dir="ltr" value="' + esc(x.value) + '" inputmode="' + (x.type === 'email' ? 'email' : x.type === 'phone' ? 'tel' : 'url') + '" placeholder="' + (x.type === 'email' ? 'you@example.com' : x.type === 'phone' ? '09123456789' : 'example.com') + '"><div class="field__error" role="alert" hidden></div></div>' +
           '<label class="crow__pub"><span>' + (x.public ? RI.icon('eye') + 'عمومی' : RI.icon('eyeOff') + 'پنهان') + '</span>' + RI.switchHtml({ checked: x.public, label: 'نمایش عمومی ' + x.label }).replace('<input', '<input data-cpub="' + x.id + '"') + '</label></div>').join('');
-        return '<div class="panel"><div class="panel__head"><h2>اطلاعات تماس</h2><p>هر مورد را جدا برای نمایش عمومی انتخاب کن <span class="field__req">ضروری</span> برای انتشار: دست‌کم یک راه تماس عمومی</p></div>' + rows + '<div class="banner banner--brown">' + RI.icon('shield') + '<div class="banner__body">مورد پنهان هرگز روی صفحهٔ عمومی دیده نمی‌شود، حتی اگر پر باشد</div></div></div>';
+        return '<div class="panel"><div class="panel__head"><h2>اطلاعات تماس</h2><p>هر مورد را جدا برای نمایش عمومی انتخاب کن <span class="field__req">پایهٔ انتشار</span> برای انتشار: دست‌کم یک راه تماس عمومی</p></div>' + rows + '<div class="banner banner--brown">' + RI.icon('shield') + '<div class="banner__body">مورد پنهان هرگز روی صفحهٔ عمومی دیده نمی‌شود، حتی اگر پر باشد</div></div></div>';
       }
 
       function listPanel(id) {
@@ -88,7 +99,7 @@
           '<div class="row__main"><div class="row__title">' + esc(L.title_(x)) + '</div><div class="row__sub">' + esc(L.sub(x) || '') + '</div></div>' + (L.right ? L.right(x) : '') +
           '<div class="row__actions"><button type="button" class="btn btn--icon btn--ghost btn--sm" data-up="' + x.id + '" aria-label="بالا" ' + (i === 0 ? 'disabled' : '') + '>' + RI.icon('up') + '</button><button type="button" class="btn btn--icon btn--ghost btn--sm" data-down="' + x.id + '" aria-label="پایین" ' + (i === items.length - 1 ? 'disabled' : '') + '>' + RI.icon('down') + '</button>' +
           '<button type="button" class="btn btn--icon btn--ghost btn--sm" data-edit="' + x.id + '" aria-label="ویرایش">' + RI.icon('edit') + '</button><button type="button" class="btn btn--icon btn--ghost btn--sm" data-del="' + x.id + '" aria-label="حذف">' + RI.icon('trash') + '</button></div></li>').join('');
-        return '<div class="panel"><div class="panel__head panel__head--row"><div><h2>' + L.title + '</h2><p>' + L.hint + ' <span class="field__opt">اختیاری</span></p></div><button type="button" class="btn btn--primary btn--sm" data-add>' + RI.icon('plus') + L.add + '</button></div>' +
+        return '<div class="panel"><div class="panel__head panel__head--row"><div><h2>' + L.title + '</h2><p>' + L.hint + ' <span class="field__opt">به انتخاب تو</span></p></div><button type="button" class="btn btn--primary btn--sm" data-add>' + RI.icon('plus') + L.add + '</button></div>' +
           (items.length ? '<ul class="rows" id="rlist">' + rows + '</ul>' : RI.empty({ icon: L.icon, title: L.empty[0], text: L.empty[1], action: '<button type="button" class="btn btn--primary" data-add>' + RI.icon('plus') + L.add + '</button>' })) + '</div>';
       }
 
@@ -99,7 +110,7 @@
           const value = RI.resumeValue(values[group] || {}, f), id = 'template-' + group + '-' + f.key;
           const attrs = ' id="' + esc(id) + '" data-template-group="' + group + '" data-template-key="' + esc(f.key) + '"';
           const control = f.type === 'checkbox' ? '<input class="checkbox" type="checkbox"' + attrs + (value ? ' checked' : '') + '>' : f.type === 'select' ? '<select class="select input"' + attrs + '><option value="">انتخاب کن</option>' + f.options.map(o => '<option value="' + esc(o[0]) + '"' + (o[0] === value ? ' selected' : '') + '>' + esc(o[1]) + '</option>').join('') + '</select>' : f.type === 'textarea' ? '<textarea class="textarea input"' + attrs + ' maxlength="' + (f.max || 1000) + '">' + esc(value) + '</textarea>' : '<input class="input" type="text"' + attrs + ' maxlength="' + (f.max || 1000) + '" value="' + esc(value) + '">';
-          return '<div class="field"><label class="field__label" for="' + esc(id) + '">' + esc(f.label) + (f.required ? ' — ضروری' : ' — اختیاری') + (group === 'fields' && f.public === true ? ' — عمومی' : '') + '</label>' + control + '</div>';
+          return '<div class="field"><label class="field__label" for="' + esc(id) + '">' + esc(f.label) + (f.required ? ' — پایهٔ انتشار' : ' — به انتخاب تو') + (group === 'fields' && f.public === true ? ' — عمومی' : '') + '</label>' + control + '</div>';
         }).join('')).join('') + '</div>';
       }
       function layoutPanel() {
@@ -112,6 +123,7 @@
       }
 
       function paint(keepScroll) {
+        tabsHost.replaceChildren();
         if (tab === 'layout') body.innerHTML = layoutPanel();
         else {
           body.innerHTML = stepper() + '<div id="panel">' + (step === 'profile' ? profilePanel() : step === 'contacts' ? contactsPanel() : step === 'template' ? templatePanel() : listPanel(step)) + '</div>' + navButtons();
@@ -120,6 +132,7 @@
           if (ul) { const L = RI.C()[step]; RI.sortable(ul, { onReorder: (f, t) => RI.flip(ul, () => { RI.move(L, f, t); RI.touch(step); paint(); }) }); }
         }
         RI.$$('#rtabs [data-tab]', root).forEach((b) => b.setAttribute('aria-selected', b.dataset.tab === tab));
+        placeOutline();
         RI.animateBars(body);
         if (tab === 'layout') bindLayout();
       }
@@ -127,7 +140,7 @@
         const i = STEPS.findIndex((s) => s.id === step), prev = STEPS[i - 1], next = STEPS[i + 1];
         return '<div class="stepnav">' + (prev ? '<button type="button" class="btn btn--ghost" data-step="' + prev.id + '">' + RI.icon('chevR') + prev.label + '</button>' : '<span></span>') + (next ? '<button type="button" class="btn btn--ice" data-step="' + next.id + '">' + next.label + RI.icon('chevL') + '</button>' : '<button type="button" class="btn btn--primary" data-go="publish">' + RI.icon('rocket') + 'به مرحلهٔ انتشار' + '</button>') + '</div>';
       }
-      function setStep(s) { step = s; paint(); RI.$('.schip[aria-selected="true"]',root)?.scrollIntoView({block:'nearest',inline:'nearest',behavior:'instant'}); if (!RI.reduceMotion()) RI.$('#panel', root).animate([{ opacity: 0, transform: 'translateY(8px)' }, { opacity: 1, transform: 'none' }], { duration: 180, easing: 'cubic-bezier(.22,.8,.28,1)' }); }
+      function setStep(s) { step = s; paint(); if(innerWidth<1101)RI.$('#panel',root)?.scrollIntoView({block:'start',behavior:'instant'}); if (!RI.reduceMotion()) RI.$('#panel', root).animate([{ opacity: .5, transform: 'translateY(7px)' }, { opacity: 1, transform: 'none' }], { duration: 200, easing: 'cubic-bezier(.16,1,.3,1)' }); }
 
       function bindPanel() {
         const c = RI.C(), p = c.profile;
@@ -146,7 +159,7 @@
       }
 
       /* رویدادهای کلی بدنه */
-      RI.delegate(body, 'click', '[data-step]', (e, b) => setStep(b.dataset.step));
+      RI.delegate(root, 'click', '[data-step]', (e, b) => setStep(b.dataset.step));
       RI.delegate(body, 'click', '[data-add]', () => openForm(null));
       RI.delegate(body, 'click', '[data-edit]', (e, b) => openForm(b.dataset.edit));
       RI.delegate(body, 'click', '[data-del]', (e, b) => remove(b.dataset.del));
@@ -196,7 +209,7 @@
       RI.delegate(root, 'click', '[data-live]', () => RI.openPreview('resume'));
       paint();
       if (ctx.opts && ctx.opts.step) { /* رفتن مستقیم به مرحلهٔ پیشنهادی */ }
-      return () => { off(); pv.destroy(); };
+      return () => { off(); pv.destroy(); desktop.removeEventListener('change', placeOutline); };
     },
   });
 })();

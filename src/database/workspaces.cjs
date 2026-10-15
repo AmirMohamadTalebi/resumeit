@@ -1,0 +1,6 @@
+module.exports.initialize=async execute=>{
+ await execute('CREATE TABLE IF NOT EXISTS dashboard_workspaces(user_id CHAR(36) NOT NULL,slot INT NOT NULL,slug VARCHAR(24) CHARACTER SET ascii COLLATE ascii_bin,draft JSON NOT NULL,preferences JSON NOT NULL,pub JSON NOT NULL,published JSON NOT NULL,revision INT UNSIGNED NOT NULL DEFAULT 0,PRIMARY KEY(user_id,slot),FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE) ENGINE=InnoDB');
+ await execute('CREATE TABLE IF NOT EXISTS dashboard_slug_claims(namespace VARCHAR(12) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,slug VARCHAR(24) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,user_id CHAR(36) NOT NULL,slot INT NOT NULL,PRIMARY KEY(namespace,slug),INDEX(user_id,slot),FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE) ENGINE=InnoDB');
+ await execute("INSERT IGNORE INTO dashboard_slug_claims(namespace,slug,user_id,slot) SELECT 'subdomain',slug,user_id,1 FROM dashboard_documents WHERE slug IS NOT NULL AND slug<>''");
+ await execute('CREATE TABLE IF NOT EXISTS dashboard_workspace_metrics(user_id CHAR(36) NOT NULL,slot INT NOT NULL,day INT NOT NULL,event VARCHAR(8) NOT NULL,link_id VARCHAR(64) NOT NULL DEFAULT \'\',total BIGINT UNSIGNED NOT NULL DEFAULT 0,PRIMARY KEY(user_id,slot,day,event,link_id),FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE) ENGINE=InnoDB');
+};

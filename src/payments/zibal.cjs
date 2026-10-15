@@ -17,7 +17,10 @@ function createZibal({fetch:request=global.fetch,env}={}){
       let result=await post(ROOT+'/v1/inquiry',body);
       if(result.result!==100||result.status!==2)return result;
       if(result.orderId!==order.id||result.amount!==Number(order.amount_toman)*10){const error=Error('ZIBAL_PAYMENT_MISMATCH');error.code='ZIBAL_PAYMENT_MISMATCH';throw error;}
+      const boundOrderId=result.orderId;
       result=await post(ROOT+'/v1/verify',body);
+      // Verify may omit orderId; the preceding inquiry already bound this exact trackId.
+      if(result.result===100&&result.status===1&&result.orderId===undefined)result={...result,orderId:boundOrderId};
       if(result.result===201){result=await post(ROOT+'/v1/inquiry',{merchant,trackId:Number(order.token)});if(result.result!==100||result.status!==1)throw Error('ZIBAL_UNCONFIRMED');}
       return result;
     },

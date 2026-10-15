@@ -1,0 +1,5 @@
+(() => {
+ 'use strict';const host=document.getElementById('releases'),search=document.getElementById('release-search'),esc=value=>String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));let releases=[];
+ function paint(){const query=search.value.trim().toLocaleLowerCase('fa'),list=releases.filter(r=>JSON.stringify(r).toLocaleLowerCase('fa').includes(query));host.innerHTML=list.length?list.map((r,i)=>'<article><div class="release-title"><h2>'+esc(r.title)+'</h2><div><b dir="ltr">'+esc(r.version)+'</b><time datetime="'+r.date+'">'+new Date(r.date+'T12:00:00Z').toLocaleDateString('fa-IR',{timeZone:'Asia/Tehran',dateStyle:'long'})+'</time></div></div>'+r.groups.map(g=>'<section><h3>'+esc(g.title)+'</h3><ul>'+g.items.map(item=>'<li>'+esc(item)+'</li>').join('')+'</ul></section>').join('')+'</article>').join(''):'<p>تغییری با این جست‌وجو پیدا نشد.</p>';}
+ search.addEventListener('input',paint);fetch('/api/changes').then(async r=>{if(!r.ok)throw Error();return r.json();}).then(data=>{releases=data.releases;paint();}).catch(()=>{host.textContent='فهرست نسخه‌ها دریافت نشد؛ صفحه را دوباره باز کن.';});
+})();

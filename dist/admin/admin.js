@@ -76,7 +76,7 @@
         : "—",
     icon = (n) => window.RI.icon(n),
     parse = (v) => (typeof v === "string" ? JSON.parse(v) : v);
-  let ownerId;
+  let ownerId, detailUser;
   let page = 1,
     rows = [],
     total = 0,
@@ -88,6 +88,9 @@
     "block-publication": "توقف انتشار",
     "unblock-publication": "اجازهٔ انتشار",
     "revoke-sessions": "خروج از همهٔ نشست‌ها",
+    "edit-profile": "ویرایش مشخصات",
+    "delete-account": "حذف دائمی حساب",
+    "payment-gateways": "تغییر درگاه‌های پرداخت",
   };
   const statuses = {
     accepted: "پذیرفته‌شده",
@@ -275,15 +278,15 @@
         ],
       ],
       pages: [
-        ["مالک", "آدرس", "انتشار", "کنترل انتشار", "ویرایش"],
+        ["مالک", "جایگاه", "آدرس", "انتشار", "کنترل انتشار", "ویرایش"],
         (r) => [
           userLink(r.id, r.name),
+          fa(r.slot||1),
           r.slug
             ? '<a class="ltr" href="https://' +
-              esc(r.slug) +
-              '.resumeit.ir" target="_blank" rel="noopener">' +
-              esc(r.slug) +
-              ".resumeit.ir</a>"
+              (Number(r.slot)===3?'resumeit.ir/'+esc(r.slug):esc(r.slug)+'.resumeit.ir') +
+              '" target="_blank" rel="noopener">' +
+              (Number(r.slot)===3?'resumeit.ir/'+esc(r.slug):esc(r.slug)+'.resumeit.ir') + '</a>'
             : "بدون آدرس",
           esc(publication(r.pub)),
           badge(
@@ -380,6 +383,7 @@
   }
   function detail(d) {
     const u = d.user;
+    detailUser=u;
     return (
       '<div class="admin-grid"><section class="panel"><h2>' +
       esc(
@@ -407,6 +411,8 @@
         ["revoke-sessions", "خروج نشست‌ها"],
         ...(!u.is_admin
           ? [
+              ['edit-profile','ویرایش مشخصات'],
+              ['delete-account','حذف دائمی حساب'],
               [
                 u.suspended ? "restore" : "suspend",
                 u.suspended ? "رفع تعلیق" : "تعلیق حساب",
@@ -443,6 +449,7 @@
         ["قالب رزومه", esc(d.document?.template || "—")],
         ["تعداد دسترسی‌ها", fa(d.access.length)],
       ]) +
+      (d.documents?.length?table(['جایگاه','آدرس','وضعیت ثبت‌شده'],d.documents.map(doc=>[fa(doc.slot),esc(doc.slug||'انتخاب نشده'),esc(publication(doc.pub))])):'')+
       (d.access.length
         ? table(
             ["محصول", "پایان دسترسی"],
@@ -493,7 +500,10 @@
     );
   }
   function health(d) {
+    const channels=d.notificationChannels;
     return (
+      (d.paymentPolicy?'<section class="panel"><h2>شروع پرداخت بانکی</h2><form id="admin-payment-gateways">'+[['sep','سپ'],['zibal','زیبال']].map(([id,label])=>'<label class="admin-channel-row"><span><b>'+label+'</b><small>'+(d.gateways?.find(g=>g.id===id)?.enabled?'اطلاعات پذیرندگی تنظیم شده':'اطلاعات پذیرندگی در میزبان تنظیم نشده')+'</small></span><input class="toggle" type="checkbox" name="'+id+'" '+(d.paymentPolicy[id]?'checked':'')+' aria-label="اجازهٔ پرداخت جدید با '+label+'"></label>').join('')+'<p>توقف درگاه فقط شروع پرداخت تازه را می‌بندد؛ تأیید و پیگیری پرداخت‌های قبلی ادامه دارد.</p><button class="btn" type="submit">ذخیرهٔ درگاه‌ها</button><p role="status"></p></form></section>':'')+
+      (channels?'<section class="panel"><h2>کانال‌های اعلان سایت</h2><p>این کلیدها اجازهٔ سراسری ارسال‌اند؛ دریافت هر کاربر به انتخاب خودش هم وابسته است. پیامک ورود و بازیابی رمز مستقل باقی می‌ماند.</p><form id="admin-notification-channels">'+[['email','ایمیل'],['sms','پیامک اعلان'],['push','پوش مرورگر']].map(([id,label])=>'<label class="admin-channel-row"><span><b>'+label+'</b><small>'+(channels.configured[id]?'پیکربندی سرویس موجود است':'نیازمند پیکربندی امن سرویس')+'</small></span><input class="toggle" type="checkbox" name="'+id+'" '+(channels.enabled[id]?'checked':'')+' aria-label="اجازهٔ سراسری '+label+'"></label>').join('')+'<p>خاموش‌کردن، ارسال‌های بعدی را متوقف می‌کند؛ پیام در حال ارسال قابل پس‌گرفتن نیست. ترجیحات کاربران حفظ می‌شود.</p><button class="btn btn-primary" type="submit">ذخیرهٔ کانال‌های سایت</button><p role="status" data-admin-channel-status></p></form></section>':'')+
       '<div class="admin-grid"><section class="panel"><h2>سرویس‌های فعال</h2>' +
       summary([
         ["پایگاه داده", badge(true, d.database)],
@@ -602,7 +612,12 @@
     const dlg = $("#action-dialog");
     $("#action-title").textContent = actionNames[action];
     $("#action-explain").textContent =
-      "این عملیات روی حساب انتخاب‌شده انجام می‌شود و در سابقهٔ مدیریت باقی می‌ماند.";
+      action==='delete-account'?'حذف برگشت‌ناپذیر است: صفحات، نشست‌ها، تیکت‌ها و کیف پول حذف می‌شوند. رسیدهای بانکی برای پیگیری بدون حساب نگه داشته می‌شوند. تأیید: '+(detailUser.phone||id):"این عملیات روی حساب انتخاب‌شده انجام می‌شود و در سابقهٔ مدیریت باقی می‌ماند.";
+    $('#profile-fields').hidden=action!=='edit-profile';
+    $('#delete-field').hidden=action!=='delete-account';
+    $('#delete-confirm').required=action==='delete-account';$('#delete-confirm').value='';
+    for(const [field,key] of [['first','first_name'],['last','last_name'],['role','role'],['bio','bio']])$('#edit-'+field).value=detailUser?.[key]||'';
+    $('#edit-first').required=$('#edit-last').required=action==='edit-profile';
     $("#amount-field").hidden = action !== "credit";
     $("#amount").required = action === "credit";
     $("#action-error").textContent = "";
@@ -624,8 +639,11 @@
           reason,
           requestId,
           ...(action === "credit" ? { toman } : {}),
+          ...(action==='edit-profile'?{profile:Object.fromEntries([['first','first_name'],['last','last_name'],['role','role'],['bio','bio']].map(([field,key])=>[key,$('#edit-'+field).value]))}:{}),
+          ...(action==='delete-account'?{confirmation:$('#delete-confirm').value}:{}),
         });
         dlg.close();
+        if(action==='delete-account')history.replaceState(null,'','/admin/users/');
         await load();
       } catch (error) {
         $("#action-error").textContent = error.message;
@@ -735,6 +753,15 @@
     };
     $("#catalog-kind").onchange = load;
     $("#export").onclick = exportCsv;
+    document.addEventListener('submit',async event=>{
+      if(event.target.id==='admin-payment-gateways'){
+        event.preventDefault();const form=event.target,button=form.querySelector('[type=submit]'),status=form.querySelector('[role=status]');if(button.disabled)return;button.disabled=true;
+        try{await api('payment-gateways',Object.fromEntries(['sep','zibal'].map(key=>[key,form.elements.namedItem(key).checked])));status.textContent='تنظیم درگاه‌ها ذخیره شد؛ پیگیری پرداخت‌های قبلی ادامه دارد.';}catch(error){status.textContent=error.message;}finally{button.disabled=false;}return;
+      }
+      if(event.target.id!=='admin-notification-channels')return;event.preventDefault();const form=event.target,button=form.querySelector('[type=submit]'),status=form.querySelector('[data-admin-channel-status]');if(button.disabled)return;button.disabled=true;
+      try{await api('notification-channels',Object.fromEntries(['email','sms','push'].map(key=>[key,form.elements.namedItem(key).checked])));status.textContent='تنظیم کانال‌های سایت ذخیره شد؛ انتخاب کاربران حفظ شده است.';}
+      catch(error){status.textContent=error.message;}finally{button.disabled=false;}
+    });
     document.addEventListener("click", (e) => {
       const a = e.target.closest("[data-action]");
       if (a) actionDialog(a.dataset.user, a.dataset.action);

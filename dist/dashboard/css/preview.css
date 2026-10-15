@@ -143,6 +143,9 @@
 .lv-head p { color: var(--lv-muted); max-width: 44ch; font-size: 14px; }
 .lv-avatar { width: 96px; height: 96px; border-radius: 50%; object-fit: cover; background: var(--ice-200); margin-bottom: 6px; }
 .lv-avatar--ring { box-shadow: 0 0 0 4px var(--lv-bg), 0 0 0 6px var(--lv-accent); }
+.lv-avatar--ring{outline:2px solid var(--lv-accent);outline-offset:4px;box-shadow:none}
+.lv--end .lv-head{justify-items:end;text-align:end}.lv--end .lv-btn__txt{text-align:end}
+.lv-text{white-space:pre-wrap;line-height:1.9;padding:16px;color:var(--lv-ink);background:color-mix(in srgb,var(--lv-btn) 55%,transparent);border-radius:var(--lv-r)}.lv-image{overflow:hidden;border-radius:var(--lv-r)}.lv-image img{width:100%;height:auto;display:block}.lv-image p{margin:0;padding:12px;background:var(--lv-btn);color:var(--lv-btn-ink)}
 .lv-list { display: grid; gap: 12px; padding: 18px 24px 8px; width: min(100%, 520px); margin: 0 auto; }
 .lv-div { margin-top: 8px; text-align: center; font-size: 12.5px; font-weight: 700; color: var(--lv-muted); display: flex; align-items: center; gap: 12px; }
 .lv-div::before, .lv-div::after { content: ''; flex: 1; height: 1px; background: currentColor; opacity: .3; }

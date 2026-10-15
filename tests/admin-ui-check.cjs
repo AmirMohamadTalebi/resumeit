@@ -4,6 +4,7 @@ const { chromium } = require("playwright");
 const { createServer } = require("../src/http/server.cjs");
 (async () => {
   const fixture = await require("./admin-fixture.cjs")(),
+    store = require('./workspace-test-store.cjs')(fixture.db,[fixture.owner,fixture.target]),
     server = createServer(fixture.db);
   await new Promise((r) => server.listen(0, "127.0.0.1", r));
   const base = "http://127.0.0.1:" + server.address().port,
@@ -143,6 +144,7 @@ const { createServer } = require("../src/http/server.cjs");
   } finally {
     await browser.close();
     await new Promise((r) => server.close(r));
+    store.close();
   }
 })().catch((e) => {
   console.error(e);

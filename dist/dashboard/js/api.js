@@ -1,26 +1,33 @@
 (() => {
   'use strict';const RI=window.RI;
+  RI.workspaceSlot=1;try{const value=Number(new URLSearchParams(location.search).get('workspace')||sessionStorage.getItem('ri-workspace')||1);if([1,2,3].includes(value))RI.workspaceSlot=value;}catch{}
+  RI.pageKinds=()=>RI.workspaceSlot===3?['links']:['resume','links'];
   RI.restorePublication=doc=>{if(doc.content&&doc.pub)for(const k of ['resume','links'])if(doc.pub[k]?.snapCurrent){doc.pub[k].snap=JSON.stringify(RI.pubData(k,doc.content));delete doc.pub[k].snapCurrent;}return doc;};
   RI.dashboardRequest=async(route,data)=>{
-    let r;try{r=await fetch('/api/dashboard/'+route,{method:data?'POST':'GET',credentials:'same-origin',headers:{...(data?{'Content-Type':'application/json'}:{}),...(RI.ownerId?{'X-ResumeIt-Owner':RI.ownerId}:{})},body:data?JSON.stringify(data):undefined,signal:AbortSignal.timeout(20000)});}catch{throw Object.assign(new Error('ارتباط با سرور برقرار نشد؛ تغییراتت را نگه دار و دوباره تلاش کن'),{code:'NETWORK_ERROR'});}
-    const result=await r.json();if(!r.ok)throw Object.assign(new Error(result.error||'درخواست انجام نشد'),{status:r.status,code:result.code});return RI.restorePublication(result);
+    const url=new URL('/api/dashboard/'+route,location.origin);if(['document','save','publish','unpublish','slug','share-qr','stats','stats/export'].includes(route.split('?')[0])&&!url.searchParams.has('workspace')&&RI.workspaceSlot>1)url.searchParams.set('workspace',RI.workspaceSlot);
+    let r;try{r=await fetch(url.pathname+url.search,{method:data?'POST':'GET',credentials:'same-origin',headers:{...(data?{'Content-Type':'application/json'}:{}),...(RI.ownerId?{'X-ResumeIt-Owner':RI.ownerId}:{})},body:data?JSON.stringify(data):undefined,signal:AbortSignal.timeout(20000)});}catch{throw Object.assign(new Error('ارتباط با سرور برقرار نشد؛ تغییراتت را نگه دار و دوباره تلاش کن'),{code:'NETWORK_ERROR'});}
+    let result;try{if(!r.headers.get('content-type')?.includes('application/json'))throw Error();result=await r.json();}catch{throw Object.assign(new Error('پاسخ سرور کامل دریافت نشد؛ تغییراتت حفظ شده، دوباره تلاش کن'),{status:r.status,code:'INVALID_RESPONSE'});}if(!r.ok)throw Object.assign(new Error(result.error||'درخواست انجام نشد'),{status:r.status,code:result.code});return RI.restorePublication(result);
   };
   RI.loadStats=()=>{RI.statsLoading=true;return RI.dashboardRequest('stats').then(r=>r.rows).catch(()=>null).then(rows=>{RI.statsRows=rows;RI.statsLoading=false;RI.emit('stats');});};
   RI.paymentRequest=async(route,data)=>{
     let r;try{r=await fetch('/api/payments/'+route,{method:data?'POST':'GET',credentials:'same-origin',headers:{...(data?{'Content-Type':'application/json'}:{}),...(RI.ownerId?{'X-ResumeIt-Owner':RI.ownerId}:{})},body:data?JSON.stringify(data):undefined,signal:AbortSignal.timeout(20000)});}catch{throw new Error('ارتباط پرداخت قطع شد؛ وضعیت کیف پول را بررسی کن و دوباره تلاش کن');}
-    const result=await r.json();if(!r.ok)throw new Error(result.error||'درخواست پرداخت انجام نشد');return result;
+    let result;try{if(!r.headers.get('content-type')?.includes('application/json'))throw Error();result=await r.json();}catch{throw new Error('پاسخ سرویس پرداخت دریافت نشد؛ قبل از تلاش دوباره وضعیت پرداخت‌های بانکی را بررسی کن');}if(!r.ok)throw new Error(result.error||'درخواست پرداخت انجام نشد');return result;
   };
   RI.loadDashboard=async(owner)=>{
     RI.statsRows=null; RI.statsLoading=false;
-    if(['home','links','stats'].includes(document.body.dataset.page))RI.loadStats();
-    const doc=RI.restorePublication(window.resumeitDocument?await window.resumeitDocument:await RI.dashboardRequest('document'));
+    let doc=RI.restorePublication(window.resumeitDocument?await window.resumeitDocument:await RI.dashboardRequest('document'));
+    let previousOwner;try{previousOwner=sessionStorage.getItem('ri-workspace-owner');}catch{}
+    if(previousOwner&&previousOwner!==owner){RI.workspaceSlot=1;doc=await RI.dashboardRequest('document?workspace=1');}
+    try{sessionStorage.setItem('ri-workspace-owner',owner);sessionStorage.setItem('ri-workspace',String(doc.workspace||1));}catch{}
     if(doc.error)throw new Error(doc.error);
     if(doc.ownerId&&doc.ownerId!==owner)throw new Error('حساب فعال تغییر کرده؛ صفحه را دوباره باز کن');
-    let legacy=false;try{legacy=!!sessionStorage.getItem('resumeit-draft-v1:'+owner);}catch{}
+    RI.workspaceSlot=doc.workspace||1;
+    if(['home','links','stats'].includes(document.body.dataset.page))RI.loadStats();
+    let legacy=false;try{legacy=RI.workspaceSlot===1&&!!sessionStorage.getItem('resumeit-draft-v1:'+owner);}catch{}
     if(!doc.revision && legacy) await RI.loadTemplates(['vista','satiar']);
     RI.restoreDraft(owner,doc.revision>0);
     const old=RI.C();
-    RI.state.content=doc.content;RI.state.pub=doc.pub;RI.revision=doc.revision;RI.savedSlug=doc.slug||'';RI.saved=JSON.stringify(doc.content);
+    RI.state.content=Object.assign(RI.seed('empty'),doc.content);RI.state.pub=doc.pub;RI.revision=doc.revision;RI.savedSlug=doc.slug||'';RI.saved=JSON.stringify(RI.state.content);
     Object.assign(RI.state.account,doc.preferences);RI.state.billing=Object.assign(RI.seedBilling('free'),doc.billing||{});
     RI.savedIndexing=RI.state.account.indexing; RI.resetEdits();
     if(!doc.revision&&old.profile.name){const importOld=await RI.choice({title:'پیش‌نویس قبلی این تب',text:'یک پیش‌نویس موقت از نسخهٔ قبلی پیدا شد. آن را روی حساب ذخیره کنیم؟',options:[{label:'انتقال به حساب',kind:'primary',value:true},{label:'شروع خالی',kind:'ghost',value:false}]});if(importOld){RI.state.content=old;RI.touch();await RI.save();}}

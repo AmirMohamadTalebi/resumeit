@@ -1,7 +1,8 @@
 (()=>{
   'use strict';
   const error=document.querySelector('#invoice-error'),form=document.querySelector('#invoice-pay'),result=document.querySelector('[data-order]');
-  const show=message=>{error.textContent=message;error.hidden=false;};
+  const show=message=>{error.textContent=message;error.hidden=false;window.ResumeItNotify?.(message,{kind:'error'});};
+  if(result?.dataset.status==='paid')window.ResumeItNotify?.('پرداخت تأیید شد و اعتبار به کیف پول اضافه شد',{kind:'success'});
   async function request(path,body){const response=await fetch('/api/payments/'+path,{method:body?'POST':'GET',credentials:'same-origin',headers:body?{'Content-Type':'application/json'}:{},body:body?JSON.stringify(body):undefined,signal:AbortSignal.timeout(20000)});if(!response.headers.get('content-type')?.includes('application/json'))throw Error('پاسخ معتبر از سرویس پرداخت دریافت نشد؛ پیش از تلاش دوباره، وضعیت پرداخت را در کیف پول بررسی کن');let data;try{data=await response.json();}catch{throw Error('پاسخ سرویس پرداخت ناقص است؛ وضعیت پرداخت را در کیف پول بررسی کن');}if(!response.ok)throw Error(data.error||'درخواست انجام نشد');return data;}
   document.querySelector('[data-print]')?.addEventListener('click',()=>window.print());
   form?.addEventListener('submit',async event=>{
@@ -12,10 +13,12 @@
     catch(e){show(e.message==='Failed to fetch'?'ارتباط قطع شد؛ وضعیت پرداخت را بررسی کن و دوباره تلاش کن':e.message);button.disabled=false;button.textContent='تلاش دوباره برای پرداخت';}
   });
   if(result&&['creating','pending','verifying'].includes(result.dataset.status)){
-    let attempts=0,busy=false;
+    let busy=false;const deadline=Date.now()+25*60*1000;
     const check=async(manual=false)=>{if(busy)return;busy=true;const button=document.querySelector('#payment-recheck');if(button)button.disabled=true;try{const data=await request('orders/'+result.dataset.order+(manual?'/recheck':''),manual?{}:undefined);if(data.order.status!==result.dataset.status)location.reload();}catch(e){if(manual)show(e.message);}finally{busy=false;if(button)button.disabled=false;}};
     document.querySelector('#payment-recheck')?.addEventListener('click',()=>check(true));
-    const timer=setInterval(()=>{if(++attempts>12||document.hidden){if(attempts>12)clearInterval(timer);return;}void check();},5000);
-    addEventListener('pagehide',()=>clearInterval(timer),{once:true});
+    const visible=()=>{if(!document.hidden&&Date.now()<deadline)void check();};
+    const timer=setInterval(()=>{if(Date.now()>=deadline){clearInterval(timer);return;}if(!document.hidden)void check();},5000);
+    document.addEventListener('visibilitychange',visible);
+    addEventListener('pagehide',()=>{clearInterval(timer);document.removeEventListener('visibilitychange',visible);},{once:true});
   }
 })();

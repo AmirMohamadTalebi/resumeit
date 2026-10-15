@@ -125,6 +125,9 @@ module.exports = async () => {
     traffic: [],
   });
   let actions = [];
+  let policy={sep:true,zibal:true};
+  db.paymentPolicy=async()=>({...policy});
+  db.savePaymentPolicy=async(actor,input)=>{if(typeof input.sep!=='boolean'||typeof input.zibal!=='boolean')throw Object.assign(Error('Invalid gateways'),{status:400});policy={sep:input.sep,zibal:input.zibal};return {ok:true};};
   db.adminAction = async (actor, id, action, input) => {
     actions.push({ actor, id, action, ...input });
     return { ok: true };

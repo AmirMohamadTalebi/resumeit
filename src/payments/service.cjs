@@ -8,7 +8,7 @@ const publicOrder = o => ({ id:o.id,provider:o.provider,amount:Number(o.amount_t
 
 function createPayments(database, options = {}) {
   const configs={sep:sep.configuration(options.env),zibal:zibal.configuration(options.env)},providers={sep:options.provider||options.providers?.sep||sep.createSep(options),zibal:options.providers?.zibal||zibal.createZibal(options)},now=options.now||Date.now;
-  const gateways=()=>[{id:'sep',name:'سپ — پرداخت الکترونیک سامان',enabled:configs.sep.enabled},{id:'zibal',name:'زیبال',enabled:configs.zibal.enabled}];
+  const gateways=async()=>{const policy=database.paymentPolicy?await database.paymentPolicy():{sep:true,zibal:true};return [{id:'sep',name:'سپ — پرداخت الکترونیک سامان',enabled:configs.sep.enabled&&policy.sep},{id:'zibal',name:'زیبال',enabled:configs.zibal.enabled&&policy.zibal}];};
   async function invoice(user,input){
     if(!user.phone_verified||!user.phone)fail('برای پرداخت، شمارهٔ حساب را تأیید کن',403);
     const time=now(),row=await database.createInvoice({id:randomUUID(),user_id:user.id,amount_toman:input.amount,request_id:input.requestId,created_at:time,expires_at:time+24*3600000});
@@ -17,7 +17,7 @@ function createPayments(database, options = {}) {
   async function start(user, input, origin, gateway='sep') {
     if(!configs[gateway])fail('درگاه معتبر نیست',404);
     const config=configs[gateway],provider=providers[gateway];
-    if(!config.enabled)fail('درگاه انتخاب‌شده هنوز فعال نیست',503);
+    if(!(await gateways()).find(g=>g.id===gateway)?.enabled)fail('درگاه انتخاب‌شده برای پرداخت جدید فعال نیست',503);
     let invoiceId;
     if(input.invoiceId){
       if(!uuid.test(input.invoiceId))fail('پیش‌فاکتور معتبر نیست');
@@ -69,6 +69,7 @@ function createPayments(database, options = {}) {
       if(proof.amountRial!==Number(order.amount_toman)*10) {await reverse(order,'AMOUNT_MISMATCH');return;}
       const result=await database.completePayment(order,proof,now());
       if(result?.accountDeleted)await reverse(order,'ACCOUNT_DELETED');
+      else if(result?.status==='paid'&&database.notify)await database.notify(order.user_id,'payments','کیف پول شارژ شد',String(Number(order.amount_toman)/2000)+' It به موجودی اضافه شد.','/dashboard/wallet/?payment='+order.id,'credit:'+order.id).catch(()=>{});
     } catch(error) { await database.releasePayment(id,order.lease_key,error.code==='ZIBAL_PAYMENT_MISMATCH'?'review':'pending',error.code==='ZIBAL_PAYMENT_MISMATCH'?error.code:bankCode||'VERIFY_UNCONFIRMED',now(),Math.min(300000,15000*2**Math.min(4,Number(order.attempts)))); }
   }
   async function callback(fields, key, gateway='sep') {
@@ -95,7 +96,11 @@ function createPayments(database, options = {}) {
   async function reconcile() {
     if(running||!database.duePayments)return;
     running=true;
-    try { for(const order of await database.duePayments(now()))await verify(order.id); } finally {running=false;}
+    try {
+      const due=await database.duePayments(now());let cursor=0;
+      // Three bounded workers keep a slow bank response from blocking every later order.
+      await Promise.all(Array.from({length:Math.min(3,due.length)},async()=>{while(cursor<due.length){const order=due[cursor++];await verify(order.id);}}));
+    } finally {running=false;}
   }
   return {invoice,start,callback,verify,reconcile,gateways,enabled:configs.sep.enabled||configs.zibal.enabled,payUrl:providers.sep.payUrl||sep.PAY_URL,publicOrder};
 }

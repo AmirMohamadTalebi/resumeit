@@ -2,7 +2,30 @@ const { randomUUID } = require("node:crypto");
 const { fail } = require("../dashboard/model.cjs");
 const { RI } = require("../dashboard/render.cjs");
 const publicationSummary="JSON_OBJECT('resume',JSON_OBJECT('status',JSON_UNQUOTE(JSON_EXTRACT(pub,'$.resume.status'))),'links',JSON_OBJECT('status',JSON_UNQUOTE(JSON_EXTRACT(pub,'$.links.status')))) AS pub";
+const documents="(SELECT user_id,1 slot,slug,draft,pub,revision FROM dashboard_documents UNION ALL SELECT user_id,slot,slug,draft,pub,revision FROM dashboard_workspaces)";
+const metrics="(SELECT user_id,day,event,total FROM dashboard_metrics UNION ALL SELECT user_id,day,event,total FROM dashboard_workspace_metrics)";
+const editableProfile = input => {
+  const profile={};
+  for(const [key,max] of [['first_name',39],['last_name',39],['role',100],['bio',500]]){
+    if(typeof input?.[key]!=='string'||input[key].trim().length>max||/[\u0000-\u001f\u007f<>]/.test(input[key]))fail('اطلاعات مشخصات معتبر نیست');
+    profile[key]=input[key].trim();
+  }
+  if(!profile.first_name||!profile.last_name)fail('نام و نام خانوادگی را کامل کن');
+  return profile;
+};
 module.exports = ({ execute, transaction }) => ({
+  async paymentPolicy(){const [row]=await execute('SELECT sep_enabled,zibal_enabled FROM payment_policy WHERE id=1');return {sep:!!row?.sep_enabled,zibal:!!row?.zibal_enabled};},
+  async savePaymentPolicy(actor,input){
+    if(!input||typeof input.sep!=='boolean'||typeof input.zibal!=='boolean')fail('وضعیت درگاه معتبر نیست');
+    return transaction(async con=>{
+      const [[manager]]=await con.execute('SELECT a.user_id FROM admin_accounts a LEFT JOIN admin_controls c ON c.user_id=a.user_id WHERE a.user_id=? AND COALESCE(c.suspended,0)=0 FOR UPDATE',[actor]);
+      if(!manager)fail('دسترسی مدیریت ندارید',403);
+      await con.execute('SELECT id FROM payment_policy WHERE id=1 FOR UPDATE');
+      await con.execute('UPDATE payment_policy SET sep_enabled=?,zibal_enabled=? WHERE id=1',[input.sep,input.zibal]);
+      await con.execute('INSERT INTO admin_audit(id,actor_id,target_id,action,reason,details,request_id,created_at) VALUES(?,?,NULL,?,?,?,?,?)',[randomUUID(),actor,'payment-gateways','تغییر اجازهٔ شروع پرداخت',JSON.stringify({sep:input.sep,zibal:input.zibal}),randomUUID(),Date.now()]);
+      return {ok:true};
+    });
+  },
   async adminOverview(from) {
     const results = await Promise.all([
       execute(
@@ -10,7 +33,8 @@ module.exports = ({ execute, transaction }) => ({
         [from],
       ),
       execute(
-        "SELECT COUNT(*) total,SUM(JSON_UNQUOTE(JSON_EXTRACT(d.pub,'$.resume.status'))='published' AND COALESCE(c.suspended,0)=0 AND COALESCE(c.publication_blocked,0)=0) resumes,SUM(JSON_UNQUOTE(JSON_EXTRACT(d.pub,'$.links.status'))='published' AND COALESCE(c.suspended,0)=0 AND COALESCE(c.publication_blocked,0)=0) links FROM dashboard_documents d LEFT JOIN admin_controls c ON c.user_id=d.user_id",
+        `SELECT COUNT(*) total,SUM(d.slot<>3 AND JSON_UNQUOTE(JSON_EXTRACT(d.pub,'$.resume.status'))='published' AND COALESCE(c.suspended,0)=0 AND COALESCE(c.publication_blocked,0)=0) resumes,SUM(JSON_UNQUOTE(JSON_EXTRACT(d.pub,'$.links.status'))='published' AND COALESCE(c.suspended,0)=0 AND COALESCE(c.publication_blocked,0)=0) links FROM ${documents} d LEFT JOIN admin_controls c ON c.user_id=d.user_id WHERE d.slot=1 OR EXISTS(SELECT 1 FROM account_access a WHERE a.user_id=d.user_id AND a.ref LIKE 'subscription:%' AND a.expires_at>?)`,
+        [Date.now()],
       ),
       execute(
         "SELECT COUNT(*) total,SUM(status='accepted') accepted,SUM(status='failed') failed,SUM(verified_at IS NOT NULL) verified,MIN(created_at) started FROM otp_events WHERE created_at>=?",
@@ -29,7 +53,7 @@ module.exports = ({ execute, transaction }) => ({
         Date.now(),
       ]),
       execute(
-        "SELECT day,event,SUM(total) total FROM dashboard_metrics WHERE day>=? GROUP BY day,event ORDER BY day",
+        `SELECT day,event,SUM(total) total FROM ${metrics} m WHERE day>=? GROUP BY day,event ORDER BY day`,
         [Math.floor((from + 12600000) / 86400000)],
       ),
       execute(
@@ -67,11 +91,11 @@ module.exports = ({ execute, transaction }) => ({
       },
       pages: {
         table:
-          "dashboard_documents d JOIN profiles p ON p.user_id=d.user_id LEFT JOIN admin_controls c ON c.user_id=d.user_id",
+          `${documents} d JOIN profiles p ON p.user_id=d.user_id LEFT JOIN admin_controls c ON c.user_id=d.user_id`,
         fields:
-          `d.user_id id,d.slug,${publicationSummary},d.revision,p.name,COALESCE(c.publication_blocked,0) publication_blocked,COALESCE(c.suspended,0) suspended`,
+          `d.user_id id,d.slot,d.slug,${publicationSummary},d.revision,p.name,COALESCE(c.publication_blocked,0) publication_blocked,COALESCE(c.suspended,0) suspended`,
         search: "CONCAT_WS(' ',d.slug,p.name)",
-        order: "d.user_id",
+        order: "d.user_id,d.slot",
       },
       transactions: {
         table:
@@ -159,14 +183,14 @@ module.exports = ({ execute, transaction }) => ({
   },
   async adminUser(id) {
     const [user] = await execute(
-      "SELECT u.id,u.phone,u.phone_verified,u.created_at,p.name,p.first_name,p.last_name,COALESCE(c.suspended,0) suspended,COALESCE(c.publication_blocked,0) publication_blocked,EXISTS(SELECT 1 FROM admin_accounts WHERE user_id=u.id) is_admin FROM users u JOIN profiles p ON p.user_id=u.id LEFT JOIN admin_controls c ON c.user_id=u.id WHERE u.id=?",
+      "SELECT u.id,u.phone,u.phone_verified,u.created_at,p.name,p.first_name,p.last_name,p.role,p.bio,COALESCE(c.suspended,0) suspended,COALESCE(c.publication_blocked,0) publication_blocked,EXISTS(SELECT 1 FROM admin_accounts WHERE user_id=u.id) is_admin FROM users u JOIN profiles p ON p.user_id=u.id LEFT JOIN admin_controls c ON c.user_id=u.id WHERE u.id=?",
       [id],
     );
     if (!user) fail("حساب پیدا نشد", 404);
     const [document, wallet, access, sessions, social, traffic] =
       await Promise.all([
         execute(
-          `SELECT slug,${publicationSummary},revision,JSON_UNQUOTE(JSON_EXTRACT(draft,'$.theme.resume')) template FROM dashboard_documents WHERE user_id=?`,
+          `SELECT slot,slug,${publicationSummary},revision,JSON_UNQUOTE(JSON_EXTRACT(draft,'$.theme.resume')) template FROM ${documents} d WHERE user_id=? ORDER BY slot`,
           [id],
         ),
         execute("SELECT balance_units FROM wallets WHERE user_id=?", [id]),
@@ -180,13 +204,14 @@ module.exports = ({ execute, transaction }) => ({
         ),
         execute("SELECT provider FROM social_identities WHERE user_id=?", [id]),
         execute(
-          "SELECT event,SUM(total) total FROM dashboard_metrics WHERE user_id=? GROUP BY event",
+          `SELECT event,SUM(total) total FROM ${metrics} m WHERE user_id=? GROUP BY event`,
           [id],
         ),
       ]);
     return {
       user,
       document: document[0] || null,
+      documents: document,
       balance_units: wallet[0]?.balance_units || 0,
       access,
       sessions: sessions[0],
@@ -201,11 +226,7 @@ module.exports = ({ execute, transaction }) => ({
         [actor],
       );
       if (!manager) fail("دسترسی مدیریت ندارید", 403);
-      const [[user]] = await con.execute(
-        "SELECT id FROM users WHERE id=? FOR UPDATE",
-        [id],
-      );
-      if (!user) fail("حساب پیدا نشد", 404);
+      const profile=action==='edit-profile'?editableProfile(input.profile):null;
       const [[prior]] = await con.execute(
         "SELECT actor_id,target_id,action,reason,details FROM admin_audit WHERE request_id=?",
         [input.requestId],
@@ -220,13 +241,30 @@ module.exports = ({ execute, transaction }) => ({
           prior.target_id !== id ||
           prior.action !== action ||
           prior.reason !== input.reason ||
-          (action === "credit" && details.toman !== input.toman)
+          (action === "credit" && details.toman !== input.toman) ||
+          (action === "edit-profile" && JSON.stringify(details.profile)!==JSON.stringify(profile)) ||
+          (action === "delete-account" && details.confirmation!==input.confirmation)
         )
           fail("شناسهٔ درخواست تکراری است", 409);
         return { ok: true, repeated: true };
       }
+      const [[user]] = await con.execute('SELECT id,phone FROM users WHERE id=? FOR UPDATE',[id]);
+      if(!user)fail('حساب پیدا نشد',404);
       const details = {};
-      if (action === "credit") {
+      if(['edit-profile','delete-account'].includes(action)){
+        const [[admin]]=await con.execute('SELECT user_id FROM admin_accounts WHERE user_id=?',[id]);
+        if(admin)fail('ویرایش یا حذف حساب مدیر از این مسیر مجاز نیست',409);
+        if(action==='edit-profile'){
+          await con.execute('UPDATE profiles SET first_name=?,last_name=?,name=?,role=?,bio=?,updated_at=CURRENT_TIMESTAMP WHERE user_id=?',[profile.first_name,profile.last_name,profile.first_name+' '+profile.last_name,profile.role,profile.bio,id]);
+          details.profile=profile;
+        }else{
+          if(input.confirmation!==(user.phone||id))fail('برای حذف دائمی، شمارهٔ حساب یا شناسهٔ نمایش‌داده‌شده را دقیق وارد کن');
+          details.confirmation=input.confirmation;
+          await con.execute('DELETE FROM oauth_states WHERE owner_id=?',[id]);
+          await con.execute('DELETE FROM otp_challenges WHERE owner_id=? OR phone=?',[id,user.phone]);
+          await con.execute('DELETE FROM users WHERE id=?',[id]);
+        }
+      } else if (action === "credit") {
         const amount = input.toman;
         if (
           !Number.isSafeInteger(amount) ||

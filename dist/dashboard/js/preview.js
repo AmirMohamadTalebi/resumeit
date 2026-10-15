@@ -39,7 +39,7 @@
   };
   RI.linksVars = function (t, theme, style) {
     const v = Object.assign({}, t.v), pc = palColors(theme.linksPalette);
-    if (pc) { v.accent = pc[0]; }
+    if (pc) { v.accent = pc[0];v.btnBg=pc[0];v.btnInk=onColor(pc[0]);v.btnBd=pc[1]; }
     const bgo = RI.LINK_BGS.find((b) => b.id === (style && style.bgOverride));
     if (bgo && bgo.bg) { v.bg = bgo.bg; v.ink = bgo.ink; v.muted = bgo.muted; }
     const f = RI.FONTS.find((x) => x.id === theme.font) || RI.FONTS[0];
@@ -51,12 +51,16 @@
   const dots = (n) => '<span class="pv-dots" aria-hidden="true">' + [1, 2, 3, 4, 5].map((i) => '<i' + (i <= n ? ' class="on"' : '') + '></i>').join('') + '</span>';
   const when = (x) => (x.from || '') + (x.from ? ' — ' : '') + (x.current ? 'اکنون' : (x.to || ''));
 
-  function brandFoot() {
-    if (!RI.state.account.brand) return '';
+  function brandFoot(c,kind) {
+    const value=c.branding?.[kind];
+    if(value?.mode==='hidden')return '';
+    if(value?.mode==='custom')return '<footer class="pv-foot">'+esc(value.text)+'</footer>';
     return '<footer class="pv-foot"><span>ساخته‌شده با</span> <span class="ri-logo"><img src="/brand/resumeit-logo-v1.png" alt="ResumeIt" width="2172" height="724"></span></footer>';
   }
+  RI.brandFoot=brandFoot;
   function nav(c, active, base) {
     const nm = c.profile.name.trim() || 'نام شما';
+    if(c._linksOnly)return '<nav class="pv-nav" aria-label="صفحهٔ لینک"><span class="pv-nav__brand">'+esc(nm)+'</span></nav>';
     return '<nav class="pv-nav" aria-label="منوی صفحه"><span class="pv-nav__brand">' + esc(nm) + '</span><span class="pv-nav__links"><a href="' + esc(base === undefined ? '#' : base + '/') + '" data-pv-go="resume" class="' + (active === 'resume' ? 'is-on' : '') + '">رزومه</a><a href="' + esc(base === undefined ? '#' : base + '/links') + '" data-pv-go="links" class="' + (active === 'links' ? 'is-on' : '') + '">لینک‌ها</a></span></nav>';
   }
 
@@ -101,18 +105,21 @@
     const empty = !body && !bio ? '<section class="pv-sec pv-empty"><p>هنوز محتوایی اضافه نشده است. از بخش «رزومه» شروع کنید؛ این‌جا همان لحظه ساخته می‌شود.</p></section>' : '';
     const cover = '<div class="pv-cover" style="' + esc(RI.bg(p.cover) || 'background:var(--pv-hero)') + '"></div>';
     return '<div class="pv pv--' + t.layout + (t.mono ? ' pv--mono' : '') + '" style="' + esc(RI.resumeVars(t, theme)) + '">' + nav(c, 'resume', o.publicBase) + cover +
-      '<div class="pv-wrap">' + idBlock + '<main class="pv-main">' + bio + body + empty + '</main></div>' + brandFoot() + '</div>';
+      '<div class="pv-wrap">' + idBlock + '<main class="pv-main">' + bio + body + empty + '</main></div>' + brandFoot(c,'resume') + '</div>';
   };
 
   RI.linksHtml = function (c, o) {
     o = o || {};
     const theme = Object.assign({}, c.theme, o.theme || {});
-    const t = RI.findTemplate('links', theme.links);
+    let t = RI.findTemplate('links', theme.links);
+    if(c.links.style.matchResume){const source=RI.findTemplate('resume',theme.resume);if(source){const v=source.v;t={...t,v:{...t.v,bg:v.bg,ink:v.ink,muted:v.muted,accent:v.accent,btnBg:v.surface,btnInk:v.ink,btnBd:v.line}};}}
     const h = c.links.header, p = c.profile, st = c.links.style;
     const name = (h.sync ? p.name : h.name).trim(), bio = (h.sync ? p.bio : h.bio).trim();
     const items = c.links.items.filter((i) => i.type === 'divider' || i.active);
     const list = items.map((i) => {
       if (i.type === 'divider') return '<li class="lv-div"><span>' + esc(i.title) + '</span></li>';
+      if(i.type==='text')return '<li class="lv-text">'+esc(i.title)+'</li>';
+      if(i.type==='image')return '<li class="lv-image"><img loading="lazy" src="'+esc(RI.safeImage(i.image))+'" alt="'+esc(i.title||'تصویر صفحهٔ لینک')+'" width="480" height="270">'+(i.title?'<p>'+esc(i.title)+'</p>':'')+'</li>';
       const feat = i.featured ? ' lv-btn--feat' : '';
       return '<li><a href="' + esc(o.publicBase === undefined ? RI.normUrl(i.url) : o.publicBase + '/out/' + i.id) + '" rel="noopener noreferrer" class="lv-btn lv-btn--' + t.btn + feat + '" data-pv-link="1">' +
         (i.image ? '<span class="lv-btn__img" style="' + esc(RI.bg(i.image)) + '"></span>' : '<span class="lv-btn__ico">' + RI.icon(i.icon || 'link') + '</span>') +
@@ -120,10 +127,10 @@
     }).join('');
     const socials = c.socials.length ? '<ul class="lv-soc">' + c.socials.map((s) => '<li title="' + esc(s.platform) + '"><a data-pv-link="1" href="'+esc(socialUrl(s))+'" rel="noopener noreferrer" aria-label="'+esc(s.platform)+'">' + RI.icon(s.platform) + '</a></li>').join('') + '</ul>' : '';
     const empty = !items.length ? '<li class="lv-empty">لینکی برای نمایش نیست؛ از «لینک‌ها» یک لینک فعال اضافه کنید.</li>' : '';
-    return '<div class="lv lv--' + (st.align === 'start' ? 'start' : 'center') + '" style="' + esc(RI.linksVars(t, theme, st)) + '">' + nav(c, 'links', o.publicBase) +
-      '<div class="lv-head"><img class="lv-avatar' + (st.ring ? ' lv-avatar--ring' : '') + '" src="' + esc(RI.avatarOf(p)) + '" alt="">' +
+    return '<div class="lv lv--' + (['start','end'].includes(st.align)?st.align:'center') + '" style="' + esc(RI.linksVars(t, theme, st)) + '">' + nav(c, 'links', o.publicBase) +
+      '<div class="lv-head"><img class="lv-avatar' + (st.ring ? ' lv-avatar--ring' : '') + '" src="' + esc(RI.avatarOf(p)) + '" alt="تصویر پروفایل '+esc(name)+'">' +
       '<h1>' + (name ? esc(name) : '<span class="pv-ph">نام شما</span>') + '</h1>' + (bio ? '<p>' + esc(bio) + '</p>' : '') + '</div>' +
-      '<ul class="lv-list">' + list + empty + '</ul>' + socials + brandFoot() + '</div>';
+      '<ul class="lv-list">' + list + empty + '</ul>' + socials + brandFoot(c,'links') + '</div>';
   };
 
   /* ---------- قاب دستگاه ---------- */
@@ -145,9 +152,12 @@
 
     function fit() {
       const nat = NAT[st.device];
-      const w = stage.clientWidth || host.clientWidth || 360;
-      let k = Math.min(1, (w - (st.device === 'mobile' ? 16 : 2)) / nat[0]);
-      if (o.fitHeight) k = Math.min(k, Math.max(0.3, (window.innerHeight - o.fitHeight) / (nat[1] + 40)));
+      const stageStyle=getComputedStyle(stage),frameStyle=getComputedStyle(dev);
+      const horizontal=style=>['paddingLeft','paddingRight','borderLeftWidth','borderRightWidth'].reduce((sum,key)=>sum+(parseFloat(style[key])||0),0);
+      const w = Math.max(20,(stage.clientWidth || host.clientWidth || 360)-horizontal(stageStyle)-horizontal(frameStyle));
+      let k = Math.min(1, w / nat[0]);
+      if (o.fitHeight) k = Math.min(k, Math.max(0.05, (window.innerHeight - o.fitHeight) / (nat[1] + 40)));
+      k=Math.max(0.05,k);
       if (o.maxScale) k = Math.min(k, o.maxScale);
       scaler.style.width = nat[0] + 'px'; scaler.style.height = nat[1] + 'px';
       scaler.style.transform = 'scale(' + k + ')';

@@ -33,6 +33,7 @@
       }
       async function refresh(){const button=RI.$('[data-refresh]',root);button.disabled=true;try{RI.statsRows=(await RI.dashboardRequest('stats')).rows;}catch(e){RI.statsRows=null;RI.toast(e.message,{kind:'error'});}finally{if(active){button.disabled=false;paint();}}}
       RI.delegate(root,'click','[data-r]',(e,b)=>{n=Number(b.dataset.r);RI.$$('[data-r]',root).forEach(x=>x.setAttribute('aria-pressed',String(x===b)));paint();});
+      const download=document.createElement('a');download.className='btn btn--soft';download.href='/api/dashboard/stats/export';download.textContent='خروجی CSV'+(!RI.hasSub()?' · اشتراک':'');download.addEventListener('click',e=>{if(!RI.hasSub()){e.preventDefault();RI.go('billing');}});root.querySelector('.statbar').append(download);
       RI.delegate(root,'click','[data-refresh]',refresh);const offStats=RI.on('stats',paint);paint();return()=>{offStats();active=false;};
     }
   });

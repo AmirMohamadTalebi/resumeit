@@ -58,9 +58,10 @@
   RI.resumeRequirements = function (c) {
     const spec = RI.resumeSpec(c.theme.resume), values = RI.resumeValues(c), visible = key => spec.sections.includes(key) && c.sections.some(s => s.key === key && s.visible);
     return [
-      { id: 'name', req: true, label: 'نام و عنوان حرفه‌ای وارد شده', done: !!(c.profile.name.trim() && c.profile.title.trim()), step: 'profile' },
+      { id: 'name', req: true, label: 'نام نمایشی رزومه', done: !!c.profile.name.trim(), step: 'profile' },
+      { id: 'title', req: true, label: 'عنوان حرفه‌ای یا تحصیلی', done: !!c.profile.title.trim(), step: 'profile' },
       ...(spec.sections.includes('contacts') ? [{ id: 'contact', req: true, label: 'دست‌کم یک راه تماس عمومی و نمایان', done: visible('contacts') && c.contacts.some(x => x.public && x.value.trim()), step: 'contacts' }] : []),
-      ...(spec.bodySections.length ? [{ id: 'body', req: true, label: 'حداقل یک بخش محتوایی نمایان پر شده', done: spec.bodySections.some(k => visible(k) && c[k].length), step: spec.bodySections[0] }] : []),
+      ...(spec.bodySections.length ? [{ id: 'body', req: true, label: 'افزودن محتوای رزومه و نمایش آن', done: spec.bodySections.some(k => visible(k) && c[k].length), step: spec.bodySections[0] }] : []),
       ...spec.requiredSections.map(k => ({ id: 'section-' + k, req: true, label: 'بخش ضروری قالب: ' + k, done: visible(k) && c[k].length > 0, step: k })),
       ...['fields', 'settings'].flatMap(group => spec[group].filter(f => f.required).map(f => ({ id: 'template-' + group + '-' + f.key, req: true, label: f.label, done: f.type === 'checkbox' ? RI.resumeValue(values[group] || {}, f) === true : !!RI.resumeValue(values[group] || {}, f).trim(), step: 'template' }))),
     ].map(x => Object.assign({ route: 'resume' }, x));

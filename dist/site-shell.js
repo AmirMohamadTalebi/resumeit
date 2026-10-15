@@ -20,7 +20,7 @@
   await icons;
   const link=document.querySelector('[data-session-link]');if(!link&&!control)return;
   const wrapper=document.createElement('div');wrapper.className='public-account';
-  const dashboard=original.cloneNode(true);dashboard.href='/dashboard/';dashboard.innerHTML=icon('home')+'<span>داشبورد من</span>';
+  const dashboard=original.cloneNode(true);dashboard.href='/dashboard/';dashboard.innerHTML=icon('home')+'<span>داشبورد</span>';
   trigger=document.createElement('button');trigger.type='button';trigger.className='public-account__trigger';trigger.setAttribute('aria-label','دسترسی سریع حساب');trigger.setAttribute('aria-expanded','false');trigger.setAttribute('aria-controls','public-account-menu');
   const avatar=document.createElement('img');avatar.src='/brand/resumeit-mark-v1.png';avatar.alt='تصویر پروفایل';avatar.width=40;avatar.height=40;trigger.append(avatar);
   popover=document.createElement('div');popover.id='public-account-menu';popover.className='public-account__menu';popover.hidden=true;
@@ -31,7 +31,7 @@
   wrapper.append(dashboard,trigger,popover);(control||link).replaceWith(wrapper);control=wrapper;identity=key;
   trigger.addEventListener('click',()=>{const open=popover.hidden;popover.hidden=!open;trigger.setAttribute('aria-expanded',String(open));});
   logout.addEventListener('click',async()=>{logout.disabled=true;try{const response=await fetch('/api/auth/logout',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});if(!response.ok)throw Error();close();await paint(null);startLinks.forEach(a=>a.href='/register/');}catch{logout.disabled=false;logout.querySelector('span').textContent='خروج انجام نشد؛ دوباره تلاش کن';}});
-  try{const response=await fetch('/api/dashboard/document',{cache:'no-store',headers:{'X-Resumeit-Owner':key},signal:AbortSignal.timeout(5000)});if(!response.ok)return;const doc=await response.json();if(identity!==key||doc.ownerId!==key)return;const src=doc.content?.profile?.avatar;if(typeof src==='string'&&(/^(data:image\/(png|jpeg|webp);base64,|https:\/\/)/.test(src))){wrapper.querySelectorAll('img').forEach(img=>{img.src=src;img.classList.add('has-photo');});}}catch{}
+  try{const response=await fetch('/api/dashboard/document',{cache:'no-store',headers:{'X-Resumeit-Owner':key},signal:AbortSignal.timeout(5000)});if(!response.ok)return;const doc=await response.json();if(identity!==key||doc.ownerId!==key)return;const src=doc.content?.profile?.avatar;if(typeof src==='string'&&(/^(data:image\/(png|jpeg|webp);base64,|https:\/\/|\/api\/dashboard\/media\/[a-f0-9]{32}$)/.test(src))){wrapper.querySelectorAll('img').forEach(img=>{img.src=src;img.classList.add('has-photo');});}}catch{}
  }
  async function refresh(){if(pending)return;pending=true;try{const response=await fetch('/api/auth/session',{cache:'no-store',signal:AbortSignal.timeout(5000)});if(!response.ok)return;const {user}=await response.json();await paint(user);startLinks.forEach(a=>a.href=user?'/dashboard/resume/':'/register/');}catch{}finally{pending=false;}}
  refresh();window.addEventListener('pageshow',e=>{if(e.persisted)refresh();});document.addEventListener('visibilitychange',()=>{if(!document.hidden){close();refresh();}});

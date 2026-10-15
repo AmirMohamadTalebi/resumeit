@@ -15,6 +15,8 @@ async function openDatabase(options) {
     finally { connection.release(); }
   }
   await require('./schema.cjs').initializeSchema(execute,pool);
+  await require('./workspaces.cjs').initialize(execute);
+  await require('./notification-delivery.cjs').initialize(execute);
   const context={execute,transaction};
   const database = {
     ...require('./accounts.cjs')(context),
@@ -22,6 +24,9 @@ async function openDatabase(options) {
     ...require('./sessions.cjs')(context),
     ...require('./profiles.cjs')(context),
     ...require('./dashboard.cjs')(context),
+    ...require('./support.cjs')(context),
+    ...require('./notification-delivery.cjs')(context),
+    ...require('./history.cjs')(context),
     ...require('./wallet.cjs')(context),
     ...require('./payments.cjs')(context),
     ...require('./admin.cjs')(context),

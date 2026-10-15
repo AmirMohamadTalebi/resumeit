@@ -1,7 +1,7 @@
 /* The accepted coral shell keeps existing routes, form mounts and save contracts. */
 (() => {
  'use strict';
- const RI=window.RI,groups=[['home','خانه','home'],['resume','استودیو','resume'],['publish','انتشار','globe'],['wallet','حساب','card']];
+ const RI=window.RI,groups=[['home','خانه','home'],['resume','استودیو','resume'],['publish','انتشار','globe'],['wallet','حساب','card'],['support','پشتیبانی','help'],['notifications','اعلان‌ها','bell']];
  function preference(key,value){try{if(value===undefined)return localStorage.getItem(key);localStorage.setItem(key,String(value));}catch{}return null;}
  RI.polishShell=()=>{
   const app=document.querySelector('.app');if(document.querySelector('.coral-rail'))return;
@@ -17,9 +17,11 @@
   rail.querySelectorAll('[data-coral-group]').forEach(a=>{a.addEventListener('pointerenter',()=>mark(a));a.addEventListener('focus',()=>mark(a));});nav.addEventListener('pointerleave',()=>mark(nav.querySelector('[aria-current="page"]')));new ResizeObserver(()=>mark(nav.querySelector('[aria-current="page"]'))).observe(nav);
  };
  RI.polishView=(root,id)=>{
-  const group=['publish','stats'].includes(id)?'publish':['wallet','billing','settings'].includes(id)?'wallet':id==='home'?'home':'resume';
+  RI.mountWorkspaceSwitcher?.(root,id);
+  root.querySelectorAll('.field__req').forEach(el=>{el.textContent='پایهٔ انتشار';});root.querySelectorAll('.field__opt').forEach(el=>{if(el.textContent==='اختیاری')el.textContent='به انتخاب تو';});
+  const group=['publish','stats'].includes(id)?'publish':['wallet','billing','settings'].includes(id)?'wallet':['home','support','notifications'].includes(id)?id:'resume';
   document.querySelectorAll('[data-coral-group]').forEach(a=>{if(a.dataset.coralGroup===group)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current');});
-  document.querySelectorAll('#sidebar .nav__group').forEach((el,i)=>{el.hidden=i!==(group==='publish'?1:group==='wallet'?2:0);});
+  document.querySelectorAll('#sidebar .nav__group').forEach(el=>{el.hidden=el.dataset.navGroup!==(group==='resume'?'home':group);});
   const active=document.querySelector('.coral-rail [aria-current="page"]'),nav=active?.parentElement;if(active){nav.style.setProperty('--coral-slot-y',(active.getBoundingClientRect().top-nav.getBoundingClientRect().top)+'px');nav.style.setProperty('--coral-slot-h',active.offsetHeight+'px');}
   const editor=root.querySelector('.editor'),side=editor?.querySelector('.editor__side');if(!editor||!side)return;
   const divider=document.createElement('div');divider.className='coral-divider';divider.tabIndex=0;divider.setAttribute('role','separator');divider.setAttribute('aria-label','تنظیم عرض فرم و پیش‌نمایش');divider.setAttribute('aria-orientation','vertical');divider.setAttribute('aria-valuemin','300');divider.setAttribute('aria-valuemax','800');divider.setAttribute('aria-valuenow','360');divider.innerHTML='<span></span>';side.before(divider);

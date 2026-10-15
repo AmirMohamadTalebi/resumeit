@@ -3,8 +3,6 @@
   'use strict';
   const RI = window.RI, esc = RI.esc;
 
-  const NOTIFS = [['sms_publish', 'پیامک انتشار و به‌روزرسانی صفحه', 'sms'], ['sms_security', 'پیامک هشدار امنیتی (ورود تازه)', 'sms'], ['email_stats', 'گزارش هفتگی بازدیدها', 'mail'], ['email_tips', 'راهنمایی و خبرهای محصول', 'mail'], ['push_milestones', 'اعلان رسیدن به نشان‌ها', 'bell']];
-
   RI.registerPage('settings', {
     title: 'تنظیمات حساب',
     render() {
@@ -16,14 +14,17 @@
         '<div class="syncrow"><div><b>شمارهٔ موبایل</b><div class="mobrow"><span class="ltr-inline mono">' + esc(a.mobile.replace(/^(\d{4})(\d{3})(\d{4})$/, '$1 $2 $3')) + '</span> ' + (a.mobileVerified ? '<span class="chip chip--ok">' + RI.icon('check') + 'تأیید شده</span>' : '<span class="chip chip--warn">تأییدنشده</span>') + '</div></div><button type="button" class="btn btn--soft btn--sm" data-mobile>' + RI.icon('phone') + (a.mobile ? 'تغییر یا تأیید شماره' : 'اضافه‌کردن شماره') + '</button></div></section>' +
         '<section class="panel"><div class="panel__head"><h2>امنیت ورود</h2><p>ورود با رمز عبور یا کد یک‌بارمصرف پیامکی</p></div><div class="syncrow"><div><b>رمز عبور</b><div class="field__hint">تغییر رمز با تأیید پیامکی شمارهٔ حساب انجام می‌شود و نشست‌های قبلی را می‌بندد</div></div><button type="button" class="btn btn--soft btn--sm" data-pass>' + RI.icon('key') + 'تغییر رمز</button></div><hr class="divider">' + conn('google', 'گوگل', 'google') + conn('github', 'گیت‌هاب', 'github') + '</section>' +
         '<section class="panel"><div class="panel__head"><h2>نمایش عمومی اطلاعات تماس</h2><p>همان مقدارهای بخش «تماس» در رزومه؛ این‌جا فقط نمایش آن‌ها را کنترل می‌کنی</p></div>' + c.contacts.map((x) => '<div class="syncrow"><div><b>' + esc(x.label) + '</b><div class="field__hint ltr">' + (x.value ? esc(x.value) : 'وارد نشده') + '</div></div>' + RI.switchHtml({ checked: x.public && !!x.value, disabled: !x.value, label: 'نمایش عمومی ' + x.label }).replace('<input', '<input data-cpub="' + x.id + '"') + '</div>').join('') + '</section></div>' +
-        '<div class="setcol"><section class="panel"><div class="panel__head"><h2>اعلان‌ها</h2><p>ارسال اعلان خودکار فعلاً فعال نیست.</p></div>' + NOTIFS.map((n) => '<div class="syncrow"><div class="connrow"><span class="row__ico">' + RI.icon(n[2] === 'sms' ? 'phone' : n[2] === 'mail' ? 'mail' : 'bell') + '</span><b>' + n[1] + '</b></div>' + RI.switchHtml({ checked: false, disabled: true, label: n[1] }).replace('<input', '<input data-notif="' + n[0] + '"') + '</div>').join('') + '</section>' +
-        '<section class="panel"><div class="panel__head"><h2>نشان ResumeIt</h2></div><div class="syncrow"><div><b>نشان «ساخته‌شده با ResumeIt»</b><div class="field__hint">این نشان روی صفحهٔ عمومی نمایش داده می‌شود. حذف آن فعلاً در دسترس نیست.</div></div>' + RI.switchHtml({ checked: true, disabled: true, label: 'نمایش نشان برند؛ حذف فعلاً در دسترس نیست' }).replace('<input', '<input data-brand') + '</div></section>' +
+        '<div class="setcol">' +
         '<section class="panel"><div class="panel__head"><h2>اطلاعات و حذف حساب</h2></div><div class="syncrow"><div><b>خروجی گرفتن از اطلاعات</b><div class="field__hint">فایل JSON از محتوای فعلی، تنظیمات و وضعیت انتشار؛ بدون رمز یا نشست</div></div><button type="button" class="btn btn--soft btn--sm" data-export>' + RI.icon('download') + 'خروجی</button></div>' +
         '<div class="syncrow"><div><b>خروج از حساب</b><div class="field__hint">پایان نشست در این دستگاه</div></div><button type="button" class="btn btn--soft btn--sm" data-logout>' + RI.icon('logout') + 'خروج</button></div>' +
         '<div class="danger"><div><b>حذف حساب</b><div class="field__hint">رزومه، لینک‌ها، موجودی و خریدهای حساب حذف می‌شوند؛ این عمل برگشت‌ناپذیر است</div></div><button type="button" class="btn btn--danger-soft btn--sm" data-delete>' + RI.icon('trash') + 'حذف حساب</button></div></section></div></div>';
     },
     mount(root) {
       const a = RI.state.account;
+      const tabs=document.createElement('div');tabs.innerHTML=RI.tabsHtml([['profile','مشخصات'],['security','ورود و امنیت'],['privacy','حریم خصوصی'],['data','اطلاعات و حساب']],'profile');root.querySelector('.setgrid').before(tabs);
+      const sections=[...root.querySelectorAll('.setgrid section')],keys=['profile','security','privacy','data'];
+      const select=id=>sections.forEach((section,i)=>{section.hidden=keys[i]!==id;});select('profile');
+      RI.delegate(tabs,'click','[data-workspace-tab]',(e,b)=>{select(b.dataset.workspaceTab);tabs.querySelectorAll('button').forEach(x=>x.setAttribute('aria-selected',String(x===b)));});
       RI.delegate(root, 'click', '[data-name]', async (e,b) => {if(b.disabled)return;b.disabled=true;try{await RI.accountRequest('account/names',{firstName:RI.$('#a_name',root).value.trim(),lastName:RI.$('#a_last',root).value.trim()});await RI.reloadAccount();RI.rerender();RI.toast('مشخصاتت ذخیره شد');}catch(error){RI.toast(error.message,{kind:'error'});}finally{b.disabled=false;}});
       RI.delegate(root, 'click', '[data-mobile]', () => RI.phoneDialog());
       RI.delegate(root, 'click', '[data-pass]', async () => { if(await RI.leaveGuard()) location.assign('/forgot-password/'); });

@@ -3,8 +3,9 @@ const { isAdmin } = require("./access.cjs");
 const { RI } = require("../dashboard/render.cjs");
 const { version,displayVersion } = require("../version.cjs");
 const started = Date.now();
-function adminHandler(database, auth) {
+function adminHandler(database, auth, notifications) {
   return async (req, res, path, origin) => {
+    if (path === "/api/changes" && req.method === "GET") {res.writeHead(200,{"Content-Type":"application/json; charset=utf-8"});res.end(JSON.stringify({releases:require('../releases.json')}));return true;}
     if (path === "/api/version" && req.method === "GET") {
       res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
       res.end(JSON.stringify({ version,displayVersion }));
@@ -50,7 +51,8 @@ function adminHandler(database, auth) {
       }
       const from = Date.now() - days * 86400000;
       if (req.method === "GET") {
-        if (path === "/api/admin/overview")
+        if(path==='/api/admin/notification-channels')reply(200,await notifications.adminSettings());
+        else if (path === "/api/admin/overview")
           reply(200, await database.adminOverview(from));
         else if (path === "/api/admin/catalog")
           reply(200, {
@@ -77,6 +79,7 @@ function adminHandler(database, auth) {
             ),
             paymentConfigured: require('../payments/sep.cjs').configuration().enabled||require('../payments/zibal.cjs').configuration().enabled,
             gateways: [{id:'sep',enabled:require('../payments/sep.cjs').configuration().enabled},{id:'zibal',enabled:require('../payments/zibal.cjs').configuration().enabled}],
+            paymentPolicy:database.paymentPolicy?await database.paymentPolicy():null,
             limits: {
               otpDaily: 100,
               phoneDaily: 5,
@@ -84,6 +87,7 @@ function adminHandler(database, auth) {
               resendSeconds: 60,
               otpSeconds: 120,
             },
+            notificationChannels:notifications?await notifications.adminSettings():null,
             at: Date.now(),
           });
         else if (/^\/api\/admin\/users\/[a-f0-9-]{36}$/.test(path))
@@ -103,6 +107,12 @@ function adminHandler(database, auth) {
             }),
           );
         else reply(404, { error: "بخش پیدا نشد" });
+      } else if(req.method==='POST'&&path==='/api/admin/payment-gateways'){
+        if(req.headers.origin!==origin||req.headers['content-type']?.split(';')[0]!=='application/json'){reply(403,{error:'درخواست معتبر نیست'});return true;}
+        reply(200,await database.savePaymentPolicy(user.id,await readJson(req,2048)));
+      } else if(req.method==='POST'&&path==='/api/admin/notification-channels'){
+        if(req.headers.origin!==origin||req.headers['content-type']?.split(';')[0]!=='application/json'){reply(403,{error:'درخواست معتبر نیست'});return true;}
+        reply(200,await notifications.saveAdminSettings(user.id,await readJson(req,2048)));
       } else if (
         req.method === "POST" &&
         /^\/api\/admin\/users\/[a-f0-9-]{36}\/actions$/.test(path)
@@ -128,6 +138,8 @@ function adminHandler(database, auth) {
             "block-publication",
             "unblock-publication",
             "revoke-sessions",
+            "edit-profile",
+            "delete-account",
           ].includes(input.action)
         ) {
           reply(400, { error: "عملیات، دلیل و شناسهٔ درخواست را کامل کنید" });

@@ -86,7 +86,7 @@
     e.hidden = false; e.innerHTML = RIA.icon('alert') + '<span>' + RIA.esc(msg) + '</span>';
     if (!RIA.reduce()) e.animate([{ transform: 'translateX(-6px)' }, { transform: 'translateX(6px)' }, { transform: 'none' }], { duration: 260 });
   };
-  RIA.handleError=(root,error)=>RIA.formError(root,error.message);
+  RIA.handleError=(root,error)=>{RIA.formError(root,error.message);RIA.toast(error.message,'error');};
   RIA.fieldError = function (field, msg) {
     const g = field.closest('.field'), e = $('.field__error', g), inp = $('input', g);
     if (msg) { e.innerHTML = RIA.icon('alert') + RIA.esc(msg); e.hidden = false; inp.setAttribute('aria-invalid', 'true'); }

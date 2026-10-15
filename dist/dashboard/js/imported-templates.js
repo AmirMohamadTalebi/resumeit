@@ -78,7 +78,7 @@
     if (f.type === 'link') return /^\/?\?page=[a-z0-9]+(?:#[a-zA-Z0-9_-]*)?$/.test(value) || /^#[a-zA-Z0-9_-]*$/.test(value) || /^(mailto:[^\s@]+@[^\s@]+\.[^\s@]+|tel:\+?[0-9 ()-]{6,24})$/i.test(value) || (RI.isUrl(value) && !/[\s'"()\\]/.test(value));
     if (f.type === 'url') return RI.isUrl(value) && !/[\s'"()\\]/.test(value);
     if (f.type === 'contact') return /^(mailto:[^\s@]+@[^\s@]+\.[^\s@]+|tel:\+?[0-9 ()-]{6,24}|https:\/\/[^\s'"()\\]+)$/i.test(value);
-    if (f.type === 'image') return /^\/templates\/(vista|satiar)\/[a-f0-9]{16}\.(png|jpg|jpeg|webp|svg|gif)$/.test(value) ||
+    if (f.type === 'image') return /^\/api\/dashboard\/media\/[a-f0-9]{32}$/.test(value) || /^\/templates\/(vista|satiar)\/[a-f0-9]{16}\.(png|jpg|jpeg|webp|svg|gif)$/.test(value) ||
       (/^https:\/\//i.test(value) && RI.isUrl(value) && !/[\s<>\x27"()\\]/.test(value)) || /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/]+={0,2}$/.test(value);
     return f.type !== 'select' || !value || f.options.some(o => o[0] === value);
   };
@@ -145,7 +145,7 @@
     const contact = '<section id="ri-contact" class="ri-template-contact"><h2>' + esc(c.profile.name) + '</h2><p>' + esc(c.profile.title) + '</p>' + contacts.map(x => '<a data-pv-link="1" href="' + esc(x.type === 'email' ? 'mailto:' + x.value : x.type === 'phone' ? 'tel:' + x.value.replace(/[^+0-9]/g, '') : RI.normUrl(x.value)) + '">' + esc(x.label) + ': ' + esc(x.value) + '</a>').join('') + socials.map(s => '<a data-pv-link="1" href="' + esc(RI.isUrl(s.handle) ? RI.normUrl(s.handle) : (socialUrls[s.platform] || 'https://resumeit.ir/') + encodeURIComponent(s.handle.replace(/^@/, ''))) + '">' + esc(s.platform) + '</a>').join('') + compose + '</section>';
     const nav = '<nav class="ri-template-nav" aria-label="صفحه‌های رزومه"><a href="' + esc(base + '/') + '">رزومه</a><a href="' + esc(base + '/links') + '" data-pv-go="links">لینک‌ها</a>' +
       (pageId !== 'home' ? '<a href="' + esc(base + '/') + '">صفحه اصلی</a>' : '') + '</nav>';
-    const brand = '<footer class="ri-template-brand">ساخته‌شده با <a href="https://resumeit.ir" data-pv-link="1">ResumeIt</a></footer>';
+    const brand = '<div class="ri-template-brand">'+RI.brandFoot(c,'resume')+'</div>';
     return '<div class="ri-imported" data-template="' + id + '" data-template-mode="' + (settings.mode==='light'?'light':'dark') + '" data-template-page="' + pageId + '" style="' + esc(vars) + '">' +
       '<link rel="stylesheet" href="/fonts/fonts.css">' + page.css.map(url => '<link rel="stylesheet" href="' + url + '">').join('') + '<link rel="stylesheet" href="/templates/template-support.css">' +
       '<style>:root{' + vars + '}' + page.inline.replace(/<\/style/gi, '') + fontCss + '.ri-imported .pf-card,.ri-imported .blog-card,.ri-imported .tech-card,.ri-imported .soc-card{border-radius:' + radius + '}</style>' + nav + renderNode(page.node) + contact + brand + '</div>';

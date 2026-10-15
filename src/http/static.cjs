@@ -20,8 +20,8 @@ const assetRevision=version+'-'+assetHash.digest('hex').slice(0,16);
 // Bundle only shared workspace files; editable source modules remain independent.
 const bundles=new Map();
 for(const [url,files] of [
-  ['/dashboard/js/workspace.js',['icons','core','ui','data','imported-templates','resume-templates','state','api','account','preview','commerce','app','coral','toolbar'].map(n=>'dashboard/js/'+n+'.js')],
-  ['/dashboard/css/workspace.css',['tokens','base','shell','components','preview','pages','coral'].map(n=>'dashboard/css/'+n+'.css')]
+  ['/dashboard/js/workspace.js',['icons','core','ui','data','imported-templates','resume-templates','state','api','account','preview','commerce','workspace-tools','notification-channels','app','coral','toolbar'].map(n=>'dashboard/js/'+n+'.js')],
+  ['/dashboard/css/workspace.css',['tokens','base','shell','components','preview','pages','abgoon'].map(n=>'dashboard/css/'+n+'.css')]
 ])bundles.set(url,Buffer.from(files.map(file=>{
   let source=localFiles.readFileSync(path.join(root,file),'utf8');
   if(file.endsWith('.css'))source=source.replace(/url\((["']?)(?!data:|https?:|\/\/)([^)"'?#]+)\1\)/g,(_,quote,url)=>`url(${quote}${path.posix.resolve('/',path.posix.dirname(file),url)}${quote})`);
@@ -64,6 +64,8 @@ async function serveStatic(req, res, pathname, origin, account) {
   if (!['GET', 'HEAD'].includes(req.method)) { res.setHeader('Allow', 'GET, HEAD'); send(405, 'Method not allowed'); return; }
   const publicAsset=publicAssets.has(pathname);
   let file = path.resolve(root, publicAssets.get(pathname) || '.' + pathname);
+  const workspacePage=/^\/dashboard\/(support|notifications|studio)\/$/.exec(pathname);
+  if(workspacePage)file=path.join(root,'dashboard/index.html');
   try {
     // Authenticate the resolved file as well as the URL (case aliases and symlinks included).
     const adminPath=pathname.toLowerCase()==='/admin'||pathname.toLowerCase().startsWith('/admin/');
@@ -95,6 +97,8 @@ async function serveStatic(req, res, pathname, origin, account) {
         fileBodies.set(realFile,body);fileCacheBytes+=body.length;
       }
     }
+    if(workspacePage)body=Buffer.from(body.toString('utf8').replace('data-page="home"','data-page="'+workspacePage[1]+'"').replace('/dashboard/js/pages/home.js','/dashboard/js/pages/'+workspacePage[1]+'.js'));
+    if(type.startsWith('text/html')&&!pathname.startsWith('/templates/')&&!body.includes('/notifications.js'))body=Buffer.from(body.toString('utf8').replace('</head>','<link rel="stylesheet" href="/notifications.css"><script defer src="/notifications.js"></script></head>'));
     if(type.startsWith('text/html'))body=Buffer.from(body.toString('utf8').replace(/<html\b([^>]*)>/i,`<html$1 data-asset-version="${assetRevision}">`).replace(/\b(src|href)=(["'])(\/[^"'?#]+\.(?:js|css|woff2|png|svg))\2/g,(_,attr,quote,url)=>`${attr}=${quote}${url}?v=${assetRevision}${quote}`));
     if(type.startsWith('text/css'))body=Buffer.from(body.toString('utf8').replace(/url\((["']?)(?!data:|https?:|\/\/)([^)"'?#]+\.(?:woff2|woff|ttf|png|svg|webp|jpg))\1\)/g,(_,quote,url)=>`url(${quote}${url}?v=${assetRevision}${quote})`));
     send(200,body,type);

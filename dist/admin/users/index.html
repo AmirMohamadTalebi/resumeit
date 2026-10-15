@@ -93,6 +93,15 @@
         <h2 id="action-title"></h2>
         <p id="action-explain"></p>
         <form class="action-form" id="action-form">
+          <fieldset id="profile-fields" hidden>
+            <legend>مشخصات حساب</legend>
+            <label>نام<input class="input" id="edit-first" maxlength="39"></label>
+            <label>نام خانوادگی<input class="input" id="edit-last" maxlength="39"></label>
+            <label>عنوان حرفه‌ای<input class="input" id="edit-role" maxlength="100"></label>
+            <label>معرفی کوتاه<textarea class="textarea" id="edit-bio" maxlength="500"></textarea></label>
+            <small>شماره، تأیید هویت و رمز ورود از این فرم تغییر نمی‌کنند. این تغییر، نسخهٔ عمومی رزومه را بدون اقدام مالک بازنویسی نمی‌کند.</small>
+          </fieldset>
+          <label id="delete-field" hidden>برای حذف دائمی، شمارهٔ حساب یا شناسهٔ نمایش‌داده‌شده را وارد کن<input class="input" id="delete-confirm" autocomplete="off"></label>
           <label id="amount-field"
             >مبلغ شارژ به تومان<input
               class="input"

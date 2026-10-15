@@ -1,47 +1,15 @@
-(function(){
-  'use strict';
-  const RI=window.RI,esc=RI.esc;
-  const statuses={creating:'در حال آماده‌سازی',pending:'تأیید نشده',verifying:'در حال تأیید بانک',paid:'شارژ انجام شد',failed:'اتصال ناموفق',review:'نیاز به بررسی پشتیبانی',reversed:'برگشت به کارت',cancelled:'انصراف از پرداخت',expired:'مهلت پرداخت تمام شد'};
-  RI.registerPage('wallet',{title:'کیف پول It',render(){return RI.pageHead({title:'کیف پول It',desc:'اعتبار ResumeIt برای خرید قالب و اشتراک؛ هر It برابر ۲٬۰۰۰ تومان است.'})+'<div id="wallet-content" aria-busy="true"><p role="status">در حال دریافت موجودی…</p></div>';},mount(root){
-    const host=root.querySelector('#wallet-content');let active=true,checkout={gateways:[],orders:[]},timer=null,polls=0,requestId=crypto.randomUUID(),paying=false,topup='100000';
-    const paymentId=new URL(location.href).searchParams.get('payment');
-    function history(){
-      const node=root.querySelector('#payment-history');if(!node)return;
-      const orders=checkout.orders,result=orders.find(o=>o.id===paymentId);
-      node.innerHTML='<h2>پرداخت‌های بانکی</h2><p class="field__hint">آخرین ۵۰ درخواست شارژ؛ موجودی فقط پس از تأیید بانک اضافه می‌شود.</p>'+(result?'<p class="banner" role="status">'+esc(statuses[result.status]||'وضعیت نامشخص')+' · '+RI.toman(result.amount)+' · '+RI.fa(result.it)+' It</p>':'')+(orders.length?'<ul class="rows">'+orders.map(o=>'<li class="row"><div class="row__main"><b>'+RI.toman(o.amount)+' · '+RI.fa(o.it)+' It</b><p>'+RI.date(o.at)+' · '+(o.provider==='sep'?'سپ':'زیبال')+'</p><p>'+esc(statuses[o.status]||'وضعیت نامشخص')+(o.rrn?' · شمارهٔ مرجع: '+esc(o.rrn):'')+'</p></div><div class="row__actions"><a class="btn btn--soft btn--sm" href="/payments/result?id='+esc(o.id)+'">فاکتور و وضعیت</a>'+(['pending','verifying'].includes(o.status)?'<button type="button" class="btn btn--soft btn--sm" data-payment-recheck="'+esc(o.id)+'">بررسی مجدد</button>':'')+(o.status==='paid'?'<button type="button" class="btn btn--soft btn--sm" data-payment-receipt="'+esc(o.id)+'">رسید</button>':'')+'</div></li>').join('')+'</ul>':'<p>هنوز درخواست پرداخت بانکی ثبت نشده است.</p>');
-    }
-    function updateOrder(order){const index=checkout.orders.findIndex(o=>o.id===order.id);if(index<0)checkout.orders.unshift(order);else checkout.orders[index]=order;history();}
-    function paintCheckout(configuration,startPoll=true){
-      if(!active||!root.querySelector('#wallet-pay'))return;
-      checkout=configuration||{gateways:[],orders:[]};const enabled=checkout.gateways.some(g=>g.enabled);
-      root.querySelector('#wallet-pay').disabled=paying;
-      root.querySelector('#gateway-note').textContent=enabled?'در پیش‌فاکتور، سپ یا زیبال را انتخاب کن؛ اعتبار پس از تأیید بانک اضافه می‌شود.':configuration?'شارژ آنلاین هنوز فعال نیست؛ می‌توانی پیش‌فاکتور را ببینی. موجودی فعلی برای خرید قابل استفاده است.':'وضعیت درگاه دریافت نشد؛ پیش‌فاکتور همچنان قابل مشاهده است.';
-      history();if(startPoll&&paymentId){clearInterval(timer);timer=setInterval(refreshOrder,5000);void refreshOrder();}
-    }
-    async function refreshOrder(){
-      if(!active||!paymentId||polls++>=12){clearInterval(timer);return;}
-      try{const {order}=await RI.paymentRequest('orders/'+encodeURIComponent(paymentId));if(!active)return;updateOrder(order);if(!['creating','pending','verifying'].includes(order.status)){clearInterval(timer);if(order.status==='paid')await load(false);}}
-      catch{clearInterval(timer);}
-    }
-    async function load(startPoll=true){
-      try{
-        const configurationRequest=RI.paymentRequest('options').catch(()=>null);
-        const wallet=await RI.dashboardRequest('wallet');if(!active)return;RI.wallet=wallet;
-        host.setAttribute('aria-busy','false');host.innerHTML=
-          '<div class="wallet-overview"><section class="panel wallet-balance"><img src="/brand/it-coin.svg" width="104" height="104" alt="سکهٔ It"><div><span>موجودی قابل استفاده</span><h2 class="ltr-inline">'+RI.fa(wallet.balance)+' It</h2><p>معادل '+RI.toman(wallet.balance*wallet.rate)+'</p></div></section>'+
-          '<section class="panel wallet-topup"><h2>شارژ کیف پول</h2><form id="wallet-payment"><div class="field"><label class="field__label" for="wallet-topup">مبلغ شارژ (تومان)</label><input class="input" id="wallet-topup" type="number" inputmode="numeric" min="2000" max="100000000" step="2000" value="'+esc(topup)+'" required><p class="field__hint" id="wallet-conversion" role="status" aria-live="polite">'+RI.fa(Number(topup)/RI.IT_RATE)+' It دریافت می‌کنی</p></div><p id="gateway-note">انتخاب سپ یا زیبال در مرحلهٔ پیش‌فاکتور انجام می‌شود.</p><p class="field__error" id="payment-error" role="alert" hidden></p><div class="btnrow"><button type="submit" class="btn btn--primary" id="wallet-pay">تأیید مبلغ و مشاهدهٔ پیش‌فاکتور</button><button type="button" class="btn btn--soft" data-wallet-support>پشتیبانی شارژ</button><a class="btn btn--soft" href="/dashboard/themes/">انتخاب قالب</a></div></form></section></div>'+
-          '<section class="panel" id="payment-history" aria-live="polite"></section><section class="panel"><h2>تاریخچهٔ کیف پول</h2><p class="field__hint">آخرین ۵۰ تراکنش؛ مبلغ‌ها برحسب It هستند.</p>'+(wallet.transactions.length?'<ul class="rows">'+wallet.transactions.map(t=>'<li class="row"><div class="row__main"><b>'+esc(t.label)+'</b><p>'+RI.date(t.at)+' · موجودی پس از تراکنش: '+RI.fa(t.balance)+' It</p></div><strong class="ltr-inline">'+(t.amount>0?'+':'')+RI.fa(t.amount)+' It</strong></li>').join('')+'</ul>':'<p>هنوز تراکنشی ثبت نشده است.</p>')+'</section>';
-        history();void configurationRequest.then(configuration=>paintCheckout(configuration,startPoll));
-      }catch(e){if(active){host.setAttribute('aria-busy','false');host.innerHTML='<p role="alert">'+esc(e.message)+'</p><button class="btn" type="button" data-wallet-retry>تلاش دوباره</button>';}}
-    }
-    root.addEventListener('input',e=>{if(e.target.id==='wallet-topup'){topup=e.target.value;requestId=crypto.randomUUID();const value=Number(e.target.value);root.querySelector('#wallet-conversion').textContent=e.target.validity.valid&&Number.isFinite(value)?RI.fa(value/RI.IT_RATE)+' It دریافت می‌کنی':'مبلغ معتبر با گام ۲٬۰۰۰ تومان وارد کن';}});
-    root.addEventListener('submit',async e=>{
-      if(e.target.id!=='wallet-payment')return;e.preventDefault();const button=root.querySelector('#wallet-pay'),error=root.querySelector('#payment-error');if(button.disabled||paying)return;paying=true;button.disabled=true;button.textContent='در حال صدور پیش‌فاکتور…';error.hidden=true;
-      try{const result=await RI.paymentRequest('invoices',{amount:Number(root.querySelector('#wallet-topup').value),requestId});if(active)location.assign(result.url);}
-      catch(ex){paying=false;if(active){error.textContent=ex.message;error.hidden=false;button.disabled=false;button.textContent='تأیید مبلغ و مشاهدهٔ پیش‌فاکتور';requestId=crypto.randomUUID();}}
-    });
-    RI.delegate(root,'click','[data-payment-recheck]',async(e,b)=>{if(b.disabled)return;b.disabled=true;try{const {order}=await RI.paymentRequest('orders/'+b.dataset.paymentRecheck+'/recheck',{});if(!active)return;updateOrder(order);if(order.status==='paid')await load(false);}catch(ex){if(active)RI.toast(ex.message,{kind:'error'});}finally{b.disabled=false;}});
-    RI.delegate(root,'click','[data-payment-receipt]',(e,b)=>{const pay=checkout.orders.find(o=>o.id===b.dataset.paymentReceipt);if(pay)RI.receiptModal({...pay,title:'شارژ کیف پول با '+(pay.provider==='sep'?'سپ':'زیبال')});});
-    RI.delegate(root,'click','[data-wallet-retry]',()=>load());RI.delegate(root,'click','[data-wallet-support]',()=>location.assign('/contact/'));void load();return()=>{active=false;clearInterval(timer);};
-  }});
+(() => {
+ 'use strict';const RI=window.RI,esc=RI.esc;
+ RI.registerPage('wallet',{title:'کیف پول It',render(){return RI.pageHead({title:'کیف پول It',actions:'<a class="btn btn--soft btn--sm" data-go="billing" href="/dashboard/billing/">'+RI.icon('crown')+'اشتراک‌ها</a>'})+'<div id="wallet-balance" aria-live="polite"></div>'+RI.tabsHtml([['topup','شارژ اعتبار'],['bank','پرداخت بانکی'],['ledger','گردش کیف پول'],['purchases','خریدها']],'topup')+'<div id="wallet-body"></div>';},mount(root){
+  let tab=new URLSearchParams(location.search).has('payment')?'bank':'topup',alive=true,historyOff=null,requestId=crypto.randomUUID(),paying=false,amount='100000';const body=root.querySelector('#wallet-body');
+  async function balance(){try{const wallet=await RI.dashboardRequest('wallet');if(!alive)return;RI.wallet=wallet;root.querySelector('#wallet-balance').innerHTML='<section class="wallet-balance"><img src="/brand/it-cat-coin-v1.png" width="108" height="108" alt="سکهٔ It با نشان گربهٔ طلایی"><div><small>اعتبار قابل استفاده</small><h2 class="ltr-inline">'+RI.fa(wallet.balance)+' It</h2><p>'+RI.toman(wallet.balance*wallet.rate)+'</p></div></section>';}catch(e){if(alive)root.querySelector('#wallet-balance').innerHTML='<p role="alert">'+esc(e.message)+'</p><button class="btn btn--soft" data-balance-retry>تلاش دوباره</button>';}}
+  function paint(){historyOff?.();historyOff=null;root.querySelectorAll('[data-workspace-tab]').forEach(x=>x.setAttribute('aria-selected',String(x.dataset.workspaceTab===tab)));if(tab!=='topup'){historyOff=RI.mountHistory(body,tab);return;}
+   body.innerHTML='<section class="workspace-band"><h2>چقدر اعتبار اضافه کنیم؟</h2><form id="wallet-payment"><div class="workspace-tools">'+[100000,300000,600000,1000000].map(value=>'<button class="btn btn--soft" type="button" data-amount="'+value+'">'+RI.toman(value)+'</button>').join('')+'</div><div class="workspace-columns"><div><div class="field"><label class="field__label" for="wallet-topup">مبلغ شارژ، تومان</label><input class="input" id="wallet-topup" type="number" inputmode="numeric" min="2000" max="100000000" step="2000" value="'+esc(amount)+'" required><p class="field__hint" id="wallet-conversion" role="status">'+RI.fa(Number(amount)/RI.IT_RATE)+' It به کیف پولت اضافه می‌شود</p></div><p class="field__error" id="payment-error" role="alert" hidden></p><button class="btn btn--primary" id="wallet-pay" type="submit">مشاهدهٔ پیش‌فاکتور'+RI.icon('chevL')+'</button></div><div><p id="gateway-note" role="status">در حال دریافت وضعیت درگاه‌ها…</p><p class="field__hint">هر It برابر ۲٬۰۰۰ تومان است. اعتبار فقط پس از تأیید بانک اضافه می‌شود؛ کلیک دوبارهٔ پرداخت، موجودی اضافه نمی‌کند.</p><a class="textlink" href="/dashboard/support/" data-go="support">پشتیبانی پرداخت '+RI.icon('help')+'</a></div></div></form></section>';
+   RI.paymentRequest('options').then(config=>{if(!alive||tab!=='topup')return;const gateways=config.gateways.filter(g=>g.enabled);root.querySelector('#gateway-note').textContent=gateways.length?'درگاه‌های آماده: '+gateways.map(g=>g.name).join('، ')+'؛ انتخاب در پیش‌فاکتور انجام می‌شود.':'درگاه فعالی تنظیم نشده؛ پیش‌فاکتور قابل مشاهده است، پرداخت بانکی فعلاً انجام نمی‌شود.';}).catch(()=>{if(alive&&tab==='topup')root.querySelector('#gateway-note').textContent='وضعیت درگاه دریافت نشد؛ پیش از پرداخت دوباره، صندوق پرداخت‌های بانکی را بررسی کن.';});
+  }
+  RI.delegate(root,'click','[data-workspace-tab]',(e,b)=>{if(paying)return;tab=b.dataset.workspaceTab;paint();});RI.delegate(root,'click','[data-balance-retry]',balance);RI.delegate(root,'click','[data-amount]',(e,b)=>{const input=root.querySelector('#wallet-topup');input.value=b.dataset.amount;input.dispatchEvent(new Event('input',{bubbles:true}));});
+  root.addEventListener('input',e=>{if(e.target.id!=='wallet-topup')return;amount=e.target.value;requestId=crypto.randomUUID();root.querySelector('#wallet-conversion').textContent=e.target.validity.valid?RI.fa(Number(amount)/RI.IT_RATE)+' It به کیف پولت اضافه می‌شود':'مبلغ را مضربی از ۲٬۰۰۰ تومان وارد کن';});
+  root.addEventListener('submit',async e=>{if(e.target.id!=='wallet-payment')return;e.preventDefault();if(paying||!e.target.reportValidity())return;const button=root.querySelector('#wallet-pay'),error=root.querySelector('#payment-error');paying=true;button.disabled=true;error.hidden=true;try{const result=await RI.paymentRequest('invoices',{amount:Number(amount),requestId});if(alive)location.assign(result.url);}catch(ex){if(alive){error.textContent=ex.message;error.hidden=false;button.disabled=false;}paying=false;}});
+  balance();paint();return()=>{alive=false;historyOff?.();};
+ }});
 })();

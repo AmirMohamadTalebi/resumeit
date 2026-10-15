@@ -4,9 +4,11 @@
   const RI = (window.RI = window.RI || {});
 
   const NAV = [
-    { group: 'ساخت', items: [['home', 'خانهٔ داشبورد', 'home'], ['resume', 'رزومه', 'resume'], ['links', 'صفحهٔ لینک‌ها', 'link'], ['themes', 'ظاهر و قالب', 'palette']] },
+    { group: 'استودیو', items: [['home', 'خانهٔ داشبورد', 'home'], ['resume', 'رزومه', 'resume'], ['links', 'صفحهٔ لینک‌ها', 'link'], ['themes', 'ظاهر و قالب', 'palette'], ['studio', 'آمادگی انتشار', 'check']] },
     { group: 'انتشار', items: [['publish', 'آدرس و انتشار', 'globe'], ['stats', 'آمار', 'chart']] },
-    { group: 'حساب', items: [['wallet', 'کیف پول It', 'card'], ['billing', 'اشتراک و خریدها', 'card'], ['settings', 'تنظیمات حساب', 'settings']] },
+    { group: 'حساب', items: [['wallet', 'کیف پول It', 'card'], ['billing', 'اشتراک و خریدها', 'crown'], ['settings', 'تنظیمات حساب', 'settings']] },
+    { group: 'پشتیبانی', items: [['support', 'تیکت‌ها', 'help'], ['support', 'تیکت جدید', 'plus', {tab:'new'}], ['contact', 'ارتباط با ما', 'mail', {href:'/contact/'}], ['telegram', 'پشتیبانی تلگرام', 'telegram', {href:'https://t.me/amirtalebi_x',external:true}], ['channel', 'کانال تلگرام', 'telegram', {href:'https://t.me/resumeit_ir',external:true}]] },
+    { group: 'اعلان‌ها', items: [['notifications', 'همهٔ اعلان‌ها', 'bell'], ['notifications', 'خوانده‌نشده‌ها', 'eye', {tab:'unread'}], ['notifications', 'تنظیمات اعلان‌ها', 'settings', {tab:'preferences'}], ['changes', 'تغییرات رزومیت', 'refresh', {href:'/changes/'}]] },
   ];
   const BOTTOM = [['home', 'خانه', 'home'], ['resume', 'رزومه', 'resume'], ['links', 'لینک‌ها', 'link'], ['themes', 'قالب‌ها', 'palette']];
   const LOGO = '<span class="ri-logo"><img src="/brand/resumeit-logo-v1.png" alt="ResumeIt" width="2172" height="724"></span>';
@@ -18,8 +20,8 @@
     const acc = RI.state.account;
     RI.$('#sidebar').innerHTML =
       '<div class="sidebar__glass"><div class="brand"><a href="/" aria-label="خانهٔ ResumeIt">' + LOGO + '</a><button type="button" class="btn btn--icon btn--ghost drawer-close" id="drawerClose" aria-label="بستن منو">'+RI.icon('close')+'</button></div>' +
-      '<nav class="nav" aria-label="بخش‌های داشبورد">' + NAV.map(g => '<ul class="menu nav__group"><li class="menu-title nav__label">'+g.group+'</li>'+g.items.map(i=>'<li><a class="nav__item" href="'+RI.routeUrl(i[0])+'" data-route="'+i[0]+'">'+RI.icon(i[2])+'<span>'+i[1]+'</span></a></li>').join('')+'</ul>').join('')+'</nav>' +
-      '<div class="sidebar__foot">'+(acc.isAdmin?'<a class="panel-switch" href="/admin/">'+RI.icon('shield')+'<span>ورود به مدیریت</span>'+RI.icon('chevL')+'</a>':'')+'<a class="panel-help" href="/contact/">'+RI.icon('help')+'راهنما و پشتیبانی</a><button type="button" class="account-btn" id="accountBtn" aria-haspopup="menu"><img class="avatar" id="accAvatar" alt="" src="/brand/resumeit-mark-v1.png"><span><span class="account-btn__name" id="accName"></span><br><span class="account-btn__sub">تنظیمات و خروج</span></span>'+RI.icon('chevL')+'</button><small data-site-version></small></div></div>';
+      '<nav class="nav" aria-label="بخش‌های داشبورد">' + NAV.map(g => '<ul class="menu nav__group" data-nav-group="'+g.items[0][0]+'"><li class="menu-title nav__label">'+g.group+'</li>'+g.items.filter(i=>i[0]!=='home').map(i=>{const opts=i[3]||{};return '<li><a class="nav__item" href="'+(opts.href||RI.routeUrl(i[0],opts))+'" '+(opts.href?'':('data-route="'+i[0]+'" '+(opts.tab?'data-tab="'+opts.tab+'"':'')))+(opts.external?' target="_blank" rel="noopener noreferrer"':'')+' title="'+i[1]+'">'+RI.icon(i[2])+'<span>'+i[1]+'</span></a></li>';}).join('')+'</ul>').join('')+'</nav>' +
+      '<div class="sidebar__foot">'+(acc.isAdmin?'<a class="panel-switch" href="/admin/">'+RI.icon('shield')+'<span>ورود به مدیریت</span>'+RI.icon('chevL')+'</a>':'')+'<a class="panel-help" href="/dashboard/support/" data-route="support">'+RI.icon('help')+'پشتیبانی</a><button type="button" class="account-btn" id="accountBtn" aria-haspopup="menu"><img class="avatar" id="accAvatar" alt="تصویر پروفایل" src="/brand/resumeit-mark-v1.png"><span class="account-btn__info"><span class="account-btn__name" id="accName"></span><span class="account-btn__sub">پروفایل و دسترسی سریع</span></span>'+RI.icon('chevL')+'</button><small><a href="/changes/" data-site-version>تغییرات رزومیت</a></small></div></div>';
     RI.$('#bottomNav').innerHTML = BOTTOM.map(i=>'<a href="'+RI.routeUrl(i[0])+'" data-route="'+i[0]+'">'+RI.icon(i[2])+'<span>'+i[1]+'</span></a>').join('')+'<button type="button" data-all-pages aria-label="همهٔ بخش‌ها">'+RI.icon('menu')+'<span>بیشتر</span></button>';
     paintAccount();RI.polishShell?.();
   }
@@ -33,7 +35,7 @@
     const ui = RI.state.ui, el = RI.$('#saveState');let btn=RI.$('#saveBtn');
     const tag=RI.manualSave()?'BUTTON':'SPAN';
     if(btn.tagName!==tag){const replacement=document.createElement(tag.toLowerCase());replacement.id='saveBtn';replacement.setAttribute('aria-live','off');btn.replaceWith(replacement);btn=replacement;if(tag==='BUTTON')btn.type='button';}
-    let st = 'saved', txt = 'همهٔ تغییرات ذخیره شد', ic = 'check';
+    let st = 'saved', txt = 'ذخیره شده', ic = 'check';
     if (ui.saving) { st = 'saving'; txt = 'در حال ذخیره…'; ic = 'refresh'; }
     else if (ui.saveError) { st = 'error'; txt = 'ذخیره نشد'; ic = 'alert'; }
     else if (ui.dirty) { st = 'dirty'; txt = 'در انتظار ذخیره…'; ic = 'edit'; }
@@ -65,8 +67,6 @@
 
   /* ---------- مسیریاب ---------- */
   RI.go = function (id, opts) {
-    if (opts) RI.routeOpts = opts;
-    if (id === current) { render(id, true); return; }
     navigate(id, opts);
   };
   RI.routeOpts = null;
@@ -118,8 +118,9 @@
     // Each mount owns its listeners; replacing the root discards the previous mount's handlers.
     const view=previousView.cloneNode(false);previousView.replaceWith(view);
     current = id;
-    RI.$$('[data-route]').forEach((a) => { if (a.dataset.route === id) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
-    RI.$('#topTitle').textContent = page.title;
+    RI.$$('[data-route]').forEach((a) => { if (a.dataset.route === id && (!a.closest('#sidebar') || (a.dataset.tab||'') === (RI.routeOpts?.tab||''))) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
+    RI.$('#topTitle').textContent = id === 'resume' ? 'رزومهٔ من' : page.title;
+    RI.$('.topbar__crumb').innerHTML = RI.icon(id === 'links' ? 'link' : 'file') + '<span>' + (NAV.find(g=>g.items.some(i=>i[0]===id))?.group || 'داشبورد') + '</span>' + RI.icon('chevL');
     document.title = page.title + ' | ResumeIt';
     closeDrawer();
     const opts = RI.routeOpts; RI.routeOpts = null;
@@ -192,22 +193,27 @@
     RI.delegate(document,'click','#saveBtn',()=>{if(RI.manualSave())RI.doSave();});
     RI.delegate(document,'click','[data-save-retry]',RI.doSave);
     window.addEventListener('online',()=>{if(!RI.manualSave()&&RI.state.ui.saveError&&!RI.conflict)RI.save();});
-    RI.$('#topPreview').addEventListener('click', async () => {try{if(current!=='links') await RI.loadTemplates([RI.C().theme.resume]); RI.openPreview(current === 'links' ? 'links' : 'resume');}catch(e){RI.toast(e.message,{kind:'error'});}});
+    RI.$('#topPreview').addEventListener('click', async () => {try{const kind=current==='links'||RI.workspaceSlot===3?'links':'resume';if(kind==='resume')await RI.loadTemplates([RI.C().theme.resume]);RI.openPreview(kind);}catch(e){RI.toast(e.message,{kind:'error'});}});
     RI.$('#undoBtn').addEventListener('click', RI.undo);
     RI.$('#accountBtn').addEventListener('click', (e) => {
       RI.menu(e.currentTarget, [
+        { label: 'پروفایل و رزومه', icon: 'user', onClick: () => RI.go('resume',{step:'profile'}) },
+        { label: 'صفحهٔ لینک‌ها', icon: 'link', onClick: () => RI.go('links') },
         { label: 'تنظیمات حساب', icon: 'settings', onClick: () => RI.go('settings') },
         { label: 'اشتراک و خریدها', icon: 'card', onClick: () => RI.go('billing') },
+        { label: 'اعلان‌ها', icon: 'bell', onClick: () => RI.go('notifications') },
         'hr',
         { label: 'خروج از حساب', icon: 'logout', danger: true, onClick: () => RI.logout() },
       ], { up: true });
     });
+    const bell=document.createElement('button');bell.type='button';bell.className='btn btn--icon btn--soft topbar__bell';bell.setAttribute('aria-label','اعلان‌ها');bell.innerHTML=RI.icon('bell');bell.addEventListener('click',()=>RI.go('notifications'));RI.$('.topbar__actions').append(bell);
+    RI.on('inbox',()=>{const count=RI.inbox?.unread||0;bell.classList.toggle('has-unread',count>0);bell.setAttribute('aria-label',count?'اعلان‌ها؛ '+RI.fa(count)+' خوانده‌نشده':'اعلان‌ها');bell.title=bell.getAttribute('aria-label');});
     RI.delegate(document, 'click', '[data-copy]', (e, b) => RI.copy(b.dataset.copy));
     RI.delegate(document,'click','a[href="/admin/"]',async e=>{
       if(e.ctrlKey||e.metaKey||e.shiftKey||e.altKey||e.button!==0)return;
       e.preventDefault();if(await RI.leaveGuard()&&RI.keepDraft())location.assign('/admin/');
     });
-    RI.delegate(document, 'click', '[data-open-url]', (e, b) => {const k=/\/links$/.test(b.dataset.openUrl)?'links':'resume';if(RI.state.pub[k].status!=='published'){RI.toast('ابتدا این صفحه را منتشر کن',{kind:'info'});return;}window.open('https://'+(b.dataset.openUrl.replace(/^https?:\/\//,'')),'_blank','noopener,noreferrer');});
+    RI.delegate(document, 'click', '[data-open-url]', (e, b) => {const urls=RI.urls(),k=[urls.links,urls.fallbackLinks].includes(b.dataset.openUrl)?'links':'resume';if(RI.state.pub[k].status!=='published'){RI.toast('ابتدا این صفحه را منتشر کن',{kind:'info'});return;}window.open('https://'+(b.dataset.openUrl.replace(/^https?:\/\//,'')),'_blank','noopener,noreferrer');});
     RI.delegate(document, 'click', '[data-go], [data-route]', (e, b) => {
       if (e.ctrlKey || e.metaKey || e.shiftKey || e.altKey || e.button !== 0) return;
       e.preventDefault();
@@ -221,6 +227,7 @@
     RI.routeOpts = Object.fromEntries(new URLSearchParams(location.search));
     await render(document.body.dataset.page);
     document.dispatchEvent(new Event('ri:dashboard-ready'));
+    RI.startInbox?.();
   }
 
   RI.logout = async function () {

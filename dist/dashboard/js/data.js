@@ -4,7 +4,9 @@
   const RI = (window.RI = window.RI || {});
 
   RI.DOMAIN = 'resumeit.ir';
-  RI.TAKEN_SLUGS = ['www','admin','api','app','dashboard','auth','login','register','support','mail','smtp','ftp','cdn','assets','static','cname','blog','status','links','resume','demo'];
+  RI.TAKEN_SLUGS = ['www','admin','api','app','dashboard','auth','login','register','support','mail','smtp','ftp','cdn','assets','static','cname','blog','status','links','resume','demo','about','contact','privacy','terms','payments','changes','brand','fonts','templates','u','logout','reset','verify','forgot-password','auth-ui','public-assets','signature','sitemap','robots','favicon'];
+  RI.PAGE_PATH_RESERVED=['out','share-image','api','admin','dashboard','assets','templates','fonts','brand','payments','login','register','auth'];
+  RI.pagePathValid=value=>typeof value==='string'&&value.length>=1&&value.length<=24&&/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(value)&&!RI.PAGE_PATH_RESERVED.includes(value);
 
   /* ---------- شبکه‌های اجتماعی و آیکن لینک ---------- */
   RI.SOCIALS = [
@@ -56,6 +58,8 @@
   ];
 
   RI.IT_RATE = 2000;
+  RI.shareCard=(c,kind='resume')=>{const header=kind==='links'&&!c.links.header.sync?c.links.header:c.profile;return {title:c.share.title.trim()||header.name||'صفحهٔ شخصی',desc:c.share.desc.trim()||header.bio||'',image:c.share.image||c.profile.cover||c.profile.avatar||null};};
+  RI.publicationData=(k,c)=>k==='resume'?{routing:c.routing,slug:c.slug,profile:c.profile,contacts:c.contacts,skills:c.skills,experience:c.experience,education:c.education,projects:c.projects,certs:c.certs,languages:c.languages,socials:c.socials,sections:c.sections,resumeTemplates:c.resumeTemplates,theme:{resume:c.theme.resume,font:c.theme.font,palette:c.theme.palette,radius:c.theme.radius},share:c.share,branding:c.branding?.resume}:{routing:c.routing,slug:c.slug,links:c.links,name:c.profile.name,bio:c.profile.bio,avatar:c.profile.avatar,theme:{links:c.theme.links,font:c.theme.font,linksPalette:c.theme.linksPalette,radius:c.theme.radius,resume:c.links.style.matchResume?c.theme.resume:undefined},share:c.share,branding:c.branding?.links};
   RI.it = amount => RI.fa(amount / RI.IT_RATE) + ' It';
   RI.allowed = (ref, item, billing = {}, now = Date.now()) => item.access === 'free' ||
     (item.access === 'buy' && (billing.purchases || []).some(p => p.ref === ref)) ||
@@ -80,15 +84,19 @@
 
   /* ---------- پلن‌ها (خرید با It، شارژ آنلاین غیرفعال) ---------- */
   RI.PLANS = {
-    q: { id: 'q', name: 'سه‌ماهه', months: 3, price: 288000 },
-    h: { id: 'h', name: 'شش‌ماهه', months: 6, price: 510000, badge: 'محبوب' },
-    y: { id: 'y', name: 'سالانه', months: 12, price: 900000, badge: 'دامنهٔ ir رایگان' },
+    q: { id: 'q', name: 'رخش', period: 'سه‌ماهه', months: 3, price: 288000 },
+    h: { id: 'h', name: 'سیمرغ', period: 'شش‌ماهه', months: 6, price: 510000 },
+    y: { id: 'y', name: 'هما', period: 'سالانه', months: 12, price: 900000 },
   };
   RI.PLAN_FEATURES = [
-    ['یک رزومه و یک صفحهٔ لینک', true, true],
+    ['تعداد رزومهٔ مستقل', '۱', '۲'],
+    ['تعداد صفحهٔ لینک مستقل', '۱', '۳'],
     ['قالب‌ها و فونت‌های استارتی', true, true],
     ['بارگذاری تصویر در ویرایشگر', 'تا ۲ مگابایت برای هر تصویر', 'تا ۲ مگابایت برای هر تصویر'],
     ['قالب‌های اشتراکی و ویژه', false, true],
+    ['حذف نشان رزومیت و امضای اختصاصی در هر صفحه', false, true],
+    ['بلوک متن و تصویر در صفحهٔ لینک', false, true],
+    ['خروجی CSV آمار بازدید و کلیک', false, true],
     ['فونت‌های پولی', 'خرید یک‌باره', 'خرید یک‌باره'],
     ['انتشار روی زیردامنهٔ resumeit.ir', true, true],
     ['اتصال دامنهٔ مستقل', 'فعلاً غیرفعال', 'فعلاً غیرفعال'],
@@ -98,6 +106,7 @@
   function blank() {
     return {
       slug: '',
+      routing: { resume: '', links: 'link' },
       resumeTemplates: {},
       profile: { name: '', title: '', bio: '', location: '', avatar: null, cover: null },
       contacts: [
@@ -114,10 +123,11 @@
       links: {
         header: { sync: true, name: '', bio: '' },
         items: [],
-        style: { align: 'center', ring: true, bgOverride: null },
+        style: { align: 'center', ring: true, bgOverride: null, matchResume: false },
       },
       theme: { resume: 'glacier', links: 'frost', font: 'vazir', palette: 'default', linksPalette: 'default', radius: 'soft' },
       share: { title: '', desc: '', image: null },
+      branding: { resume: { mode: 'resumeit', text: '' }, links: { mode: 'resumeit', text: '' } },
       domain: { value: '', status: 'none' },
     };
   }

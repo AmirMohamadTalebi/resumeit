@@ -102,16 +102,17 @@
   function fieldHtml(f, v) {
     const id = 'f_' + f.key;
     const label = '<label class="field__label" for="' + id + '">' + esc(f.label) +
-      (f.required ? '<span class="field__req">ضروری</span>' : f.optional ? '<span class="field__opt">اختیاری</span>' : '') +
+      (f.required ? '<span class="field__req">پایهٔ انتشار</span>' : '<span class="field__opt">به انتخاب تو</span>') +
       (f.max && (f.type === 'textarea' || f.type === 'text') ? '<span class="field__count" data-count-for="' + f.key + '"></span>' : '') + '</label>';
     let ctl = '';
     const dirAttr = f.ltr ? ' dir="ltr" class="input ltr"' : ' class="input"';
     const common = ' id="' + id + '" name="' + f.key + '" aria-describedby="' + id + '_e ' + id + '_h"' + (f.placeholder ? ' placeholder="' + esc(f.placeholder) + '"' : '') + (f.max ? ' maxlength="' + f.max + '"' : '');
     if (f.type === 'textarea') ctl = '<textarea class="textarea"' + common + ' rows="' + (f.rows || 4) + '">' + esc(v || '') + '</textarea>';
     else if (f.type === 'select') ctl = '<select class="select"' + common + '>' + f.options.map((o) => '<option value="' + esc(o[0]) + '"' + (String(v) === String(o[0]) ? ' selected' : '') + '>' + esc(o[1]) + '</option>').join('') + '</select>';
+    else if(f.type==='icon')ctl='<input type="hidden"'+common+' value="'+esc(v||'link')+'"><div class="icon-picker" role="group" aria-label="'+esc(f.label)+'">'+RI.LINK_ICONS.map(key=>'<button type="button" data-icon-value="'+key+'" data-icon-field="'+f.key+'" aria-pressed="'+((v||'link')===key)+'">'+RI.icon(key)+'<span>'+esc(RI.LINK_ICON_NAMES[key])+'</span></button>').join('')+'</div>';
     else if (f.type === 'checkbox') return '<div class="field" data-field="' + f.key + '"><label class="check"><input type="checkbox"' + common + (v ? ' checked' : '') + '> ' + esc(f.label) + '</label></div>';
     else if (f.type === 'level') ctl = '<input type="range" class="range" min="1" max="5" step="1"' + common + ' value="' + (v || 3) + '"><div class="field__hint" data-level-text>' + esc((f.levels || [])[(v || 3) - 1] || '') + '</div>';
-    else if (f.type === 'image') return '<div class="field" data-field="' + f.key + '"><div class="field__label">' + esc(f.label) + (f.optional ? '<span class="field__opt">اختیاری</span>' : '') + '</div>' + RI.imageFieldHtml(f.key, { value: v, wide: f.wide, label: f.label }) + '</div>';
+    else if (f.type === 'image') return '<div class="field" data-field="' + f.key + '"><div class="field__label">' + esc(f.label) + (f.required ? '<span class="field__req">پایهٔ انتشار</span>' : '<span class="field__opt">به انتخاب تو</span>') + '</div>' + RI.imageFieldHtml(f.key, { value: v, wide: f.wide, label: f.label }) + '</div>';
     else ctl = '<input type="' + (f.type === 'url' ? 'text' : f.type || 'text') + '"' + (f.type === 'url' ? ' inputmode="url"' : '') + dirAttr + common + ' value="' + esc(v || '') + '">';
     return '<div class="field' + (f.span ? ' span-2' : '') + '" data-field="' + f.key + '">' + label + ctl +
       (f.hint ? '<div class="field__hint" id="' + id + '_h">' + f.hint + '</div>' : '') + '<div class="field__error" id="' + id + '_e" role="alert" hidden></div></div>';
@@ -150,6 +151,7 @@
       ],
       onMount: (api) => {
         const form = RI.$('form', api.body);
+        RI.delegate(form,'click','[data-icon-value]',(e,b)=>{const input=form.elements[b.dataset.iconField];input.value=b.dataset.iconValue;input.dispatchEvent(new Event('input',{bubbles:true}));b.parentElement.querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));});
         const refresh = () => o.fields.forEach((f) => {
           const g = RI.$('[data-field="' + f.key + '"]', form);
           if (g && f.showIf) g.hidden = !f.showIf(values);
