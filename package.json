@@ -1,6 +1,6 @@
 {
   "name": "resumeit",
-  "version": "0.22.2-beta",
+  "version": "0.22.3-beta",
   "private": true,
   "engines": {
     "node": ">=24.15.0"
@@ -28,6 +28,7 @@
     "check:enamad": "node tests/enamad-footer-check.cjs",
     "test": "npm run check:security && npm run check:auth && npm run check:sms && npm run check:oauth && node tests/dashboard-api-check.cjs && node tests/resume-templates-check.cjs && node tests/imported-templates-check.cjs && node tests/wallet-check.cjs && node tests/dashboard-save-check.cjs && node tests/admin-api-check.cjs && node tests/admin-completion-check.cjs && npm run check:payments && node tests/workspace-revision-api-check.cjs && node tests/notification-delivery-check.cjs && node tests/notification-policy-check.cjs && node tests/multipage-check.cjs && node tests/revision-completion-check.cjs && node tests/template-loader-check.cjs && node tests/payment-status-poll-check.cjs && node tests/owner-role-check.cjs && node tests/support-role-check.cjs && node tests/owner-controls-check.cjs",
     "check:ui": "node tests/full-ui-suite.cjs",
+    "check:contrast": "node tests/nightlight-contrast-check.cjs && node tests/site-interaction-contrast-check.cjs",
     "check:ui-layout": "node tests/full-ui-audit.cjs",
     "check:payments": "node tests/sep-check.cjs && node tests/zibal-check.cjs && node tests/payments-api-check.cjs && node tests/invoice-api-check.cjs"
   },
