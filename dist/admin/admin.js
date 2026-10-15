@@ -67,7 +67,7 @@
             "'": "&#39;",
           })[c],
       ),
-    fa = (v) => Number(v || 0).toLocaleString("fa-IR"),
+    fa = (v) => Number(v || 0).toLocaleString("fa-IR",{maximumFractionDigits:4}),
     date = (v) =>
       v
         ? new Date(
@@ -76,12 +76,26 @@
         : "—",
     icon = (n) => window.RI.icon(n),
     parse = (v) => (typeof v === "string" ? JSON.parse(v) : v);
-  let ownerId, detailUser;
+  let ownerId, detailUser, fullAdmin=false;
+  const roleNames={owner:'مالک / فول ادمین',admin:'ادمین',support:'ساپورت',user:'کاربر'};
   let page = 1,
     rows = [],
     total = 0,
     loadToken = 0;
   const actionNames = {
+    'owner-password':'بازنشانی رمز توسط مالک',
+    'owner-subscription':'اصلاح اشتراک توسط مالک',
+    'owner-profile':'ویرایش پیشرفتهٔ مشخصات',
+    'owner-access':'تغییر دسترسی محصول',
+    'owner-wallet':'اصلاح اعتبار توسط مالک',
+    'owner-extra-subdomain':'تغییر سهمیهٔ ریزدامنه',
+    'owner-commerce':'تغییر قیمت‌گذاری و نرخ It',
+    'account-role':'تغییر نقش حساب',
+    'support-role':'تغییر نقش ساپورت',
+    'audit-purge':'پاک‌سازی لاگ مدیریتی',
+    'support-reply':'پاسخ پشتیبانی',
+    'support-open':'باز کردن تیکت',
+    'support-closed':'بستن تیکت',
     credit: "شارژ کیف پول",
     suspend: "تعلیق حساب",
     restore: "رفع تعلیق",
@@ -395,7 +409,7 @@
       summary([
         ["شماره", '<span class="ltr">' + esc(u.phone || "—") + "</span>"],
         ["تأیید شماره", badge(u.phone_verified)],
-        ["نقش", u.is_admin ? "مدیر" : "کاربر"],
+        ["نقش", roleNames[u.account_role] || (u.is_owner ? roleNames.owner : u.is_admin ? roleNames.admin : u.is_support ? roleNames.support : roleNames.user)],
         ["وضعیت", badge(!u.suspended, u.suspended ? "تعلیق‌شده" : "فعال")],
         ["تاریخ عضویت", date(u.created_at)],
         ["موجودی", fa(Number(d.balance_units) / 2000) + " It"],
@@ -439,7 +453,7 @@
             "</button>",
         )
         .join("") +
-      '</div></section><section class="panel"><h2>صفحه و دسترسی‌های کاربر</h2>' +
+      '</div>' + (!u.is_admin?'<form id="support-role-form" class="staff-role-form"><h3>نقش ساپورت</h3><p>فقط پاسخ‌گویی به تیکت‌ها؛ بدون دسترسی به مدیریت، پرداخت‌ها، OTP یا تغییر حساب کاربران.</p><label class="admin-channel-row"><span>دسترسی پنل پشتیبانی</span><input type="checkbox" class="toggle" name="enabled" '+(u.is_support?'checked':'')+'></label><label>دلیل تغییر<input class="input" name="reason" required minlength="5" maxlength="500"></label><button class="btn" type="submit">ذخیرهٔ نقش ساپورت</button><p role="status"></p></form>':'')+'</section><section class="panel"><h2>صفحه و دسترسی‌های کاربر</h2>' +
       summary([
         ["آدرس", esc(d.document?.slug || "انتخاب نشده")],
         [
@@ -487,7 +501,7 @@
               [
                 "قیمت",
                 x.price
-                  ? fa(x.price) + " تومان / " + fa(x.price / 2000) + " It"
+                  ? fa(x.price*d.rate/2000) + " تومان / " + fa(x.price / 2000) + " It"
                   : "رایگان",
               ],
               ["شناسه", esc(x.id)],
@@ -496,7 +510,7 @@
             "</article>",
         )
         .join("") +
-      '</div><p class="notice">قیمت‌ها از همان فهرست فعال سایت خوانده می‌شوند. تغییر فهرست محصولات در این نسخه با انتشار کد انجام می‌شود تا قرارداد قالب‌ها و قیمت خرید یکسان بماند.</p>'
+      '</div><p class="notice">قیمت‌ها از فهرست فعال سایت خوانده می‌شوند. تغییر قیمت و توقف فروش در کنترل مالک انجام می‌شود؛ فاکتورهای قبلی حفظ می‌شوند.</p>'
     );
   }
   function health(d) {
@@ -549,7 +563,6 @@
     $("#content").setAttribute("aria-busy", "true");
     $("#content").innerHTML =
       '<div class="loading" role="status">در حال دریافت اطلاعات…</div>';
-    $("#refresh").disabled = true;
     $("#export").disabled = true;
     try {
       const detailId = new URL(location.href).searchParams.get("user");
@@ -593,6 +606,10 @@
                 : detailId && section === "users"
                   ? detail(d)
                   : listContent(section, d);
+      permissions(d,detailId);
+      if(fullAdmin&&detailId&&section==='users')$('#content').insertAdjacentHTML('beforeend',window.ownerUserControls(d));
+      if(fullAdmin&&section==='catalog'&&d.policy)$('#content').insertAdjacentHTML('afterbegin',window.ownerCommerceControls(d));
+      document.querySelectorAll('.owner-product-row').forEach(row=>{if(!row.querySelector('[data-owner-price]'))row.querySelector('[data-owner-paused]').disabled=true;});
       $("#updated").textContent = "آخرین دریافت: " + date(Date.now());
       $("#export").disabled = !rows.length;
     } catch (e) {
@@ -604,9 +621,23 @@
     } finally {
       if (token === loadToken) {
         $("#content").removeAttribute("aria-busy");
-        $("#refresh").disabled = false;
+        if($("#refresh"))$("#refresh").disabled = false;
       }
     }
+  }
+  function permissions(data,detailId){
+    if(!fullAdmin){
+      document.querySelectorAll('[data-action="credit"],[data-action="delete-account"]').forEach(button=>button.remove());
+      for(const id of ['admin-payment-gateways','admin-notification-channels']){const form=document.getElementById(id);if(form){const notice=document.createElement('p');notice.className='notice';notice.textContent='تغییر تنظیمات سراسری این بخش فقط برای مالک سایت مجاز است.';form.replaceWith(notice);}}
+      return;
+    }
+    if(section==='users'&&detailId){
+      $('#support-role-form')?.remove();
+      const role=detailUser.account_role||(detailUser.is_admin?'admin':detailUser.is_support?'support':'user');
+      if(detailId===ownerId)return;
+      $('#content .detail-actions').insertAdjacentHTML('afterend','<form id="account-role-form" class="staff-role-form"><h3>نقش حساب</h3><p>مالک می‌تواند تنظیمات حساس و نقش مدیرها را تغییر دهد. ادمین به کنترل‌های سراسری سرویس‌ها و پاک‌کردن لاگ‌ها دسترسی ندارد.</p><label>سطح دسترسی<select class="select" name="role">'+Object.entries(roleNames).map(([id,label])=>'<option value="'+id+'" '+(role===id?'selected':'')+'>'+label+'</option>').join('')+'</select></label><label>دلیل تغییر<input class="input" name="reason" required minlength="5" maxlength="500"></label><label>برای تأیید، نام نقش انتخاب‌شده را بنویس<input class="input" name="confirmation" required autocomplete="off" placeholder="'+esc(roleNames[role])+'"></label><button class="btn" type="submit">ذخیرهٔ نقش حساب</button><p role="status"></p></form>');
+    }
+    if(section==='audit')$('#content').insertAdjacentHTML('afterbegin','<section class="panel audit-purge"><h2>پاک‌سازی لاگ‌های مدیریتی</h2><p>حذف برگشت‌پذیر نیست؛ رسیدهای پاک‌سازی شامل عامل، دلیل و تعداد حذف‌شده باقی می‌مانند.</p><form id="audit-purge-form" class="staff-role-form"><label>بازهٔ حذف<select class="select" name="range"><option value="90">قدیمی‌تر از ۹۰ روز</option><option value="30">قدیمی‌تر از ۳۰ روز</option><option value="7">قدیمی‌تر از ۷ روز</option><option value="0">تمام لاگ‌ها تا همین لحظه</option></select></label><label>دلیل پاک‌سازی<input class="input" name="reason" required minlength="5" maxlength="500"></label><label>برای تأیید بنویس: حذف لاگ‌ها<input class="input" name="confirmation" required autocomplete="off"></label><button class="btn" type="submit">حذف لاگ‌های این بازه</button><p role="status"></p></form></section>');
   }
   function actionDialog(id, action) {
     const dlg = $("#action-dialog");
@@ -682,6 +713,7 @@
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
   async function boot() {
+    window.bindOwnerControls(api,load,()=>ownerId);
     const response = await fetch("/api/auth/session", { cache: "no-store" }),
       { user } = await response.json();
     if (!user) {
@@ -693,6 +725,7 @@
       return;
     }
     ownerId=user.id;
+    fullAdmin=!!user.is_owner;
     const info = sections[section];
     $("#page-title").textContent = info[0];
     $("#page-desc").textContent = info[2];
@@ -700,15 +733,20 @@
     $("#admin-name").textContent =
       [user.first_name, user.last_name].filter(Boolean).join(" ") ||
       "مدیر ResumeIt";
-    const groups=[['دید کلی',['overview','traffic']],['حساب‌ها و محتوا',['users','pages']],['مالی و فروش',['payments','transactions','purchases']],['محصول و ظاهر',['catalog']],['امنیت و سرویس‌ها',['otp','audit','health']]];
-    $("#admin-nav").innerHTML=groups.map(([label,ids])=>'<ul class="menu"><li class="menu-title">'+label+'</li>'+ids.map(id=>'<li><a href="'+(id==='overview'?'/admin/':'/admin/'+id+'/')+'" '+(id===section?'aria-current="page"':'')+'>'+icon(sections[id][1])+'<span>'+sections[id][0]+'</span></a></li>').join('')+'</ul>').join('');
+    const groups=[['دید کلی','chart',['overview','traffic']],['کاربران و صفحات','user',['users','pages']],['امور مالی','card',['payments','transactions','purchases']],['محصولات','palette',['catalog']],['امنیت و سرویس‌ها','shield',['health','otp','audit']]],active=groups.find(g=>g[2].includes(section));
+    const href=id=>id==='overview'?'/admin/':'/admin/'+id+'/';
+    $("#admin-nav").innerHTML='<ul class="menu">'+groups.map(([label,symbol,ids])=>'<li><a title="'+label+'" href="'+href(ids.includes(section)?section:ids[0])+'" '+(ids.includes(section)?'aria-current="page"':'')+'>'+icon(symbol)+'<span>'+label+'</span></a></li>').join('')+'<li><a href="/staff/" title="پنل پشتیبانی">'+icon('help')+'<span>پشتیبانی و تیکت‌ها</span></a></li></ul>';
     $("#admin-menu").innerHTML = icon("menu");
     const topnav=document.createElement('nav');topnav.className='admin-topnav';topnav.setAttribute('aria-label','دسترسی سریع مدیریت');topnav.append($('#admin-menu'));
-    for(const id of ['overview','users','pages','payments','health']){const a=document.createElement('a');a.href=id==='overview'?'/admin/':'/admin/'+id+'/';a.innerHTML=icon(sections[id][1])+'<span>'+sections[id][0]+'</span>';if(id===section)a.setAttribute('aria-current','page');topnav.append(a);}
+    for(const id of active[2]){const a=document.createElement('a');a.href=href(id);a.innerHTML=icon(sections[id][1])+'<span>'+sections[id][0]+'</span>';if(id===section)a.setAttribute('aria-current','page');topnav.append(a);}
     $('.admin-head').after(topnav);$('#admin-menu').setAttribute('aria-controls','admin-side');$('#admin-menu').title='باز و بسته کردن منوی مدیریت';
-    $('#admin-close').innerHTML=icon('close');
-    $('.admin-payment').textContent='درگاه‌های بانکی';
-    api('health').then(data=>{const gateways=data.gateways||data.data?.gateways||[];const enabled=gateways.filter(g=>g.enabled);$('.admin-payment').textContent=enabled.length?'درگاه تنظیم‌شده: '+enabled.map(g=>g.id==='zibal'?'زیبال':'سپ').join('، '):'درگاه بانکی تنظیم نشده';}).catch(()=>{});
+    $('#admin-close').innerHTML=icon('x');
+    $('.admin-payment').remove();$('#refresh').remove();
+    const footer=$('.admin-side footer'),name=$('#admin-name'),logout=$('#logout'),profile=document.createElement('details');profile.className='admin-profile';
+    profile.innerHTML='<summary title="پروفایل و دسترسی سریع"><img src="/brand/resumeit-mark-v1.png" alt="" width="42" height="42"><span><strong></strong><small>مدیر · دسترسی سریع</small></span>'+icon('chevD')+'</summary><div class="admin-profile-menu"><a href="/dashboard/settings/">'+icon('user')+'تنظیمات حساب</a><a href="/staff/">'+icon('help')+'میز پشتیبانی</a></div>';
+    profile.querySelector('strong').replaceWith(name);logout.innerHTML=icon('logout')+'<span>خروج از حساب</span>';profile.querySelector('.admin-profile-menu').append(logout);footer.prepend(profile);
+    profile.querySelector('summary small').textContent=(fullAdmin?'مالک / فول ادمین':'ادمین')+' · دسترسی سریع';
+    document.addEventListener('click',e=>{if(!profile.contains(e.target))profile.open=false;});document.addEventListener('keydown',e=>{if(e.key==='Escape'&&profile.open){profile.open=false;profile.querySelector('summary').focus();}});
     $("#search-wrap").hidden = ![
       "users",
       "pages",
@@ -737,7 +775,6 @@
       $("#filters").hidden = true;
       $("#export").hidden = true;
     }
-    $("#refresh").onclick = load;
     $("#filters").onsubmit = (e) => {
       e.preventDefault();
       page = 1;
@@ -753,7 +790,21 @@
     };
     $("#catalog-kind").onchange = load;
     $("#export").onclick = exportCsv;
+    document.addEventListener('change',event=>{const form=event.target.closest('#account-role-form');if(form&&event.target.name==='role'){const confirmation=form.elements.namedItem('confirmation');confirmation.value='';confirmation.placeholder=roleNames[event.target.value];form.querySelector('[role=status]').textContent='';delete form.dataset.requestId;}});
     document.addEventListener('submit',async event=>{
+      if(['account-role-form','audit-purge-form'].includes(event.target.id)){
+        event.preventDefault();const form=event.target,button=form.querySelector('[type=submit]'),status=form.querySelector('[role=status]');if(button.disabled)return;
+        const role=form.elements.namedItem('role')?.value;
+        if(role&&form.elements.namedItem('confirmation').value.trim()!==roleNames[role]){status.textContent='نام نقش انتخاب‌شده را دقیق وارد کن: '+roleNames[role];return;}
+        const input={reason:form.elements.namedItem('reason').value,requestId:form.dataset.requestId||(form.dataset.requestId=crypto.randomUUID()),...(role?{role}:{before:Number(form.dataset.before||(form.dataset.before=Date.now()-Number(form.elements.namedItem('range').value)*86400000)),confirmation:form.elements.namedItem('confirmation').value})};
+        button.disabled=true;
+        try{const result=await api(role?'users/'+detailUser.id+'/role':'audit/purge',input);await load();const output=document.querySelector('#'+form.id+' [role=status]');if(output)output.textContent=role?'نقش حساب ذخیره شد.':fa(result.deleted)+' لاگ حذف شد؛ رسید پاک‌سازی ثبت شد.';}catch(error){status.textContent=error.message;delete form.dataset.requestId;delete form.dataset.before;}finally{button.disabled=false;}return;
+      }
+      if(event.target.id==='support-role-form'){
+        event.preventDefault();const form=event.target,button=form.querySelector('[type=submit]'),status=form.querySelector('[role=status]');if(button.disabled)return;button.disabled=true;
+        const requestId=form.dataset.requestId||(form.dataset.requestId=crypto.randomUUID());
+        try{await api('users/'+detailUser.id+'/support-role',{enabled:form.elements.namedItem('enabled').checked,reason:form.elements.namedItem('reason').value,requestId});await load();}catch(error){status.textContent=error.message;delete form.dataset.requestId;}finally{button.disabled=false;}return;
+      }
       if(event.target.id==='admin-payment-gateways'){
         event.preventDefault();const form=event.target,button=form.querySelector('[type=submit]'),status=form.querySelector('[role=status]');if(button.disabled)return;button.disabled=true;
         try{await api('payment-gateways',Object.fromEntries(['sep','zibal'].map(key=>[key,form.elements.namedItem(key).checked])));status.textContent='تنظیم درگاه‌ها ذخیره شد؛ پیگیری پرداخت‌های قبلی ادامه دارد.';}catch(error){status.textContent=error.message;}finally{button.disabled=false;}return;
@@ -784,6 +835,7 @@
       $("#admin-backdrop").dataset.open = open;
       $("#admin-menu").setAttribute("aria-expanded", String(open));
       $('.admin-shell').classList.toggle('admin-compact',!open&&!mobile.matches);
+      $('.admin-brand img').src=!open&&!mobile.matches?'/brand/resumeit-mark-v1.png':'/brand/resumeit-logo-v1.png';
       $('#admin-menu').setAttribute('aria-label',open?'جمع کردن منوی مدیریت':'باز کردن منوی مدیریت');
       if (open&&mobile.matches) $("#admin-close").focus();
       else if (mobile.matches && wasOpen) $("#admin-menu").focus();

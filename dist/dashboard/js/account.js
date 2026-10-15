@@ -8,6 +8,8 @@
   RI.applyAccount=user=>{
     RI.ownerId=user.id;
     RI.state.account.isAdmin=!!user.is_admin;
+    RI.state.account.isOwner=!!user.is_owner;
+    RI.state.account.isSupport=!!user.is_support;
     Object.assign(RI.state.account,{mobile:user.phone||'',mobileVerified:!!user.phone_verified,firstName:user.first_name||'',lastName:user.last_name||'',google:!!user.google,github:!!user.github,name:[user.first_name,user.last_name].filter(Boolean).join(' ')||'حساب من'});
   };
   RI.reloadAccount=async()=>{const {user}=await RI.accountRequest('session');if(!user)throw new Error('دوباره وارد حسابت شو');RI.applyAccount(user);RI.emit('change',{});};

@@ -1,6 +1,6 @@
 {
   "name": "resumeit",
-  "version": "0.22.0-beta",
+  "version": "0.22.2-beta",
   "private": true,
   "engines": {
     "node": ">=24.15.0"
@@ -12,8 +12,13 @@
     "check:sms": "node tests/smsir-check.cjs && node tests/otp-check.cjs",
     "check:dashboard": "node tests/dashboard-check.cjs",
     "check:editor-polish": "node tests/editor-polish-ui-check.cjs",
+    "build:template-previews": "node scripts/build-template-previews.cjs && node scripts/capture-template-thumbs.cjs",
+    "check:template-performance": "node tests/template-loader-check.cjs && node tests/template-performance-check.cjs && node tests/performance-snapshot.cjs",
     "check:communication": "node tests/notification-policy-check.cjs && node tests/communication-ui-check.cjs",
     "check:admin-completion": "node tests/admin-completion-check.cjs && node tests/admin-completion-ui-check.cjs",
+    "check:support": "node tests/support-role-check.cjs && node tests/support-role-ui-check.cjs",
+    "check:roles": "node tests/owner-role-check.cjs && node tests/support-role-check.cjs && node tests/owner-role-ui-check.cjs && node tests/support-role-ui-check.cjs",
+    "check:owner-controls": "node tests/owner-controls-ui-check.cjs",
     "check:multipage": "node tests/multipage-check.cjs && node tests/multipage-ui-check.cjs",
     "check:auth-ui": "node tests/auth-ui-check.cjs",
     "check:auth-motion": "node tests/auth-motion-check.cjs",
@@ -21,8 +26,9 @@
     "check:oauth": "node tests/oauth-check.cjs",
     "check:security": "node tests/security-check.cjs && node tests/static-cache-check.cjs",
     "check:enamad": "node tests/enamad-footer-check.cjs",
-    "test": "npm run check:security && npm run check:auth && npm run check:sms && npm run check:oauth && node tests/dashboard-api-check.cjs && node tests/resume-templates-check.cjs && node tests/imported-templates-check.cjs && node tests/wallet-check.cjs && node tests/dashboard-save-check.cjs && node tests/admin-api-check.cjs && node tests/admin-completion-check.cjs && npm run check:payments && node tests/workspace-revision-api-check.cjs && node tests/notification-delivery-check.cjs && node tests/notification-policy-check.cjs && node tests/multipage-check.cjs && node tests/revision-completion-check.cjs && node tests/payment-status-poll-check.cjs",
-    "check:ui": "npm run check:dashboard && npm run check:auth-ui && npm run check:auth-mobile && npm run check:auth-motion && node tests/site-content-check.cjs && node tests/dashboard-public-ui-check.cjs && node tests/imported-templates-ui-check.cjs && node tests/wallet-ui-check.cjs && node tests/dashboard-loading-check.cjs && node tests/dashboard-performance-check.cjs && node tests/dashboard-responsive-check.cjs && node tests/browser-audit-check.cjs && node tests/dashboard-save-ui-check.cjs && node tests/admin-ui-check.cjs && node tests/dashboard-warm-cache-check.cjs && node tests/workspace-navigation-check.cjs && node tests/ui-polish-check.cjs && node tests/payments-ui-check.cjs",
+    "test": "npm run check:security && npm run check:auth && npm run check:sms && npm run check:oauth && node tests/dashboard-api-check.cjs && node tests/resume-templates-check.cjs && node tests/imported-templates-check.cjs && node tests/wallet-check.cjs && node tests/dashboard-save-check.cjs && node tests/admin-api-check.cjs && node tests/admin-completion-check.cjs && npm run check:payments && node tests/workspace-revision-api-check.cjs && node tests/notification-delivery-check.cjs && node tests/notification-policy-check.cjs && node tests/multipage-check.cjs && node tests/revision-completion-check.cjs && node tests/template-loader-check.cjs && node tests/payment-status-poll-check.cjs && node tests/owner-role-check.cjs && node tests/support-role-check.cjs && node tests/owner-controls-check.cjs",
+    "check:ui": "node tests/full-ui-suite.cjs",
+    "check:ui-layout": "node tests/full-ui-audit.cjs",
     "check:payments": "node tests/sep-check.cjs && node tests/zibal-check.cjs && node tests/payments-api-check.cjs && node tests/invoice-api-check.cjs"
   },
   "dependencies": {

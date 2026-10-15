@@ -27,11 +27,12 @@
     const caption = hero.querySelector('[data-caption]'), track = hero.querySelector('.sig-track i');
     const reduced = matchMedia('(prefers-reduced-motion: reduce)');
     const elements = new Map([...hero.querySelectorAll('[data-piece]')].map(el => [el.dataset.piece, el]));
-    let geometry = [], scale = 1, distance = 800, start = 0, raf = 0, phase = -1;
+    let geometry = [], scale = 1, distance = 800, start = 0, raf = 0, phase = -1,lastProgress=-1,lastWidth=0;
     const clamp = v => Math.max(0, Math.min(1, v));
     function paint() {
       raf = 0;
       const p = reduced.matches ? 1 : clamp((scrollY - start) / distance);
+      if(p===lastProgress)return;lastProgress=p;
       geometry.forEach(([id, from, to], i) => {
         const delay = [0,.04,.1,0,.04,.12,.19,.24][i];
         const t = reduced.matches ? 1 : clamp((p - delay) / (.78 - delay));
@@ -39,7 +40,7 @@
         const x = from[0] + (to[0]-from[0])*ease;
         const y = from[1] + (to[1]-from[1])*ease - Math.sin(Math.PI*ease)*12;
         const angle = from[2]*(1-ease);
-        elements.get(id).style.transform = `translate(${x*scale}px,${y*scale}px) rotate(${angle}deg) scale(${innerWidth<=760?1:scale})`;
+        elements.get(id).style.transform = `translate3d(${x*scale}px,${y*scale}px,0) rotate(${angle}deg) scale(${innerWidth<=760?1:scale})`;
       });
       track.style.transform = `scaleX(${Math.max(.1,p)})`;
       const next = p >= .78 ? 2 : p > .06 ? 1 : 0;
@@ -51,6 +52,7 @@
     }
     function schedule(){if(!raf) raf=requestAnimationFrame(paint);}
     function resize(){
+      if(innerWidth<=760&&lastWidth===innerWidth&&scrollY>0)return;lastWidth=innerWidth;lastProgress=-1;
       const small = innerWidth <= 760;
       hero.classList.remove('is-animated','is-static-r');
       hero.classList.toggle('sig-mobile',small);

@@ -4,32 +4,34 @@ const sep = require('./sep.cjs'),zibal=require('./zibal.cjs');
 const hash = value => createHash('sha256').update(value).digest('hex');
 const uuid = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/;
 const reference = /^[A-Za-z0-9+/=_-]{1,50}$/;
-const publicOrder = o => ({ id:o.id,provider:o.provider,amount:Number(o.amount_toman),it:Number(o.amount_toman)/2000,status:o.status,rrn:o.rrn||'',trace:o.trace||'',at:Number(o.created_at),updatedAt:Number(o.updated_at) });
+const publicOrder = o => ({ id:o.id,provider:o.provider,amount:Number(o.amount_toman),it:Number(o.credit_units??o.amount_toman)/2000,status:o.status,rrn:o.rrn||'',trace:o.trace||'',at:Number(o.created_at),updatedAt:Number(o.updated_at) });
 
 function createPayments(database, options = {}) {
   const configs={sep:sep.configuration(options.env),zibal:zibal.configuration(options.env)},providers={sep:options.provider||options.providers?.sep||sep.createSep(options),zibal:options.providers?.zibal||zibal.createZibal(options)},now=options.now||Date.now;
   const gateways=async()=>{const policy=database.paymentPolicy?await database.paymentPolicy():{sep:true,zibal:true};return [{id:'sep',name:'سپ — پرداخت الکترونیک سامان',enabled:configs.sep.enabled&&policy.sep},{id:'zibal',name:'زیبال',enabled:configs.zibal.enabled&&policy.zibal}];};
   async function invoice(user,input){
     if(!user.phone_verified||!user.phone)fail('برای پرداخت، شمارهٔ حساب را تأیید کن',403);
-    const time=now(),row=await database.createInvoice({id:randomUUID(),user_id:user.id,amount_toman:input.amount,request_id:input.requestId,created_at:time,expires_at:time+24*3600000});
+    const rate=database.commerceSettings?(await database.commerceSettings()).rate:2000;
+    const time=now(),row=await database.createInvoice({id:randomUUID(),user_id:user.id,amount_toman:input.amount,...require('../owner/settings.cjs').quote(input.amount,rate),request_id:input.requestId,created_at:time,expires_at:time+24*3600000});
     return {id:row.id,url:'/payments/checkout?id='+row.id};
   }
   async function start(user, input, origin, gateway='sep') {
     if(!configs[gateway])fail('درگاه معتبر نیست',404);
     const config=configs[gateway],provider=providers[gateway];
     if(!(await gateways()).find(g=>g.id===gateway)?.enabled)fail('درگاه انتخاب‌شده برای پرداخت جدید فعال نیست',503);
-    let invoiceId;
+    let invoiceId,quote;
     if(input.invoiceId){
       if(!uuid.test(input.invoiceId))fail('پیش‌فاکتور معتبر نیست');
       const row=await database.invoice(input.invoiceId);if(!row||row.user_id!==user.id)fail('پیش‌فاکتور پیدا نشد',404);
       const existing=await database.payment(row.id);if(existing?.status==='paid'||existing?.ref_num&&existing.provider==='sep')return {id:row.id,url:'/payments/result?id='+row.id};
       if(Number(row.expires_at)<=now())fail('مهلت پیش‌فاکتور تمام شد؛ پیش‌فاکتور تازه بساز',409);
-      invoiceId=row.id;input={amount:Number(row.amount_toman),requestId:row.request_id};
+      invoiceId=row.id;input={amount:Number(row.amount_toman),requestId:row.request_id};quote={it_rate:Number(row.it_rate||2000),credit_units:Number(row.credit_units??row.amount_toman)};
     }
     if(!user.phone_verified||!user.phone)fail('برای پرداخت، شمارهٔ حساب را تأیید کن',403);
     if(!Number.isSafeInteger(input.amount)||input.amount<2000||input.amount>100000000||input.amount%2000!==0||typeof input.requestId!=='string'||!/^[a-z0-9_-]{16,64}$/i.test(input.requestId))fail('مبلغ باید مضرب ۲٬۰۰۰ تومان و در محدودهٔ مجاز باشد');
     const secret=randomBytes(32).toString('hex'),time=now();
-    const result=await database.createPayment({id:invoiceId||randomUUID(),user_id:user.id,provider:gateway,terminal_id:config.terminal||0,amount_toman:input.amount,request_id:input.requestId,secret_hash:hash(secret),created_at:time,expires_at:time+20*60000});
+    quote ||= require('../owner/settings.cjs').quote(input.amount,database.commerceSettings?(await database.commerceSettings()).rate:2000);
+    const result=await database.createPayment({id:invoiceId||randomUUID(),user_id:user.id,provider:gateway,terminal_id:config.terminal||0,amount_toman:input.amount,...quote,request_id:input.requestId,secret_hash:hash(secret),created_at:time,expires_at:time+20*60000});
     const order=result.order;
     if(result.created) {
       try { const token=await provider.token(order,origin+'/api/payments/'+gateway+'/callback?key='+secret+'&id='+order.id,user.phone);await database.paymentToken(order.id,token,now());if(gateway==='zibal')await database.receivePayment(order.id,token,now()); }
@@ -69,7 +71,7 @@ function createPayments(database, options = {}) {
       if(proof.amountRial!==Number(order.amount_toman)*10) {await reverse(order,'AMOUNT_MISMATCH');return;}
       const result=await database.completePayment(order,proof,now());
       if(result?.accountDeleted)await reverse(order,'ACCOUNT_DELETED');
-      else if(result?.status==='paid'&&database.notify)await database.notify(order.user_id,'payments','کیف پول شارژ شد',String(Number(order.amount_toman)/2000)+' It به موجودی اضافه شد.','/dashboard/wallet/?payment='+order.id,'credit:'+order.id).catch(()=>{});
+      else if(result?.status==='paid'&&database.notify)await database.notify(order.user_id,'payments','کیف پول شارژ شد',String(Number(order.credit_units??order.amount_toman)/2000)+' It به موجودی اضافه شد.','/dashboard/wallet/?payment='+order.id,'credit:'+order.id).catch(()=>{});
     } catch(error) { await database.releasePayment(id,order.lease_key,error.code==='ZIBAL_PAYMENT_MISMATCH'?'review':'pending',error.code==='ZIBAL_PAYMENT_MISMATCH'?error.code:bankCode||'VERIFY_UNCONFIRMED',now(),Math.min(300000,15000*2**Math.min(4,Number(order.attempts)))); }
   }
   async function callback(fields, key, gateway='sep') {

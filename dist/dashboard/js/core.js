@@ -14,7 +14,7 @@
   RI.reduceMotion = () => window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   RI.clone = (o) => JSON.parse(JSON.stringify(o));
 
-  const nf = new Intl.NumberFormat('fa-IR');
+  const nf = new Intl.NumberFormat('fa-IR',{maximumFractionDigits:4});
   RI.fa = (n) => nf.format(n);
   RI.toman = (n) => nf.format(n) + ' تومان';
   RI.date = (d, opts) => new Intl.DateTimeFormat('fa-IR-u-ca-persian', opts || { year: 'numeric', month: 'long', day: 'numeric' }).format(d instanceof Date ? d : new Date(d));
@@ -170,12 +170,14 @@
   };
 
   /* ---------- منوی کشویی ---------- */
+  let activeMenu;
   RI.menu = function (anchor, items, opts) {
     opts = opts || {};
-    RI.$$('.menu[role="menu"]').forEach((m) => m.remove());
+    activeMenu?.close();
     const m = document.createElement('div');
     m.className = 'menu';
     m.setAttribute('role', 'menu');
+    m.id='menu-'+RI.uid();anchor.setAttribute('aria-expanded','true');anchor.setAttribute('aria-controls',m.id);
     items.forEach((it) => {
       if (it === 'hr') { m.appendChild(document.createElement('hr')); return; }
       const b = document.createElement('button');
@@ -193,19 +195,23 @@
     let top = r.bottom + 8;
     if (top + mh > window.innerHeight - 8 || opts.up) top = Math.max(8, r.top - mh - 8);
     m.style.left = left + 'px'; m.style.top = top + 'px';
-    const first = m.querySelector('button'); if (first) first.focus();
-    function close() { document.removeEventListener('mousedown', outside, true); document.removeEventListener('keydown', key, true); m.remove(); if (anchor.focus) anchor.focus(); }
+    const first = m.querySelector('button'); if (first) first.focus({preventScroll:true});
+    let closed=false;
+    function close() { if(closed)return;closed=true;document.removeEventListener('mousedown', outside, true);document.removeEventListener('keydown', key, true);window.removeEventListener('resize',close);document.removeEventListener('scroll',scroll,true);m.remove();anchor.setAttribute('aria-expanded','false');anchor.removeAttribute('aria-controls');if(anchor.isConnected)anchor.focus({preventScroll:true});if(activeMenu?.element===m)activeMenu=null; }
     function outside(e) { if (!m.contains(e.target)) close(); }
+    function scroll(e){if(!m.contains(e.target))close();}
     function key(e) {
-      if (e.key === 'Escape') close();
+      if(e.key==='Escape'){e.preventDefault();e.stopPropagation();close();return;}
+      if(e.key==='Tab'){close();return;}
+      if(e.key==='Home'||e.key==='End'){e.preventDefault();const bs=RI.$$('button',m);bs[e.key==='Home'?0:bs.length-1]?.focus();return;}
       if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
         e.preventDefault();
         const bs = RI.$$('button', m); const i = bs.indexOf(document.activeElement);
         bs[(i + (e.key === 'ArrowDown' ? 1 : -1) + bs.length) % bs.length].focus();
       }
     }
-    setTimeout(() => { document.addEventListener('mousedown', outside, true); document.addEventListener('keydown', key, true); });
-    return { close };
+    document.addEventListener('mousedown', outside, true);document.addEventListener('keydown', key, true);window.addEventListener('resize',close);document.addEventListener('scroll',scroll,true);
+    activeMenu={close,element:m};return activeMenu;
   };
 
   /* ---------- FLIP: انیمیشن جابه‌جایی آیتم‌ها ---------- */

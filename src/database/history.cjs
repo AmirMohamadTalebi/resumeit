@@ -6,7 +6,7 @@ function filters(params){
  const start=from?Date.parse(from):0,end=to?Date.parse(to)+86400000:Number.MAX_SAFE_INTEGER;if(!Number.isFinite(start)||!Number.isFinite(end)||start>=end)fail('بازهٔ تاریخ معتبر نیست');return {type,page,q,status,start,end};
 }
 module.exports=({execute})=>({async financialHistory(owner,params){
- const f=filters(params),bank=f.type==='bank',table=bank?'payment_orders':'wallet_transactions',columns=bank?'id,provider,amount_toman,status,rrn,trace,created_at,updated_at':'id,delta_units,balance_units,label,created_at';
+ const f=filters(params),bank=f.type==='bank',table=bank?'payment_orders':'wallet_transactions',columns=bank?'id,provider,amount_toman,credit_units,it_rate,status,rrn,trace,created_at,updated_at':'id,delta_units,balance_units,label,created_at';
  let where='user_id=? AND created_at>=? AND created_at<?',args=[owner,f.start,f.end];
  if(f.type==='purchases')where+=' AND delta_units<0';
  if(f.status){if(bank){where+=' AND status=?';args.push(f.status);}else if(['in','out'].includes(f.status))where+=' AND delta_units'+(f.status==='in'?'>':'<')+'0';else fail('وضعیت این تاریخچه معتبر نیست');}

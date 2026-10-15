@@ -1,4 +1,5 @@
 @import url('/admin/glass.css');
+@import url('/admin/navigation.css');
 /* Admin workspace: a clear reading canvas and a separate navigation rail. */
 * {
   box-sizing:border-box

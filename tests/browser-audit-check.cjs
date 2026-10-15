@@ -9,8 +9,10 @@ const { RI } = require('../src/dashboard/render.cjs');
 (async () => {
   const live = process.env.AUDIT_LIVE === '1';
   const db = testStore();
+  let store;
   if (!live) {
     const id = await db.provisionAccount('09120000883', null);
+    store=require('./workspace-test-store.cjs')(db,[id],{workspaces:true});
     await db.createSession(digest('e'.repeat(64)), id, Date.now() + 600000);
     await db.setAccountNames(id, 'آزمایش', 'داشبورد');
     await db.markPhoneVerified(id);
@@ -101,5 +103,6 @@ const { RI } = require('../src/dashboard/render.cjs');
     await browser.close();
     if (server) await new Promise(r => server.close(r));
     db.close();
+    store?.close();
   }
 })().catch(e => { console.error(e); process.exitCode = 1; });

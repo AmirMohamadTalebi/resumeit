@@ -12,7 +12,7 @@ function fingerprint(directory){
   for(const item of localFiles.readdirSync(directory,{withFileTypes:true}).sort((a,b)=>a.name.localeCompare(b.name,'en'))){
     const file=path.join(directory,item.name);
     if(item.isDirectory())fingerprint(file);
-    else if(item.isFile()&&/\.(?:html|js|css|woff2|woff|ttf|png|jpe?g|svg|webp|ico)$/.test(item.name)){assetHash.update(path.relative(root,file).split(path.sep).join('/'));assetHash.update(localFiles.readFileSync(file));}
+    else if(item.isFile()&&/\.(?:html|js|json|css|woff2|woff|ttf|png|jpe?g|svg|webp|ico)$/.test(item.name)){assetHash.update(path.relative(root,file).split(path.sep).join('/'));assetHash.update(localFiles.readFileSync(file));}
   }
 }
 fingerprint(root);
@@ -21,7 +21,7 @@ const assetRevision=version+'-'+assetHash.digest('hex').slice(0,16);
 const bundles=new Map();
 for(const [url,files] of [
   ['/dashboard/js/workspace.js',['icons','core','ui','data','imported-templates','resume-templates','state','api','account','preview','commerce','workspace-tools','notification-channels','app','coral','toolbar'].map(n=>'dashboard/js/'+n+'.js')],
-  ['/dashboard/css/workspace.css',['tokens','base','shell','components','preview','pages','abgoon'].map(n=>'dashboard/css/'+n+'.css')]
+  ['/dashboard/css/workspace.css',['tokens','base','shell','components','preview','pages','abgoon','performance'].map(n=>'dashboard/css/'+n+'.css')]
 ])bundles.set(url,Buffer.from(files.map(file=>{
   let source=localFiles.readFileSync(path.join(root,file),'utf8');
   if(file.endsWith('.css'))source=source.replace(/url\((["']?)(?!data:|https?:|\/\/)([^)"'?#]+)\1\)/g,(_,quote,url)=>`url(${quote}${path.posix.resolve('/',path.posix.dirname(file),url)}${quote})`);
@@ -32,6 +32,7 @@ const fileBodies=new Map(),fileCacheLimit=32*1024*1024;
 let fileCacheBytes=0;
 const mime = { '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8', '.js': 'application/javascript', '.mjs': 'application/javascript', '.woff2': 'font/woff2', '.svg': 'image/svg+xml', '.txt': 'text/plain; charset=utf-8', '.xml': 'application/xml; charset=utf-8', '.jpg': 'image/jpeg', '.png': 'image/png', '.webp': 'image/webp', '.ico': 'image/x-icon' };
 Object.assign(mime,{'.jpeg':'image/jpeg','.gif':'image/gif','.woff':'font/woff','.ttf':'font/ttf'});
+mime['.json']='application/json; charset=utf-8';
 
 function requestPath(url) {
   const raw = url.split('?')[0];
@@ -43,9 +44,10 @@ function requestPath(url) {
 
 async function serveStatic(req, res, pathname, origin, account) {
   const send = (status, body, type = 'text/plain; charset=utf-8') => {
-    if (/^(text\/|application\/(javascript|xml)|image\/svg)/.test(type)) res.setHeader('Vary','Accept-Encoding');
+    if(status===200&&/^\/dashboard\/template-data\/(vista|satiar)\.json$/.test(pathname))res.setHeader('X-Uncompressed-Length',body.length);
+    if (/^(text\/|application\/(javascript|json|xml)|image\/svg)/.test(type)) res.setHeader('Vary','Accept-Encoding');
     if (type.startsWith('text/html')) securityHeaders(res, origin, body.toString('utf8'), pathname.startsWith('/demo/'));
-    if (status===200 && /^(text\/|application\/(javascript|xml)|image\/svg)/.test(type) && /\bgzip\b/.test(req.headers['accept-encoding'] || '') && body.length>1024) {
+    if (status===200 && /^(text\/|application\/(javascript|json|xml)|image\/svg)/.test(type) && /\bgzip\b/.test(req.headers['accept-encoding'] || '') && body.length>1024) {
       let cached=compressedAssets.get(pathname);if(!cached||!cached.source.equals(body)){cached={source:body,body:gzipSync(body)};if(compressedAssets.size>=64)compressedAssets.delete(compressedAssets.keys().next().value);compressedAssets.set(pathname,cached);}
       body=cached.body;res.setHeader('Content-Encoding','gzip');res.setHeader('Vary','Accept-Encoding');
     }
@@ -64,9 +66,13 @@ async function serveStatic(req, res, pathname, origin, account) {
   if (!['GET', 'HEAD'].includes(req.method)) { res.setHeader('Allow', 'GET, HEAD'); send(405, 'Method not allowed'); return; }
   const publicAsset=publicAssets.has(pathname);
   let file = path.resolve(root, publicAssets.get(pathname) || '.' + pathname);
+  const sample=/^\/(resume|link)([a-z0-9-]+)\/$/.exec(pathname),samplePage=new URL(req.url,origin).searchParams.get('page');
+  if(sample&&samplePage&&/^[a-z0-9]+$/.test(samplePage)&&samplePage!=='home')file=path.join(file,samplePage+'.html');
   const workspacePage=/^\/dashboard\/(support|notifications|studio)\/$/.exec(pathname);
   if(workspacePage)file=path.join(root,'dashboard/index.html');
   try {
+    const staffPath=pathname.toLowerCase()==='/staff'||pathname.toLowerCase().startsWith('/staff/');
+    if(staffPath){res.setHeader('Cache-Control','no-store');const user=account&&await account(req);if(!user){res.writeHead(303,{Location:'/login/'});res.end();return;}if(!require('../admin/access.cjs').isSupport(user)){send(403,'Forbidden');return;}}
     // Authenticate the resolved file as well as the URL (case aliases and symlinks included).
     const adminPath=pathname.toLowerCase()==='/admin'||pathname.toLowerCase().startsWith('/admin/');
     if(adminPath){const user=account&&await account(req);if(!user){res.writeHead(303,{Location:'/login/'});res.end();return;}if(!require('../admin/access.cjs').isAdmin(user)){send(403,'Forbidden');return;}}
@@ -82,6 +88,7 @@ async function serveStatic(req, res, pathname, origin, account) {
     const realFile = bundles.has(pathname)?file:await fs.realpath(file), realRoot = await fs.realpath(root);
     if (!realFile.startsWith(realRoot + path.sep)) { send(403, 'Forbidden'); return; }
     const relative = path.relative(realRoot, realFile);
+    if(!staffPath&&relative.toLowerCase().startsWith('staff'+path.sep)){const user=account&&await account(req);if(!require('../admin/access.cjs').isSupport(user)){send(403,'Forbidden');return;}}
     if(!adminPath&&relative.toLowerCase().startsWith('admin'+path.sep)){const user=account&&await account(req);if(!user){res.writeHead(303,{Location:'/login/'});res.end();return;}if(!require('../admin/access.cjs').isAdmin(user)){send(403,'Forbidden');return;}}
     if (relative.split(path.sep).some(p => p.startsWith('.')) || !mime[path.extname(realFile).toLowerCase()]) { send(403, 'Forbidden'); return; }
     if (!guarded && !publicAsset && relative.toLowerCase().startsWith('dashboard' + path.sep)) {
@@ -99,6 +106,8 @@ async function serveStatic(req, res, pathname, origin, account) {
     }
     if(workspacePage)body=Buffer.from(body.toString('utf8').replace('data-page="home"','data-page="'+workspacePage[1]+'"').replace('/dashboard/js/pages/home.js','/dashboard/js/pages/'+workspacePage[1]+'.js'));
     if(type.startsWith('text/html')&&!pathname.startsWith('/templates/')&&!body.includes('/notifications.js'))body=Buffer.from(body.toString('utf8').replace('</head>','<link rel="stylesheet" href="/notifications.css"><script defer src="/notifications.js"></script></head>'));
+    if(type.startsWith('text/html')&&!pathname.startsWith('/templates/'))body=Buffer.from(body.toString('utf8').replace('</head>','<link rel="stylesheet" href="/control-surfaces.css"></head>'));
+    if(type.startsWith('text/html')&&pathname.toLowerCase().startsWith('/admin/'))body=Buffer.from(body.toString('utf8').replace('<script defer src="/admin/admin.js">','<link rel="stylesheet" href="/admin/owner-controls.css"><script defer src="/admin/owner-controls.js"></script><script defer src="/admin/admin.js">'));
     if(type.startsWith('text/html'))body=Buffer.from(body.toString('utf8').replace(/<html\b([^>]*)>/i,`<html$1 data-asset-version="${assetRevision}">`).replace(/\b(src|href)=(["'])(\/[^"'?#]+\.(?:js|css|woff2|png|svg))\2/g,(_,attr,quote,url)=>`${attr}=${quote}${url}?v=${assetRevision}${quote}`));
     if(type.startsWith('text/css'))body=Buffer.from(body.toString('utf8').replace(/url\((["']?)(?!data:|https?:|\/\/)([^)"'?#]+\.(?:woff2|woff|ttf|png|svg|webp|jpg))\1\)/g,(_,quote,url)=>`url(${quote}${url}?v=${assetRevision}${quote})`));
     send(200,body,type);

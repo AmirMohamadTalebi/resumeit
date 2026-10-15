@@ -74,7 +74,7 @@
       '<div class="imgfield__presets" role="group" aria-label="تصویر آماده">' +
       RI.presets.map((p, i) => '<button type="button" data-preset="' + p + '" style="' + esc(RI.bg(p)) + '" aria-label="تصویر آمادهٔ ' + RI.fa(i + 1) + '"></button>').join('') +
       '</div><div class="field__error" role="alert" hidden></div>' +
-      '<div class="field__hint">PNG، JPEG یا WebP تا ۲ مگابایت؛ با ذخیره، تصویر به اطلاعات رزومه اضافه می‌شود.</div></div></div>';
+      '<div class="field__hint">PNG، JPEG یا WebP تا '+RI.fa(Math.floor(RI.imageLimit()/1024))+' کیلوبایت برای هر تصویر.</div></div></div>';
   };
   RI.bindImageField = function (root, name, io) {
     const el = RI.$('[data-img="' + name + '"]', root);
@@ -87,7 +87,7 @@
       if (!f) return;
       err.hidden = true;
       if (!/^image\/(png|jpeg|webp)$/.test(f.type)) return fail('فقط تصویر PNG، JPG یا WebP مجاز است');
-      if (f.size > 2 * 1024 * 1024) return fail('حجم تصویر بیش از ۲ مگابایت است؛ لطفاً تصویر کوچک‌تری انتخاب کنید');
+      if (f.size > RI.imageLimit()) return fail('سقف هر تصویر برای حساب تو '+RI.fa(Math.floor(RI.imageLimit()/1024))+' کیلوبایت است؛ تصویر کوچک‌تری انتخاب کن');
       const rd = new FileReader();
       rd.onload = () => { const image = new Image(); image.onload = () => { if (image.naturalWidth * image.naturalHeight > 16000000) return fail('ابعاد تصویر بیش از حد بزرگ است'); io.set(rd.result); show(rd.result); }; image.onerror = () => fail('فایل انتخاب‌شده تصویر معتبر نیست'); image.src = rd.result; };
       rd.onerror = () => fail('خواندن تصویر ممکن نشد دوباره تلاش کنید');

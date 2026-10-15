@@ -12,7 +12,10 @@ module.exports = async () => {
   const session = db.session;
   db.session = async (token) => {
     const user = await session(token);
-    return user ? { ...user, is_admin: user.id === owner } : null;
+    if(!user)return null;
+    let role=user.id===owner?'owner':'user';
+    if(db.accountRole)try{role=(await db.accountRole(user.id)).role;}catch(error){if(error.status!==404)throw error;role='user';}
+    return {...user,is_owner:role==='owner',is_admin:['owner','admin'].includes(role),is_support:role==='support',account_role:role};
   };
   const users = Array.from({ length: 31 }, (_, i) => ({
     id: i === 0 ? target : randomUUID(),

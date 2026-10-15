@@ -6,17 +6,18 @@
 
   const pending = new Map();
   RI.walletPurchase = async function (ref, name, price) {
+    if(RI.commerce?.paused.includes(ref)){RI.toast('فروش این محصول فعلاً متوقف است',{kind:'error'});return false;}
     let wallet;
     try { wallet = await RI.dashboardRequest('wallet'); } catch(e) { RI.toast(e.message,{kind:'error'});return false; }
     const enough = wallet.balance * RI.IT_RATE >= price;
     return new Promise(resolve => {
       let bought=false,busy=false;
       const modal=RI.modal({title:'خرید «'+name+'» با It',size:'sm',
-        body:'<dl class="kv"><dt>مبلغ</dt><dd>'+RI.it(price)+' · '+RI.toman(price)+'</dd><dt>موجودی</dt><dd>'+RI.fa(wallet.balance)+' It</dd></dl><p>هر It برابر ۲٬۰۰۰ تومان است. '+(enough?'پس از تأیید، اعتبار از کیف پول کم می‌شود.':'موجودی کافی نیست. از صفحهٔ کیف پول، وضعیت شارژ آنلاین را بررسی کن.')+'</p><p class="wallet-feedback" role="status" aria-live="polite"></p>',
+        body:'<dl class="kv"><dt>مبلغ</dt><dd>'+RI.it(price)+' · '+RI.priceToman(price)+'</dd><dt>موجودی</dt><dd>'+RI.fa(wallet.balance)+' It</dd></dl><p>هر It برابر '+RI.fa(wallet.rate||2000)+' تومان است. '+(enough?'پس از تأیید، اعتبار از کیف پول کم می‌شود.':'موجودی کافی نیست. از صفحهٔ کیف پول، وضعیت شارژ آنلاین را بررسی کن.')+'</p><p class="wallet-feedback" role="status" aria-live="polite"></p>',
         actions:[{label:'بستن',kind:'ghost'},enough?{label:'تأیید خرید با It',kind:'primary',keepOpen:true,onClick:async()=>{
           if(busy)return;busy=true;
           if(!pending.has(ref))pending.set(ref,crypto.randomUUID());
-          try{const result=await RI.dashboardRequest('wallet/purchase',{ref,requestId:pending.get(ref)});RI.state.billing=result.billing;RI.wallet=result.wallet;pending.delete(ref);bought=true;modal.close();RI.toast('خرید ثبت شد؛ موجودی '+RI.fa(result.wallet.balance)+' It');}
+          try{const result=await RI.dashboardRequest('wallet/purchase',{ref,requestId:pending.get(ref),expectedPrice:price});RI.state.billing=result.billing;RI.wallet=result.wallet;pending.delete(ref);bought=true;modal.close();RI.toast('خرید ثبت شد؛ موجودی '+RI.fa(result.wallet.balance)+' It');}
           catch(e){const feedback=document.querySelector('.wallet-feedback');if(feedback)feedback.textContent=e.message;}
           finally{busy=false;}
         }}:{label:'کیف پول',kind:'soft',onClick:()=>RI.go('wallet')}],onClose:()=>resolve(bought)});
@@ -32,7 +33,7 @@
 
   /* توضیح روشن برای موردی که قفل است */
   RI.lockedExplain = async function (it) {
-    if(it.subscription){const choice=await RI.choice({title:'فعال‌سازی «'+it.name+'»',text:'خرید یک‌باره '+RI.it(it.price)+' ('+RI.toman(it.price)+') یا استفاده در مدت اشتراک فعال.',options:[{label:'خرید یک‌باره با It',kind:'primary',value:'buy'},{label:'مشاهدهٔ اشتراک‌ها',kind:'soft',value:'sub'},{label:'فعلاً نه',kind:'ghost',value:null}]});if(choice==='buy')return RI.purchaseFlow(it);if(choice==='sub')RI.go('billing');return false;}
+    if(it.subscription){const choice=await RI.choice({title:'فعال‌سازی «'+it.name+'»',text:'خرید یک‌باره '+RI.it(it.price)+' ('+RI.priceToman(it.price)+') یا استفاده در مدت اشتراک فعال.',options:[{label:'خرید یک‌باره با It',kind:'primary',value:'buy'},{label:'مشاهدهٔ اشتراک‌ها',kind:'soft',value:'sub'},{label:'فعلاً نه',kind:'ghost',value:null}]});if(choice==='buy')return RI.purchaseFlow(it);if(choice==='sub')RI.go('billing');return false;}
     if (it.access === 'buy') return RI.purchaseFlow(it);
     const c = await RI.choice({
       title: '«' + it.name + '» با اشتراک باز می‌شود',
@@ -48,8 +49,8 @@
     if (a === 'free') return '<span class="chip chip--ok">رایگان</span>';
     if (a === 'owned') return '<span class="chip chip--ok">' + RI.icon('check') + 'خریده‌اید</span>';
     if (a === 'sub-ok') {const plan=RI.state.billing.plan,remaining=Math.max(1,(plan.end-Date.now())/86400000/30),nearest=[3,6,9,12].reduce((best,n)=>Math.abs(n-remaining)<Math.abs(best-remaining)?n:best,3);return '<span class="chip chip--brown">'+RI.icon('crown')+'اشتراک '+(Math.abs(remaining-nearest)>.1?'≈ ':'')+(nearest===12?'یک‌ساله':RI.fa(nearest)+'ماهه')+'</span>';}
-    if(a==='locked-special')return '<span class="chip chip--brown">ویژه · '+RI.it(it.price)+' · '+RI.toman(it.price)+' یا اشتراک</span>';
-    if (a === 'locked-buy') return '<span class="chip chip--brown">' + RI.icon('lock') + 'خرید یک‌بار · ' + RI.it(it.price) + ' · ' + RI.toman(it.price) + '</span>';
+    if(a==='locked-special')return '<span class="chip chip--brown">ویژه · '+RI.it(it.price)+' · '+RI.priceToman(it.price)+' یا اشتراک</span>';
+    if (a === 'locked-buy') return '<span class="chip chip--brown">' + RI.icon('lock') + 'خرید یک‌بار · ' + RI.it(it.price) + ' · ' + RI.priceToman(it.price) + '</span>';
     return '<span class="chip chip--brown">' + RI.icon('lock') + 'با اشتراک</span>';
   };
 })();

@@ -13,32 +13,18 @@
         '<div id="tbody"></div>';
     },
     mount(root) {
-      let tab = RI.workspaceSlot===3?'lt':'rt', cat = 'all', acc = 'all', galleryPage = 0,query='',sort='newest',searchTimer;
+      const initialTab=RI.workspaceSlot===3?'lt':'rt',requestedTab=new URLSearchParams(location.search).get('tab');
+      let tab = ['lt','font','pal',...(RI.workspaceSlot===3?[]:['rt'])].includes(requestedTab)?requestedTab:initialTab, cat = 'all', acc = 'all', galleryPage = 0,query='',sort='newest',searchTimer;
       const body = RI.$('#tbody', root);
       const th = () => RI.C().theme;
 
       function applyTheme(patch, msg) { Object.assign(th(), patch); RI.touch('theme'); RI.toast(msg || 'ظاهر انتخاب شد'); paint(); }
 
-      /* پیش‌نمایش پیش از اعمال */
-      async function tryAndApply(kind, override, it, ref, patch, label) {
-        try { if(kind==='resume') await RI.loadTemplates([override.resume || th().resume]); } catch(e) { RI.toast(e.message,{kind:'error'}); return; }
-        let applied = false;
-        const locked = !RI.canUse(ref, it);
-        const m = RI.openPreview(kind, {
-          title: 'پیش‌نمایش «' + esc(label) + '»', device: kind === 'links' ? 'mobile' : 'desktop', theme: () => override,
-          actions: [{ label: 'بستن', kind: 'ghost' }, locked ? { label: it.subscription ? 'خرید یا اشتراک' : it.access === 'buy' ? 'خرید و استفاده' : 'مشاهدهٔ اشتراک', kind: 'primary', icon: 'lock', push: true, onClick: () => { applied = 'unlock'; } } : { label: 'اعمال این ظاهر', kind: 'primary', icon: 'check', push: true, onClick: () => { applied = true; } }],
-          device_: 0,
-        });
-        const origClose = m.close; m.close = (v) => origClose(v);
-        const wait = () => new Promise((r) => { const t = setInterval(() => { if (m.closed) { clearInterval(t); r(); } }, 60); });
-        await wait();
-        if (applied === 'unlock') { const ok = await RI.lockedExplain(it); if (ok) applyTheme(patch, '«' + label + '» اعمال شد'); }
-        else if (applied) applyTheme(patch, '«' + label + '» اعمال شد');
-      }
 
       async function choose(kind, id) {
         const list = kind === 'rt' ? RI.RESUME_TEMPLATES : RI.LINK_TEMPLATES, it = list.find((x) => x.id === id), ref = kind + ':' + id;
         if (!RI.canUse(ref, it)) { const ok = await RI.lockedExplain(Object.assign({ kind: kind }, it)); if (!ok) return paint(); }
+        if(kind==='rt')try{if(!RI.templateTransition)await import('/dashboard/js/template-loading.js?v='+encodeURIComponent(document.documentElement.dataset.assetVersion||''));await RI.templateTransition(id);}catch(error){if(error.name!=='AbortError')RI.toast(error.message,{kind:'error'});return;}
         applyTheme(kind === 'rt' ? { resume: id } : { links: id }, 'قالب «' + it.name + '» انتخاب شد');
       }
 
@@ -87,14 +73,12 @@
       function paint() {
         body.innerHTML = tab === 'rt' ? gallery('rt') : tab === 'lt' ? gallery('lt') : tab === 'font' ? fonts() : palettes();
         RI.$$('#ttabs [data-tab]', root).forEach((b) => b.setAttribute('aria-selected', b.dataset.tab === tab));
-        RI.fitThumbs(body);
       }
-      const ro = new ResizeObserver(() => RI.fitThumbs(body)); ro.observe(body);
 
-      RI.delegate(root, 'click', '[data-tab]', (e, b) => { tab = b.dataset.tab; galleryPage = 0; paint(); });
+      RI.delegate(root, 'click', '[data-tab]', (e, b) => { tab = b.dataset.tab;RI.setRouteTab(tab,initialTab); galleryPage = 0; paint(); });
       body.addEventListener('input',e=>{if(e.target.id!=='template-query')return;query=e.target.value;galleryPage=0;clearTimeout(searchTimer);searchTimer=setTimeout(()=>{const position=e.target.selectionStart;paint();const input=body.querySelector('#template-query');input?.focus();if(input?.type==='search'&&position!==null)input.setSelectionRange(position,position);},200);});
       body.addEventListener('change',e=>{if(e.target.id==='template-sort'){sort=e.target.value;galleryPage=0;paint();}});
-      function previewTemplate(id){const kind=tab==='rt'?'resume':'links',it=RI.findTemplate(kind,id),patch=tab==='rt'?{resume:id}:{links:id};return tryAndApply(kind,patch,{...it,kind:tab},tab+':'+id,patch,it.name);}
+      function previewTemplate(id){const kind=tab==='rt'?'resume':'links',it=RI.findTemplate(kind,id),url='/'+(kind==='resume'?'resume':'link')+id+'/';return RI.modal({title:'پیش‌نمایش «'+it.name+'»',body:'<p>نمونه با اطلاعات آزمایشی در پنجرهٔ تازه باز می‌شود؛ ویرایشگر و تغییراتت همین‌جا باقی می‌مانند.</p>',actions:[{label:'انصراف',kind:'ghost'},{label:'باز کردن نمونه',kind:'primary',icon:'external',onClick:()=>{window.open(url,'_blank','noopener,noreferrer');}}]});}
       RI.delegate(body,'click','.tcard',(event,card)=>{if(event.target.closest('[data-use]'))return;previewTemplate(card.dataset.id);});
       RI.delegate(body, 'click', '[data-cat]', (e, b) => { cat = b.dataset.cat; galleryPage = 0; paint(); });
       RI.delegate(body, 'click', '[data-acc]', (e, b) => { acc = b.dataset.acc; galleryPage = 0; paint(); });
@@ -103,7 +87,7 @@
       RI.delegate(body, 'click', '[data-use]', (e, b) => choose(tab, b.dataset.use));
       RI.delegate(body, 'click', '[data-try]', (e, b) => {
         const kind = tab === 'rt' ? 'resume' : 'links', list = tab === 'rt' ? RI.RESUME_TEMPLATES : RI.LINK_TEMPLATES, it = list.find((x) => x.id === b.dataset.try);
-        tryAndApply(kind, kind === 'resume' ? { resume: it.id } : { links: it.id }, Object.assign({ kind: tab }, it), tab + ':' + it.id, tab === 'rt' ? { resume: it.id } : { links: it.id }, it.name);
+        previewTemplate(it.id);
       });
       RI.delegate(body, 'click', '[data-ftry]', (e, b) => { const f = RI.FONTS.find((x) => x.id === b.dataset.ftry);RI.modal({title:'فونت '+f.name,body:'<div class="font-proof" style="font-family:'+f.stack+'"><b style="font-family:'+(f.heading||f.stack)+'">رها کیانی</b><span>طراح تجربه‌های روشن و ماندگار</span><p>ResumeIt · ۰۱۲۳۴۵۶۷۸۹</p></div>',actions:[{label:'بستن',kind:'ghost'},{label:'انتخاب این فونت',kind:'primary',onClick:async()=>{if(RI.canUse('font:'+f.id,f)||await RI.lockedExplain({...f,kind:'font'}))applyTheme({font:f.id});}}]}); });
       RI.delegate(body, 'click', '[data-fuse]', async (e, b) => { const f = RI.FONTS.find((x) => x.id === b.dataset.fuse); if (!RI.canUse('font:' + f.id, f)) { if (!(await RI.lockedExplain(Object.assign({ kind: 'font' }, f)))) return paint(); } applyTheme({ font: f.id }, 'فونت «' + f.name + '» انتخاب شد'); });
@@ -114,7 +98,7 @@
       });
       RI.delegate(body, 'click', '[data-radius]', (e, b) => applyTheme({ radius: b.dataset.radius }, 'گردی گوشه‌ها تغییر کرد'));
       paint();
-      return () => {ro.disconnect();clearTimeout(searchTimer);};
+      return () => {clearTimeout(searchTimer);};
     },
   });
 })();

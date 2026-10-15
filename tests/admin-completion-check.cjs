@@ -6,6 +6,7 @@ const assert=require('node:assert/strict'),{DatabaseSync}=require('node:sqlite')
     CREATE TABLE users(id TEXT PRIMARY KEY,phone TEXT,phone_verified INTEGER,created_at TEXT);
     CREATE TABLE profiles(user_id TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,name TEXT,first_name TEXT,last_name TEXT,role TEXT,bio TEXT,updated_at TEXT);
     CREATE TABLE admin_accounts(user_id TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE);
+    CREATE TABLE owner_accounts(user_id TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE);
     CREATE TABLE admin_controls(user_id TEXT PRIMARY KEY,suspended INTEGER DEFAULT 0,publication_blocked INTEGER DEFAULT 0);
     CREATE TABLE admin_audit(id TEXT PRIMARY KEY,actor_id TEXT,target_id TEXT,action TEXT,reason TEXT,details TEXT,request_id TEXT UNIQUE,created_at INTEGER);
     CREATE TABLE payment_policy(id INTEGER PRIMARY KEY,sep_enabled INTEGER,zibal_enabled INTEGER);INSERT INTO payment_policy VALUES(1,1,1);
@@ -13,6 +14,7 @@ const assert=require('node:assert/strict'),{DatabaseSync}=require('node:sqlite')
     CREATE TABLE oauth_states(owner_id TEXT);CREATE TABLE otp_challenges(owner_id TEXT,phone TEXT);
     CREATE TABLE wallets(user_id TEXT REFERENCES users(id) ON DELETE CASCADE,balance_units INTEGER);
     CREATE TABLE account_access(user_id TEXT,ref TEXT,price_units INTEGER,expires_at INTEGER,created_at INTEGER);
+    CREATE TABLE owner_user_settings(user_id TEXT,settings TEXT);
     CREATE TABLE social_identities(user_id TEXT,provider TEXT);
     CREATE TABLE payment_orders(id TEXT,user_id TEXT REFERENCES users(id) ON DELETE SET NULL,status TEXT);
     CREATE TABLE dashboard_documents(user_id TEXT REFERENCES users(id) ON DELETE CASCADE,slug TEXT,draft TEXT,pub TEXT,revision INTEGER);
@@ -23,7 +25,7 @@ const assert=require('node:assert/strict'),{DatabaseSync}=require('node:sqlite')
   const transaction=async action=>{sql.exec('BEGIN');try{const r=await action({execute:async(q,a)=>[await execute(q,a)]});sql.exec('COMMIT');return r;}catch(e){sql.exec('ROLLBACK');throw e;}};
   const db=require('../src/database/admin.cjs')({execute,transaction}),actor=randomUUID(),target=randomUUID();
   for(const id of [actor,target]){await execute('INSERT INTO users VALUES(?,?,1,?)',[id,id===target?'09120000124':'09120000123','2026-10-15']);await execute("INSERT INTO profiles VALUES(?,'آوا مهر','آوا','مهر','','','')",[id]);}
-  await execute('INSERT INTO admin_accounts VALUES(?)',[actor]);await execute('INSERT INTO sessions VALUES(?,?)',[target,Date.now()+60000]);await execute("INSERT INTO payment_orders VALUES('pending',?,'pending')",[target]);
+  await execute('INSERT INTO admin_accounts VALUES(?)',[actor]);await execute('INSERT INTO owner_accounts VALUES(?)',[actor]);await execute('INSERT INTO sessions VALUES(?,?)',[target,Date.now()+60000]);await execute("INSERT INTO payment_orders VALUES('pending',?,'pending')",[target]);
   const request=(extra={})=>({reason:'آزمون مدیریت حساب',requestId:randomUUID(),...extra});
   const profile={first_name:'نگار',last_name:'مهر',role:'طراح',bio:'معرفی امن'};
   await assert.rejects(db.adminAction(target,actor,'edit-profile',request({profile})),e=>e.status===403);

@@ -4,13 +4,14 @@
   const RI = window.RI, esc = RI.esc;
   RI.IMPORTED_TEMPLATES = Object.create(null);
   const templateLoads = new Map();
-  RI.loadTemplates = ids => Promise.all(ids.filter(id=>['vista','satiar'].includes(id)).map(id=>{
+  RI.releaseInactiveTemplates=id=>{for(const key of Object.keys(RI.IMPORTED_TEMPLATES))if(key!==id)delete RI.IMPORTED_TEMPLATES[key];for(const key of templateLoads.keys())if(key!==id)templateLoads.delete(key);};
+  RI.loadTemplates = (ids,options={}) => Promise.all([...new Set(ids)].filter(id=>['vista','satiar'].includes(id)).map(id=>{
     if(RI.IMPORTED_TEMPLATES[id]) return Promise.resolve();
     if(!templateLoads.has(id)) templateLoads.set(id,new Promise((resolve,reject)=>{
-      const script=document.createElement('script');script.src='/dashboard/js/template-'+id+'.js'+(document.documentElement.dataset.assetVersion?'?v='+document.documentElement.dataset.assetVersion:'');
-      script.onload=()=>{ if(RI.IMPORTED_TEMPLATES[id]) resolve(); else { templateLoads.delete(id); reject(new Error('قالب بارگذاری نشد؛ دوباره تلاش کن')); } };
-      script.onerror=()=>{ templateLoads.delete(id); script.remove(); reject(new Error('قالب بارگذاری نشد؛ اتصال اینترنت را بررسی کن')); };
-      document.head.append(script);
+      const version=document.documentElement.dataset.assetVersion?'?v='+document.documentElement.dataset.assetVersion:'',worker=new Worker('/dashboard/js/template-worker.js'+version);
+      const timer=setTimeout(()=>failed(),50000),finish=()=>{clearTimeout(timer);worker.terminate();options.signal?.removeEventListener('abort',cancelled);},failed=()=>{finish();templateLoads.delete(id);reject(new Error('قالب بارگذاری نشد؛ اتصال اینترنت را بررسی کن و دوباره بزن'));},cancelled=()=>{finish();templateLoads.delete(id);reject(Object.assign(new Error('تغییر قالب لغو شد'),{name:'AbortError'}));};
+      worker.onmessage=({data})=>{if(data.type==='progress')options.progress?.(data.percent);else if(data.type==='loaded'){RI.IMPORTED_TEMPLATES[id]=data.template;RI.releaseInactiveTemplates(id);options.progress?.(100);finish();resolve();}else if(data.type==='error')failed();};
+      worker.onerror=failed;options.signal?.addEventListener('abort',cancelled,{once:true});if(options.signal?.aborted){cancelled();return;}options.worker?.(worker);options.progress?.(0);worker.postMessage({type:'load',id,version});
     }));
     return templateLoads.get(id);
   }));

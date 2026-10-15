@@ -1,6 +1,6 @@
 (() => {
   'use strict';const RI=window.RI;
-  RI.workspaceSlot=1;try{const value=Number(new URLSearchParams(location.search).get('workspace')||sessionStorage.getItem('ri-workspace')||1);if([1,2,3].includes(value))RI.workspaceSlot=value;}catch{}
+  RI.workspaceSlot=1;try{const value=Number(new URLSearchParams(location.search).get('workspace')||sessionStorage.getItem('ri-workspace')||1);if([1,2,3,4].includes(value))RI.workspaceSlot=value;}catch{}
   RI.pageKinds=()=>RI.workspaceSlot===3?['links']:['resume','links'];
   RI.restorePublication=doc=>{if(doc.content&&doc.pub)for(const k of ['resume','links'])if(doc.pub[k]?.snapCurrent){doc.pub[k].snap=JSON.stringify(RI.pubData(k,doc.content));delete doc.pub[k].snapCurrent;}return doc;};
   RI.dashboardRequest=async(route,data)=>{
@@ -22,9 +22,10 @@
     if(doc.error)throw new Error(doc.error);
     if(doc.ownerId&&doc.ownerId!==owner)throw new Error('حساب فعال تغییر کرده؛ صفحه را دوباره باز کن');
     RI.workspaceSlot=doc.workspace||1;
+    RI.applyCommerce(doc.commerce);RI.ownerSettings=doc.ownerSettings||{};
     if(['home','links','stats'].includes(document.body.dataset.page))RI.loadStats();
     let legacy=false;try{legacy=RI.workspaceSlot===1&&!!sessionStorage.getItem('resumeit-draft-v1:'+owner);}catch{}
-    if(!doc.revision && legacy) await RI.loadTemplates(['vista','satiar']);
+    if(!doc.revision&&legacy){let id;try{id=JSON.parse(sessionStorage.getItem('resumeit-draft-v1:'+owner))?.content?.theme?.resume;}catch{}if(id)await RI.loadTemplates([id]);}
     RI.restoreDraft(owner,doc.revision>0);
     const old=RI.C();
     RI.state.content=Object.assign(RI.seed('empty'),doc.content);RI.state.pub=doc.pub;RI.revision=doc.revision;RI.savedSlug=doc.slug||'';RI.saved=JSON.stringify(RI.state.content);

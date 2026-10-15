@@ -2,19 +2,26 @@ const menu=document.querySelector('.mobile-menu');menu?.addEventListener('click'
 const enamadSeal=document.querySelector('[data-enamad-seal]');
 if(enamadSeal){const image=enamadSeal.querySelector('img'),fallback=document.querySelector('.footer-enamad-fallback');const update=()=>{const loaded=image.complete&&image.naturalWidth>0;enamadSeal.hidden=!loaded;fallback.hidden=loaded;};image.addEventListener('load',update);image.addEventListener('error',update);update();}
 document.querySelectorAll('.header nav a').forEach(a=>a.addEventListener('click',()=>{menu?.setAttribute('aria-expanded','false');document.querySelector('.header nav').classList.remove('open')}));
-const galleryThemes={studio:['استودیو','برای ذهن‌هایی که خلق می‌کنند','sara'],terminal:['ترمینال','برای آدم‌هایی که با کد می‌سازند','amir'],journal:['ژورنال','برای اولین قدم‌های بزرگ','nika']};
+const galleryThemes={studio:['یخچال','شروع روشن و منظم','sara','glacier'],terminal:['ترمینال','برای آدم‌هایی که با کد می‌سازند','amir','terminal'],journal:['دفترچه','برای اولین قدم‌های بزرگ','nika','journal']};
+function confirmSample(url,title){
+ const dialog=document.createElement('dialog');dialog.className='sample-confirm';dialog.setAttribute('aria-label','تأیید پیش‌نمایش قالب');
+ dialog.innerHTML='<h2>پیش‌نمایش قالب</h2><p>نمونه در پنجرهٔ تازه باز می‌شود و این صفحه باقی می‌ماند.</p><div><button class="btn" type="button">انصراف</button><a class="btn" target="_blank" rel="noopener noreferrer">باز کردن نمونه</a></div>';
+ dialog.querySelector('h2').textContent='پیش‌نمایش «'+title+'»';dialog.querySelector('a').href=url;const close=()=>{dialog.close();dialog.remove();};dialog.querySelector('button').onclick=close;dialog.querySelector('a').onclick=close;dialog.addEventListener('cancel',()=>dialog.remove());document.body.append(dialog);dialog.showModal();
+}
+document.addEventListener('click',event=>{const link=event.target.closest('.template-card,#gallery-open');if(!link)return;event.preventDefault();confirmSample(link.href,link.querySelector('b')?.textContent||document.querySelector('#gallery-title').textContent);});
 function selectGallery(theme){
   const selected=galleryThemes[theme];if(!selected)return;
-  const frame=document.querySelector('#gallery-preview');const url='/demo/?theme='+theme;
+  const frame=document.querySelector('#gallery-preview');const url='/resume'+selected[3]+'/';
   document.querySelectorAll('[data-gallery]').forEach(button=>{const active=button.dataset.gallery===theme;button.classList.toggle('active',active);button.setAttribute('aria-pressed',String(active))});
   document.querySelector('.template-live').dataset.theme=theme;
   document.querySelector('#gallery-title').textContent=selected[0];document.querySelector('#gallery-description').textContent=selected[1];document.querySelector('#gallery-address').textContent=selected[2]+'.ResumeIt.ir';
-  document.querySelector('#gallery-open').href=url;frame.title='نمونهٔ زندهٔ قالب '+selected[0];
-  if(frame.getAttribute('src')!==url){frame.src=url;if(!matchMedia('(prefers-reduced-motion: reduce)').matches)document.querySelector('.gallery-frame').animate([{opacity:.45,transform:'translateY(12px) rotateX(-3deg)'},{opacity:1,transform:'none'}],{duration:520,easing:'cubic-bezier(.22,1,.36,1)'})}
+  document.querySelector('#gallery-open').href=url;frame.alt='نمای قالب '+selected[0];
+  frame.src='/brand/template-thumbs/resume-'+selected[3]+'.jpg';
 }
 document.querySelectorAll('[data-gallery]').forEach(button=>button.addEventListener('click',()=>selectGallery(button.dataset.gallery)));
 document.querySelectorAll('[data-filter]').forEach(button=>button.addEventListener('click',()=>{document.querySelectorAll('[data-filter]').forEach(b=>{b.classList.toggle('active',b===button);b.setAttribute('aria-pressed',String(b===button))});document.querySelectorAll('[data-category]').forEach(card=>{card.hidden=button.dataset.filter!=='all'&&card.dataset.category!==button.dataset.filter});const selected=document.querySelector('.template-card:not([hidden])');if(selected)selectGallery(selected.dataset.themeName)}));
 const plans={3:['۹۶٬۰۰۰','۲۸۸٬۰۰۰'],6:['۸۵٬۰۰۰','۵۱۰٬۰۰۰'],12:['۷۵٬۰۰۰','۹۰۰٬۰۰۰']};
+fetch('/api/catalog',{cache:'no-store',signal:AbortSignal.timeout(8000)}).then(r=>{if(!r.ok)throw Error();return r.json();}).then(data=>{const fa=n=>new Intl.NumberFormat('fa-IR').format(n);for(const plan of data.plans)plans[plan.months]=[fa(Math.ceil(plan.price/plan.months)),fa(plan.price)];const active=document.querySelector('[data-months].active');active?.click();document.querySelectorAll('.shop-prices b').forEach((el,i)=>el.textContent=Number.isFinite(i?data.fontFrom:data.templateFrom)?fa(i?data.fontFrom:data.templateFrom):'فعلاً متوقف');const note=document.querySelector('#pricing .sample-disclaimer');if(note)note.textContent='قیمت‌های جاری فروش؛ مبلغ و وضعیت درگاه پیش از پرداخت در پیش‌فاکتور نمایش داده می‌شود.';}).catch(()=>{const total=document.querySelector('#plan-total');if(total)total.textContent='قیمت نمایش‌داده‌شده پایه است؛ قیمت نهایی را پیش از خرید در داشبورد بررسی کن.';});
 document.querySelectorAll('[data-months]').forEach(button=>button.addEventListener('click',()=>{document.querySelectorAll('[data-months]').forEach(b=>{b.classList.toggle('active',b===button);b.setAttribute('aria-pressed',String(b===button))});const plan=plans[button.dataset.months];document.querySelector('#plan-price').textContent=plan[0];document.querySelector('#plan-total').textContent='پرداخت دورهٔ '+new Intl.NumberFormat('fa-IR').format(button.dataset.months)+' ماهه: '+plan[1]+' تومان';document.querySelector('#domain-benefit').textContent='دسترسی به قالب‌های ویژه در دورهٔ اشتراک'}));
 const steps=[['سلام، قهرمانِ قصه!','هر مسیر بزرگ، از معرفی خودت شروع می‌شود','من نیکام؛ دانشجو و عاشق ساختن چیزهای تازه','✦ شروع یک فصل تازه'],['چیزهایی که می‌توانی بسازی','تجربه فقط شغل نیست؛ پروژه‌های تو هم حرف دارند','مهارت‌ها: طراحی، برنامه‌نویسی، عکاسی','✦ توانایی‌هایت را پیدا کردی'],['این رنگ، شبیه توست','ظاهر صفحه‌ات را با حال و هوای خودت هماهنگ کن','قالب استودیو · فونت وزیرمتن · آبی یخی','✦ سبک خودت را ساختی'],['یک آدرس به نام تو','قصه‌ات آماده است تا جای خودش را در وب پیدا کند','nika.ResumeIt.ir + /links','✦ آمادهٔ دیده شدن']];let currentStep=0;
 function showStep(index){currentStep=index;document.querySelector('.game-preview').dataset.step=String(index);document.querySelectorAll('[data-step]').forEach(b=>{const active=Number(b.dataset.step)===index;b.classList.toggle('active',active);b.setAttribute('aria-pressed',String(active))});document.querySelector('#level').textContent=`مرحلهٔ ${['۱','۲','۳','۴'][index]} از ۴`;document.querySelector('.game-progress i').style.width=`${(index+1)*25}%`;['step-title','step-copy','step-example','step-reward'].forEach((id,i)=>document.getElementById(id).textContent=steps[index][i]);document.querySelector('#next-step').textContent=index===3?'از اول ↻':'مرحلهٔ بعد ←'}
@@ -32,10 +39,11 @@ function setFaq(detail,opening){
 }
 faqItems.forEach(detail=>detail.querySelector('summary').addEventListener('click',event=>{event.preventDefault();const opening=!(faqTargets.get(detail)??detail.open);if(opening)faqItems.forEach(other=>{if(other!==detail&&(faqTargets.get(other)??other.open))setFaq(other,false);});setFaq(detail,opening);}));
 
-if(window.gsap&&window.ScrollTrigger){
+function desktopMotion(){
+  if(!window.gsap||!window.ScrollTrigger)return;
   gsap.registerPlugin(ScrollTrigger);
   const motion=gsap.matchMedia();
-  motion.add('(prefers-reduced-motion: no-preference)',()=>{
+  motion.add('(min-width:961px) and (pointer:fine) and (prefers-reduced-motion: no-preference)',()=>{
     gsap.to('.orb-a',{x:90,y:50,duration:12,repeat:-1,yoyo:true,ease:'sine.inOut'});
     gsap.to('.orb-b',{x:-70,y:-90,duration:16,repeat:-1,yoyo:true,ease:'sine.inOut'});
 
@@ -74,3 +82,7 @@ if(window.gsap&&window.ScrollTrigger){
 }
 
 const pricingMotion=document.querySelector('.pricing-motion');if(pricingMotion){if('IntersectionObserver' in window)new IntersectionObserver(entries=>entries.forEach(entry=>entry.target.classList.toggle('in-view',entry.isIntersecting)),{rootMargin:'100px'}).observe(pricingMotion);else pricingMotion.classList.add('in-view');}
+if(matchMedia('(min-width:961px) and (pointer:fine) and (prefers-reduced-motion:no-preference)').matches){
+ const script=url=>new Promise((resolve,reject)=>{const node=document.createElement('script');node.src=url+'?v='+encodeURIComponent(document.documentElement.dataset.assetVersion||'');node.onload=resolve;node.onerror=reject;document.head.append(node);});
+ script('/assets/gsap.min.js').then(()=>script('/assets/ScrollTrigger.min.js')).then(desktopMotion).catch(()=>{});
+}

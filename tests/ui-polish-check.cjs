@@ -9,6 +9,7 @@ function luminance(hex) {
 
 (async () => {
   const fixture = await require('./admin-fixture.cjs')();
+  const store = require('./workspace-test-store.cjs')(fixture.db, [fixture.owner, fixture.target]);
   await fixture.db.mutateDashboard(fixture.owner, 0, d => {
     d.content = structuredClone(RI.seed('full'));
     d.content.profile.avatar = null;
@@ -33,14 +34,13 @@ function luminance(hex) {
         assert(gap >= 24 && gap <= 64, 'informational page spacing ' + route + ' ' + width);
       }
       await page.goto(base + '/dashboard/settings/');
-      await page.locator('[data-brand]').waitFor();
+      await page.locator('#a_last').waitFor();
       const colors = await page.evaluate(() => {
         const css = getComputedStyle(document.documentElement);
         return ['ok', 'warn'].map(key => [css.getPropertyValue('--' + key), css.getPropertyValue('--' + key + '-bg')]);
       });
       for (const [foreground, background] of colors) assert((luminance(background) + .05) / (luminance(foreground) + .05) >= 4.5, 'status text contrast');
-      assert(await page.locator('[data-brand]').isDisabled());
-      assert(await page.locator('[data-brand]').isChecked());
+      assert.equal(await page.locator('[data-brand]').count(), 0, 'branding lives in the resume and links editors, not account settings');
       assert(!(await page.locator('#view').innerText()).includes('با اشتراک می‌توانی آن را برداری'));
       assert(await page.evaluate(() => document.querySelector('[data-name]').getBoundingClientRect().top >= document.querySelector('#a_last').getBoundingClientRect().bottom));
       if (width === 1366) assert(await page.evaluate(() => document.querySelector('.nav__item[data-route=settings]').getBoundingClientRect().bottom <= document.querySelector('.nav').getBoundingClientRect().bottom), 'all navigation entries fit at 768px height');
@@ -60,17 +60,18 @@ function luminance(hex) {
       }
       assert.match(await page.locator('.allsteps tbody tr').last().textContent(), /امروز/);
       await page.goto(base + '/dashboard/wallet/');
-      await page.locator('.wallet-overview').waitFor();
+      await page.locator('.wallet-balance').waitFor();
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
       if (width === 640) assert(await page.locator('.bottom-nav').evaluate(e => e.offsetHeight <= 50), 'landscape navigation stays compact');
     }
     await page.setViewportSize({ width: 390, height: 844 });
-    for (const [route, list] of [['links', '#ltabs'], ['themes', '#ttabs'], ['publish', '#ptabs'], ['resume', '.stepper__chips']]) {
+    for (const [route, list] of [['links', '#ltabs'], ['themes', '#ttabs'], ['publish', '#ptabs'], ['resume', '.resume-outline']]) {
       await page.goto(base + '/dashboard/' + route + '/');
+      if (route === 'resume') await page.locator('.resume-outline summary').click();
       await page.locator(list + ' [role=tab]').first().focus();
       await page.keyboard.press('End');
       assert.equal(await page.locator(list + ' [role=tab]').last().getAttribute('aria-selected'), 'true', route + ' End');
-      assert(await page.locator(list + ' [role=tab]').last().evaluate(e => e === document.activeElement));
+      assert(await page.locator(list + ' [role=tab]').last().evaluate(e => e === document.activeElement), route + ' keeps keyboard focus');
       await page.keyboard.press('Home');
       await page.keyboard.press('ArrowLeft');
       assert.equal(await page.locator(list + ' [role=tab]').nth(1).getAttribute('aria-selected'), 'true', route + ' RTL arrow');
@@ -101,6 +102,7 @@ function luminance(hex) {
   } finally {
     await browser?.close();
     await new Promise(r => server.close(r));
+    store.close();
     await fixture.db.close();
   }
 })().catch(e => { console.error(e); process.exitCode = 1; });

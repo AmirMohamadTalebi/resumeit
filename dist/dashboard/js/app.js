@@ -14,16 +14,27 @@
   const LOGO = '<span class="ri-logo"><img src="/brand/resumeit-logo-v1.png" alt="ResumeIt" width="2172" height="724"></span>';
 
   let current = null, cleanup = null, bootstrapping = true;
+  function navGroup(g){
+    const id=g.items[0][0],collapsible=['wallet','support','notifications'].includes(id);
+    const links=g.items.filter(i=>i[0]!=='home').map(i=>{const opts=i[3]||{};return '<li><a class="nav__item" href="'+(opts.href||RI.routeUrl(i[0],opts))+'" '+(opts.href?'':('data-route="'+i[0]+'" '+(opts.tab?'data-tab="'+opts.tab+'"':'')))+(opts.external?' target="_blank" rel="noopener noreferrer"':'')+' title="'+i[1]+'">'+RI.icon(i[2])+'<span>'+i[1]+'</span></a></li>';}).join('');
+    return '<ul class="menu nav__group'+(collapsible?' nav__group--collapse':'')+'" data-nav-group="'+id+'" data-open="false"><li class="menu-title nav__label"><span>'+g.group+'</span>'+(collapsible?'<button type="button" class="nav__disclosure" aria-expanded="false" aria-controls="nav-children-'+id+'">'+RI.icon(id==='wallet'?'card':id==='support'?'help':'bell')+'<span>'+g.group+'</span>'+RI.icon('chevD')+'</button>':'')+'</li><li class="nav__children" id="nav-children-'+id+'"><ul>'+links+'</ul></li></ul>';
+  }
 
   /* ---------- ساخت پوسته ---------- */
   function buildShell() {
     const acc = RI.state.account;
     RI.$('#sidebar').innerHTML =
-      '<div class="sidebar__glass"><div class="brand"><a href="/" aria-label="خانهٔ ResumeIt">' + LOGO + '</a><button type="button" class="btn btn--icon btn--ghost drawer-close" id="drawerClose" aria-label="بستن منو">'+RI.icon('close')+'</button></div>' +
-      '<nav class="nav" aria-label="بخش‌های داشبورد">' + NAV.map(g => '<ul class="menu nav__group" data-nav-group="'+g.items[0][0]+'"><li class="menu-title nav__label">'+g.group+'</li>'+g.items.filter(i=>i[0]!=='home').map(i=>{const opts=i[3]||{};return '<li><a class="nav__item" href="'+(opts.href||RI.routeUrl(i[0],opts))+'" '+(opts.href?'':('data-route="'+i[0]+'" '+(opts.tab?'data-tab="'+opts.tab+'"':'')))+(opts.external?' target="_blank" rel="noopener noreferrer"':'')+' title="'+i[1]+'">'+RI.icon(i[2])+'<span>'+i[1]+'</span></a></li>';}).join('')+'</ul>').join('')+'</nav>' +
+      '<div class="sidebar__glass"><div class="brand"><a href="/" aria-label="خانهٔ ResumeIt">' + LOGO + '</a><button type="button" class="btn btn--icon btn--ghost drawer-close" id="drawerClose" aria-label="بستن منو">'+RI.icon('x')+'</button></div>' +
+      '<nav class="nav" aria-label="بخش‌های داشبورد">' + NAV.map(navGroup).join('')+'</nav>' +
       '<div class="sidebar__foot">'+(acc.isAdmin?'<a class="panel-switch" href="/admin/">'+RI.icon('shield')+'<span>ورود به مدیریت</span>'+RI.icon('chevL')+'</a>':'')+'<a class="panel-help" href="/dashboard/support/" data-route="support">'+RI.icon('help')+'پشتیبانی</a><button type="button" class="account-btn" id="accountBtn" aria-haspopup="menu"><img class="avatar" id="accAvatar" alt="تصویر پروفایل" src="/brand/resumeit-mark-v1.png"><span class="account-btn__info"><span class="account-btn__name" id="accName"></span><span class="account-btn__sub">پروفایل و دسترسی سریع</span></span>'+RI.icon('chevL')+'</button><small><a href="/changes/" data-site-version>تغییرات رزومیت</a></small></div></div>';
+    if(acc.isSupport||acc.isAdmin)RI.$('.sidebar__foot').insertAdjacentHTML('afterbegin','<a class="panel-switch" href="/staff/">'+RI.icon('help')+'<span>پنل پشتیبانی</span>'+RI.icon('chevL')+'</a>');
     RI.$('#bottomNav').innerHTML = BOTTOM.map(i=>'<a href="'+RI.routeUrl(i[0])+'" data-route="'+i[0]+'">'+RI.icon(i[2])+'<span>'+i[1]+'</span></a>').join('')+'<button type="button" data-all-pages aria-label="همهٔ بخش‌ها">'+RI.icon('menu')+'<span>بیشتر</span></button>';
     paintAccount();RI.polishShell?.();
+    const mobileGroups=matchMedia('(max-width:960px)'),groups=RI.$$('.nav__group--collapse');
+    const syncGroups=()=>groups.forEach(g=>{const closed=mobileGroups.matches&&g.dataset.open!=='true',panel=g.querySelector('.nav__children');panel.inert=closed;if(closed)panel.setAttribute('aria-hidden','true');else panel.removeAttribute('aria-hidden');});
+    RI.collapseMobileGroups=()=>{groups.forEach(g=>{g.dataset.open='false';g.querySelector('button').setAttribute('aria-expanded','false');});syncGroups();};
+    RI.$('#sidebar').addEventListener('click',e=>{const button=e.target.closest('.nav__disclosure');if(!button)return;const group=button.closest('.nav__group'),opening=group.dataset.open!=='true';groups.forEach(g=>{const on=g===group&&opening;g.dataset.open=String(on);g.querySelector('button').setAttribute('aria-expanded',String(on));});syncGroups();});
+    mobileGroups.addEventListener('change',syncGroups);syncGroups();
   }
   function paintAccount() {
     RI.$('#accName').textContent = RI.state.account.name;
@@ -76,6 +87,7 @@
     return url.pathname + url.search;
   };
   let navigating=false,pendingNavigation=null,currentUrl=location.pathname+location.search;
+  RI.setRouteTab=(tab,initial)=>{const url=new URL(location.href);if(tab===initial)url.searchParams.delete('tab');else url.searchParams.set('tab',tab);history.replaceState(history.state,'',url.pathname+url.search+url.hash);currentUrl=url.pathname+url.search;};
   const pageLoads=new Map();
   function loadScript(path) {
     if(!pageLoads.has(path)) pageLoads.set(path,new Promise((resolve,reject)=>{
@@ -140,6 +152,7 @@
   /* ---------- کشو (موبایل) ---------- */
   const mobile=matchMedia('(max-width:960px)');
   function setDrawer(open){
+    if(open&&mobile.matches)RI.collapseMobileGroups?.();
     RI.$('#sidebar').dataset.open=String(open);RI.$('#scrim').dataset.open=String(open);
     RI.$('#menuBtn').setAttribute('aria-expanded',String(open));
     RI.$('.main').inert=open&&mobile.matches;RI.$('#bottomNav').inert=open&&mobile.matches;
@@ -187,6 +200,7 @@
       const label=list.getAttribute('aria-label'),id=list.id;
       tabs[next].click();
       const selected=(id?document.getElementById(id):[...document.querySelectorAll('[role="tablist"]')].find(el=>el.getAttribute('aria-label')===label))?.querySelector('[role="tab"][aria-selected="true"]');
+      const disclosure=selected?.closest('details');if(disclosure)disclosure.open=true;
       selected?.focus({preventScroll:true});
       selected?.scrollIntoView({block:'nearest',inline:'nearest',behavior:'instant'});
     });

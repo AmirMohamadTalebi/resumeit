@@ -58,6 +58,10 @@
   ];
 
   RI.IT_RATE = 2000;
+  RI.priceToman=units=>RI.toman(Math.round(units*(RI.commerce?.rate||2000)/2000));
+  RI.applyCommerce=policy=>{RI.commerce=policy||{rate:2000,prices:{},paused:[],imageFree:409600,imagePaid:2097152};for(const [kind,list]of Object.entries({rt:RI.RESUME_TEMPLATES,lt:RI.LINK_TEMPLATES,font:RI.FONTS,pal:RI.PALETTES,subscription:Object.values(RI.PLANS)}))for(const item of list){if(item.defaultPrice===undefined)item.defaultPrice=item.price;item.price=RI.commerce.prices[kind+':'+item.id]??item.defaultPrice;item.paused=RI.commerce.paused.includes(kind+':'+item.id);}};
+  RI.imageLimit=()=>{const p=RI.commerce||{imageFree:409600,imagePaid:2097152};return RI.hasSub?.()?p.imagePaid:p.imageFree;};
+  RI.canWorkspace=slot=>slot===1||slot===2&&!!RI.ownerSettings?.extraSubdomain||RI.hasSub()&&([2,3].includes(slot)||slot===4&&!!RI.ownerSettings?.extraSubdomain);
   RI.shareCard=(c,kind='resume')=>{const header=kind==='links'&&!c.links.header.sync?c.links.header:c.profile;return {title:c.share.title.trim()||header.name||'صفحهٔ شخصی',desc:c.share.desc.trim()||header.bio||'',image:c.share.image||c.profile.cover||c.profile.avatar||null};};
   RI.publicationData=(k,c)=>k==='resume'?{routing:c.routing,slug:c.slug,profile:c.profile,contacts:c.contacts,skills:c.skills,experience:c.experience,education:c.education,projects:c.projects,certs:c.certs,languages:c.languages,socials:c.socials,sections:c.sections,resumeTemplates:c.resumeTemplates,theme:{resume:c.theme.resume,font:c.theme.font,palette:c.theme.palette,radius:c.theme.radius},share:c.share,branding:c.branding?.resume}:{routing:c.routing,slug:c.slug,links:c.links,name:c.profile.name,bio:c.profile.bio,avatar:c.profile.avatar,theme:{links:c.theme.links,font:c.theme.font,linksPalette:c.theme.linksPalette,radius:c.theme.radius,resume:c.links.style.matchResume?c.theme.resume:undefined},share:c.share,branding:c.branding?.links};
   RI.it = amount => RI.fa(amount / RI.IT_RATE) + ' It';
@@ -92,7 +96,7 @@
     ['تعداد رزومهٔ مستقل', '۱', '۲'],
     ['تعداد صفحهٔ لینک مستقل', '۱', '۳'],
     ['قالب‌ها و فونت‌های استارتی', true, true],
-    ['بارگذاری تصویر در ویرایشگر', 'تا ۲ مگابایت برای هر تصویر', 'تا ۲ مگابایت برای هر تصویر'],
+    ['بارگذاری تصویر در ویرایشگر', 'تا ۴۰۰ کیلوبایت برای هر تصویر', 'تا ۲ مگابایت برای هر تصویر'],
     ['قالب‌های اشتراکی و ویژه', false, true],
     ['حذف نشان رزومیت و امضای اختصاصی در هر صفحه', false, true],
     ['بلوک متن و تصویر در صفحهٔ لینک', false, true],
@@ -206,6 +210,7 @@
       indexing: true, brand: true,
     };
   };
+  RI.TAKEN_SLUGS.push('staff',...RI.RESUME_TEMPLATES.map(t=>'resume'+t.id),...RI.LINK_TEMPLATES.map(t=>'link'+t.id));
 })();
 
 (function(){const RI=window.RI;

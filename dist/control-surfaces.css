@@ -1,0 +1,20 @@
+/* Shared interaction spacing; page layouts and template artwork keep their own rules. */
+[role=menu]{display:grid;gap:6px;max-block-size:calc(100dvh - 24px);overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin}
+[role=menu]>hr{margin:3px 0}
+[role=menu] [role=menuitem]:focus-visible{outline:2px solid var(--bro-600,#537d8f);outline-offset:-2px;background:#e0edf3}
+.public-account__menu>a+a{margin-block-start:6px}
+.public-account__menu{background:linear-gradient(135deg,#fafdfffc,#edf4f8fa 65%,#e8eef4fc);max-block-size:calc(100dvh - 116px);overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin}
+.admin-profile-menu{display:grid;gap:6px}
+.field{min-width:0}.field__label{flex-wrap:wrap;line-height:1.8;row-gap:5px}
+.row__actions{gap:6px}
+@supports(appearance:base-select){
+  select:not([multiple]):not([size]),select:not([multiple]):not([size])::picker(select){appearance:base-select}
+  select:not([multiple]):not([size]){background-image:none;align-items:center;gap:12px}
+  select:not([multiple]):not([size])::picker(select){padding:8px;border:1px solid #bdd5df;border-radius:18px;background:#f3f9fcfa;color:#294b5b;box-shadow:0 14px 32px #294b5b26;max-block-size:min(380px,65dvh);max-inline-size:calc(100vw - 24px);overflow:auto;overscroll-behavior:contain;scrollbar-width:thin;font:inherit}
+  select:not([multiple]):not([size]) option{display:flex;align-items:center;gap:12px;margin:0 0 6px;min-block-size:44px;padding:10px 12px;border:1px solid transparent;border-radius:12px;background:transparent;color:#294b5b;line-height:1.7;white-space:normal;overflow-wrap:anywhere;cursor:pointer}
+  select:not([multiple]):not([size]) option:last-child{margin-block-end:0}
+  select:not([multiple]):not([size]) option:checked{background:#e0edf4;border-color:#c8dfe9;color:#254f62}
+  select:not([multiple]):not([size]) option:hover,select:not([multiple]):not([size]) option:focus-visible{background:#d1e7ef;border-color:#aacbd9;color:#21475b;outline:0}
+  select:not([multiple]):not([size]) option:disabled{opacity:.55;cursor:not-allowed}
+  select:not([multiple]):not([size]) option::checkmark{color:#286d7c}
+}

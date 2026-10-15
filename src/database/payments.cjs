@@ -10,11 +10,11 @@ module.exports = ({ execute, transaction }) => ({
       const [[user]]=await con.execute('SELECT id FROM users WHERE id=? FOR UPDATE',[invoice.user_id]);if(!user)fail('حساب پیدا نشد',401);
       const [[prior]]=await con.execute('SELECT * FROM payment_invoices WHERE user_id=? AND request_id=?',[invoice.user_id,invoice.request_id]);if(prior){if(Number(prior.amount_toman)!==invoice.amount_toman)fail('مبلغ پیش‌فاکتور مطابقت ندارد',409);return prior;}
       const [[count]]=await con.execute('SELECT COUNT(*) total FROM payment_invoices WHERE user_id=? AND created_at>?',[invoice.user_id,invoice.created_at-15*60000]);if(Number(count.total)>=10)fail('چند دقیقه بعد پیش‌فاکتور تازه بساز',429);
-      await con.execute('INSERT INTO payment_invoices(id,user_id,amount_toman,request_id,created_at,expires_at) VALUES(?,?,?,?,?,?)',[invoice.id,invoice.user_id,invoice.amount_toman,invoice.request_id,invoice.created_at,invoice.expires_at]);return invoice;
+      await con.execute('INSERT INTO payment_invoices(id,user_id,amount_toman,request_id,created_at,expires_at,it_rate,credit_units) VALUES(?,?,?,?,?,?,?,?)',[invoice.id,invoice.user_id,invoice.amount_toman,invoice.request_id,invoice.created_at,invoice.expires_at,invoice.it_rate||2000,invoice.credit_units??invoice.amount_toman]);return invoice;
     });
   },
   async payment(id) { return (await execute('SELECT * FROM payment_orders WHERE id=?', [id]))[0] || null; },
-  async paymentsForUser(id) { return execute('SELECT id,provider,amount_toman,status,rrn,trace,created_at,updated_at FROM payment_orders WHERE user_id=? ORDER BY created_at DESC,id DESC LIMIT 50', [id]); },
+  async paymentsForUser(id) { return execute('SELECT id,provider,amount_toman,credit_units,it_rate,status,rrn,trace,created_at,updated_at FROM payment_orders WHERE user_id=? ORDER BY created_at DESC,id DESC LIMIT 50', [id]); },
   async createPayment(order) {
     if(!Number.isSafeInteger(order.amount_toman)||order.amount_toman<2000||order.amount_toman>100000000||order.amount_toman%RI.IT_RATE!==0||!['sep','zibal'].includes(order.provider)||!/^[a-f0-9]{64}$/.test(order.secret_hash))fail('درخواست پرداخت معتبر نیست');
     return transaction(async con => {
@@ -26,7 +26,7 @@ module.exports = ({ execute, transaction }) => ({
       if (prior) { if (Number(prior.amount_toman)!==order.amount_toman) fail('شناسهٔ درخواست برای مبلغ دیگری استفاده شده است',409); return { order: prior, created: false }; }
       const [[count]] = await con.execute('SELECT COUNT(*) total FROM payment_orders WHERE user_id=? AND created_at>?', [order.user_id,order.created_at-15*60000]);
       if (Number(count.total)>=10) fail('درخواست‌های زیادی ثبت شده؛ چند دقیقه بعد تلاش کن',429);
-      await con.execute('INSERT INTO payment_orders(id,user_id,provider,terminal_id,amount_toman,request_id,secret_hash,status,created_at,updated_at,expires_at) VALUES(?,?,?,?,?,?,?,?,?,?,?)', [order.id,order.user_id,order.provider,order.terminal_id,order.amount_toman,order.request_id,order.secret_hash,'creating',order.created_at,order.created_at,order.expires_at]);
+      await con.execute('INSERT INTO payment_orders(id,user_id,provider,terminal_id,amount_toman,request_id,secret_hash,status,created_at,updated_at,expires_at,it_rate,credit_units) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)', [order.id,order.user_id,order.provider,order.terminal_id,order.amount_toman,order.request_id,order.secret_hash,'creating',order.created_at,order.created_at,order.expires_at,order.it_rate||2000,order.credit_units??order.amount_toman]);
       return { order: {...order,status:'creating'}, created:true };
     });
   },
@@ -69,8 +69,8 @@ module.exports = ({ execute, transaction }) => ({
       if (current.status==='paid') return current;
       if (current.status!=='verifying' || current.lease_key!==order.lease_key) return null;
       if (!user || !current.user_id) return {accountDeleted:true};
-      const amount=Number(current.amount_toman),reference='payment:'+current.provider+':'+current.id;
-      if (proof.amountRial!==amount*10 || amount%RI.IT_RATE!==0) fail('مبلغ پرداخت مطابقت ندارد',409);
+      const paid=Number(current.amount_toman),amount=Number(current.credit_units??current.amount_toman),reference='payment:'+current.provider+':'+current.id;
+      if (proof.amountRial!==paid*10 || !Number.isSafeInteger(amount)||amount<=0) fail('مبلغ پرداخت مطابقت ندارد',409);
       await con.execute('INSERT IGNORE INTO wallets(user_id,balance_units) VALUES(?,0)',[current.user_id]);
       const [[wallet]]=await con.execute('SELECT balance_units FROM wallets WHERE user_id=? FOR UPDATE',[current.user_id]);
       const balance=Number(wallet.balance_units)+amount;

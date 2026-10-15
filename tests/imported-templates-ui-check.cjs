@@ -6,7 +6,7 @@ const {chromium}=require('playwright'),{createServer}=require('../src/http/serve
  for(const template of ['vista','satiar'])c.resumeTemplates[template]={fields:{},settings:{reviewed:true},collections:{}};
  await db.mutateDashboard(id,0,d=>{d.content=model.content(c,{purchases:[{ref:'rt:vista'}]});d.slug=c.slug;d.published.resume=structuredClone(d.content);d.pub.resume={status:'published',version:1,at:Date.now(),snap:JSON.stringify(c)};});
  db.billing=async()=>({plan:{id:'q',end:Date.now()+600000},purchases:[],payments:[]});
- const server=createServer(db);await new Promise(r=>server.listen(0,'127.0.0.1',r));const base='http://127.0.0.1:'+server.address().port;let browser;
+ const store=require('./workspace-test-store.cjs')(db,[id]),server=createServer(db);await new Promise(r=>server.listen(0,'127.0.0.1',r));const base='http://127.0.0.1:'+server.address().port;let browser;
  try{
   browser=await chromium.launch({channel:process.platform==='win32'?'msedge':undefined,headless:true});const context=await browser.newContext({viewport:{width:1440,height:1000},reducedMotion:'reduce'});await context.addCookies([{name:'ri_session',value:'a'.repeat(64),url:base}]);
   const page=await context.newPage(),errors=[],failed=[];page.on('pageerror',e=>errors.push(e.message));page.on('response',r=>{if(r.status()>=400&&r.url().startsWith(base))failed.push(r.status()+' '+r.url());});
@@ -49,5 +49,5 @@ const {chromium}=require('playwright'),{createServer}=require('../src/http/serve
    await page.reload();await page.locator('[data-step="template"]').click();await page.locator('#template-section').selectOption(group);await page.locator('#template-collection').selectOption(collection.key);assert.equal(await page.locator('#template-controls [data-tfield="'+fieldKey+'"]').first().inputValue(),'متن شخصی‌سازی‌شده');
   }
   assert.deepEqual(errors,[]);assert.deepEqual(failed,[]);console.log('PASS: all pages load, responsive designs, local assets, isolated live preview, per-section editing, repeated-item add/remove, review reset and saved reload.');
- }finally{await browser?.close();await new Promise(r=>server.close(r));}
+ }finally{await browser?.close();await new Promise(r=>server.close(r));store.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});

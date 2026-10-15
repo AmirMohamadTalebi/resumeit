@@ -21,7 +21,11 @@ module.exports = ({execute,transaction}) => {
         return true;
       });
     },
-    async session(tokenHash) { return (await execute("SELECT u.id,u.phone,u.phone_verified,p.first_name,p.last_name,EXISTS(SELECT 1 FROM admin_accounts WHERE user_id=u.id) AS is_admin,EXISTS(SELECT 1 FROM social_identities WHERE user_id=u.id AND provider='google') AS google,EXISTS(SELECT 1 FROM social_identities WHERE user_id=u.id AND provider='github') AS github FROM sessions s JOIN users u ON u.id=s.user_id JOIN profiles p ON p.user_id=u.id LEFT JOIN admin_controls c ON c.user_id=u.id WHERE s.token_hash=? AND s.expires_at>? AND COALESCE(c.suspended,FALSE)=FALSE", [tokenHash, Date.now()]))[0]; },
+    async session(tokenHash) {
+      const [user]=await execute("SELECT u.id,u.phone,u.phone_verified,p.first_name,p.last_name,EXISTS(SELECT 1 FROM admin_accounts WHERE user_id=u.id) AS is_admin,EXISTS(SELECT 1 FROM owner_accounts WHERE user_id=u.id) AS is_owner,EXISTS(SELECT 1 FROM support_accounts WHERE user_id=u.id) AS is_support,EXISTS(SELECT 1 FROM social_identities WHERE user_id=u.id AND provider='google') AS google,EXISTS(SELECT 1 FROM social_identities WHERE user_id=u.id AND provider='github') AS github FROM sessions s JOIN users u ON u.id=s.user_id JOIN profiles p ON p.user_id=u.id LEFT JOIN admin_controls c ON c.user_id=u.id WHERE s.token_hash=? AND s.expires_at>? AND COALESCE(c.suspended,FALSE)=FALSE", [tokenHash, Date.now()]);
+      if(user)user.account_role=user.is_owner?'owner':user.is_admin?'admin':user.is_support?'support':'user';
+      return user;
+    },
     async deleteSession(tokenHash) { await execute('DELETE FROM sessions WHERE token_hash=?', [tokenHash]); },
     async claimLoginAttempts(phone, ipHash) {
       const now = Date.now();

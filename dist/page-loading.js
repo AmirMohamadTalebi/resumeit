@@ -1,5 +1,5 @@
 (() => {
-  const dashboard=location.pathname.startsWith('/dashboard');
+  const dashboard=location.pathname.startsWith('/dashboard'),auth=/^\/(login|register|forgot-password)\/?$/.test(location.pathname);
   const loader=document.createElement('div');
   loader.className='ri-page-loading';loader.hidden=true;
   loader.setAttribute('role','status');loader.setAttribute('aria-live','polite');
@@ -15,8 +15,8 @@
     fallback=setTimeout(finish,dashboard?25000:8000);
   }
   window.resumeitPageLoading={start,finish};
-  start();
+  if(dashboard||auth)start();
   document.addEventListener('ri:dashboard-ready',finish);
-  if(!dashboard){if(document.readyState==='complete')finish();else window.addEventListener('load',finish,{once:true});}
+  if(!dashboard){if(document.readyState!=='loading')finish();else document.addEventListener('DOMContentLoaded',finish,{once:true});}
   window.addEventListener('pageshow',e=>{if(e.persisted||!dashboard)finish();});
 })();

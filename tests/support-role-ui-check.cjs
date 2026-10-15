@@ -1,0 +1,27 @@
+const assert=require('node:assert/strict'),{randomUUID}=require('node:crypto'),fs=require('node:fs/promises'),path=require('node:path'),{chromium}=require('playwright'),{createServer}=require('../src/http/server.cjs');
+(async()=>{
+  const {db,owner,target}=await require('./admin-fixture.cjs')(),store=require('./workspace-test-store.cjs')(db,[owner,target]);
+  await db.markPhoneVerified(target);await db.setAccountNames(target,'نگار','مهر');
+  const ticket=await db.createTicket(owner,{subject:'راهنمای طراحی رزومه',body:'برای انتخاب قالب مناسب و تنظیم اطلاعات رزومه راهنمایی می‌خواهم. <img src=x onerror=alert(1)>',category:'editor',priority:'normal',requestId:randomUUID()});
+  const server=createServer(db);await new Promise(r=>server.listen(0,'127.0.0.1',r));const base='http://127.0.0.1:'+server.address().port;
+  const out=path.resolve('artifacts/support-role');await fs.mkdir(out,{recursive:true});const errors=[];let browser;
+  try{
+    browser=await chromium.launch({channel:process.platform==='win32'?'msedge':undefined,headless:true});
+    const admin=await browser.newContext({viewport:{width:1440,height:950},deviceScaleFactor:1});await admin.addCookies([{name:'ri_session',value:'a'.repeat(64),url:base}]);const page=await admin.newPage();page.on('pageerror',e=>errors.push(e.message));
+    const calls=[];page.on('request',r=>{if(r.url().includes('/api/admin/'))calls.push(new URL(r.url()).pathname);});
+    await page.goto(base+'/admin/users/?user='+target);await page.locator('#account-role-form').waitFor();assert(!calls.includes('/api/admin/health'),'no eager health fetch');
+    await page.locator('#account-role-form [name=role]').selectOption('support');await page.locator('#account-role-form [name=reason]').fill('دسترسی پاسخ‌گویی به کاربران');await page.locator('#account-role-form [name=confirmation]').fill('ساپورت');await page.locator('#account-role-form button').click();await page.waitForFunction(()=>document.querySelector('#account-role-form [name=role]')?.value==='support');
+    assert((await db.supportRole(target)).enabled);await page.evaluate(()=>scrollTo(0,0));await page.screenshot({path:path.join(out,'admin-support-role-desktop.png'),fullPage:true});
+    assert.equal(await page.locator('#admin-nav a').count(),6);assert.equal(await page.locator('.admin-topnav a').count(),2);assert.equal(await page.locator('#refresh').count(),0);
+    await page.locator('#admin-menu').click();await page.waitForTimeout(500);assert((await page.locator('.admin-brand img').getAttribute('src')).endsWith('resumeit-mark-v1.png'));
+    await page.locator('.admin-profile summary').click();await page.locator('#logout').waitFor({state:'visible'});
+    assert(await page.locator('.admin-shell').evaluate(el=>el.classList.contains('admin-compact')));assert.equal(await page.locator('#admin-nav a span').first().evaluate(el=>getComputedStyle(el).display),'none');assert(await page.locator('#admin-side').evaluate(el=>el.clientWidth<90));await page.waitForTimeout(250);await page.screenshot({path:path.join(out,'admin-compact-profile.png')});
+    await page.keyboard.press('Escape');await page.locator('#admin-menu').click();await page.setViewportSize({width:1366,height:650});await page.waitForTimeout(500);assert(await page.locator('#admin-side').evaluate(el=>el.scrollHeight<=el.clientHeight+2),'desktop sidebar has no internal scrollbar');
+    const staff=await browser.newContext({viewport:{width:1440,height:950},deviceScaleFactor:1});await staff.addCookies([{name:'ri_session',value:'b'.repeat(64),url:base}]);const panel=await staff.newPage();panel.on('pageerror',e=>errors.push(e.message));await panel.goto(base+'/staff/');await panel.locator('[data-ticket]').waitFor();assert.equal(await panel.locator('.stats .stat').count(),4);await panel.screenshot({path:path.join(out,'staff-desktop.png'),fullPage:true});
+    await panel.locator('[data-ticket="'+ticket.id+'"]').click();await panel.locator('#reply-body').waitFor();assert.equal(await panel.locator('.conversation img').count(),0,'ticket HTML is escaped');await panel.locator('#reply-body').fill('سلام، از بخش ظاهر و قالب می‌توانید قالب مناسب را انتخاب کنید.');await panel.locator('#reply button').click();await panel.getByText('پاسخ ثبت شد.',{exact:true}).waitFor();assert.equal((await db.ticket(null,ticket.id)).messages.length,2);
+    await panel.screenshot({path:path.join(out,'staff-thread-desktop.png'),fullPage:true});await panel.setViewportSize({width:390,height:844});await panel.screenshot({path:path.join(out,'staff-thread-mobile.png'),fullPage:true});assert(await panel.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'no mobile horizontal overflow');
+    await panel.locator('[data-back]').click();await panel.locator('[data-ticket]').waitFor();await panel.screenshot({path:path.join(out,'staff-mobile.png'),fullPage:true});
+    await db.saveSupportRole(owner,target,{enabled:false,reason:'پایان دسترسی آزمایشی پشتیبانی',requestId:randomUUID()});assert.equal((await staff.request.get(base+'/api/dashboard/support?staff=1')).status(),403);
+    assert.deepEqual(errors,[]);console.log('PASS: admin role UI, grouped navigation, no eager health request, compact logo/profile, no desktop sidebar scroll, support inbox/reply, escaped ticket HTML, mobile layout, revoked role. Screenshots: '+out);
+  }finally{await browser?.close();await new Promise(r=>server.close(r));store.close();}
+})().catch(e=>{console.error(e);process.exitCode=1;});

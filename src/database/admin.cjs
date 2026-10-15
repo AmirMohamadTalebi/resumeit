@@ -18,8 +18,7 @@ module.exports = ({ execute, transaction }) => ({
   async savePaymentPolicy(actor,input){
     if(!input||typeof input.sep!=='boolean'||typeof input.zibal!=='boolean')fail('وضعیت درگاه معتبر نیست');
     return transaction(async con=>{
-      const [[manager]]=await con.execute('SELECT a.user_id FROM admin_accounts a LEFT JOIN admin_controls c ON c.user_id=a.user_id WHERE a.user_id=? AND COALESCE(c.suspended,0)=0 FOR UPDATE',[actor]);
-      if(!manager)fail('دسترسی مدیریت ندارید',403);
+      await require('../admin/access.cjs').requireOwner(con,actor);
       await con.execute('SELECT id FROM payment_policy WHERE id=1 FOR UPDATE');
       await con.execute('UPDATE payment_policy SET sep_enabled=?,zibal_enabled=? WHERE id=1',[input.sep,input.zibal]);
       await con.execute('INSERT INTO admin_audit(id,actor_id,target_id,action,reason,details,request_id,created_at) VALUES(?,?,NULL,?,?,?,?,?)',[randomUUID(),actor,'payment-gateways','تغییر اجازهٔ شروع پرداخت',JSON.stringify({sep:input.sep,zibal:input.zibal}),randomUUID(),Date.now()]);
@@ -33,7 +32,7 @@ module.exports = ({ execute, transaction }) => ({
         [from],
       ),
       execute(
-        `SELECT COUNT(*) total,SUM(d.slot<>3 AND JSON_UNQUOTE(JSON_EXTRACT(d.pub,'$.resume.status'))='published' AND COALESCE(c.suspended,0)=0 AND COALESCE(c.publication_blocked,0)=0) resumes,SUM(JSON_UNQUOTE(JSON_EXTRACT(d.pub,'$.links.status'))='published' AND COALESCE(c.suspended,0)=0 AND COALESCE(c.publication_blocked,0)=0) links FROM ${documents} d LEFT JOIN admin_controls c ON c.user_id=d.user_id WHERE d.slot=1 OR EXISTS(SELECT 1 FROM account_access a WHERE a.user_id=d.user_id AND a.ref LIKE 'subscription:%' AND a.expires_at>?)`,
+        `SELECT COUNT(*) total,SUM(d.slot<>3 AND JSON_UNQUOTE(JSON_EXTRACT(d.pub,'$.resume.status'))='published' AND COALESCE(c.suspended,0)=0 AND COALESCE(c.publication_blocked,0)=0) resumes,SUM(JSON_UNQUOTE(JSON_EXTRACT(d.pub,'$.links.status'))='published' AND COALESCE(c.suspended,0)=0 AND COALESCE(c.publication_blocked,0)=0) links FROM ${documents} d LEFT JOIN admin_controls c ON c.user_id=d.user_id LEFT JOIN owner_user_settings o ON o.user_id=d.user_id WHERE d.slot=1 OR (d.slot IN (2,3) OR d.slot=4 AND CAST(JSON_UNQUOTE(JSON_EXTRACT(o.settings,'$.extraSubdomain')) AS CHAR) IN ('true','1')) AND EXISTS(SELECT 1 FROM account_access a WHERE a.user_id=d.user_id AND a.ref LIKE 'subscription:%' AND a.expires_at>?) OR d.slot=2 AND CAST(JSON_UNQUOTE(JSON_EXTRACT(o.settings,'$.extraSubdomain')) AS CHAR) IN ('true','1')`,
         [Date.now()],
       ),
       execute(
@@ -226,6 +225,7 @@ module.exports = ({ execute, transaction }) => ({
         [actor],
       );
       if (!manager) fail("دسترسی مدیریت ندارید", 403);
+      if(['credit','delete-account'].includes(action))await require('../admin/access.cjs').requireOwner(con,actor);
       const profile=action==='edit-profile'?editableProfile(input.profile):null;
       const [[prior]] = await con.execute(
         "SELECT actor_id,target_id,action,reason,details FROM admin_audit WHERE request_id=?",

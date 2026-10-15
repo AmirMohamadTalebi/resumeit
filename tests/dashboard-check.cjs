@@ -9,6 +9,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_PATH || 'playwright');
   delete process.env.PUBLIC_ORIGIN;
   const database = testStore();
   const ownerId=await database.provisionAccount('09120000001', await hashPassword('DemoOnly123!'));
+  const store=require('./workspace-test-store.cjs')(database,[ownerId],{workspaces:true});
   await database.socialAccount('google','10001','',ownerId);await database.socialAccount('github','10002','',ownerId);
   const server = createServer(database);
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
@@ -39,7 +40,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_PATH || 'playwright');
     await page.waitForSelector('#page-title').catch(error => { console.error({errors,failed}); throw error; });
     assert.equal(await page.locator('#demoBtn').count(), 0);
     await page.evaluate(() => document.fonts.ready);
-    await page.evaluate(()=>RI.go('settings'));await page.waitForSelector('[data-conn="google"]');
+    await page.evaluate(()=>RI.go('settings',{tab:'security'}));await page.waitForSelector('[data-conn="google"]');
     await page.evaluate(()=>{for(let i=0;i<12;i++)RI.rerender();});
     for(const provider of ['google','github']) {
       const control=()=>page.locator('[data-conn="'+provider+'"]');
@@ -55,8 +56,10 @@ const { chromium } = require(process.env.PLAYWRIGHT_PATH || 'playwright');
     const output = path.join(__dirname, '../artifacts', 'dashboard'); fs.mkdirSync(output, { recursive: true });
     await page.screenshot({ path: path.join(output, 'desktop.png'), fullPage: true });
     for (const route of ['resume', 'links', 'themes', 'publish', 'billing', 'stats', 'settings', 'home']) {
-      await page.locator('#sidebar [data-route="' + route + '"]').click();
-      await page.waitForFunction(route => document.querySelector('#sidebar [data-route="' + route + '"]')?.getAttribute('aria-current') === 'page' && !!document.querySelector('#page-title'), route);
+      const group=['resume','links','themes'].includes(route)?'resume':['publish','stats'].includes(route)?'publish':['billing','settings'].includes(route)?'wallet':'home';
+      await page.locator('.coral-rail [data-coral-group="'+group+'"]').click();await page.waitForURL(url=>url.pathname===(group==='home'?'/dashboard/':'/dashboard/'+group+'/'));
+      if(route!==group)await page.locator('#sidebar [data-route="' + route + '"]').click();
+      await page.waitForFunction(route => document.querySelector('[data-route="' + route + '"][aria-current=page]') && !!document.querySelector('#page-title'), route);
       assert.equal(await page.locator('#page-title').count(), 1, route);
       const routePath = route === 'home' ? '/dashboard/' : '/dashboard/' + route + '/';
       assert.equal(new URL(page.url()).pathname, routePath);
@@ -64,6 +67,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_PATH || 'playwright');
       assert(await page.evaluate(route=>!!RI.pages[route],route));
       await page.reload(); await page.waitForSelector('#page-title');
       if (route === 'billing') {
+        await page.locator('[data-workspace-tab=plans]').click();
         assert(!(await page.locator('#view').innerText()).includes('مبلغ نمایشی'));
         assert.deepEqual(await page.evaluate(() => Object.values(RI.PLANS).map(p => p.price / p.months)), [96000,85000,75000]);
         await page.locator('[data-sub="q"]').click();
@@ -85,7 +89,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_PATH || 'playwright');
     await page.locator('#sidebar [data-route="links"]').click();
     await page.waitForSelector('[data-add]');
     assert.equal(await page.evaluate(() => RI.C().skills.some(item => item.name === 'QA Skill')), true);
-    await page.locator('[data-add-div]').click();
+    await page.locator('[data-add-block]').click();await page.getByRole('menuitem',{name:'جداکننده',exact:true}).click();
     await page.getByRole('dialog').locator('[data-field="title"] input').fill('QA Divider');
     await page.getByRole('dialog').getByRole('button',{name:'افزودن',exact:true}).click();
     await page.locator('[data-add]').first().click();
@@ -129,10 +133,10 @@ const { chromium } = require(process.env.PLAYWRIGHT_PATH || 'playwright');
     assert.equal(await page.evaluate(() => RI.C().profile.title), 'quota failure');
     await page.route('**/api/dashboard/save',r=>r.abort('failed'));
     await page.evaluate(() => { RI.C().profile.title = 'unsaved'; RI.touch('profile'); });
-    await page.locator('#sidebar [data-route="home"]').click();
+    await page.locator('.coral-rail [data-coral-group="home"]').click();
     await page.getByRole('dialog').getByRole('button', {name:'ماندن در صفحه',exact:true}).click();
     assert.equal(new URL(page.url()).pathname, '/dashboard/links/');
-    await page.locator('#sidebar [data-route="home"]').click();
+    await page.locator('.coral-rail [data-coral-group="home"]').click();
     await page.getByRole('dialog').getByRole('button', {name:'دور انداختن تغییرات',exact:true}).click();
     await page.waitForURL('**/dashboard/'); await page.waitForSelector('#page-title');
     await page.unroute('**/api/dashboard/save');
@@ -141,7 +145,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_PATH || 'playwright');
     const overflow = [];
     for (const route of ['home', 'resume', 'links', 'themes', 'publish', 'billing', 'stats', 'settings']) {
       await page.evaluate(route => RI.go(route), route);
-      await page.waitForFunction(route => document.querySelector('#sidebar [data-route="' + route + '"]')?.getAttribute('aria-current') === 'page' && !!document.querySelector('#page-title'), route);
+      await page.waitForFunction(route => document.querySelector('[data-route="' + route + '"][aria-current=page]') && !!document.querySelector('#page-title'), route);
       if (!(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1))) {
         overflow.push(route);
         console.log(route, await page.evaluate(() => [...document.querySelectorAll('#view *')].filter(el => el.getBoundingClientRect().right > innerWidth + 1 || el.getBoundingClientRect().left < -1).slice(0, 10).map(el => ({ tag: el.tagName, class: el.className, width: el.getBoundingClientRect().width, text: el.textContent.slice(0, 80) }))));
@@ -161,5 +165,5 @@ const { chromium } = require(process.env.PLAYWRIGHT_PATH || 'playwright');
     assert.deepEqual(errors, []); assert.deepEqual(failed, []);
     assert.deepEqual(overflow, [], 'Mobile overflow');
     console.log('PASS: all eight routes, login/logout, skill creation, link CRUD/order/toggle, tab draft persistence, desktop/mobile and no browser errors.');
-  } finally { if (browser) await browser.close(); await new Promise(resolve => server.close(resolve)); database.close(); }
+  } finally { if (browser) await browser.close(); await new Promise(resolve => server.close(resolve)); store.close(); database.close(); }
 })().catch(error => { console.error(error); process.exitCode = 1; });

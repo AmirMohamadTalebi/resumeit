@@ -73,7 +73,7 @@
   /* صحنهٔ استودیو؛ قالب‌های واردشده با تصویر سبک نمایش داده می‌شوند. */
   function stage() {
     const c = RI.C();
-    const resume = ['vista','satiar'].includes(c.theme.resume) ? '<img src="/brand/template-'+c.theme.resume+'-thumb.png" alt="" width="1120" height="800" style="width:1120px;height:800px;object-fit:cover">' : RI.resumeHtml(c);
+    const resume = ['vista','satiar'].includes(c.theme.resume) ? '<img src="/brand/template-thumbs/resume-'+c.theme.resume+'.jpg" alt="نمونهٔ قالب فعال رزومه" width="1120" height="800" style="width:1120px;height:800px;object-fit:cover">' : RI.resumeHtml(c);
     return '<div class="stage" aria-hidden="true"><div class="stage__desk"><div class="stage__chrome"><i></i><i></i><i></i></div><div class="mini" data-nat="1120" data-h="640"><div class="mini__in">' + resume + '</div></div></div>' +
       '<div class="stage__phone"><div class="mini" data-nat="390" data-h="700"><div class="mini__in">' + RI.linksHtml(c) + '</div></div></div></div>';
   }

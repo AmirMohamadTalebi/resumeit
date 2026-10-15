@@ -1,11 +1,20 @@
 const {DatabaseSync}=require('node:sqlite');
 module.exports=(db,owners,options={})=>{
+ db.billing ||= async()=>({plan:null,purchases:[],payments:[]});
  const sql=new DatabaseSync(':memory:');
+ sql.exec('CREATE TABLE commerce_settings(id INTEGER PRIMARY KEY,settings TEXT);CREATE TABLE owner_user_settings(user_id TEXT PRIMARY KEY,settings TEXT);');
  sql.function('JSON_UNQUOTE',value=>value);
  sql.exec(`CREATE TABLE users(id TEXT PRIMARY KEY);CREATE TABLE support_tickets(id TEXT PRIMARY KEY,user_id TEXT,subject TEXT,category TEXT,priority TEXT,status TEXT,request_id TEXT,created_at INTEGER,updated_at INTEGER,UNIQUE(user_id,request_id));CREATE TABLE support_messages(id TEXT PRIMARY KEY,ticket_id TEXT,staff INTEGER,body TEXT,request_id TEXT,created_at INTEGER,UNIQUE(ticket_id,request_id));CREATE TABLE user_notifications(id TEXT PRIMARY KEY,user_id TEXT,kind TEXT,title TEXT,body TEXT,url TEXT,reference TEXT UNIQUE,created_at INTEGER,read_at INTEGER);CREATE TABLE notification_preferences(user_id TEXT PRIMARY KEY,preferences TEXT);CREATE TABLE wallet_transactions(id TEXT PRIMARY KEY,user_id TEXT,delta_units INTEGER,balance_units INTEGER,label TEXT,reference TEXT,created_at INTEGER);CREATE TABLE payment_orders(id TEXT PRIMARY KEY,user_id TEXT,provider TEXT,amount_toman INTEGER,status TEXT,rrn TEXT,trace TEXT,created_at INTEGER,updated_at INTEGER);`);
  for(const owner of owners)sql.prepare('INSERT INTO users VALUES(?)').run(owner);
+ sql.exec('CREATE TABLE admin_accounts(user_id TEXT PRIMARY KEY);CREATE TABLE support_accounts(user_id TEXT PRIMARY KEY);');
+ sql.exec('CREATE TABLE owner_accounts(user_id TEXT PRIMARY KEY);');
+ if(!options.workspaces)sql.exec('CREATE TABLE admin_controls(user_id TEXT PRIMARY KEY,suspended INTEGER DEFAULT 0,publication_blocked INTEGER DEFAULT 0);');
+ if(!options.workspaces)sql.exec('CREATE TABLE profiles(user_id TEXT PRIMARY KEY,name TEXT,role TEXT,bio TEXT);');
+ if(owners.length)sql.prepare('INSERT INTO admin_accounts VALUES(?)').run(owners[0]);
+ if(owners.length)sql.prepare('INSERT INTO owner_accounts VALUES(?)').run(owners[0]);
  sql.exec(`ALTER TABLE users ADD COLUMN phone TEXT;ALTER TABLE users ADD COLUMN phone_verified INTEGER DEFAULT 1;UPDATE users SET phone='09120000123';CREATE TABLE notification_channels(user_id TEXT PRIMARY KEY,email TEXT,email_verified INTEGER DEFAULT 0,email_enabled INTEGER DEFAULT 0,sms_enabled INTEGER DEFAULT 0,push_enabled INTEGER DEFAULT 0,enabled_at INTEGER,pending_email TEXT,challenge_hash TEXT,challenge_salt TEXT,challenge_at INTEGER,challenge_expiry INTEGER,challenge_attempts INTEGER DEFAULT 0);CREATE TABLE notification_email_attempts(id TEXT PRIMARY KEY,user_id TEXT,email TEXT,created_at INTEGER);CREATE TABLE notification_push(id TEXT PRIMARY KEY,user_id TEXT,subscription TEXT,created_at INTEGER);CREATE TABLE notification_delivery(id TEXT PRIMARY KEY,notification_id TEXT,user_id TEXT,channel TEXT,recipient_key TEXT,status TEXT,created_at INTEGER,updated_at INTEGER,UNIQUE(notification_id,channel,recipient_key));`);
  const execute=async(query,args=[])=>{
+  query=query.replace('ON DUPLICATE KEY UPDATE price_units=VALUES(price_units),expires_at=VALUES(expires_at),created_at=VALUES(created_at)','ON CONFLICT(user_id,ref) DO UPDATE SET price_units=excluded.price_units,expires_at=excluded.expires_at,created_at=excluded.created_at');
   query=query.replace(/ FOR UPDATE/g,'').replace(/INSERT IGNORE/g,'INSERT OR IGNORE').replace('ON DUPLICATE KEY UPDATE total=total+1','ON CONFLICT DO UPDATE SET total=total+1').replace('ON DUPLICATE KEY UPDATE preferences=VALUES(preferences)','ON CONFLICT(user_id) DO UPDATE SET preferences=excluded.preferences').replace('ON DUPLICATE KEY UPDATE subscription=VALUES(subscription)','ON CONFLICT(id) DO UPDATE SET subscription=excluded.subscription');
   const stmt=sql.prepare(query),values=args.map(x=>typeof x==='boolean'?Number(x):x);
   if(/^SELECT/i.test(query))return stmt.all(...values);const result=stmt.run(...values);return {affectedRows:result.changes};
@@ -17,5 +26,6 @@ module.exports=(db,owners,options={})=>{
     sql.exec('CREATE TABLE dashboard_metrics(user_id TEXT,day INTEGER,event TEXT,link_id TEXT,total INTEGER,PRIMARY KEY(user_id,day,event,link_id));CREATE TABLE dashboard_workspace_metrics(user_id TEXT,slot INTEGER,day INTEGER,event TEXT,link_id TEXT,total INTEGER,PRIMARY KEY(user_id,slot,day,event,link_id));');
     const methods=require('../src/database/dashboard.cjs')({execute,transaction});for(const key of ['loadDashboard','mutateDashboard','slugAvailable','publicWorkspace','publicPage','recordMetric','dashboardStats','workspaceList'])db[key]=methods[key];
  }
- Object.assign(db,require('../src/database/support.cjs')({execute,transaction}),require('../src/database/history.cjs')({execute,transaction}),require('../src/database/notification-delivery.cjs')({execute,transaction}));return {sql,execute,close:()=>sql.close()};
+ sql.exec('ALTER TABLE payment_orders ADD COLUMN credit_units INTEGER;ALTER TABLE payment_orders ADD COLUMN it_rate INTEGER DEFAULT 2000;');
+ Object.assign(db,require('../src/database/owner-controls.cjs')({execute,transaction}),require('../src/database/support.cjs')({execute,transaction}),require('../src/database/support-roles.cjs')({execute,transaction}),require('../src/database/ownership.cjs')({execute,transaction}),require('../src/database/history.cjs')({execute,transaction}),require('../src/database/notification-delivery.cjs')({execute,transaction}));return {sql,execute,transaction,close:()=>sql.close()};
 };

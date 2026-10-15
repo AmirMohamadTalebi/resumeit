@@ -25,6 +25,9 @@ async function openDatabase(options) {
     ...require('./profiles.cjs')(context),
     ...require('./dashboard.cjs')(context),
     ...require('./support.cjs')(context),
+    ...require('./support-roles.cjs')(context),
+    ...require('./ownership.cjs')(context),
+    ...require('./owner-controls.cjs')(context),
     ...require('./notification-delivery.cjs')(context),
     ...require('./history.cjs')(context),
     ...require('./wallet.cjs')(context),
@@ -35,7 +38,7 @@ async function openDatabase(options) {
   };
   try{
     await require('./owner-wallet-credit.cjs')(database,execute);
-    await execute('INSERT IGNORE INTO admin_accounts(user_id) SELECT id FROM users WHERE SHA2(phone,256)=? AND phone_verified=TRUE',[require('../admin/access.cjs').OWNER_PHONE_HASH]);
+    await require('./ownership.cjs').bootstrapOwner(execute);
   }catch(error){await pool.end();throw error;}
   return database;
 }

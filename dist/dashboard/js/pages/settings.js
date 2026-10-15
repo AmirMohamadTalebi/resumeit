@@ -17,14 +17,15 @@
         '<div class="setcol">' +
         '<section class="panel"><div class="panel__head"><h2>اطلاعات و حذف حساب</h2></div><div class="syncrow"><div><b>خروجی گرفتن از اطلاعات</b><div class="field__hint">فایل JSON از محتوای فعلی، تنظیمات و وضعیت انتشار؛ بدون رمز یا نشست</div></div><button type="button" class="btn btn--soft btn--sm" data-export>' + RI.icon('download') + 'خروجی</button></div>' +
         '<div class="syncrow"><div><b>خروج از حساب</b><div class="field__hint">پایان نشست در این دستگاه</div></div><button type="button" class="btn btn--soft btn--sm" data-logout>' + RI.icon('logout') + 'خروج</button></div>' +
-        '<div class="danger"><div><b>حذف حساب</b><div class="field__hint">رزومه، لینک‌ها، موجودی و خریدهای حساب حذف می‌شوند؛ این عمل برگشت‌ناپذیر است</div></div><button type="button" class="btn btn--danger-soft btn--sm" data-delete>' + RI.icon('trash') + 'حذف حساب</button></div></section></div></div>';
+        (a.isOwner?'<div class="syncrow"><div><b>مالکیت این حساب</b><div class="field__hint">پیش از حذف حساب، یک مالک دیگر باید نقش مالکیت تو را تغییر دهد.</div></div><a class="btn btn--soft btn--sm" href="/admin/users/">'+RI.icon('shield')+'مدیریت نقش‌ها</a></div>':'<div class="danger"><div><b>حذف حساب</b><div class="field__hint">رزومه، لینک‌ها، موجودی و خریدهای حساب حذف می‌شوند؛ این عمل برگشت‌ناپذیر است</div></div><button type="button" class="btn btn--danger-soft btn--sm" data-delete>' + RI.icon('trash') + 'حذف حساب</button></div>')+'</section></div></div>';
     },
     mount(root) {
       const a = RI.state.account;
       const tabs=document.createElement('div');tabs.innerHTML=RI.tabsHtml([['profile','مشخصات'],['security','ورود و امنیت'],['privacy','حریم خصوصی'],['data','اطلاعات و حساب']],'profile');root.querySelector('.setgrid').before(tabs);
       const sections=[...root.querySelectorAll('.setgrid section')],keys=['profile','security','privacy','data'];
-      const select=id=>sections.forEach((section,i)=>{section.hidden=keys[i]!==id;});select('profile');
-      RI.delegate(tabs,'click','[data-workspace-tab]',(e,b)=>{select(b.dataset.workspaceTab);tabs.querySelectorAll('button').forEach(x=>x.setAttribute('aria-selected',String(x===b)));});
+      const select=id=>{sections.forEach((section,i)=>{section.hidden=keys[i]!==id;});tabs.querySelectorAll('button').forEach(button=>button.setAttribute('aria-selected',String(button.dataset.workspaceTab===id)));};
+      const initial=new URLSearchParams(location.search).get('tab');select(keys.includes(initial)?initial:'profile');
+      RI.delegate(tabs,'click','[data-workspace-tab]',(e,b)=>{select(b.dataset.workspaceTab);RI.setRouteTab(b.dataset.workspaceTab,'profile');});
       RI.delegate(root, 'click', '[data-name]', async (e,b) => {if(b.disabled)return;b.disabled=true;try{await RI.accountRequest('account/names',{firstName:RI.$('#a_name',root).value.trim(),lastName:RI.$('#a_last',root).value.trim()});await RI.reloadAccount();RI.rerender();RI.toast('مشخصاتت ذخیره شد');}catch(error){RI.toast(error.message,{kind:'error'});}finally{b.disabled=false;}});
       RI.delegate(root, 'click', '[data-mobile]', () => RI.phoneDialog());
       RI.delegate(root, 'click', '[data-pass]', async () => { if(await RI.leaveGuard()) location.assign('/forgot-password/'); });

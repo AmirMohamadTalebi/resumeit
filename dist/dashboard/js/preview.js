@@ -218,22 +218,8 @@
   };
 
   /* ---------- بندانگشتی قالب‌ها برای گالری ---------- */
-  let demoC = null;
-  RI.demoContent = function () { if (!demoC) demoC = RI.seed('full'); return demoC; };
   RI.thumbHtml = function (kind, tplId, theme) {
-    if(kind==='resume' && ['vista','satiar'].includes(tplId)) return '<img src="/brand/template-'+tplId+'-thumb.png" alt="" loading="lazy" width="400" height="286" style="width:100%;height:100%;object-fit:cover;object-position:top">';
-    const c = RI.demoContent();
-    const html = kind === 'resume' ? RI.resumeHtml(c, { theme: Object.assign({ resume: tplId }, theme || {}) }) : RI.linksHtml(c, { theme: Object.assign({ links: tplId }, theme || {}) });
-    const isolated = kind === 'resume' && RI.IMPORTED_TEMPLATES && RI.IMPORTED_TEMPLATES[tplId];
-    const content = isolated ? '<iframe sandbox="" tabindex="-1" title="نمونه قالب" style="width:1120px;height:800px;border:0;pointer-events:none" srcdoc="' + esc('<!doctype html><html lang="fa" dir="rtl"><body style="margin:0">' + html + '</body></html>') + '"></iframe>' : html;
-    return '<div class="thumb thumb--' + kind + '" aria-hidden="true"><div class="thumb__scaler">' + content + '</div></div>';
-  };
-  RI.fitThumbs = function (root) {
-    RI.$$('.thumb', root).forEach((t) => {
-      const sc = RI.$('.thumb__scaler', t), nat = t.classList.contains('thumb--links') ? 390 : 1120;
-      const k = t.clientWidth / nat;
-      sc.style.width = nat + 'px'; sc.style.transform = 'scale(' + k + ')';
-    });
+    return '<img src="/brand/template-thumbs/'+kind+'-'+tplId+'.jpg" alt="نمای قالب '+esc(RI.findTemplate(kind,tplId)?.name||tplId)+'" loading="lazy" decoding="async" width="480" height="343" style="width:100%;height:100%;object-fit:cover;object-position:top">';
   };
 
   /* ---------- پیش‌نمایش تمام‌صفحه با نوار آدرس ---------- */
