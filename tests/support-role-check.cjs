@@ -27,7 +27,7 @@ const assert=require('node:assert/strict'),{randomUUID}=require('node:crypto'),{
     const created=await request('/api/dashboard/support','c',{subject:'راهنمایی برای رزومه',body:'اطلاعات فرم رزومه نیاز به راهنمایی دارد.',category:'editor',priority:'normal',requestId:randomUUID()}),id=created.body.id;assert.equal(created.status,200);
     assert.equal((await request('/api/dashboard/support?staff=1','c')).status,403);
     assert.equal((await request('/api/dashboard/support?staff=1','b')).body.total,1);
-    const detail=(await request('/api/dashboard/support?staff=1&id='+id,'b')).body;assert.deepEqual(Object.keys(detail.customer).sort(),['id','name','suspended']);
+    const detail=(await request('/api/dashboard/support?staff=1&id='+id,'b')).body;assert.deepEqual(Object.keys(detail.customer).sort(),['admin_code','id','name','suspended']);
     const reply={id,body:'پاسخ پشتیبانی امن <img src=x onerror=alert(1)>',requestId:randomUUID()};
     assert.equal((await request('/api/dashboard/support/reply?staff=1','b',reply)).status,200);assert.equal((await request('/api/dashboard/support/reply?staff=1','b',reply)).status,200);
     assert.equal((await request('/api/dashboard/support?id='+id,'c')).body.messages.length,2);

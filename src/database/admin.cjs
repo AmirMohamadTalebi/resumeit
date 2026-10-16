@@ -85,7 +85,11 @@ module.exports = ({ execute, transaction }) => ({
     };
   },
   async adminList(kind, { page, q, from, status, filters:inputFilters }) {
-    const f=require('../admin/filters.cjs').filters(inputFilters);
+    const query=require('../admin/search.cjs').search(q),allowedFields={users:['role','plan','min','max','status'],pages:['status'],payments:['provider','min','max','status'],transactions:['direction','min','max','ref'],purchases:['ref','min','max'],otp:['status'],audit:[]}[kind]||[];
+    if(Object.keys(query.fields).some(field=>!allowedFields.includes(field)))fail('این ویژگی برای جست‌وجوی فهرست انتخاب‌شده معتبر نیست');
+    if(query.fields.ref&&this.adminFindCode){const product=await this.adminFindCode(query.fields.ref);if(product?.kind==='catalog')query.fields.ref=product.key;}
+    const f=require('../admin/filters.cjs').filters({...inputFilters,...query.fields});
+    if(query.fields.status){const allowed={users:['active','suspended'],pages:['published','draft'],payments:['creating','pending','verifying','paid','review','failed','reversed','cancelled','expired'],otp:['accepted','pending','failed','verified']}[kind]||[];if(!allowed.includes(query.fields.status))fail('وضعیت جست‌وجو برای این فهرست معتبر نیست');status=query.fields.status;}
     const sources = {
       users: {
         table:
@@ -109,7 +113,7 @@ module.exports = ({ execute, transaction }) => ({
           "wallet_transactions t JOIN users u ON u.id=t.user_id LEFT JOIN profiles p ON p.user_id=u.id",
         fields:
           "t.id,t.user_id,t.delta_units,t.balance_units,t.label,t.reference,t.product_ref,t.created_at,u.phone,p.name",
-        search: "CONCAT_WS(' ',t.id,t.user_id,t.reference,u.phone,p.name,t.label)",
+        search: "CONCAT_WS(' ',t.id,t.user_id,t.reference,t.product_ref,u.phone,p.name,t.label)",
         date: "t.created_at",
         order: "t.created_at DESC,t.id",
       },
@@ -125,7 +129,7 @@ module.exports = ({ execute, transaction }) => ({
       payments: {
         table: "payment_orders o LEFT JOIN users u ON u.id=o.user_id LEFT JOIN profiles p ON p.user_id=o.user_id",
         fields: "o.id,o.user_id,o.provider,o.amount_toman,o.status,o.rrn,o.trace,o.last_error,o.attempts,o.it_rate,o.credit_units,o.created_at,o.updated_at,u.phone,p.name",
-        search: "CONCAT_WS(' ',o.id,u.phone,p.name,o.rrn,o.trace)",
+        search: "CONCAT_WS(' ',o.id,u.phone,p.name,o.provider,o.status,o.rrn,o.trace,o.amount_toman)",
         date: "o.created_at",
         order: "o.created_at DESC,o.id",
       },
@@ -140,29 +144,34 @@ module.exports = ({ execute, transaction }) => ({
         table: "admin_audit a LEFT JOIN profiles p ON p.user_id=a.actor_id",
         fields:
           "a.id,a.actor_id,a.target_id,a.action,a.reason,a.details,a.created_at,p.name",
-        search: "CONCAT_WS(' ',a.action,a.reason,p.name,a.target_id)",
+        search: "CONCAT_WS(' ',a.id,a.actor_id,a.action,a.reason,p.name,a.target_id)",
         date: "a.created_at",
         order: "a.created_at DESC,a.id",
       },
     };
     const s = sources[kind];
     if (!s) fail("بخش پیدا نشد", 404);
-    const words=require('../admin/filters.cjs').normalize(q).split(/\s+/).filter(Boolean).slice(0,12),where=[],params=[];
+    if(query.after!==undefined&&!s.date)fail('این فهرست تاریخ ثبت مستقلی برای جست‌وجو ندارد');
+    const words=query.words,where=[],params=[];let exactCode=false;
+    for(let i=words.length-1;i>=0;i--){const found=this.adminFindCode?await this.adminFindCode(words[i]):null;if(!found)continue;words.splice(i,1);exactCode=true;const expression=found.kind===kind?({users:'u.id',pages:"CONCAT(d.user_id,':',d.slot)",payments:'o.id',transactions:'t.id',audit:'a.id'})[kind]:found.kind==='users'?({pages:'d.user_id',payments:'o.user_id',transactions:'t.user_id',purchases:'a.user_id'})[kind]:found.kind==='catalog'?({purchases:'a.ref',transactions:'t.product_ref'})[kind]:null;if(found.kind==='users'&&kind==='audit'){where.push('(a.actor_id=? OR a.target_id=?)');params.push(found.key,found.key);}else if(expression){where.push(expression+'=?');params.push(found.key);}else where.push('1=0');}
     for(const word of words){where.push(`REPLACE(REPLACE(${s.search},'ي','ی'),'ك','ک') LIKE ? ESCAPE '='`);params.push('%'+word.replace(/[=%_]/g,v=>'='+v)+'%');}
     if(!where.length)where.push('1=1');
-    if(['audit','payments','transactions','purchases'].includes(kind)&&f.archive!=='all'){const idExpr=({audit:'a.id',payments:'o.id',transactions:'t.id',purchases:"CONCAT(a.user_id,':',a.ref)"})[kind];where.push((f.archive==='archived'?'':'NOT ')+'EXISTS(SELECT 1 FROM admin_archives z WHERE z.kind=? AND z.record_id='+idExpr+')');params.push(kind);}
-    if (s.date && (kind !== "users"||f.after!==null)) {
+    if(['audit','payments','transactions','purchases'].includes(kind)&&f.archive!=='all'&&(f.archive||!exactCode)){const idExpr=({audit:'a.id',payments:'o.id',transactions:'t.id',purchases:"CONCAT(a.user_id,':',a.ref)"})[kind];where.push((f.archive==='archived'?'':'NOT ')+'EXISTS(SELECT 1 FROM admin_archives z WHERE z.kind=? AND z.record_id='+idExpr+')');params.push(kind);}
+    if (s.date && (kind !== "users"||f.after!==null||query.after!==undefined)) {
       where.push(`${s.date}>=?`);
-      params.push(f.after??from);
+      params.push(Math.max(f.after??0,query.after??0,f.after===null&&f.before===null&&query.after===undefined&&!exactCode?from:0));
     }
     if(s.date&&f.before!==null){where.push(`${s.date}<=?`);params.push(f.before);}
+    if(s.date&&query.before!==undefined){where.push(`${s.date}<=?`);params.push(query.before);}
     if(kind==='users'){
       if(f.verified){where.push('u.phone_verified=?');params.push(f.verified==='yes'?1:0);}
       if(f.role){where.push("(CASE WHEN EXISTS(SELECT 1 FROM owner_accounts WHERE user_id=u.id) THEN 'owner' WHEN EXISTS(SELECT 1 FROM admin_accounts WHERE user_id=u.id) THEN 'admin' WHEN EXISTS(SELECT 1 FROM support_accounts WHERE user_id=u.id) THEN 'support' ELSE 'user' END)=?");params.push(f.role);}
-      if(f.plan){where.push((f.plan==='free'?'NOT ':'')+"EXISTS(SELECT 1 FROM account_access a WHERE a.user_id=u.id AND a.ref LIKE 'subscription:%' AND a.expires_at>?)");params.push(Date.now());}
+      if(f.plan){where.push((f.plan==='free'?'NOT ':'')+"EXISTS(SELECT 1 FROM account_access a WHERE a.user_id=u.id AND "+(['q','h','y'].includes(f.plan)?'a.ref=?':"a.ref LIKE 'subscription:%'")+" AND a.expires_at>?)");if(['q','h','y'].includes(f.plan))params.push('subscription:'+f.plan);params.push(Date.now());}
     }
     if(kind==='payments'&&f.provider){where.push('o.provider=?');params.push(f.provider);}
     if(kind==='transactions'&&f.direction)where.push('t.delta_units'+(f.direction==='credit'?'>0':'<0'));
+    if(kind==='transactions'&&f.ref){where.push('t.product_ref=?');params.push(f.ref);}
+    if(kind==='pages'&&query.fields.status){where.push("(JSON_UNQUOTE(JSON_EXTRACT(d.pub,'$.resume.status'))=? OR JSON_UNQUOTE(JSON_EXTRACT(d.pub,'$.links.status'))=?)");params.push(query.fields.status,query.fields.status);}
     if(kind==='purchases'){
       if(f.ref){where.push('a.ref=?');params.push(f.ref);}
       if(f.access==='permanent')where.push('a.expires_at IS NULL');
@@ -171,8 +180,7 @@ module.exports = ({ execute, transaction }) => ({
     const amount=({users:'COALESCE(w.balance_units,0)',payments:'o.amount_toman',transactions:'ABS(t.delta_units)',purchases:'a.price_units'})[kind];
     if(amount)for(const [key,operator]of [['min','>='],['max','<=']])if(f[key]!==null){where.push(amount+operator+'?');params.push(f[key]*(kind==='payments'?1:2000));}
     if (kind === "otp" && status) {
-      where.push("status=?");
-      params.push(status);
+      if(status==='verified')where.push('verified_at IS NOT NULL');else{where.push("status=?");params.push(status);}
     }
     if(kind==='payments'&&status){where.push('o.status=?');params.push(status);}
     if (kind === "users" && status) {
@@ -270,6 +278,7 @@ module.exports = ({ execute, transaction }) => ({
           (action === "credit" && details.toman !== input.toman) ||
           (action === "edit-profile" && JSON.stringify(details.profile)!==JSON.stringify(profile)) ||
           (action === "delete-account" && details.confirmation!==input.confirmation)
+          ||(['suspend','delete-account'].includes(action)&&JSON.stringify(details.restrictionInput||{publicReason:null,until:null})!==JSON.stringify({publicReason:input.publicReason??null,until:input.until??null}))
         )
           fail("شناسهٔ درخواست تکراری است", 409);
         return { ok: true, repeated: true };
@@ -285,6 +294,7 @@ module.exports = ({ execute, transaction }) => ({
           details.profile=profile;
         }else{
           if(input.confirmation!==(user.phone||id))fail('برای حذف دائمی، شمارهٔ حساب یا شناسهٔ نمایش‌داده‌شده را دقیق وارد کن');
+          details.notice=await require('./account-notices.cjs').recordNotice(con,actor,user,action,input);details.restrictionInput={publicReason:input.publicReason??null,until:input.until??null};
           details.confirmation=input.confirmation;
           await con.execute('DELETE FROM oauth_states WHERE owner_id=?',[id]);
           await con.execute('DELETE FROM otp_challenges WHERE owner_id=? OR phone=?',[id,user.phone]);
@@ -340,6 +350,7 @@ module.exports = ({ execute, transaction }) => ({
           [id],
         );
         if (admin) fail("محدود کردن حساب مدیر مجاز نیست", 409);
+        if(['suspend','restore'].includes(action)){details.notice=await require('./account-notices.cjs').recordNotice(con,actor,user,action,input);details.restrictionInput={publicReason:input.publicReason??null,until:input.until??null};}
         await con.execute(
           "INSERT IGNORE INTO admin_controls(user_id) VALUES(?)",
           [id],

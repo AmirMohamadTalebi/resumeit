@@ -11,6 +11,7 @@ module.exports=async(database,req,path,origin,user,reply)=>{
       if(!Number.isSafeInteger(page)||page<1||page>10000||q.length>100||!['','open','answered','closed'].includes(status))fail('فیلتر معتبر نیست');
       const result=id?await database.ticket(owner,id):await database.tickets(owner,{page,q,status});
       if(id&&staff&&database.supportCustomer)result.customer=await database.supportCustomer(result.user_id);
+      if(staff&&database.adminCodes){if(id){const [coded]=await database.adminCodes('tickets',[result]);result.admin_code=coded.admin_code;if(result.customer)[result.customer]=await database.adminCodes('users',[result.customer]);}else result.rows=await database.adminCodes('tickets',result.rows);}
       reply(200,result);
     }else if(path==='/api/dashboard/notifications'){
       if(url.searchParams.get('updates')==='1'&&database.notify){const release=require('../releases.json')[0];await database.notify(user.id,'product','نسخهٔ '+release.version,release.title,'/changes/','release:'+release.version+':'+user.id).catch(()=>{});}

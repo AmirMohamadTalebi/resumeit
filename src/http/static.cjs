@@ -42,7 +42,8 @@ function requestPath(url) {
   return decoded;
 }
 
-async function serveStatic(req, res, pathname, origin, account) {
+async function serveStatic(req, res, pathname, origin, account, restricted) {
+  const signin=async()=>restricted&&await restricted(req)?'/account-status/':'/login/';
   const send = (status, body, type = 'text/plain; charset=utf-8') => {
     if(status===200&&/^\/dashboard\/template-data\/(vista|satiar)\.json$/.test(pathname))res.setHeader('X-Uncompressed-Length',body.length);
     if (/^(text\/|application\/(javascript|json|xml)|image\/svg)/.test(type)) res.setHeader('Vary','Accept-Encoding');
@@ -73,14 +74,14 @@ async function serveStatic(req, res, pathname, origin, account) {
   const retentionPage=pathname==='/admin/retention/';if(retentionPage)file=path.join(root,'admin/health/index.html');
   try {
     const staffPath=pathname.toLowerCase()==='/staff'||pathname.toLowerCase().startsWith('/staff/');
-    if(staffPath){res.setHeader('Cache-Control','no-store');const user=account&&await account(req);if(!user){res.writeHead(303,{Location:'/login/'});res.end();return;}if(!require('../admin/access.cjs').isSupport(user)){send(403,'Forbidden');return;}}
+    if(staffPath){res.setHeader('Cache-Control','no-store');const user=account&&await account(req);if(!user){res.writeHead(303,{Location:await signin()});res.end();return;}if(!require('../admin/access.cjs').isSupport(user)){send(403,'Forbidden');return;}}
     // Authenticate the resolved file as well as the URL (case aliases and symlinks included).
     const adminPath=pathname.toLowerCase()==='/admin'||pathname.toLowerCase().startsWith('/admin/');
-    if(adminPath){const user=account&&await account(req);if(!user){res.writeHead(303,{Location:'/login/'});res.end();return;}if(!require('../admin/access.cjs').isAdmin(user)||retentionPage&&!require('../admin/access.cjs').isOwner(user)){send(403,'Forbidden');return;}}
+    if(adminPath){const user=account&&await account(req);if(!user){res.writeHead(303,{Location:await signin()});res.end();return;}if(!require('../admin/access.cjs').isAdmin(user)||retentionPage&&!require('../admin/access.cjs').isOwner(user)){send(403,'Forbidden');return;}}
     const guarded = pathname.toLowerCase() === '/dashboard' || pathname.toLowerCase().startsWith('/dashboard/');
     if (guarded) {
       res.setHeader('Cache-Control', 'no-store');
-      if (account && !await account(req)) { res.writeHead(303, { Location: '/login/' }); res.end(); return; }
+      if (account && !await account(req)) { res.writeHead(303, { Location: await signin() }); res.end(); return; }
     }
     if(!bundles.has(pathname)&& (await fs.stat(file)).isDirectory()) {
       if (!pathname.endsWith('/')) { res.writeHead(308, { Location: pathname + '/' + (req.url.includes('?') ? '?' + req.url.split('?').slice(1).join('?') : '') }); res.end(); return; }
@@ -90,11 +91,11 @@ async function serveStatic(req, res, pathname, origin, account) {
     if (!realFile.startsWith(realRoot + path.sep)) { send(403, 'Forbidden'); return; }
     const relative = path.relative(realRoot, realFile);
     if(!staffPath&&relative.toLowerCase().startsWith('staff'+path.sep)){const user=account&&await account(req);if(!require('../admin/access.cjs').isSupport(user)){send(403,'Forbidden');return;}}
-    if(!adminPath&&relative.toLowerCase().startsWith('admin'+path.sep)){const user=account&&await account(req);if(!user){res.writeHead(303,{Location:'/login/'});res.end();return;}if(!require('../admin/access.cjs').isAdmin(user)){send(403,'Forbidden');return;}}
+    if(!adminPath&&relative.toLowerCase().startsWith('admin'+path.sep)){const user=account&&await account(req);if(!user){res.writeHead(303,{Location:await signin()});res.end();return;}if(!require('../admin/access.cjs').isAdmin(user)){send(403,'Forbidden');return;}}
     if (relative.split(path.sep).some(p => p.startsWith('.')) || !mime[path.extname(realFile).toLowerCase()]) { send(403, 'Forbidden'); return; }
     if (!guarded && !publicAsset && relative.toLowerCase().startsWith('dashboard' + path.sep)) {
       res.setHeader('Cache-Control', 'no-store');
-      if (account && !await account(req)) { res.writeHead(303, { Location: '/login/' }); res.end(); return; }
+      if (account && !await account(req)) { res.writeHead(303, { Location: await signin() }); res.end(); return; }
     }
     const type=mime[path.extname(realFile).toLowerCase()];let body=bundles.get(pathname)||fileBodies.get(realFile);
     if(!body){

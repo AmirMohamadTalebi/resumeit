@@ -19,6 +19,8 @@ async function openDatabase(options) {
   await require('./notification-delivery.cjs').initialize(execute);
   const context={execute,transaction};
   const database = {
+    ...require('./admin-codes.cjs')(context),
+    ...require('./account-notices.cjs')(context),
     ...require('./accounts.cjs')(context),
     ...require('./otp.cjs')(context),
     ...require('./sessions.cjs')(context),

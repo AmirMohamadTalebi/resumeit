@@ -1,7 +1,7 @@
 const {fail}=require('../dashboard/model.cjs');
 function filters(input={}){
  const f={};
- for(const [key,values] of Object.entries({role:['','owner','admin','support','user'],verified:['','yes','no'],plan:['','paid','free'],provider:['','sep','zibal'],direction:['','credit','debit'],access:['','active','expired','permanent'],archive:['','archived','all'],sort:['newest','oldest','name','highest','lowest']})){
+ for(const [key,values] of Object.entries({role:['','owner','admin','support','user'],verified:['','yes','no'],plan:['','paid','free','q','h','y'],provider:['','sep','zibal'],direction:['','credit','debit'],access:['','active','expired','permanent'],archive:['','archived','all'],sort:['newest','oldest','name','highest','lowest']})){
   f[key]=input[key]|| (key==='sort'?'newest':'');if(!values.includes(f[key]))fail('فیلتر '+key+' معتبر نیست');
  }
  f.pageSize=Number(input.pageSize||25);if(![10,25,50,100].includes(f.pageSize))fail('تعداد ردیف معتبر نیست');

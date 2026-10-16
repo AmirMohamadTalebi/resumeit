@@ -24,8 +24,9 @@ const assert=require('node:assert/strict'),{DatabaseSync}=require('node:sqlite')
   const execute=async(q,args=[])=>{const stmt=sql.prepare(q.replace(/ FOR UPDATE/g,'').replace(/INSERT IGNORE/g,'INSERT OR IGNORE')),values=args.map(v=>typeof v==='boolean'?Number(v):v);return /^SELECT/.test(q)?stmt.all(...values):{affectedRows:stmt.run(...values).changes};};
   const transaction=async action=>{sql.exec('BEGIN');try{const r=await action({execute:async(q,a)=>[await execute(q,a)]});sql.exec('COMMIT');return r;}catch(e){sql.exec('ROLLBACK');throw e;}};
   const db=require('../src/database/admin.cjs')({execute,transaction}),actor=randomUUID(),target=randomUUID();
+  require('./account-notice-schema.cjs')(sql);sql.exec('CREATE TABLE support_accounts(user_id TEXT);ALTER TABLE sessions ADD COLUMN token_hash TEXT;ALTER TABLE social_identities ADD COLUMN subject TEXT;');
   for(const id of [actor,target]){await execute('INSERT INTO users VALUES(?,?,1,?)',[id,id===target?'09120000124':'09120000123','2026-10-15']);await execute("INSERT INTO profiles VALUES(?,'آوا مهر','آوا','مهر','','','')",[id]);}
-  await execute('INSERT INTO admin_accounts VALUES(?)',[actor]);await execute('INSERT INTO owner_accounts VALUES(?)',[actor]);await execute('INSERT INTO sessions VALUES(?,?)',[target,Date.now()+60000]);await execute("INSERT INTO payment_orders VALUES('pending',?,'pending')",[target]);
+  await execute('INSERT INTO admin_accounts VALUES(?)',[actor]);await execute('INSERT INTO owner_accounts VALUES(?)',[actor]);await execute('INSERT INTO sessions(user_id,expires_at) VALUES(?,?)',[target,Date.now()+60000]);await execute("INSERT INTO payment_orders VALUES('pending',?,'pending')",[target]);
   const request=(extra={})=>({reason:'آزمون مدیریت حساب',requestId:randomUUID(),...extra});
   const profile={first_name:'نگار',last_name:'مهر',role:'طراح',bio:'معرفی امن'};
   await assert.rejects(db.adminAction(target,actor,'edit-profile',request({profile})),e=>e.status===403);

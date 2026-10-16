@@ -5,22 +5,24 @@ const digest = value => createHash('sha256').update(value).digest('hex');
 function authHandler(database, options = {}) {
   const otp = require('./otp.cjs').createOtpService({ database, ...options });
   const oauth = require('./oauth.cjs').oauthHandler(database,options);
+  const status=require('./account-status.cjs'),statusHandler=status.handler(database);
   let pending = 0;
   const token = req => {
     const value = /(?:^|;\s*)ri_session=([a-f0-9]{64})(?:;|$)/.exec(req.headers.cookie || '')?.[1];
     return value ? digest(value) : '';
   };
   const account = req => token(req) ? database.session(token(req)) : null;
-  return { account, async handle(req, res, pathname) {
+  return { account, restricted:async req=>{const proof=database.noticeProof?await database.noticeProof(status.proofHash(req)):null;return proof?.notice.active?proof:null;}, async handle(req, res, pathname) {
     if (!pathname.startsWith('/api/auth/')) return false;
     res.setHeader('Cache-Control', 'no-store');
     res.setHeader('Vary', 'Cookie');
     if(await oauth(req,res,pathname))return true;
     const reply = (status, body) => { res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'X-Content-Type-Options': 'nosniff' }); res.end(JSON.stringify(body)); };
     const origin = publicOrigin(req);
+    try{if(await statusHandler(req,res,pathname,origin,reply))return true;}catch(error){reply(error.status||503,{error:error.status?error.message:'بررسی وضعیت انجام نشد؛ دوباره تلاش کن'});return true;}
     const cookie = (value, age) => res.setHeader('Set-Cookie', `ri_session=${value}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${age}${origin.startsWith('https:') ? '; Secure' : ''}`);
     if (pathname === '/api/auth/session' && req.method === 'GET') {
-      try { const user = await account(req); reply(200, { user: user || null }); } catch { reply(503, { error: 'ارتباط با دیتابیس برقرار نشد' }); } return true;
+      try { const user = await account(req),restricted=!user&&database.noticeProof?await database.noticeProof(status.proofHash(req)):null;reply(200, { user: user || null,...(restricted?.notice.active?{restricted:true,redirect:'/account-status/'}:{}) }); } catch { reply(503, { error: 'ارتباط با دیتابیس برقرار نشد' }); } return true;
     }
     if(pathname==='/api/auth/publication-check'&&req.method==='GET') {
       try{const user=await account(req);if(!user){reply(401,{error:'اول وارد حسابت شو'});return true;}const missing=[!user.first_name&&'نام',!user.last_name&&'نام خانوادگی',!(user.phone&&user.phone_verified)&&'شماره تأییدشده'].filter(Boolean);reply(200,{canPublish:!missing.length,missing});}catch{reply(503,{error:'نتونستیم مشخصات حسابت رو بررسی کنیم'});}return true;
@@ -28,7 +30,7 @@ function authHandler(database, options = {}) {
     if (req.method !== 'POST') { reply(405, { error: 'Method not allowed' }); return true; }
     if (req.headers.origin !== origin || req.headers['content-type']?.split(';')[0] !== 'application/json') { reply(403, { error: 'درخواست معتبر نیست' }); return true; }
     if (pathname === '/api/auth/logout') {
-      try { await database.deleteSession(token(req)); cookie('', 0); reply(200, { ok: true }); } catch { reply(503, { error: 'خروج انجام نشد' }); } return true;
+      try { await database.deleteSession(token(req));if(database.deleteNoticeProof)await database.deleteNoticeProof(status.proofHash(req));cookie('', 0);res.appendHeader('Set-Cookie',`ri_restriction=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0${origin.startsWith('https:')?'; Secure':''}`);reply(200, { ok: true }); } catch { reply(503, { error: 'خروج انجام نشد' }); } return true;
     }
     if(['/api/auth/account/names','/api/auth/social/unlink','/api/auth/phone/request','/api/auth/phone/verify'].includes(pathname)) {
       try {
@@ -56,10 +58,11 @@ function authHandler(database, options = {}) {
       } catch(error){reply(error.status || (error instanceof SyntaxError ? 400 : 503),{error:'درخواست انجام نشد، دوباره امتحان کن'});}return true;
     }
     const signIn = async user => {
+      const notice=database.accountNotice?await database.accountNotice(user.id):null;if(notice){reply(200,await status.issue(database,req,res,notice,{type:user.phone?'phone':'session',value:user.phone||null},origin));return;}
       await database.deleteSession(token(req));
       const value = randomBytes(32).toString('hex');
       if(!await database.createSession(digest(value),user.id,Date.now()+7*86400000,user.password_hash,user.phone)) { reply(401,{error:'مشخصات حساب تغییر کرده؛ دوباره وارد شو'}); return; }
-      cookie(value,7*86400); reply(200,{ok:true});
+      cookie(value,7*86400);res.appendHeader('Set-Cookie',`ri_restriction=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0${origin.startsWith('https:')?'; Secure':''}`);reply(200,{ok:true});
     };
     if (['/api/auth/otp/request','/api/auth/otp/verify','/api/auth/register','/api/auth/password/reset'].includes(pathname)) {
       try {
@@ -89,8 +92,9 @@ function authHandler(database, options = {}) {
           if(input.purpose!=='register') {
             if(!await database.claimLoginAttempts(input.phone,digest(req.socket.remoteAddress||'unknown'))) { reply(429,{error:'تلاش‌های زیادی انجام شده؛ کمی بعد دوباره امتحان کن'}); return true; }
             const owner=await database.accountByPhone(input.phone);
-            if(!owner) { reply(200,{challengeId:require('node:crypto').randomUUID(),expiresIn:120,retryAfter:60}); return true; }
-            ownerId=owner.id;
+            const deleted=!owner&&database.identityNotice?await database.identityNotice('phone',input.phone):null;
+            if(!owner&&!deleted) { reply(200,{challengeId:require('node:crypto').randomUUID(),expiresIn:120,retryAfter:60}); return true; }
+            ownerId=owner?.id||deleted.user_id;
           }
           const result=await otp.request(input.phone,input.purpose,digest(req.socket.remoteAddress||'unknown'),ownerId);
           if (!result) { res.setHeader('Retry-After','60'); reply(429,{error:'محدودیت ارسال کد؛ یک دقیقه صبر کن اگر سهمیهٔ روزانه تمام شده، فردا امتحان کن'}); }
@@ -98,6 +102,7 @@ function authHandler(database, options = {}) {
         } else {
           if (typeof input.challengeId!=='string'||!/^[a-f0-9-]{36}$/.test(input.challengeId)||typeof input.code!=='string'||!/^\d{6}$/.test(input.code)) { reply(400,{error:'کد شش‌رقمی معتبر وارد کن'}); return true; }
           const result=await otp.verify(input.challengeId,input.code,input.purpose);
+          if(result&&database.identityNotice){const current=await database.accountByPhone(result.phone);if(['login','reset'].includes(input.purpose)&&current&&current.id!==result.ownerId){reply(401,{error:'مشخصات حساب تغییر کرده؛ دوباره کد بگیر'});return true;}const notice=await database.identityNotice('phone',result.phone);if(notice){reply(200,await status.issue(database,req,res,notice,{type:'phone',value:result.phone},origin));return true;}}
           if (!result) reply(401,{error:'این کد درست نیست یا اعتبارش تموم شده، تا پنج بار می‌تونی امتحان کنی'});
           else if(input.purpose==='register') reply(200,{registrationToken:result.registrationToken});
           else if(input.purpose==='reset') {

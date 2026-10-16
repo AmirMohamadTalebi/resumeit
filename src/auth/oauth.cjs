@@ -66,13 +66,14 @@ function oauthHandler(database,{oauthFetch=fetch}={}) {
       const subject=name==='google'?identity.sub:(Number.isSafeInteger(identity.id)&&identity.id>0?String(identity.id):null);
       if(typeof subject!=='string'||!/^\d{1,255}$/.test(subject))throw new Error('Invalid identity');
       const displayName=typeof identity.name==='string'?identity.name.slice(0,80):typeof identity.login==='string'?identity.login.slice(0,80):'';
+      if(!pending.owner_id&&database.identityNotice){const notice=await database.identityNotice(name,subject);if(notice){await require('./account-status.cjs').issue(database,req,res,notice,{type:name,value:subject},settings.origin);redirect('/account-status/');return true;}}
       const user=await database.socialAccount(name,subject,displayName,pending.owner_id);
       if(pending.owner_id){redirect('/dashboard/settings/');return true;}
       const session=randomBytes(32).toString('hex');
       if(!await database.createSession(hash(session),user.id,Date.now()+7*86400000,user.password_hash,user.phone))throw new Error('Session changed');
       const previous=/(?:^|;\s*)ri_session=([a-f0-9]{64})(?:;|$)/.exec(req.headers.cookie||'')?.[1];
       if(previous)await database.deleteSession(hash(previous));
-      res.setHeader('Set-Cookie',[cookie('',0),`ri_session=${session}; Path=/; HttpOnly; SameSite=Lax; Max-Age=604800${settings.origin.startsWith('https:')?'; Secure':''}`]);
+      res.setHeader('Set-Cookie',[cookie('',0),`ri_session=${session}; Path=/; HttpOnly; SameSite=Lax; Max-Age=604800${settings.origin.startsWith('https:')?'; Secure':''}` ,`ri_restriction=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0${settings.origin.startsWith('https:')?'; Secure':''}`]);
       redirect('/dashboard/');
     } catch {fail('failed');}
     return true;

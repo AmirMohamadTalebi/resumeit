@@ -67,13 +67,14 @@ function adminHandler(database, auth, notifications) {
         else if (path === "/api/admin/overview")
           reply(200, await database.adminOverview(from));
         else if (path === "/api/admin/catalog") {
+          const bases=[...RI.RESUME_TEMPLATES.map(x=>({...x,ref:'rt:'+x.id})),...RI.LINK_TEMPLATES.map(x=>({...x,ref:'lt:'+x.id})),...RI.FONTS.map(x=>({...x,ref:'font:'+x.id})),...Object.values(RI.PLANS).map(x=>({...x,ref:'subscription:'+x.id}))],codes=new Map((database.adminCodes?await database.adminCodes('catalog',bases):bases).map(x=>[x.ref,x.admin_code]));
           const policy=database.commerceSettings?await database.commerceSettings():require('../owner/settings.cjs').defaults(),items=(list,kind)=>list.map(x=>({...x,...policy.products?.[kind+':'+x.id],ref:kind+':'+x.id,price:policy.prices[kind+':'+x.id]??x.price,paused:policy.paused.includes(kind+':'+x.id)})),sales=database.adminSales?await database.adminSales():null;
           reply(200, {
-            templates: items(RI.RESUME_TEMPLATES,'rt'),
-            linkTemplates: items(RI.LINK_TEMPLATES,'lt'),
-            fonts: items(RI.FONTS,'font'),
+            templates: items(RI.RESUME_TEMPLATES,'rt').map(x=>({...x,admin_code:codes.get(x.ref)})),
+            linkTemplates: items(RI.LINK_TEMPLATES,'lt').map(x=>({...x,admin_code:codes.get(x.ref)})),
+            fonts: items(RI.FONTS,'font').map(x=>({...x,admin_code:codes.get(x.ref)})),
             palettes: items(RI.PALETTES,'pal'),
-            plans: Object.fromEntries(items(Object.values(RI.PLANS),'subscription').map(x=>[x.id,x])),
+            plans: Object.fromEntries(items(Object.values(RI.PLANS),'subscription').map(x=>[x.id,{...x,admin_code:codes.get(x.ref)}])),
             rate: policy.rate,
             sales,
             ...(isOwner(user)?{policy}:{}),
@@ -109,7 +110,8 @@ function adminHandler(database, auth, notifications) {
         else if (/^\/api\/admin\/users\/[a-f0-9-]{36}\/support-role$/.test(path))
           reply(200,await database.supportRole(path.split('/')[4]));
         else if (/^\/api\/admin\/users\/[a-f0-9-]{36}$/.test(path)){
-          const id=path.split('/').pop(),detail=await database.adminUser(id);
+          const id=path.split('/').pop(),restriction=database.accountNotice?await database.accountNotice(id):null,detail=await database.adminUser(id);if(restriction)detail.restriction={reason:restriction.reason,until:restriction.until_at,actorCode:restriction.actor_code,reviewTicket:restriction.review_ticket};
+          if(database.adminCodes){[detail.user]=await database.adminCodes('users',[detail.user]);if(detail.documents)detail.documents=await database.adminCodes('pages',detail.documents.map(r=>({...r,id})));}
           detail.user.is_support=database.supportRole?(await database.supportRole(id)).enabled:false;
           if(database.accountRole){const {role}=await database.accountRole(id);detail.user.account_role=role;detail.user.is_owner=role==='owner';detail.user.is_admin=['admin','owner'].includes(role);}
           if(isOwner(user))detail.ownerSettings=database.ownerUserSettings?await database.ownerUserSettings(id):{extraSubdomain:false};
@@ -128,6 +130,7 @@ function adminHandler(database, auth, notifications) {
               filters,
             });
           if(['payments','transactions','purchases'].includes(kind)&&database.adminSales)data.sales=await database.adminSales();
+          if(database.adminCodes)data.rows=await database.adminCodes(kind,data.rows);
           reply(200,data);
         }
         else reply(404, { error: "بخش پیدا نشد" });

@@ -3,6 +3,9 @@ module.exports=(db,owners,options={})=>{
  db.billing ||= async()=>({plan:null,purchases:[],payments:[]});
  const sql=new DatabaseSync(':memory:');
  sql.function('CONCAT',(...values)=>values.join(''));
+ sql.function('CONCAT_WS',(...values)=>values.slice(1).filter(x=>x!==null).join(values[0]));
+ sql.exec('CREATE TABLE admin_codes(id INTEGER PRIMARY KEY AUTOINCREMENT,entity_kind TEXT NOT NULL,entity_key TEXT NOT NULL,UNIQUE(entity_kind,entity_key));');
+ require('./account-notice-schema.cjs')(sql);
  sql.exec('CREATE TABLE admin_archives(kind TEXT,record_id TEXT,actor_id TEXT,record_at INTEGER,created_at INTEGER,batch_id TEXT,PRIMARY KEY(kind,record_id));');
  sql.exec('CREATE TABLE commerce_settings(id INTEGER PRIMARY KEY,settings TEXT);CREATE TABLE owner_user_settings(user_id TEXT PRIMARY KEY,settings TEXT);');
  sql.function('JSON_UNQUOTE',value=>value);
@@ -30,5 +33,5 @@ module.exports=(db,owners,options={})=>{
     const methods=require('../src/database/dashboard.cjs')({execute,transaction});for(const key of ['loadDashboard','mutateDashboard','slugAvailable','publicWorkspace','publicPage','recordMetric','dashboardStats','workspaceList','workspaceSummary'])db[key]=methods[key];
  }
  sql.exec('ALTER TABLE payment_orders ADD COLUMN credit_units INTEGER;ALTER TABLE payment_orders ADD COLUMN it_rate INTEGER DEFAULT 2000;');
- Object.assign(db,require('../src/database/owner-controls.cjs')({execute,transaction}),require('../src/database/retention.cjs')({execute,transaction}),require('../src/database/support.cjs')({execute,transaction}),require('../src/database/support-roles.cjs')({execute,transaction}),require('../src/database/ownership.cjs')({execute,transaction}),require('../src/database/history.cjs')({execute,transaction}),require('../src/database/notification-delivery.cjs')({execute,transaction}));return {sql,execute,transaction,close:()=>sql.close()};
+ Object.assign(db,require('../src/database/account-notices.cjs')({execute,transaction}),require('../src/database/admin-codes.cjs')({execute,transaction}),require('../src/database/owner-controls.cjs')({execute,transaction}),require('../src/database/retention.cjs')({execute,transaction}),require('../src/database/support.cjs')({execute,transaction}),require('../src/database/support-roles.cjs')({execute,transaction}),require('../src/database/ownership.cjs')({execute,transaction}),require('../src/database/history.cjs')({execute,transaction}),require('../src/database/notification-delivery.cjs')({execute,transaction}));return {sql,execute,transaction,close:()=>sql.close()};
 };

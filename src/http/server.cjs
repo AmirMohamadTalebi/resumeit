@@ -22,7 +22,7 @@ function createServer(database, options) {
       if (await dashboard(req,res,pathname,origin)) return;
       if (await auth.handle(req, res, pathname)) return;
       if (pathname.startsWith('/api/')) { res.writeHead(404); res.end('Not found'); return; }
-      await serveStatic(req, res, pathname, origin, auth.account);
+      await serveStatic(req, res, pathname, origin, auth.account,auth.restricted);
     } catch {
       if (!res.headersSent) { res.writeHead(503, { 'Content-Type': 'application/json; charset=utf-8' }); res.end(JSON.stringify({ error: 'درخواست انجام نشد؛ کمی بعد دوباره امتحان کن' })); }
       else res.destroy();
@@ -33,6 +33,7 @@ function createServer(database, options) {
   server.on('close',payments.stop);
   server.on('listening',notifications.start);
   server.on('close',notifications.stop);
+  if(database.expireAccountNotices){let expiry;server.on('listening',()=>{expiry=setInterval(()=>database.expireAccountNotices().catch(()=>{}),30000);expiry.unref();});server.on('close',()=>clearInterval(expiry));}
   return server;
 }
 module.exports = { createServer };

@@ -9,10 +9,13 @@ async function staffAudit(con,actor,ticket,action,requestId){
 }
 module.exports=({execute,transaction})=>({
   async tickets(owner,{page=1,q='',status=''}){
-    const where=(owner?'t.user_id=? AND ':'')+'(?=\'\' OR t.status=?) AND (?=\'\' OR t.subject LIKE ? OR t.id=?)';
-    const args=[...(owner?[owner]:[]),status,status,q,'%'+q+'%',q];
-    const [total]=await execute('SELECT COUNT(*) total FROM support_tickets t WHERE '+where,args);
-    const rows=await execute('SELECT t.id,t.subject,t.category,t.priority,t.status,t.created_at,t.updated_at FROM support_tickets t WHERE '+where+' ORDER BY t.updated_at DESC,t.id DESC LIMIT 25 OFFSET '+((page-1)*25),args);
+    const query=require('../admin/search.cjs').search(q),parts=[],args=[],source='support_tickets t LEFT JOIN users u ON u.id=t.user_id LEFT JOIN profiles p ON p.user_id=t.user_id';
+    if(owner){parts.push('t.user_id=?');args.push(owner);}if(status){parts.push('t.status=?');args.push(status);}
+    for(const [field,value]of Object.entries(query.fields)){if(!['status','category','priority'].includes(field)||!({status:['open','answered','closed'],category:['account','payment','editor','publication','other'],priority:['high','normal']})[field].includes(value))fail('ویژگی جست‌وجوی تیکت معتبر نیست');parts.push('t.'+field+'=?');args.push(value);}
+    for(const word of query.words){const found=!owner&&this.adminFindCode?await this.adminFindCode(word):null;if(found){parts.push(found.kind==='tickets'?'t.id=?':found.kind==='users'?'t.user_id=?':'1=0');if(['tickets','users'].includes(found.kind))args.push(found.key);}else{parts.push("REPLACE(REPLACE(CONCAT_WS(' ',t.id,t.subject,t.category,t.priority,t.status,p.name,u.phone),'ي','ی'),'ك','ک') LIKE ? ESCAPE '='");args.push('%'+word.replace(/[=%_]/g,v=>'='+v)+'%');}}
+    if(query.after!==undefined){parts.push('t.created_at>=? AND t.created_at<=?');args.push(query.after,query.before);}const where=parts.join(' AND ')||'1=1';
+    const [total]=await execute('SELECT COUNT(*) total FROM '+source+' WHERE '+where,args);
+    const rows=await execute('SELECT t.id,t.subject,t.category,t.priority,t.status,t.created_at,t.updated_at FROM '+source+' WHERE '+where+' ORDER BY t.updated_at DESC,t.id DESC LIMIT 25 OFFSET '+((page-1)*25),args);
     const [summary]=await execute("SELECT COUNT(*) total,SUM(CASE WHEN status='open' THEN 1 ELSE 0 END) open_count,SUM(CASE WHEN status='answered' THEN 1 ELSE 0 END) answered_count,SUM(CASE WHEN status='closed' THEN 1 ELSE 0 END) closed_count FROM support_tickets"+(owner?' WHERE user_id=?':''),owner?[owner]:[]);
     return {rows,total:Number(total.total),page,summary:{total:Number(summary.total),open:Number(summary.open_count||0),answered:Number(summary.answered_count||0),closed:Number(summary.closed_count||0)}};
   },
