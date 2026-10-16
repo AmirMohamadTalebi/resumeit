@@ -16,7 +16,7 @@
     render() {
       const u = RI.urls();
       return RI.pageHead({ title: 'صفحهٔ لینک‌ها', desc: RI.fa(RI.C().links.items.filter(x=>x.type==='link'&&x.active).length)+' لینک فعال · '+esc(RI.findTemplate('links',RI.C().theme.links).name),
-        actions: '<button type="button" class="btn btn--soft btn--sm show-sm" data-live>' + RI.icon('eye') + 'پیش‌نمایش زنده</button>' }) +
+        actions: '<button type="button" class="btn btn--soft btn--sm show-sm" data-live>' + RI.icon('eye') + 'پیش‌نمایش زنده</button><button type="button" class="btn btn--ghost btn--sm" data-reset-page="links">'+RI.icon('refresh')+'بازنشانی لینک‌ها</button>' }) +
         RI.completionStrip('links')+'<div class="editor"><div class="editor__main"><div class="segmented" role="tablist" id="ltabs">' +
         [['items', 'لینک‌ها', 'link'], ['header', 'مشخصات بالای صفحه', 'user'], ['style', 'ظاهر صفحه', 'palette']].map((t, i) => '<button type="button" role="tab" data-tab="' + t[0] + '" aria-selected="' + (i === 0) + '">' + RI.icon(t[2]) + t[1] + '</button>').join('') +
         '</div><div id="lbody"></div></div><aside class="editor__side" aria-label="پیش‌نمایش زندهٔ صفحهٔ لینک"><div class="sticky"><div id="lpv"></div></div></aside></div>';

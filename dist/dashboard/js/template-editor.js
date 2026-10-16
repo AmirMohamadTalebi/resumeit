@@ -8,7 +8,7 @@
     walk(node); return keys;
   };
   RI.importedEditorHtml = function () {
-    return '<section class="panel template-workspace"><div class="panel__head"><h2>بخش‌های قالب انتخاب‌شده</h2><p>صفحه و بخش را انتخاب کن؛ هر بار فقط چند فیلد نمایش داده می‌شود. اطلاعات بخش‌های دیگر محفوظ است.</p></div>'+
+    return '<section class="panel template-workspace"><div class="panel__head"><h2>جزئیات همین رزومه</h2><p>همهٔ بخش‌ها در یک صفحه‌اند. پروژه‌ها را از تب «پروژه‌ها و نمونه‌کارها» اضافه کن؛ جزئیاتشان با کلیک باز می‌شود.</p></div>'+
       '<div class="form-grid template-selectors"><div class="field"><label for="template-page" class="field__label">صفحهٔ قالب</label><select id="template-page" class="select input"></select></div><div class="field"><label for="template-section" class="field__label">بخش این صفحه</label><select id="template-section" class="select input"></select></div></div>'+
       '<nav id="template-section-nav" class="template-section-nav" aria-label="بخش‌های صفحهٔ قالب"></nav>'+
       '<div class="template-tools"><label for="template-search" class="sr-only">جست‌وجو در محتوای بخش</label><input class="input" id="template-search" type="search" placeholder="جست‌وجوی متن، تصویر یا لینک در این بخش"><div class="row__actions"><button type="button" class="btn btn--soft btn--sm" data-tsection-shift="-1">بخش به بالا</button><button type="button" class="btn btn--soft btn--sm" data-tsection-shift="1">بخش به پایین</button></div></div>'+
@@ -19,7 +19,7 @@
     const c = RI.C(), id = c.theme.resume, spec = RI.importedSpec(id);
     const page = root.querySelector('#template-page'), section = root.querySelector('#template-section'), search = root.querySelector('#template-search'), controls = root.querySelector('#template-controls');
     const itemHost=root.querySelector('#template-items'),pager=root.querySelector('#template-pager');
-    let category='all',fieldPage=0,collectionKey='',rowIndex=0;
+    let category='all',fieldPage=0,collectionKey='',rowIndex=0,focusField='';
     const state = () => { c.resumeTemplates ||= {}; return c.resumeTemplates[id] ||= { fields: {}, settings: {}, collections: {} }; };
     const changed = (review) => { if (!review) state().settings.reviewed = false; RI.touch('resumeTemplates'); };
     const control = (f, values, attrs, suffix) => {
@@ -34,7 +34,7 @@
       else html = '<input class="input" type="' + (f.type === 'color' ? 'color' : 'text') + '"' + extra + ' value="' + esc(value) + '" maxlength="' + (f.max || 1000) + '"' + (['url','link','image','contact'].includes(f.type) ? ' dir="ltr"' : '') + '>';
       if (f.type === 'link') html += '<label class="field__label" for="' + key + '-target">یا یک صفحهٔ داخلی انتخاب کن</label><select class="select input" id="' + key + '-target" ' + attrs + ' data-tfield="' + f.key + '"><option value="">انتخاب صفحه</option>' + Object.entries(spec.pages).map(([page, p]) => '<option value="/?page=' + page + '">' + esc(p.title) + '</option>').join('') + '<option value="#ri-contact">راه‌های تماس عمومی</option></select>';
       if (f.type === 'image') html += (value ? '<img src="' + esc(value) + '" alt="پیش‌نمایش" style="max-width:100%;height:100px;object-fit:contain">' : '') + '<label class="field__label" for="' + key + '-file">بارگذاری PNG، JPEG یا WebP (حداکثر '+RI.fa(Math.floor(RI.imageLimit()/1024))+' کیلوبایت برای این حساب)</label><input class="file-input" type="file" id="' + key + '-file" accept="image/png,image/jpeg,image/webp" ' + attrs + ' data-tupload="' + f.key + '">';
-      return '<div class="field"><label class="field__label" for="' + key + '">' + esc(f.label) + '</label>' + html + '<div class="field__error" id="' + key + '-error" role="alert" hidden></div></div>';
+      return '<div class="field"><label class="field__label" for="' + key + '">' + esc(f.label) + '</label>' + html + (['text','textarea'].includes(f.type)?'<div class="field__hint">متن پیش‌فرض را می‌توانی تغییر بدهی یا کاملاً پاک کنی.</div><button type="button" class="btn btn--ghost btn--sm" data-advisor-confirm="'+esc(f.key)+'" '+attrs+'>این متن اطلاعات واقعی من است</button>':'') + '<div class="field__error" id="' + key + '-error" role="alert" hidden></div></div>';
     };
     function rowsFor(def) {
       const values = state(); values.collections ||= {};
@@ -59,13 +59,15 @@
         const data=Object.assign({},values.fields,rows[rowIndex].fields);
         for(const f of spec.fields.filter(f=>selectedKeys.has(f.key)))if(match(f,data))entries.push([f,data,'data-tcollection="'+def.key+'" data-trow="'+rows[rowIndex].id+'"','-'+def.key+'-'+rows[rowIndex].id]);
       }
-      const pages=Math.max(1,Math.ceil(entries.length/8));fieldPage=Math.min(fieldPage,pages-1);
+      const pages=Math.max(1,Math.ceil(entries.length/8));if(focusField){const index=entries.findIndex(([f])=>f.key===focusField);if(index>=0)fieldPage=Math.floor(index/8);}fieldPage=Math.min(fieldPage,pages-1);
       controls.innerHTML=entries.slice(fieldPage*8,fieldPage*8+8).map(([f,v,attrs,suffix])=>control({...f,label:label(f)},v,attrs,suffix)).join('')||'<p class="template-empty">فیلدی با این فیلتر پیدا نشد. نوع تنظیمات یا عبارت جست‌وجو را عوض کن.</p>';
       itemHost.innerHTML=defs.length?'<div class="template-item-tools"><label for="template-collection">محتوای ثابت یا مجموعهٔ تکرارشونده</label><select class="input select" id="template-collection"><option value="">محتوای ثابت این بخش</option>'+defs.map((d,i)=>'<option value="'+d.key+'"'+(d.key===collectionKey?' selected':'')+'>مجموعهٔ '+RI.fa(i+1)+' — '+esc(d.label.replace(/\s+/g,' ').trim().slice(0,60))+'</option>').join('')+'</select>'+ (def?'<label for="template-row">مورد قابل ویرایش</label><select class="input select" id="template-row">'+rows.map((r,i)=>'<option value="'+i+'"'+(i===rowIndex?' selected':'')+'>مورد '+RI.fa(i+1)+'</option>').join('')+'</select><div class="row__actions"><button type="button" class="btn btn--soft btn--sm" data-tadd="'+def.key+'"'+(rows.length>=30?' disabled':'')+'>افزودن مورد</button>'+(rows.length?'<button type="button" class="btn btn--soft btn--sm" data-tmove="-1" data-tlist="'+def.key+'" data-rowid="'+rows[rowIndex].id+'"'+(!rowIndex?' disabled':'')+'>بالا</button><button type="button" class="btn btn--soft btn--sm" data-tmove="1" data-tlist="'+def.key+'" data-rowid="'+rows[rowIndex].id+'"'+(rowIndex===rows.length-1?' disabled':'')+'>پایین</button><button type="button" class="btn btn--ghost btn--sm" data-tremove="'+def.key+'" data-rowid="'+rows[rowIndex].id+'">حذف این مورد</button>':'')+'</div>':'')+'</div>':'';
       pager.innerHTML='<span>'+RI.fa(entries.length)+' فیلد · صفحهٔ '+RI.fa(fieldPage+1)+' از '+RI.fa(pages)+'</span><div><button type="button" class="btn btn--soft btn--sm" data-tpage="-1"'+(!fieldPage?' disabled':'')+'>قبلی</button><button type="button" class="btn btn--soft btn--sm" data-tpage="1"'+(fieldPage===pages-1?' disabled':'')+'>بعدی</button></div>';
       root.querySelector('#template-review').innerHTML=control(spec.settings.find(f=>f.key==='reviewed'),values.settings,'data-tgroup="settings"');
       root.querySelectorAll('[data-tcategory]').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.tcategory===category)));
       root.querySelectorAll('[data-tsection]').forEach(b=>b.setAttribute('aria-current',b.dataset.tsection===group?'true':'false'));
+      preview?.setTemplateSection?.(group);
+      if(focusField){controls.querySelector('[data-tfield="'+focusField+'"]')?.focus();focusField='';}
     }
     function sections() {
       const groups = spec.groups.filter(g => g.page === page.value);
@@ -97,6 +99,18 @@
       if (el.id.endsWith('-target')) { const input = root.querySelector('#' + el.id.slice(0,-7)); if (input) input.value = value; }
       const review = root.querySelector('[data-tfield="reviewed"]'); if (review) review.checked = state().settings.reviewed === true;
     }
+    RI.delegate(root,'click','[data-advisor-confirm]',(event,button)=>{
+      const field=spec.fields.find(f=>f.key===button.dataset.advisorConfirm);if(!field)return;
+      const collection=button.dataset.tcollection,row=button.dataset.trow,values=collection?state().collections[collection]?.find(r=>r.id===row)?.fields:state().fields;
+      const target='template:'+id+(collection?':'+collection+':'+row:'')+':'+field.key;
+      if(RI.confirmAdvisorSource)RI.confirmAdvisorSource(target,RI.resumeValue(values||{},field));else RI.toast('راهنمای کیفیت هنوز آماده نیست؛ کمی بعد دوباره بزن',{kind:'info'});
+    });
+    root.addEventListener('ri:template-focus',event=>{
+      const target=event.detail,field=spec.fields.find(f=>f.key===target.field);if(!field||!spec.groups.some(g=>g.key===field.group))return;
+      page.value='home';sections();section.value=field.group;search.value='';category='all';
+      const parts=target.itemId.split(':');collectionKey=parts[1]||'';const def=spec.collections.find(c=>c.key===collectionKey);rowIndex=def?rowsFor(def).findIndex(r=>r.id===parts[2]):0;
+      focusField=field.key;paint();
+    });
     root.addEventListener('input', e => { const el = e.target; if (el.dataset.tfield) update(el, el.type === 'checkbox' ? el.checked : el.value); });
     root.addEventListener('change', e => {
       const el = e.target, file = el.files && el.files[0]; if (!el.dataset.tupload || !file) return;

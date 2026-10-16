@@ -2,6 +2,7 @@ window.resumeitSession = fetch('/api/auth/session', { cache: 'no-store' }).then(
   if (!response.ok) throw new Error('Session unavailable');
   const { user } = await response.json();
   if (!user) { location.replace('/login/'); return null; }
+  if(window.BroadcastChannel){const channel=new BroadcastChannel('resumeit-session');channel.postMessage({owner:user.id});channel.close();}
   return user;
 }).catch(() => { location.replace('/login/'); return null; });
 // Fetch the document alongside the session rather than adding a second network round trip.

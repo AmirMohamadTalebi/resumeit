@@ -13,6 +13,7 @@ module.exports=({execute,transaction})=>({
     const doc=r?{content:parse(r.draft),preferences:parse(r.preferences),pub:parse(r.pub),revision:r.revision,slug:r.slug,published:r.published?parse(r.published):{}}:{...initial(),slug:null,published:{}};
     if(doc.revision!==expected)fail('نسخهٔ جدیدتری ذخیره شده است؛ صفحه را دوباره باز کن',409,'REVISION_CONFLICT');
     await action(doc);doc.revision++;
+    if(options.resetAdvisor)await con.execute('DELETE FROM advisor_state WHERE user_id=? AND slot=?',[id,slot]);
     if(doc.slug){const namespace=slot===3?'path':'subdomain',[[claim]]=await con.execute('SELECT user_id,slot FROM dashboard_slug_claims WHERE namespace=? AND slug=?',[namespace,doc.slug]);if(claim&&(claim.user_id!==id||Number(claim.slot)!==slot))fail('این نام صفحه قبلاً گرفته شده است',409);if(!claim)await con.execute('INSERT INTO dashboard_slug_claims(namespace,slug,user_id,slot) VALUES(?,?,?,?)',[namespace,doc.slug,id,slot]);await con.execute('DELETE FROM dashboard_slug_claims WHERE user_id=? AND slot=? AND slug<>?',[id,slot,doc.slug]);}
     else await con.execute('DELETE FROM dashboard_slug_claims WHERE user_id=? AND slot=?',[id,slot]);
     // Never upsert on the unique slug: a collision must not update another account's row.

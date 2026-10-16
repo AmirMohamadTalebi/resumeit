@@ -18,7 +18,7 @@ const {chromium}=require('playwright'),{createServer}=require('../src/http/serve
     assert((await page.locator('body').innerText()).includes('آزمایش قالب'));
     await page.screenshot({path:'artifacts/imported-templates/'+template+'-'+width+'.png',fullPage:false});
     const dimensions=await page.evaluate(()=>({width:innerWidth,scroll:document.documentElement.scrollWidth,height:document.documentElement.scrollHeight}));console.log(template,width,dimensions);assert(dimensions.scroll<=width+1,'horizontal overflow '+template+' '+width);assert(dimensions.height>1000,'content must scroll');
-    if(template==='satiar')assert(dimensions.height>7000,'all seven sections must remain reachable');
+    assert.equal(await page.locator('[data-template-page="home"]').count(),1,'one resume page');assert.equal(await page.locator('a[href*="?page="]').count(),0,'removed pages are not navigation destinations');
     const imgs=await page.locator('img').evaluateAll(images=>images.filter(i=>i.getBoundingClientRect().top<innerHeight&&i.src&&i.complete&&!i.naturalWidth).map(i=>i.src));assert.deepEqual(imgs,[],'broken visible images');
     if(width===390){
      const toggle=page.locator('.mobile-menu-toggle,.mobile-nav-toggle,.menu-button,.menu-toggle').first();
@@ -34,6 +34,7 @@ const {chromium}=require('playwright'),{createServer}=require('../src/http/serve
    await page.locator('#template-collection').selectOption(collection.key);
    const field=page.locator('#template-controls input[data-ttype="text"],#template-controls textarea[data-ttype="textarea"]').first();
    const fieldKey=await field.getAttribute('data-tfield');await field.fill('متن شخصی‌سازی‌شده');
+   const confirmed=page.waitForResponse(r=>r.url().includes('/api/dashboard/advisor')&&r.request().method()==='POST');await page.locator('[data-advisor-confirm="'+fieldKey+'"]').click();assert.equal((await confirmed).status(),200);const advisor=await(await page.request.get(base+'/api/dashboard/advisor')).json();assert(Object.entries(advisor.state.confirmations).some(([target,digest])=>target.endsWith(':'+fieldKey)&&digest==='sha256:'+require('node:crypto').createHash('sha256').update('متن شخصی‌سازی‌شده').digest('hex')),'template confirmation binds exact text, field and repeated row');
    assert.equal(await page.locator('[data-tfield="reviewed"]').isChecked(),false);
    assert((await page.locator('#template-controls > .field').count())<=8,'bounded fields');
    await page.locator('[data-tadd]').click();assert.equal(await page.locator('#template-row option').count(),2);

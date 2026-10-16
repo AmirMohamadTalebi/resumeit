@@ -3,3 +3,4 @@
 @media(max-width:760px){.info-page{padding:32px 20px 30px}.info-layout{grid-template-columns:minmax(0,1fr);gap:28px;margin-top:28px}.info-nav{position:static;flex-direction:row;flex-wrap:wrap;border-bottom:1px solid #bfd3dd;padding-bottom:16px;gap:2px}.info-nav a{font-size:11px;padding:6px 8px}.info-lead{font-size:14px}.info-content h2{font-size:18px}.info-content p{font-size:13px}.info-content section+section{margin-top:26px;padding-top:22px}.contact-row{align-items:start;flex-direction:column}}
 
 .contact-row a{display:inline-flex;align-items:center;min-height:32px}
+.info-accordion{padding:16px 0;border-bottom:1px solid #cadde5}.info-accordion summary{cursor:pointer;min-height:44px;display:flex;align-items:center;gap:12px}.info-accordion summary::before{content:'+';font-size:22px}.info-accordion[open] summary::before{content:'−'}.info-accordion summary h2{margin:0}.info-accordion summary:focus-visible{outline:2px solid #477e92;outline-offset:4px}

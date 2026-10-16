@@ -6,7 +6,7 @@ const { requestPath, serveStatic } = require('./static.cjs');
 function createServer(database, options) {
   const auth = authHandler(database, options);
   const notifications=require('../notifications/service.cjs')(database,options?.notifications);
-  const dashboard=require('../dashboard/http.cjs').dashboardHandler(database,auth,notifications);
+  const dashboard=require('../dashboard/http.cjs').dashboardHandler(database,auth,notifications,options);
   const admin=require('../admin/http.cjs').adminHandler(database,auth,notifications);
   const payments=require('../payments/http.cjs').paymentHandler(database,auth,options?.payments);
   const server = http.createServer({ requestTimeout: 15000, headersTimeout: 10000, maxHeaderSize: 16384 }, async (req, res) => {

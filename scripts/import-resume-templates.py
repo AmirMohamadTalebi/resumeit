@@ -194,3 +194,5 @@ if __name__=='__main__':
     parser=argparse.ArgumentParser();parser.add_argument('source',type=Path);args=parser.parse_args()
     Compiler('vista',args.source/'avadisweb.ir/vista/dark').run()
     Compiler('satiar',args.source/'ghaleblake.ir/wp_themes/satiar').run()
+    import subprocess
+    subprocess.run(['node',str(ROOT/'scripts/compact-resume-templates.cjs')],cwd=ROOT,check=True)

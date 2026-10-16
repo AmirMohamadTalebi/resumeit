@@ -29,4 +29,4 @@ for(const id of ['vista','satiar']){
  c.resumeTemplates[id].settings[Object.values(t.colors)[0]]='red;position:fixed';assert.throws(()=>model.content(c,billing));c.resumeTemplates[id].settings[Object.values(t.colors)[0]]='#123456';
  c.theme.resume='glacier';assert(model.content(c,billing).resumeTemplates[id]);
 }
-console.log('PASS: all 54 template pages, unique editable contracts, safe URLs/images/colors, private contacts, independent repeated rows, removal, publication review and preserved switching.');
+console.log('PASS: both compact single-page templates, unique editable contracts, safe URLs/images/colors, private contacts, independent repeated rows, removal, publication review and preserved switching.');

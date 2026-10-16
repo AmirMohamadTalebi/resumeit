@@ -17,6 +17,9 @@ async function openDatabase(options) {
   await require('./schema.cjs').initializeSchema(execute,pool);
   await require('./workspaces.cjs').initialize(execute);
   await require('./notification-delivery.cjs').initialize(execute);
+  await require('./advisor.cjs').initialize(execute);
+  await require('./reset.cjs').initialize(execute);
+  await execute('CREATE TABLE IF NOT EXISTS support_attachments(id CHAR(36) PRIMARY KEY,message_id CHAR(36) NOT NULL,name VARCHAR(120) NOT NULL,mime VARCHAR(64) NOT NULL,data MEDIUMBLOB NOT NULL,size INT NOT NULL,INDEX(message_id),FOREIGN KEY(message_id) REFERENCES support_messages(id) ON DELETE CASCADE) ENGINE=InnoDB');
   const context={execute,transaction};
   const database = {
     ...require('./admin-codes.cjs')(context),
@@ -27,6 +30,8 @@ async function openDatabase(options) {
     ...require('./profiles.cjs')(context),
     ...require('./dashboard.cjs')(context),
     ...require('./support.cjs')(context),
+    ...require('./advisor.cjs')(context),
+    ...require('./reset.cjs')(context),
     ...require('./support-roles.cjs')(context),
     ...require('./ownership.cjs')(context),
     ...require('./owner-controls.cjs')(context),

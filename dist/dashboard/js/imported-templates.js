@@ -18,19 +18,19 @@
   const types = ['text', 'textarea', 'image', 'url', 'link', 'icon', 'percent', 'contact', 'color', 'checkbox', 'select', 'order'];
   RI.importedSpec = function (id) {
     const t = RI.IMPORTED_TEMPLATES[id];
-    if (!t) return ['vista','satiar'].includes(id) ? {sections:['contacts','socials'],bodySections:[],requiredSections:[],fields:[],settings:[{key:'reviewed',label:'متن‌ها، تصاویر، آمار و لینک‌های نمونه را بررسی و برای انتشار تأیید کرده‌ام',type:'checkbox',required:true,default:false}]} : null;
+    if (!t) return ['vista','satiar'].includes(id) ? {sections:['contacts','socials','projects'],bodySections:[],requiredSections:[],fields:[],settings:[{key:'reviewed',label:'متن‌ها، تصاویر، آمار و لینک‌های نمونه را بررسی و برای انتشار تأیید کرده‌ام',type:'checkbox',required:true,default:false}]} : null;
     const groupName=g=>{const key=g.key.split(':')[1];const names={body:'سربرگ، منو و پابرگ',intro:'معرفی و تصویر اصلی',about:'دربارهٔ من',services:'خدمات',resume:'سوابق، مهارت‌ها و آمار',portfolio:'نمونه‌کارها',blog:'مقالات',contact:'تماس'};return names[key]||g.label.replace(/\s+/g,' ').trim();};
-    const groups=t.groups.map(g=>({...g,label:groupName(g)}));
+    const groups=t.groups.filter(g=>!/(?:portfolio|نمونه کار|نمونه‌کار)/i.test(g.key+' '+g.label)).map(g=>({...g,label:groupName(g)}));
     const compose = [['compose_title','عنوان فرم تماس','نوشتن پیام'],['compose_name','برچسب نام فرستنده','نام شما'],['compose_email','برچسب ایمیل فرستنده','ایمیل شما'],['compose_message','برچسب پیام','پیام شما'],['compose_submit','متن دکمهٔ تماس','باز کردن برنامهٔ ایمیل']].map(([key,label,defaultValue])=>({key,label,default:defaultValue,type:'text',max:120,public:true,group:'home:compose'}));
-    return { sections: ['contacts', 'socials'], bodySections: [], requiredSections: [], fields: t.fields.concat(compose),
+    return { sections: ['contacts', 'socials','projects'], bodySections: [], requiredSections: [], fields: t.fields.concat(compose),
       settings: [{ key: 'reviewed', label: 'متن‌ها، تصاویر، آمار و لینک‌های نمونه را بررسی و برای انتشار تأیید کرده‌ام', type: 'checkbox', required: true, default: false },
         { key: 'mode', label: 'حالت پیش‌فرض قالب', type: 'select', options: [['dark','تیره'],['light','روشن']], default: 'dark' },
         { key: 'font', label: 'فونت نوشته‌ها', type: 'select', options: [['theme','طبق انتخاب ظاهر و قالب'],['original','فونت اصلی قالب'],...RI.FONTS.map(f=>[f.id,f.name+(f.access==='buy'?' · '+RI.it(f.price):' · رایگان')])], default: 'theme' },
         { key: 'compose', label: 'نمایش فرم تماس با برنامهٔ ایمیل', type: 'checkbox', default: true, group: 'home:compose' },
-        { key: 'section_order', label: 'ترتیب بخش‌ها', type: 'order', keys: t.groups.map(g=>g.key), default: '', max: 50000 },
+        { key: 'section_order', label: 'ترتیب بخش‌ها', type: 'order', keys: t.groups.map(g=>g.key).concat(t.legacyGroups||[]), default: '', max: 50000 },
         ...Object.entries(t.colors).map(([color, key]) => ({ key, label: 'رنگ ' + color, type: 'color', default: color })),
         ...Object.entries(t.backgrounds || {}).map(([url, key]) => ({ key, label: 'تصویر زمینه ' + key.replace('background', ''), type: 'image', default: url, max: 3 * 1024 * 1024 })),
-        ...groups.map(g => ({ key: 'show_' + g.key.replace(/:/g, '_'), label: 'نمایش ' + g.label, type: 'checkbox', default: true, group: g.key }))], collections: t.collections, groups: groups.concat({key:'home:compose',label:'فرم تماس از طریق ایمیل',page:'home'}), pages: t.pages };
+        ...[...t.groups,...(t.legacyGroups||[]).map(key=>({key,label:'',legacy:true}))].map(g => ({ key: 'show_' + g.key.replace(/:/g, '_'), label: 'نمایش ' + g.label, type: 'checkbox', default: true, group: g.key }))], collections: t.collections, groups: groups.concat({key:'home:compose',label:'فرم تماس از طریق ایمیل',page:'home'}), pages: t.pages,legacyPages:t.legacyPages||[] };
   };
   RI.bindImportedPage = function (doc, openPage) {
     const root = doc.querySelector('.ri-imported');
@@ -98,6 +98,9 @@
     };
     const renderNode = (n, overrides, suffix) => {
       if (typeof n === 'string') return esc(n);
+      if(/(?:^|\s)(?:testimonial|wp-active-we-testimonials|stat-card)(?:\s|$)/.test(n.attrs?.class||''))return '';
+      if(n.group&&t.groups.some(g=>g.key===n.group&&/(?:portfolio|نمونه کار|نمونه‌کار)/i.test(g.key+' '+g.label)))return projects;
+      if(n.group==='home:contact')return '';
       if (n.field) return esc(value(n, overrides));
       if (n.icon) { const choice = value({field:n.icon},overrides); return choice && choice !== 'original' ? RI.icon(choice) : renderNode(n.original,overrides,suffix); }
       if (n.collection) {
@@ -107,12 +110,13 @@
       }
       if (n.group && settings['show_' + n.group.replace(/:/g, '_')] === false) return '';
       const nodeAttrs=Object.assign({},n.attrs);if(n.progress)nodeAttrs.style=(nodeAttrs.style||'')+';width:'+(parseInt(value({field:n.progress},overrides),10)||0)+'%';
+      if(n.tag==='img'){nodeAttrs.loading='lazy';nodeAttrs.decoding='async';}
       const attrs = Object.entries(nodeAttrs).map(([key, raw]) => {
         let v = raw;
         if (raw && typeof raw === 'object') {
           v = raw.field ? value(raw, overrides) : base + '/?page=' + encodeURIComponent(raw.page) + (raw.hash ? '#' + encodeURIComponent(raw.hash) : '');
           if (key === 'href' && raw.field && v) {
-            if (v.startsWith('/?page=')) v = base + v;
+            if (/^\/?\?page=/.test(v)) v = '#ri-contact';
             else if (!v.startsWith('#') && !/^(mailto:|tel:)/.test(v)) v = RI.normUrl(v);
           }
         }
@@ -123,7 +127,9 @@
       const children=n.children.slice(),slots=children.map((child,index)=>({child,index})).filter(x=>x.child&&x.child.group),order=(settings.section_order||'').split(',');
       const sorted=slots.map(x=>x.child).sort((a,b)=>{const ai=order.indexOf(a.group),bi=order.indexOf(b.group);return (ai<0?99999:ai)-(bi<0?99999:bi);});slots.forEach((slot,i)=>children[slot.index]=sorted[i]);
       if (n.tag === 'body') return '<div class="' + esc(page.bodyClass) + ' ri-imported-body">' + children.map(child => renderNode(child, overrides, suffix)).join('') + '</div>';
-      return '<' + n.tag + attrs + (n.group?' data-ri-section="'+esc(n.group)+'"':'') + '>' + (voids.has(n.tag) ? '' : children.map(child => renderNode(child, overrides, suffix)).join('') + '</' + n.tag + '>');
+      const html='<' + n.tag + attrs + (n.group?' data-ri-section="'+esc(n.group)+'"':'') + '>' + (voids.has(n.tag) ? '' : children.map(child => renderNode(child, overrides, suffix)).join('') + '</' + n.tag + '>');
+      const group=n.group&&spec.groups.find(g=>g.key===n.group);
+      return group&&!n.group.endsWith(':body')&&n.group!==t.groups[1]?.key?'<details class="ri-resume-section"><summary>'+esc(group.label)+'</summary>'+html+'</details>':html;
     };
     const palette = RI.PALETTES.find(p => p.id === options.theme.palette);
     const accents = id === 'vista' ? ['#00b894','#f59e0b'] : ['#a04dff','#0a4b78'];
@@ -147,8 +153,9 @@
     const nav = '<nav class="ri-template-nav" aria-label="صفحه‌های رزومه"><a href="' + esc(base + '/') + '">رزومه</a><a href="' + esc(base + '/links') + '" data-pv-go="links">لینک‌ها</a>' +
       (pageId !== 'home' ? '<a href="' + esc(base + '/') + '">صفحه اصلی</a>' : '') + '</nav>';
     const brand = '<div class="ri-template-brand">'+RI.brandFoot(c,'resume')+'</div>';
+    const projects=c.sections.some(s=>s.key==='projects'&&s.visible)&&c.projects.length?'<section class="ri-user-projects" id="ri-projects"><h2>پروژه‌ها و نمونه‌کارها</h2>'+RI.projectCards(c)+'</section>':'';
     return '<div class="ri-imported" data-template="' + id + '" data-template-mode="' + (settings.mode==='light'?'light':'dark') + '" data-template-page="' + pageId + '" style="' + esc(vars) + '">' +
       '<link rel="stylesheet" href="/fonts/fonts.css">' + page.css.map(url => '<link rel="stylesheet" href="' + url + '">').join('') + '<link rel="stylesheet" href="/templates/template-support.css">' +
-      '<style>:root{' + vars + '}' + page.inline.replace(/<\/style/gi, '') + fontCss + '.ri-imported .pf-card,.ri-imported .blog-card,.ri-imported .tech-card,.ri-imported .soc-card{border-radius:' + radius + '}</style>' + nav + renderNode(page.node) + contact + brand + '</div>';
+      '<style>:root{' + vars + '}' + page.inline.replace(/<\/style/gi, '') + fontCss + '.ri-imported .pf-card,.ri-imported .blog-card,.ri-imported .tech-card,.ri-imported .soc-card{border-radius:' + radius + '}</style>' + nav + '<span id="ri-resume-top"></span>'+renderNode(page.node) + contact + brand + '</div>';
   };
 })();

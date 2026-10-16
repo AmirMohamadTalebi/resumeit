@@ -26,9 +26,12 @@ function securityHeaders(res, origin, html = '', allowSameOriginFrame = false) {
 
 async function readJson(req, limit = 2048) {
   const chunks = []; let size = 0;
-  for await (const chunk of req) {
+  const oversized=()=>{req.resume();throw Object.assign(new Error('حجم درخواست بیش از حد مجاز است'),{status:413});};
+  if(Number(req.headers['content-length'])>limit)oversized();
+  // Preserve the socket so an oversized upload receives 413 instead of a connection reset.
+  for await (const chunk of req.iterator({destroyOnReturn:false})) {
     size += chunk.length;
-    if (size > limit) throw Object.assign(new Error('Request too large'), { status: 413 });
+    if (size > limit) oversized();
     chunks.push(chunk);
   }
   const input = JSON.parse(Buffer.concat(chunks).toString('utf8'));

@@ -36,3 +36,12 @@
  async function refresh(){if(pending)return;pending=true;try{const response=await fetch('/api/auth/session',{cache:'no-store',signal:AbortSignal.timeout(5000)});if(!response.ok)return;const {user}=await response.json();await paint(user);startLinks.forEach(a=>a.href=user?'/dashboard/resume/':'/register/');}catch{}finally{pending=false;}}
  refresh();window.addEventListener('pageshow',e=>{if(e.persisted)refresh();});document.addEventListener('visibilitychange',()=>{if(!document.hidden){close();refresh();}});
 })();
+
+(() => {
+ if(!/^\/(privacy|terms)\/?$/.test(location.pathname))return;
+ const sections=[...document.querySelectorAll('.info-content>section')];
+ for(const section of sections){const heading=section.querySelector('h2');if(!heading)continue;const details=document.createElement('details'),summary=document.createElement('summary');details.className='info-accordion';details.id=section.id;summary.append(heading);details.append(summary,...section.childNodes);section.replaceWith(details);}
+ function reveal(){const id=location.hash.slice(1),target=sections.length&&document.getElementById(id);if(target?.matches('.info-accordion'))target.open=true;}
+ document.querySelector('.info-nav')?.addEventListener('click',e=>{const link=e.target.closest('a[href^="#"]');if(link){const target=document.getElementById(link.hash.slice(1));if(target?.matches('.info-accordion'))target.open=true;}});
+ addEventListener('hashchange',reveal);reveal();
+})();

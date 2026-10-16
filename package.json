@@ -1,12 +1,14 @@
 {
   "name": "resumeit",
-  "version": "0.23.2-beta",
+  "version": "0.24.0-beta",
   "private": true,
   "engines": {
     "node": ">=24.15.0"
   },
   "scripts": {
     "start": "node server.cjs",
+    "posttest": "node tests/advisor-core-check.cjs && node tests/advisor-api-check.cjs && node tests/readjson-limit-check.cjs",
+    "check:advisor": "node tests/advisor-core-check.cjs && node tests/advisor-api-check.cjs && node tests/advisor-coordinator-ui-check.cjs && node tests/advisor-journey-check.cjs && node tests/compact-pages-ui-check.cjs",
     "check:database": "node tests/database-check.cjs && node tests/payments-database-check.cjs",
     "check:auth": "node tests/auth-check.cjs",
     "check:sms": "node tests/smsir-check.cjs && node tests/otp-check.cjs",

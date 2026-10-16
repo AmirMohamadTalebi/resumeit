@@ -41,8 +41,8 @@
     title: 'ساخت و ویرایش رزومه',
     render(ctx) {
       return RI.pageHead({ title: 'طراحی رزومه', desc:esc(RI.findTemplate('resume',RI.C().theme.resume).name)+' · '+RI.fa(RI.completion().pct)+'٪ تکمیل',
-        actions: '<button type="button" class="btn btn--soft btn--sm show-sm" data-live>' + RI.icon('eye') + 'پیش‌نمایش زنده</button><a class="btn btn--ghost btn--sm" href="/dashboard/themes/" data-go="themes">' + RI.icon('palette') + 'ظاهر و قالب</a>' }) +
-        RI.completionStrip('resume')+'<div class="resume-tabs-host"></div><div class="editor"><div class="editor__main"><div class="segmented" role="tablist" aria-label="حالت ویرایش" id="rtabs"><button type="button" role="tab" data-tab="content" aria-selected="true">' + RI.icon('edit') + 'محتوا</button><button type="button" role="tab" data-tab="layout" aria-selected="false">' + RI.icon('section') + 'چیدمان بخش‌ها</button></div><div id="rbody"></div></div>' +
+        actions: '<button type="button" class="btn btn--soft btn--sm show-sm" data-live>' + RI.icon('eye') + 'پیش‌نمایش زنده</button><a class="btn btn--ghost btn--sm" href="/dashboard/themes/" data-go="themes">' + RI.icon('palette') + 'ظاهر و قالب</a><button type="button" class="btn btn--ghost btn--sm" data-reset-page="resume">'+RI.icon('trash')+'پاک‌کردن رزومه</button>' }) +
+        RI.completionStrip('resume')+'<div id="resume-advisor"></div><div class="resume-tabs-host"></div><div class="editor"><div class="editor__main"><div class="segmented" role="tablist" aria-label="حالت ویرایش" id="rtabs"><button type="button" role="tab" data-tab="content" aria-selected="true">' + RI.icon('edit') + 'محتوا</button><button type="button" role="tab" data-tab="layout" aria-selected="false">' + RI.icon('section') + 'چیدمان بخش‌ها</button></div><div id="rbody"></div></div>' +
         '<aside class="editor__side" aria-label="پیش‌نمایش زندهٔ رزومه"><div class="sticky"><div id="rpv"></div></div></aside></div>';
     },
     mount(root, ctx) {
@@ -208,8 +208,11 @@
       RI.delegate(root, 'click', '[data-tab]', (e, b) => { tab = b.dataset.tab; paint(); });
       RI.delegate(root, 'click', '[data-live]', () => RI.openPreview('resume'));
       paint();
+      let advisorCleanup, mounted=true;
+      if(!RI.advisorScripts)RI.advisorScripts=(async()=>{for(const name of ['advisor-core','advisor-ui'])await new Promise((resolve,reject)=>{const script=document.createElement('script');script.src='/dashboard/js/'+name+'.js?v='+encodeURIComponent(document.documentElement.dataset.assetVersion||'');script.onload=resolve;script.onerror=reject;document.head.append(script);});})().catch(error=>{RI.advisorScripts=null;throw error;});
+      RI.advisorScripts.then(()=>{if(mounted)advisorCleanup=RI.mountAdvisor(RI.$('#resume-advisor',root),target=>{tab='content';setStep(target.section==='template'?'template':target.section);if(target.section==='template')body.dispatchEvent(new CustomEvent('ri:template-focus',{detail:target}));else if(target.section!=='profile')openForm(target.itemId);else requestAnimationFrame(()=>RI.$('[data-p="'+target.field+'"]',root)?.focus());});}).catch(()=>{if(mounted)RI.$('#resume-advisor',root).textContent='راهنمای کیفیت دریافت نشد؛ ویرایش و انتشار همچنان در دسترس‌اند.';});
       if (ctx.opts && ctx.opts.step) { /* رفتن مستقیم به مرحلهٔ پیشنهادی */ }
-      return () => { off(); pv.destroy(); desktop.removeEventListener('change', placeOutline); };
+      return () => { mounted=false;advisorCleanup?.();cancelAnimationFrame(raf);off(); pv.destroy(); desktop.removeEventListener('change', placeOutline); };
     },
   });
 })();

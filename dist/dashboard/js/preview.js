@@ -66,6 +66,8 @@
 
   const SEC_TITLES = { skills: ['مهارت‌ها', 'sparkle'], experience: ['تجربه‌های کاری', 'briefcase'], education: ['تحصیلات', 'book'], projects: ['پروژه‌ها و نمونه‌کارها', 'code'], certs: ['دوره‌ها، گواهی‌ها و افتخارات', 'award'], languages: ['زبان‌ها', 'language'] };
 
+  RI.projectCards = c => '<link rel="stylesheet" href="/templates/projects.css"><div class="pv-proj">'+c.projects.map(x=>{const id='project-'+x.id;return '<article><button type="button" class="project-trigger" data-project-open="'+esc(id)+'" aria-haspopup="dialog"><span class="pv-proj__img" style="'+esc(RI.bg(x.image)||'background:var(--pv-line,#dfebf0)')+'"></span><span class="pv-proj__body"><b>'+esc(x.title)+'</b><span>'+esc(x.desc.slice(0,90))+(x.desc.length>90?'…':'')+'</span><small>دربارهٔ پروژه</small></span></button><dialog class="project-dialog" id="'+esc(id)+'" aria-labelledby="'+esc(id)+'-title"><button type="button" class="project-close" data-project-close aria-label="بستن جزئیات پروژه">'+RI.icon('x')+'</button><h2 id="'+esc(id)+'-title">'+esc(x.title)+'</h2>'+(x.image&&!x.image.startsWith('grad:')?'<img src="'+esc(x.image)+'" alt="'+esc('تصویر پروژهٔ '+x.title)+'">':'')+'<p>'+esc(x.desc)+'</p>'+(x.url&&RI.isUrl(x.url)?'<a href="'+esc(RI.normUrl(x.url))+'" target="_blank" rel="noopener noreferrer" data-pv-link="1">دیدن پروژه</a>':'')+'</dialog></article>';}).join('')+'</div>';
+
   function bodySection(key, c) {
     const items = c[key];
     if (!items || !items.length) return '';
@@ -73,7 +75,7 @@
     if (key === 'skills') inner = '<ul class="pv-chips">' + items.map((s) => '<li>' + esc(s.name) + dots(s.level) + '</li>').join('') + '</ul>';
     if (key === 'experience') inner = '<ol class="pv-tl">' + items.map((x) => '<li><b>' + esc(x.role) + '</b><span class="pv-sub">' + esc(x.org) + ' · ' + esc(when(x)) + '</span>' + (x.desc ? '<p>' + esc(x.desc) + '</p>' : '') + '</li>').join('') + '</ol>';
     if (key === 'education') inner = '<ol class="pv-tl">' + items.map((x) => '<li><b>' + esc(x.degree) + '</b><span class="pv-sub">' + esc(x.school) + ' · ' + esc(when(x)) + '</span>' + (x.desc ? '<p>' + esc(x.desc) + '</p>' : '') + '</li>').join('') + '</ol>';
-    if (key === 'projects') inner = '<div class="pv-proj">' + items.map((x) => '<article><div class="pv-proj__img" style="' + esc(RI.bg(x.image) || 'background:var(--pv-line)') + '"></div><div class="pv-proj__body"><b>' + esc(x.title) + '</b><p>' + esc(x.desc) + '</p>' + (x.url ? '<a class="pv-url ltr" data-pv-link="1" href="'+esc(RI.isUrl(x.url)?RI.normUrl(x.url):'#')+'" rel="noopener noreferrer">' + esc(x.url) + '</a>' : '') + '</div></article>').join('') + '</div>';
+    if (key === 'projects') inner = RI.projectCards(c);
     if (key === 'certs') inner = '<ul class="pv-list">' + items.map((x) => '<li><b>' + esc(x.title) + '</b><span class="pv-sub">' + esc(x.issuer) + (x.year ? ' · ' + esc(x.year) : '') + '</span></li>').join('') + '</ul>';
     if (key === 'languages') inner = '<ul class="pv-list pv-list--inline">' + items.map((x) => '<li><b>' + esc(x.name) + '</b><span class="pv-sub">' + LV(x.level) + '</span></li>').join('') + '</ul>';
     return '<section class="pv-sec pv-sec--' + key + '"><h3>' + esc(SEC_TITLES[key][0]) + '</h3>' + inner + '</section>';
@@ -173,7 +175,7 @@
         const frame = document.createElement('iframe'); frame.title = 'پیش‌نمایش قالب رزومه'; frame.setAttribute('sandbox', 'allow-same-origin');
         frame.style.cssText = 'width:100%;height:100%;border:0;display:block;background:#fff';
         frame.srcdoc = '<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body style="margin:0">' + html + '</body></html>';
-        frame.addEventListener('load', () => { const doc = frame.contentDocument; if (!doc) return; RI.bindImportedPage(doc, (id) => { frame.contentWindow.scrollTo(0, 0); frame.srcdoc = frame.srcdoc.replace(/<body[\s\S]*<\/body>/, '<body style="margin:0">' + RI.resumeHtml(c, { theme, page: id }) + '</body>'); }); });
+        frame.addEventListener('load', () => { const doc = frame.contentDocument; if (!doc) return; window.bindResumeProjects?.(doc); RI.bindImportedPage(doc, () => {});const section=st.templateSection&&doc.querySelector('[data-ri-section="'+st.templateSection+'"]');if(section?.closest('details'))section.closest('details').open=true; });
         vp.replaceChildren(frame);
       } else vp.innerHTML = html;
       vp.scrollTop = top;
@@ -193,6 +195,7 @@
     const api = {
       refresh: render,
       setTemplatePage(id) { st.templatePage = id; render(false); },
+      setTemplateSection(key) {st.templateSection=key;const doc=vp.querySelector('iframe')?.contentDocument,section=key&&doc?.querySelector('[data-ri-section="'+key+'"]');if(section?.closest('details'))section.closest('details').open=true;},
       setDevice(d) {
         if (d === st.device) return;
         st.device = d;

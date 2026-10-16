@@ -49,7 +49,7 @@
       }
       for (const values of [clean.fields, ...Object.values(clean.collections || {}).flat().map(row => row.fields)]) for (const [key, value] of Object.entries(values)) {
         const f = spec.fields.find(x => x.key === key), match = f && f.type === 'link' && /^\/?\?page=([a-z0-9]+)/.exec(value);
-        if (match && (!spec.pages || !Object.hasOwn(spec.pages, match[1]))) return bad();
+        if (match && (!spec.pages || !Object.hasOwn(spec.pages, match[1])) && !(spec.legacyPages||[]).includes(match[1])) return bad();
       }
       out[id] = clean;
     }

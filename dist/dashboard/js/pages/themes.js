@@ -16,6 +16,9 @@
       const initialTab=RI.workspaceSlot===3?'lt':'rt',requestedTab=new URLSearchParams(location.search).get('tab');
       let tab = ['lt','font','pal',...(RI.workspaceSlot===3?[]:['rt'])].includes(requestedTab)?requestedTab:initialTab, cat = 'all', acc = 'all', galleryPage = 0,query='',sort='newest',searchTimer;
       const body = RI.$('#tbody', root);
+      const compactGallery = matchMedia('(max-width:600px)');
+      const resizeGallery = () => { galleryPage = 0; paint(); };
+      compactGallery.addEventListener('change', resizeGallery);
       const th = () => RI.C().theme;
 
       function applyTheme(patch, msg) { Object.assign(th(), patch); RI.touch('theme'); RI.toast(msg || 'ظاهر انتخاب شد'); paint(); }
@@ -38,9 +41,10 @@
         if(sort==='cheap')list.sort((a,b)=>price(a)-price(b));else if(sort==='expensive')list.sort((a,b)=>price(b)-price(a));else if(sort==='name')list.sort((a,b)=>a.name.localeCompare(b.name,'fa'));
         const curId = kind === 'rt' ? th().resume : th().links;
         const cur = RI.findTemplate(kind === 'rt' ? 'resume' : 'links', curId);
-        const pageCount = Math.ceil(list.length / 6);
+        const pageSize = compactGallery.matches ? 2 : 6;
+        const pageCount = Math.ceil(list.length / pageSize);
         galleryPage = Math.min(galleryPage, Math.max(0, pageCount - 1));
-        const cards = list.slice(galleryPage * 6, (galleryPage + 1) * 6).map((t) => {
+        const cards = list.slice(galleryPage * pageSize, (galleryPage + 1) * pageSize).map((t) => {
           const ref = kind + ':' + t.id, on = t.id === curId, usable = RI.canUse(ref, t);
           return '<article class="tcard' + (on ? ' is-current' : '') + '" data-id="' + t.id + '"><button type="button" class="tcard__preview" data-template-preview="'+t.id+'" aria-label="پیش‌نمایش قالب '+esc(t.name)+'"><span class="tcard__thumb">' + RI.thumbHtml(kind === 'rt' ? 'resume' : 'links', t.id) + (!usable ? '<span class="tcard__lock">' + RI.icon('lock') + '</span>' : '') + (on ? '<span class="tcard__on">' + RI.icon('check') + 'در حال استفاده</span>' : '') + '</span></button>' +
             '<div class="tcard__body"><div class="tcard__title"><h3>' + t.name + '</h3>' + RI.accessBadge(ref, t) + '</div><p>' + t.desc + '</p><div class="tcard__cats">' + t.cats.map((c) => '<span class="chip">' + CATS.find((x) => x[0] === c)[1] + '</span>').join('') + '</div>' +
@@ -98,7 +102,7 @@
       });
       RI.delegate(body, 'click', '[data-radius]', (e, b) => applyTheme({ radius: b.dataset.radius }, 'گردی گوشه‌ها تغییر کرد'));
       paint();
-      return () => {clearTimeout(searchTimer);};
+      return () => {clearTimeout(searchTimer);compactGallery.removeEventListener('change',resizeGallery);};
     },
   });
 })();

@@ -1,11 +1,16 @@
 const {readJson}=require('../http/security.cjs'),{fail}=require('./model.cjs'),{isSupport}=require('../admin/access.cjs');
 const uuid=/^[a-f0-9-]{36}$/;
 const clean=(value,min,max)=>{if(typeof value!=='string'||value.trim().length<min||value.length>max||/[\x00-\x08\x0b\x0c\x0e-\x1f]/.test(value))fail('متن واردشده معتبر نیست');return value.trim();};
-module.exports=async(database,req,path,origin,user,reply)=>{
+module.exports=async(database,req,path,origin,user,reply,res)=>{
   if(!path.startsWith('/api/dashboard/support')&&!path.startsWith('/api/dashboard/notifications'))return false;
   const url=new URL(req.url,origin),staff=url.searchParams.get('staff')==='1';if(staff&&!isSupport(user))fail('این بخش فقط برای پشتیبانی است',403);
   const owner=staff?null:user.id,id=url.searchParams.get('id');if(id&&!uuid.test(id))fail('شناسه معتبر نیست');
   if(req.method==='GET'){
+    if(path==='/api/dashboard/support/attachment'){
+      if(!id)fail('شناسهٔ پیوست لازم است');
+      const file=await database.ticketAttachment(owner,id);if(!file)fail('پیوست پیدا نشد',404);
+      res.writeHead(200,{'Content-Type':'application/octet-stream','Content-Length':file.size,'Content-Disposition':"attachment; filename=\"attachment\"; filename*=UTF-8''"+encodeURIComponent(file.name),'X-Content-Type-Options':'nosniff','Cache-Control':'private, no-store'});res.end(Buffer.from(file.data));return true;
+    }
     if(path==='/api/dashboard/support'){
       const page=Number(url.searchParams.get('page')||1),q=url.searchParams.get('q')||'',status=url.searchParams.get('status')||'';
       if(!Number.isSafeInteger(page)||page<1||page>10000||q.length>100||!['','open','answered','closed'].includes(status))fail('فیلتر معتبر نیست');
@@ -22,12 +27,17 @@ module.exports=async(database,req,path,origin,user,reply)=>{
   }
   if(req.method!=='POST')fail('روش درخواست معتبر نیست',405);
   if(req.headers.origin!==origin||req.headers['content-type']?.split(';')[0]!=='application/json')fail('مبدأ درخواست معتبر نیست',403);
-  const input=await readJson(req,24000);
+  const input=await readJson(req,['/api/dashboard/support','/api/dashboard/support/reply'].includes(path)?12*1024*1024:24000);
+  let attachments;
+  if(['/api/dashboard/support','/api/dashboard/support/reply'].includes(path)){
+    const billing=database.billing?await database.billing(user.id):{};
+    attachments=require('./attachments.cjs').validate(input.attachments,staff||billing.plan?.end>Date.now());
+  }
   if(path==='/api/dashboard/support'){
     if(!['account','payment','editor','publication','other'].includes(input.category)||!['normal','high'].includes(input.priority)||!uuid.test(input.requestId||''))fail('موضوع تیکت معتبر نیست');
-    reply(200,await database.createTicket(user.id,{...input,subject:clean(input.subject,3,120),body:clean(input.body,10,6000)}));
+    reply(200,await database.createTicket(user.id,{...input,attachments,subject:clean(input.subject,3,120),body:clean(input.body,10,6000)}));
   }else if(path==='/api/dashboard/support/reply'){
-    if(!uuid.test(input.id||'')||!uuid.test(input.requestId||''))fail('شناسه معتبر نیست');reply(200,await database.replyTicket(user.id,input.id,clean(input.body,1,6000),input.requestId,staff));
+    if(!uuid.test(input.id||'')||!uuid.test(input.requestId||''))fail('شناسه معتبر نیست');reply(200,await database.replyTicket(user.id,input.id,clean(input.body,1,6000),input.requestId,staff,attachments));
   }else if(path==='/api/dashboard/support/status'){
     if(!uuid.test(input.id||'')||!['open','closed'].includes(input.status))fail('وضعیت معتبر نیست');await database.ticketStatus(user.id,input.id,input.status,staff);reply(200,{ok:true});
   }else if(path==='/api/dashboard/notifications/read'){

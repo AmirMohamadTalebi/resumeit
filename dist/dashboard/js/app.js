@@ -234,7 +234,7 @@
       RI.go(b.dataset.go || b.dataset.route, { step: b.dataset.step, tab: b.dataset.tab, anchor: b.dataset.anchor });
     });
     window.addEventListener('popstate',()=>{const match=/^\/dashboard\/(?:([a-z]+)\/)?$/.exec(location.pathname);if(match)navigate(match[1]||'home',Object.fromEntries(new URLSearchParams(location.search)),true);});
-    RI.delegate(document,'click','a[href]',async(e,a)=>{const u=new URL(a.href,location.origin);if(e.defaultPrevented||u.origin!==location.origin||a.target||e.ctrlKey||e.metaKey||e.shiftKey||e.altKey||e.button!==0)return;const match=/^\/dashboard\/(?:([a-z]+)\/)?$/.exec(u.pathname);if(match){e.preventDefault();navigate(match[1]||'home',Object.fromEntries(u.searchParams));}else if(!u.pathname.startsWith('/admin/')){e.preventDefault();if(await RI.leaveGuard())location.assign(u.href);}});
+    RI.delegate(document,'click','a[href]',async(e,a)=>{const u=new URL(a.href,location.origin);if(e.defaultPrevented||a.hasAttribute('download')||!['http:','https:'].includes(u.protocol)||u.origin!==location.origin||a.target||e.ctrlKey||e.metaKey||e.shiftKey||e.altKey||e.button!==0)return;const match=/^\/dashboard\/(?:([a-z]+)\/)?$/.exec(u.pathname);if(match){e.preventDefault();navigate(match[1]||'home',Object.fromEntries(u.searchParams));}else if(!u.pathname.startsWith('/admin/')){e.preventDefault();if(await RI.leaveGuard())location.assign(u.href);}});
     window.addEventListener('beforeunload', (e) => { if (RI.state.ui.dirty) { e.preventDefault(); e.returnValue = ''; } });
     const legacy = /^#\/([a-z]+)$/.exec(location.hash);
     if (legacy && NAV.some(g => g.items.some(i => i[0] === legacy[1]))) { location.replace(RI.routeUrl(legacy[1])); return; }
@@ -251,6 +251,8 @@
     try {
       const response = await fetch('/api/auth/logout', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
       if (!response.ok) throw new Error('Logout failed');
+      RI.advisorClear?.();
+      if(window.BroadcastChannel){const channel=new BroadcastChannel('resumeit-session');channel.postMessage({owner:null});channel.close();}
     } catch { RI.toast('خروج انجام نشد؛ دوباره امتحان کنید.'); return; }
     RI.state.ui.dirty = false;
     RI.clearDraft();

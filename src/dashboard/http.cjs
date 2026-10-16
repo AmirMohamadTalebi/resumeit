@@ -3,7 +3,7 @@ const model=require('./model.cjs'),{render,RI}=require('./render.cjs');
 const {gzipSync}=require('node:zlib');
 const {serveStatic,publicAssets}=require('../http/static.cjs');
 const pubData=(c,k)=>RI.publicationData(k,c);
-function dashboardHandler(database,auth,notifications){return async(req,res,pathname,origin)=>{
+function dashboardHandler(database,auth,notifications,options){const reset=require('./reset.cjs')(database,options);return async(req,res,pathname,origin)=>{
   if(publicAssets.has(pathname)||pathname.startsWith('/templates/')||pathname.startsWith('/fonts/')){await serveStatic(req,res,pathname,origin);return true;}
   const root=new URL(origin),host=(req.headers.host||'').toLowerCase(),domain=root.hostname.startsWith('127.')||root.hostname==='localhost'?'resumeit.ir':root.hostname;
   const sampleName=pathname.split('/')[1],sampleRoute=host===root.host&&[...RI.RESUME_TEMPLATES.map(t=>'resume'+t.id),...RI.LINK_TEMPLATES.map(t=>'link'+t.id)].includes(sampleName),samplePages=sampleRoute&&database.publicWorkspace?await database.publicWorkspace(sampleName,'path'):null;
@@ -33,10 +33,10 @@ function dashboardHandler(database,auth,notifications){return async(req,res,path
     if(pathPages)c._linksOnly=true;
     const card=RI.shareCard(c,kind),image=card.image,ogImage=/^https:\/\//.test(image||'')?image:/^data:image\//.test(image||'')?canonical+'/share-image':null;
     const templatePage=new URL(req.url,origin).searchParams.get('page')||'home',imported=kind==='resume'&&RI.IMPORTED_TEMPLATES[c.theme.resume];
-    if(imported&&!Object.hasOwn(imported.pages,templatePage)){res.writeHead(404);res.end('صفحه پیدا نشد');return true;}
+    if(imported&&!Object.hasOwn(imported.pages,templatePage)){if((imported.legacyPages||[]).includes(templatePage)){res.writeHead(308,{Location:canonical+'#ri-projects'});res.end();return true;}res.writeHead(404);res.end('صفحه پیدا نشد');return true;}
     const rendered=render(c,kind,page.preferences,base,templatePage).replaceAll('href="'+base+'/links"','href="'+base+linksPath+'"').replaceAll('href="'+base+'/"','href="'+base+(resumePath||'/')+'"').replaceAll('href="'+base+'/?page=','href="'+base+resumePath+'/?page=');
     const html='<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+esc(card.title)+'</title><meta name="description" content="'+esc(card.desc)+'"><meta name="robots" content="'+(page.preferences.indexing?'index,follow':'noindex,nofollow')+'"><link rel="canonical" href="'+esc(canonical+(imported&&templatePage!=='home'?'/?page='+templatePage:''))+'"><meta property="og:title" content="'+esc(card.title)+'"><meta property="og:description" content="'+esc(card.desc)+'"><meta property="og:url" content="'+esc(canonical)+'">'+(ogImage?'<meta property="og:image" content="'+esc(ogImage)+'">':'')+'<link rel="icon" href="/brand/favicon.svg">'+(imported?'':'<link rel="stylesheet" href="/fonts/fonts.css"><link rel="stylesheet" href="/public-assets/tokens.css"><link rel="stylesheet" href="/public-assets/base.css"><link rel="stylesheet" href="/public-assets/preview.css">')+'</head><body'+(imported?' class="'+esc(imported.pages[templatePage].bodyClass)+'"':'')+'><main class="public-page">'+rendered+'</main>'+(imported?'<script src="/templates/template-runtime.js"></script>':'')+'</body></html>';
-    const output=html.replace('</head>','<meta property="og:type" content="website"><meta name="twitter:card" content="'+(ogImage?'summary_large_image':'summary')+'"><meta name="twitter:title" content="'+esc(card.title)+'"><meta name="twitter:description" content="'+esc(card.desc)+'">'+(ogImage?'<meta name="twitter:image" content="'+esc(ogImage)+'">':'')+'</head>');
+    const output=html.replace('</body>','<script src="/public-assets/projects.js"></script></body>').replace('</head>','<meta property="og:type" content="website"><meta name="twitter:card" content="'+(ogImage?'summary_large_image':'summary')+'"><meta name="twitter:title" content="'+esc(card.title)+'"><meta name="twitter:description" content="'+esc(card.desc)+'">'+(ogImage?'<meta name="twitter:image" content="'+esc(ogImage)+'">':'')+'</head>');
     securityHeaders(res,origin,output);
     res.setHeader('Cache-Control','private, no-store');
     if(req.method==='GET'){
@@ -50,13 +50,15 @@ function dashboardHandler(database,auth,notifications){return async(req,res,path
   try{
     if(req.headers.host!==root.host)model.fail('مبدأ درخواست معتبر نیست',403);
     const user=await auth.account(req);if(!user)model.fail('دوباره وارد حسابت شو',401);
-    const scoped=['document','save','publish','unpublish','slug','share-qr'].some(route=>pathname==='/api/dashboard/'+route)||pathname.startsWith('/api/dashboard/media/');
+    const scoped=['document','save','publish','unpublish','slug','share-qr','advisor'].some(route=>pathname==='/api/dashboard/'+route)||pathname.startsWith('/api/dashboard/media/');
     const workspace=Number(new URL(req.url,origin).searchParams.get('workspace')||1);if(!require('../owner/settings.cjs').validSlot(workspace))model.fail('جایگاه صفحه معتبر نیست');
     activeWorkspace=workspace;
     if(scoped&&workspace>1&&req.method==='POST'&&pathname!=='/api/dashboard/unpublish'){const billing=await database.billing(user.id),owner=database.ownerUserSettings?await database.ownerUserSettings(user.id):{};if(!require('../owner/settings.cjs').workspaceAllowed(workspace,billing,owner))model.fail('این جایگاه به اشتراک فعال یا سهمیهٔ اضافهٔ مالک نیاز دارد',403);}
     if(req.headers['x-resumeit-owner']&&req.headers['x-resumeit-owner']!==user.id)model.fail('حساب فعال عوض شده است؛ این صفحه را دوباره باز کن',409,'ACCOUNT_CHANGED');
     if(notifications&&await notifications.handle(req,pathname,origin,user,reply))return true;
-    if(await require('./support.cjs')(database,req,pathname,origin,user,reply))return true;
+    if(await require('./support.cjs')(database,req,pathname,origin,user,reply,res))return true;
+    if(await require('./advisor.cjs').handle(database,req,pathname,origin,user,workspace,reply))return true;
+    if(await reset(req,pathname,origin,user,workspace,reply))return true;
     if(req.method==='GET'){
       const media=/^\/api\/dashboard\/media\/([a-f0-9]{32})$/.exec(pathname);
       if(media){const doc=await database.loadDashboard(user.id,workspace),value=require('./media.cjs').images(doc.content).get(media[1]);if(!value)model.fail('تصویر پیدا نشد',404);const m=/^data:image\/(png|jpeg|webp);base64,(.+)$/.exec(value);res.setHeader('Cache-Control','private, max-age=3600');res.setHeader('Vary','Cookie');res.writeHead(200,{'Content-Type':'image/'+m[1]});res.end(Buffer.from(m[2],'base64'));return true;}
@@ -99,6 +101,6 @@ function dashboardHandler(database,auth,notifications){return async(req,res,path
     },{draftOnly:saving,workspace,checkAccess:!pathname.endsWith('/unpublish')});
     if(!saving&&database.notify)await database.notify(user.id,'publication',pathname.endsWith('/unpublish')?'صفحه از انتشار برداشته شد':'نسخهٔ تازه منتشر شد',input.kind==='resume'?'رزومه':'صفحهٔ لینک‌ها','/dashboard/publish/','pub:'+user.id+':'+workspace+':'+result.revision).catch(()=>{});
     reply(200,saving&&input.compact===true?{revision:result.revision,slug:result.slug,preferences:result.preferences}:result);
-  }catch(e){reply(e.status||503,{error:e.status?e.message:'درخواست انجام نشد؛ دوباره تلاش کن',code:['REVISION_CONFLICT','ACCOUNT_CHANGED'].includes(e.code)?e.code:undefined});}return true;
+  }catch(e){reply(e.status||503,{error:e.status?e.message:'درخواست انجام نشد؛ دوباره تلاش کن',code:['REVISION_CONFLICT','ACCOUNT_CHANGED','ADVISOR_CONFLICT'].includes(e.code)?e.code:undefined});}return true;
 };}
 module.exports={dashboardHandler};
