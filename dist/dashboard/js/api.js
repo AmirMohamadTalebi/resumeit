@@ -1,6 +1,6 @@
 (() => {
   'use strict';const RI=window.RI;
-  RI.workspaceSlot=1;try{const value=Number(new URLSearchParams(location.search).get('workspace')||sessionStorage.getItem('ri-workspace')||1);if([1,2,3,4].includes(value))RI.workspaceSlot=value;}catch{}
+  RI.workspaceSlot=1;try{const value=Number(new URLSearchParams(location.search).get('workspace')||sessionStorage.getItem('ri-workspace')||1);if(Number.isSafeInteger(value)&&value>=1&&value<=2147483647)RI.workspaceSlot=value;}catch{}
   RI.pageKinds=()=>RI.workspaceSlot===3?['links']:['resume','links'];
   RI.restorePublication=doc=>{if(doc.content&&doc.pub)for(const k of ['resume','links'])if(doc.pub[k]?.snapCurrent){doc.pub[k].snap=JSON.stringify(RI.pubData(k,doc.content));delete doc.pub[k].snapCurrent;}return doc;};
   RI.dashboardRequest=async(route,data)=>{

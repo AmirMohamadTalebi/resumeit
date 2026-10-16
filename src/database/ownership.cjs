@@ -31,13 +31,15 @@ module.exports=({execute,transaction})=>({
   },
   async purgeAdminAudit(actor,input){
     requestInput(input);
-    if(input.confirmation!=='حذف لاگ‌ها'||!Number.isSafeInteger(input.before)||input.before<0||input.before>Date.now())fail('بازه و عبارت تأیید حذف لاگ‌ها معتبر نیست');
+    if(!['حذف لاگ‌ها','بایگانی لاگ‌ها'].includes(input.confirmation)||!Number.isSafeInteger(input.before)||input.before<0||input.before>Date.now())fail('بازه و عبارت تأیید لاگ‌ها معتبر نیست');
     return transaction(async con=>{
       await requireOwner(con,actor);
       const [[prior]]=await con.execute('SELECT actor_id,action,reason,details FROM admin_audit WHERE request_id=?',[input.requestId]);
       if(prior){const details=typeof prior.details==='string'?JSON.parse(prior.details):prior.details;if(prior.actor_id!==actor||prior.action!=='audit-purge'||prior.reason!==input.reason.trim()||details.before!==input.before)fail('شناسهٔ عملیات قبلاً استفاده شده است',409);return {ok:true,deleted:details.deleted,repeated:true};}
-      const [result]=await con.execute("DELETE FROM admin_audit WHERE created_at<? AND action<>'audit-purge'",[input.before]);
-      const deleted=Number(result.affectedRows);
+      // Audit rows also guard replay of sensitive commands; hide them without destroying receipts.
+      const [rows]=await con.execute("SELECT id,created_at FROM admin_audit WHERE created_at<? AND action NOT IN ('audit-purge','retention-run') AND NOT EXISTS(SELECT 1 FROM admin_archives z WHERE z.kind='audit' AND z.record_id=admin_audit.id) ORDER BY created_at,id LIMIT 200 FOR UPDATE",[input.before]);
+      for(const row of rows)await con.execute('INSERT IGNORE INTO admin_archives(kind,record_id,actor_id,record_at,created_at,batch_id) VALUES(?,?,?,?,?,?)',['audit',row.id,actor,Number(row.created_at),Date.now(),input.requestId]);
+      const deleted=rows.length;
       await con.execute('INSERT INTO admin_audit(id,actor_id,target_id,action,reason,details,request_id,created_at) VALUES(?,?,NULL,?,?,?,?,?)',[randomUUID(),actor,'audit-purge',input.reason.trim(),JSON.stringify({before:input.before,deleted}),input.requestId,Date.now()]);
       return {ok:true,deleted};
     });

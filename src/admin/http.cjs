@@ -7,7 +7,7 @@ function adminHandler(database, auth, notifications) {
   return async (req, res, path, origin) => {
     if(path==='/api/catalog'&&req.method==='GET'){
       try{const policy=database.commerceSettings?await database.commerceSettings():require('../owner/settings.cjs').defaults(),price=(ref,p)=>Math.round((policy.prices[ref]??p.price)*policy.rate/2000),minimum=(list,kind)=>Math.min(...list.filter(x=>x.price>0&&!policy.paused.includes(kind+':'+x.id)).map(x=>price(kind+':'+x.id,x)));
-        res.setHeader('Cache-Control','no-store');res.writeHead(200,{'Content-Type':'application/json; charset=utf-8'});res.end(JSON.stringify({rate:policy.rate,plans:Object.values(RI.PLANS).map(p=>({...p,price:price('subscription:'+p.id,p),paused:policy.paused.includes('subscription:'+p.id)})),templateFrom:minimum(RI.RESUME_TEMPLATES,'rt'),fontFrom:minimum(RI.FONTS,'font')}));
+        res.setHeader('Cache-Control','no-store');res.writeHead(200,{'Content-Type':'application/json; charset=utf-8'});res.end(JSON.stringify({rate:policy.rate,plans:Object.values(RI.PLANS).map(p=>({...p,name:policy.products?.['subscription:'+p.id]?.name||p.name,desc:policy.products?.['subscription:'+p.id]?.desc??p.desc,price:price('subscription:'+p.id,p),paused:policy.paused.includes('subscription:'+p.id)})),templateFrom:minimum(RI.RESUME_TEMPLATES,'rt'),fontFrom:minimum(RI.FONTS,'font')}));
       }catch{res.writeHead(503);res.end();}return true;
     }
     if (path === "/api/changes" && req.method === "GET") {res.writeHead(200,{"Content-Type":"application/json; charset=utf-8"});res.end(JSON.stringify({releases:require('../releases.json')}));return true;}
@@ -36,7 +36,7 @@ function adminHandler(database, auth, notifications) {
         return true;
       }
       if(req.headers["x-resumeit-owner"] && req.headers["x-resumeit-owner"]!==user.id){reply(409,{error:"حساب فعال عوض شده است؛ این صفحه را دوباره باز کنید"});return true;}
-      const ownerPanel=path==='/api/admin/commerce'||/^\/api\/admin\/users\/[a-f0-9-]{36}\/owner-controls$/.test(path);
+      const ownerPanel=path==='/api/admin/commerce'||path==='/api/admin/catalog/product'||['/api/admin/retention','/api/admin/retention/run'].includes(path)||/^\/api\/admin\/users\/[a-f0-9-]{36}\/owner-controls$/.test(path);
       const ownerOnly=ownerPanel||['/api/admin/payment-gateways','/api/admin/notification-channels','/api/admin/audit/purge'].includes(path)||/^\/api\/admin\/users\/[a-f0-9-]{36}\/role$/.test(path);
       if((ownerPanel||req.method!=='GET'&&ownerOnly)&&!isOwner(user)){reply(403,{error:'این عملیات فقط برای مالک سایت مجاز است'});return true;}
       const url = new URL(req.url, origin),
@@ -58,14 +58,16 @@ function adminHandler(database, auth, notifications) {
         return true;
       }
       const from = Date.now() - days * 86400000;
+      const filters=require('./filters.cjs').filters(Object.fromEntries(url.searchParams));
       if (req.method === "GET") {
         if(path==='/api/admin/commerce')reply(200,await database.commerceSettings());
+        else if(path==='/api/admin/retention')reply(200,await database.retentionPreview(user.id,Number(url.searchParams.get('before')||Date.now()-90*86400000)));
         else if(/^\/api\/admin\/users\/[a-f0-9-]{36}\/owner-controls$/.test(path))reply(200,{settings:await database.ownerUserSettings(path.split('/')[4]),billing:await database.billing(path.split('/')[4])});
         else if(path==='/api/admin/notification-channels')reply(200,await notifications.adminSettings());
         else if (path === "/api/admin/overview")
           reply(200, await database.adminOverview(from));
         else if (path === "/api/admin/catalog") {
-          const policy=database.commerceSettings?await database.commerceSettings():require('../owner/settings.cjs').defaults(),items=(list,kind)=>list.map(x=>({...x,price:policy.prices[kind+':'+x.id]??x.price,paused:policy.paused.includes(kind+':'+x.id)}));
+          const policy=database.commerceSettings?await database.commerceSettings():require('../owner/settings.cjs').defaults(),items=(list,kind)=>list.map(x=>({...x,...policy.products?.[kind+':'+x.id],ref:kind+':'+x.id,price:policy.prices[kind+':'+x.id]??x.price,paused:policy.paused.includes(kind+':'+x.id)})),sales=database.adminSales?await database.adminSales():null;
           reply(200, {
             templates: items(RI.RESUME_TEMPLATES,'rt'),
             linkTemplates: items(RI.LINK_TEMPLATES,'lt'),
@@ -73,6 +75,7 @@ function adminHandler(database, auth, notifications) {
             palettes: items(RI.PALETTES,'pal'),
             plans: Object.fromEntries(items(Object.values(RI.PLANS),'subscription').map(x=>[x.id,x])),
             rate: policy.rate,
+            sales,
             ...(isOwner(user)?{policy}:{}),
           });
         }
@@ -116,20 +119,21 @@ function adminHandler(database, auth, notifications) {
           /^\/api\/admin\/(users|pages|transactions|payments|purchases|otp|audit)$/.test(
             path,
           )
-        )
-          reply(
-            200,
-            await database.adminList(path.split("/").pop(), {
+        ){
+          const kind=path.split('/').pop(),data=await database.adminList(kind, {
               page,
               q,
               from,
               status,
-            }),
-          );
+              filters,
+            });
+          if(['payments','transactions','purchases'].includes(kind)&&database.adminSales)data.sales=await database.adminSales();
+          reply(200,data);
+        }
         else reply(404, { error: "بخش پیدا نشد" });
       } else if(req.method==='POST'&&ownerPanel){
         if(req.headers.origin!==origin||req.headers['content-type']?.split(';')[0]!=='application/json'){reply(403,{error:'درخواست معتبر نیست'});return true;}
-        const input=await readJson(req,65536);reply(200,path==='/api/admin/commerce'?await database.saveCommerceSettings(user.id,input):await database.ownerControl(user.id,path.split('/')[4],input));
+        const input=await readJson(req,65536);reply(200,path==='/api/admin/commerce'?await database.saveCommerceSettings(user.id,input):path==='/api/admin/retention/run'?await database.runRetention(user.id,input):path==='/api/admin/catalog/product'?await database.saveCatalogProduct(user.id,input):await database.ownerControl(user.id,path.split('/')[4],input));
       } else if(req.method==='POST'&&(path==='/api/admin/audit/purge'||/^\/api\/admin\/users\/[a-f0-9-]{36}\/role$/.test(path))){
         if(req.headers.origin!==origin||req.headers['content-type']?.split(';')[0]!=='application/json'){reply(403,{error:'درخواست معتبر نیست'});return true;}
         const input=await readJson(req,4096);

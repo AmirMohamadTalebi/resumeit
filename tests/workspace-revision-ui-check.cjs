@@ -3,7 +3,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),{randomUUID}=re
  const fixture=await require('./admin-fixture.cjs')(),{db,owner,target}=fixture,store=require('./workspace-test-store.cjs')(db,[owner,target]);
  const billing={plan:{id:'y',end:Date.now()+350*86400000},purchases:[],payments:[]};db.billing=async()=>structuredClone(billing);db.wallet=async()=>({balance:120,rate:2000,transactions:[]});
  const content=RI.seed('full');content.profile.name='آوا مهر';content.branding=RI.seed('empty').branding;content.links.style.matchResume=true;await db.mutateDashboard(owner,0,d=>{d.content=JSON.parse(JSON.stringify(content));});
- for(let i=0;i<52;i++)await store.execute('INSERT INTO wallet_transactions VALUES(?,?,?,?,?,?,?)',[randomUUID(),owner,i%3?2000:-4000,240000,'خرید آزمایشی '+i,'test:'+i,Date.now()-i*86400000]);
+ for(let i=0;i<52;i++)await store.execute('INSERT INTO wallet_transactions(id,user_id,delta_units,balance_units,label,reference,created_at) VALUES(?,?,?,?,?,?,?)',[randomUUID(),owner,i%3?2000:-4000,240000,'خرید آزمایشی '+i,'test:'+i,Date.now()-i*86400000]);
  await db.notify(owner,'product','نسخهٔ آزمایشی پنل','این اطلاعات برای تست محلی است.','/changes/','test:notice');
  const deliveries=[],keys=require('web-push').generateVAPIDKeys(),provider={available:{email:true,sms:true,push:true},publicKey:keys.publicKey,mail:async(to,subject,text)=>deliveries.push({to,subject,text}),sms:async()=>{},push:async()=>{}};
  const server=createServer(db,{notifications:{provider}});await new Promise(r=>server.listen(0,'127.0.0.1',r));const base='http://127.0.0.1:'+server.address().port,browser=await chromium.launch({channel:process.platform==='win32'?'msedge':undefined,headless:true});

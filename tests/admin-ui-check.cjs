@@ -122,8 +122,8 @@ const { createServer } = require("../src/http/server.cjs");
     );
     assert.equal(fixture.actions[0].toman, 10000);
     await page.goto(base + "/admin/catalog/");
-    await page.waitForSelector(".catalog-item");
-    await page.locator("#catalog-kind").selectOption("fonts");
+    await page.waitForSelector("[data-catalog-results] tbody tr");
+    await page.locator('[data-catalog-group="fonts"]').click();
     await page.waitForFunction(() =>
       document.querySelector("#content").textContent.includes("استعداد"),
     );

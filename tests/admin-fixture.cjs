@@ -58,7 +58,7 @@ module.exports = async () => {
       },
     ],
   });
-  db.adminList = async (kind, { page, q }) => {
+  db.adminList = async (kind, { page, q, filters:f={} }) => {
     if(kind==='payments')return {rows:[],total:0,page,pageSize:25};
     const all =
       kind === "users"
@@ -103,12 +103,17 @@ module.exports = async () => {
                     action: "credit",
                     reason: "دلیل آزمایشی شارژ مدیریتی",
                   }));
-    const filtered = q ? all.filter((u) => JSON.stringify(u).includes(q)) : all;
+    let filtered = q ? all.filter((u) => JSON.stringify(u).includes(q)) : all;
+    if(kind==='users'){if(f.verified)filtered=filtered.filter(u=>!!u.phone_verified===(f.verified==='yes'));if(f.role)filtered=filtered.filter(u=>(u.is_admin?'admin':'user')===f.role);if(f.plan==='paid')filtered=[];}
+    const amount=r=>Number(kind==='payments'?r.amount_toman:kind==='transactions'?Math.abs(r.delta_units)/2000:kind==='purchases'?r.price_units/2000:r.balance_units/2000);
+    if(f.min!==null&&f.min!==undefined)filtered=filtered.filter(r=>amount(r)>=f.min);if(f.max!==null&&f.max!==undefined)filtered=filtered.filter(r=>amount(r)<=f.max);
+    if(f.sort==='oldest')filtered=filtered.toReversed();if(['highest','lowest'].includes(f.sort))filtered=[...filtered].sort((a,b)=>(amount(a)-amount(b))*(f.sort==='highest'?-1:1));
+    const pageSize=f.pageSize||25;
     return {
-      rows: filtered.slice((page - 1) * 25, page * 25),
+      rows: filtered.slice((page - 1) * pageSize, page * pageSize),
       total: filtered.length,
       page,
-      pageSize: 25,
+      pageSize,
       ...(kind === "otp"
         ? { stats: { accepted: 31, failed: 0, pending: 0, verified: 31 } }
         : {}),

@@ -19,7 +19,7 @@ function expand(input,previous){
   const existing=images(previous);
   return visit(input,value=>{
     if(typeof value!=='string'||!value.startsWith('/api/dashboard/media/'))return value;
-    const match=/^\/api\/dashboard\/media\/([a-f0-9]{32})(?:\?workspace=[234])?$/.exec(value),image=match&&existing.get(match[1]);
+    const match=/^\/api\/dashboard\/media\/([a-f0-9]{32})(?:\?workspace=[1-9][0-9]{0,9})?$/.exec(value),image=match&&existing.get(match[1]);
     if(!image)throw Object.assign(new Error('تصویر قبلی در دسترس نیست؛ صفحه را تازه کن'),{status:409});
     return image;
   });

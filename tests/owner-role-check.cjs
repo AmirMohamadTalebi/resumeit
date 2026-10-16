@@ -8,6 +8,7 @@ const assert=require('node:assert/strict'),{randomUUID}=require('node:crypto'),{
   const admin=require('../src/database/admin.cjs')(store);db.savePaymentPolicy=admin.savePaymentPolicy;db.paymentPolicy=admin.paymentPolicy;
   const input=role=>({role,reason:'تعیین سطح دسترسی آزمایشی',requestId:randomUUID()});
   await db.saveAccountRole(owner,target,input('admin'));await db.saveAccountRole(owner,support,input('support'));
+  await assert.rejects(admin.adminAction(target,owner,'revoke-sessions',{reason:'تلاش مدیر عادی برای خروج مالک',requestId:randomUUID()}),e=>e.status===403);
   const server=createServer(db,{notifications:{provider:{available:{email:false,sms:false,push:false}}}});await new Promise(r=>server.listen(0,'127.0.0.1',r));const base='http://127.0.0.1:'+server.address().port;
   const request=async(path,who='a',body,headers={})=>{const r=await fetch(base+path,{method:body?'POST':'GET',headers:{Cookie:'ri_session='+who.repeat(64),...(body?{Origin:base,'Content-Type':'application/json'}:{}),...headers},body:body?JSON.stringify(body):undefined});return {status:r.status,body:await r.json()};};
   const purge={reason:'حذف سابقهٔ آزمایشی قدیمی',requestId:randomUUID(),before:Date.now()-1000,confirmation:'حذف لاگ‌ها'};

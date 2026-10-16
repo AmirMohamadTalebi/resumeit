@@ -4,6 +4,8 @@ const { RI } = require("../dashboard/render.cjs");
 const publicationSummary="JSON_OBJECT('resume',JSON_OBJECT('status',JSON_UNQUOTE(JSON_EXTRACT(pub,'$.resume.status'))),'links',JSON_OBJECT('status',JSON_UNQUOTE(JSON_EXTRACT(pub,'$.links.status')))) AS pub";
 const documents="(SELECT user_id,1 slot,slug,draft,pub,revision FROM dashboard_documents UNION ALL SELECT user_id,slot,slug,draft,pub,revision FROM dashboard_workspaces)";
 const metrics="(SELECT user_id,day,event,total FROM dashboard_metrics UNION ALL SELECT user_id,day,event,total FROM dashboard_workspace_metrics)";
+const subscribed="EXISTS(SELECT 1 FROM account_access a WHERE a.user_id=d.user_id AND a.ref LIKE 'subscription:%' AND a.expires_at>?)";
+const customQuota="JSON_CONTAINS_PATH(o.settings,'one','$.subdomainLimit')",quotaValue="JSON_EXTRACT(o.settings,'$.subdomainLimit')";
 const editableProfile = input => {
   const profile={};
   for(const [key,max] of [['first_name',39],['last_name',39],['role',100],['bio',500]]){
@@ -14,6 +16,11 @@ const editableProfile = input => {
   return profile;
 };
 module.exports = ({ execute, transaction }) => ({
+  async adminSales(){
+    const now=Date.now(),day=Math.floor((now+12600000)/86400000)*86400000-12600000;
+    const [totals]=await execute("SELECT COUNT(*) total,COALESCE(SUM(created_at>=?),0) today,COALESCE(SUM(created_at>=?),0) week,COALESCE(SUM(created_at>=?),0) month,COALESCE(SUM(-delta_units),0) units,COALESCE(SUM(product_ref IS NULL),0) unassigned FROM wallet_transactions WHERE delta_units<0 AND reference LIKE 'purchase:%'",[day,now-7*86400000,now-30*86400000]);
+    const products=await execute("SELECT product_ref ref,COUNT(*) total,COALESCE(SUM(created_at>=?),0) month,COALESCE(SUM(-delta_units),0) units FROM wallet_transactions WHERE delta_units<0 AND reference LIKE 'purchase:%' AND product_ref IS NOT NULL GROUP BY product_ref",[now-30*86400000]);return {totals,products,at:now};
+  },
   async paymentPolicy(){const [row]=await execute('SELECT sep_enabled,zibal_enabled FROM payment_policy WHERE id=1');return {sep:!!row?.sep_enabled,zibal:!!row?.zibal_enabled};},
   async savePaymentPolicy(actor,input){
     if(!input||typeof input.sep!=='boolean'||typeof input.zibal!=='boolean')fail('وضعیت درگاه معتبر نیست');
@@ -32,8 +39,8 @@ module.exports = ({ execute, transaction }) => ({
         [from],
       ),
       execute(
-        `SELECT COUNT(*) total,SUM(d.slot<>3 AND JSON_UNQUOTE(JSON_EXTRACT(d.pub,'$.resume.status'))='published' AND COALESCE(c.suspended,0)=0 AND COALESCE(c.publication_blocked,0)=0) resumes,SUM(JSON_UNQUOTE(JSON_EXTRACT(d.pub,'$.links.status'))='published' AND COALESCE(c.suspended,0)=0 AND COALESCE(c.publication_blocked,0)=0) links FROM ${documents} d LEFT JOIN admin_controls c ON c.user_id=d.user_id LEFT JOIN owner_user_settings o ON o.user_id=d.user_id WHERE d.slot=1 OR (d.slot IN (2,3) OR d.slot=4 AND CAST(JSON_UNQUOTE(JSON_EXTRACT(o.settings,'$.extraSubdomain')) AS CHAR) IN ('true','1')) AND EXISTS(SELECT 1 FROM account_access a WHERE a.user_id=d.user_id AND a.ref LIKE 'subscription:%' AND a.expires_at>?) OR d.slot=2 AND CAST(JSON_UNQUOTE(JSON_EXTRACT(o.settings,'$.extraSubdomain')) AS CHAR) IN ('true','1')`,
-        [Date.now()],
+        `SELECT COUNT(*) total,SUM(d.slot<>3 AND JSON_UNQUOTE(JSON_EXTRACT(d.pub,'$.resume.status'))='published' AND COALESCE(c.suspended,0)=0 AND COALESCE(c.publication_blocked,0)=0) resumes,SUM(JSON_UNQUOTE(JSON_EXTRACT(d.pub,'$.links.status'))='published' AND COALESCE(c.suspended,0)=0 AND COALESCE(c.publication_blocked,0)=0) links FROM ${documents} d LEFT JOIN admin_controls c ON c.user_id=d.user_id LEFT JOIN owner_user_settings o ON o.user_id=d.user_id WHERE (d.slot=3 AND ${subscribed}) OR (d.slot<>3 AND ((${customQuota} AND (${quotaValue} IS NULL OR JSON_UNQUOTE(${quotaValue})='null')) OR (CASE WHEN d.slot<3 THEN d.slot ELSE d.slot-1 END)<=(CASE WHEN ${customQuota} THEN CAST(JSON_UNQUOTE(${quotaValue}) AS UNSIGNED) ELSE (CASE WHEN ${subscribed} THEN 2 ELSE 1 END)+(CASE WHEN CAST(JSON_UNQUOTE(JSON_EXTRACT(o.settings,'$.extraSubdomain')) AS CHAR) IN ('true','1') THEN 1 ELSE 0 END) END)))`,
+        [Date.now(),Date.now()],
       ),
       execute(
         "SELECT COUNT(*) total,SUM(status='accepted') accepted,SUM(status='failed') failed,SUM(verified_at IS NOT NULL) verified,MIN(created_at) started FROM otp_events WHERE created_at>=?",
@@ -41,7 +48,7 @@ module.exports = ({ execute, transaction }) => ({
       ),
       execute("SELECT COALESCE(SUM(balance_units),0) balance FROM wallets"),
       execute(
-        "SELECT COUNT(*) total,COALESCE(SUM(-delta_units),0) spent FROM wallet_transactions WHERE delta_units<0 AND created_at>=?",
+        "SELECT COUNT(*) total,COALESCE(SUM(-delta_units),0) spent FROM wallet_transactions WHERE delta_units<0 AND reference LIKE 'purchase:%' AND created_at>=?",
         [from],
       ),
       execute(
@@ -77,14 +84,15 @@ module.exports = ({ execute, transaction }) => ({
       at: Date.now(),
     };
   },
-  async adminList(kind, { page, q, from, status }) {
+  async adminList(kind, { page, q, from, status, filters:inputFilters }) {
+    const f=require('../admin/filters.cjs').filters(inputFilters);
     const sources = {
       users: {
         table:
           "users u JOIN profiles p ON p.user_id=u.id LEFT JOIN wallets w ON w.user_id=u.id LEFT JOIN admin_controls c ON c.user_id=u.id",
         fields:
           "u.id,u.phone,u.phone_verified,u.created_at,p.name,p.first_name,p.last_name,COALESCE(w.balance_units,0) balance_units,COALESCE(c.suspended,0) suspended,EXISTS(SELECT 1 FROM admin_accounts WHERE user_id=u.id) is_admin",
-        search: "CONCAT_WS(' ',u.phone,p.name,p.first_name,p.last_name)",
+        search: "CONCAT_WS(' ',u.id,u.phone,p.name,p.first_name,p.last_name)",
         date: "UNIX_TIMESTAMP(u.created_at)*1000",
         order: "u.created_at DESC,u.id",
       },
@@ -100,8 +108,8 @@ module.exports = ({ execute, transaction }) => ({
         table:
           "wallet_transactions t JOIN users u ON u.id=t.user_id LEFT JOIN profiles p ON p.user_id=u.id",
         fields:
-          "t.id,t.user_id,t.delta_units,t.balance_units,t.label,t.created_at,u.phone,p.name",
-        search: "CONCAT_WS(' ',u.phone,p.name,t.label)",
+          "t.id,t.user_id,t.delta_units,t.balance_units,t.label,t.reference,t.product_ref,t.created_at,u.phone,p.name",
+        search: "CONCAT_WS(' ',t.id,t.user_id,t.reference,u.phone,p.name,t.label)",
         date: "t.created_at",
         order: "t.created_at DESC,t.id",
       },
@@ -116,7 +124,7 @@ module.exports = ({ execute, transaction }) => ({
       },
       payments: {
         table: "payment_orders o LEFT JOIN users u ON u.id=o.user_id LEFT JOIN profiles p ON p.user_id=o.user_id",
-        fields: "o.id,o.user_id,o.provider,o.amount_toman,o.status,o.rrn,o.trace,o.last_error,o.attempts,o.created_at,o.updated_at,u.phone,p.name",
+        fields: "o.id,o.user_id,o.provider,o.amount_toman,o.status,o.rrn,o.trace,o.last_error,o.attempts,o.it_rate,o.credit_units,o.created_at,o.updated_at,u.phone,p.name",
         search: "CONCAT_WS(' ',o.id,u.phone,p.name,o.rrn,o.trace)",
         date: "o.created_at",
         order: "o.created_at DESC,o.id",
@@ -139,12 +147,29 @@ module.exports = ({ execute, transaction }) => ({
     };
     const s = sources[kind];
     if (!s) fail("بخش پیدا نشد", 404);
-    const where = [`${s.search} LIKE ? ESCAPE '='`],
-      params = ["%" + q.replace(/[=%_]/g, (v) => "=" + v) + "%"];
-    if (s.date && kind !== "users") {
+    const words=require('../admin/filters.cjs').normalize(q).split(/\s+/).filter(Boolean).slice(0,12),where=[],params=[];
+    for(const word of words){where.push(`REPLACE(REPLACE(${s.search},'ي','ی'),'ك','ک') LIKE ? ESCAPE '='`);params.push('%'+word.replace(/[=%_]/g,v=>'='+v)+'%');}
+    if(!where.length)where.push('1=1');
+    if(['audit','payments','transactions','purchases'].includes(kind)&&f.archive!=='all'){const idExpr=({audit:'a.id',payments:'o.id',transactions:'t.id',purchases:"CONCAT(a.user_id,':',a.ref)"})[kind];where.push((f.archive==='archived'?'':'NOT ')+'EXISTS(SELECT 1 FROM admin_archives z WHERE z.kind=? AND z.record_id='+idExpr+')');params.push(kind);}
+    if (s.date && (kind !== "users"||f.after!==null)) {
       where.push(`${s.date}>=?`);
-      params.push(from);
+      params.push(f.after??from);
     }
+    if(s.date&&f.before!==null){where.push(`${s.date}<=?`);params.push(f.before);}
+    if(kind==='users'){
+      if(f.verified){where.push('u.phone_verified=?');params.push(f.verified==='yes'?1:0);}
+      if(f.role){where.push("(CASE WHEN EXISTS(SELECT 1 FROM owner_accounts WHERE user_id=u.id) THEN 'owner' WHEN EXISTS(SELECT 1 FROM admin_accounts WHERE user_id=u.id) THEN 'admin' WHEN EXISTS(SELECT 1 FROM support_accounts WHERE user_id=u.id) THEN 'support' ELSE 'user' END)=?");params.push(f.role);}
+      if(f.plan){where.push((f.plan==='free'?'NOT ':'')+"EXISTS(SELECT 1 FROM account_access a WHERE a.user_id=u.id AND a.ref LIKE 'subscription:%' AND a.expires_at>?)");params.push(Date.now());}
+    }
+    if(kind==='payments'&&f.provider){where.push('o.provider=?');params.push(f.provider);}
+    if(kind==='transactions'&&f.direction)where.push('t.delta_units'+(f.direction==='credit'?'>0':'<0'));
+    if(kind==='purchases'){
+      if(f.ref){where.push('a.ref=?');params.push(f.ref);}
+      if(f.access==='permanent')where.push('a.expires_at IS NULL');
+      else if(f.access){where.push('a.expires_at'+(f.access==='active'?'>?':'<=?'));params.push(Date.now());}
+    }
+    const amount=({users:'COALESCE(w.balance_units,0)',payments:'o.amount_toman',transactions:'ABS(t.delta_units)',purchases:'a.price_units'})[kind];
+    if(amount)for(const [key,operator]of [['min','>='],['max','<=']])if(f[key]!==null){where.push(amount+operator+'?');params.push(f[key]*(kind==='payments'?1:2000));}
     if (kind === "otp" && status) {
       where.push("status=?");
       params.push(status);
@@ -159,8 +184,9 @@ module.exports = ({ execute, transaction }) => ({
         `SELECT COUNT(*) total FROM ${s.table} WHERE ${clause}`,
         params,
       );
+    const order=f.sort==='oldest'?s.order.replaceAll('DESC','ASC'):f.sort==='name'&&['users','pages','transactions','payments','purchases'].includes(kind)?'p.name,'+s.order:['highest','lowest'].includes(f.sort)&&amount?amount+(f.sort==='highest'?' DESC,':' ASC,')+s.order:s.order;
     const rows = await execute(
-      `SELECT ${s.fields} FROM ${s.table} WHERE ${clause} ORDER BY ${s.order} LIMIT 25 OFFSET ${25 * (page - 1)}`,
+      `SELECT ${s.fields} FROM ${s.table} WHERE ${clause} ORDER BY ${order} LIMIT ${f.pageSize} OFFSET ${f.pageSize * (page - 1)}`,
       params,
     );
     const stats =
@@ -176,7 +202,7 @@ module.exports = ({ execute, transaction }) => ({
       rows,
       total: Number(count.total),
       page,
-      pageSize: 25,
+      pageSize: f.pageSize,
       ...(stats ? { stats } : {}),
     };
   },
@@ -331,6 +357,7 @@ module.exports = ({ execute, transaction }) => ({
       } else if (action === "revoke-sessions") {
         if (actor === id)
           fail("برای خروج خودتان از دکمهٔ خروج استفاده کنید", 409);
+        const [[manager]]=await con.execute('SELECT user_id FROM admin_accounts WHERE user_id=?',[id]);if(manager)await require('../admin/access.cjs').requireOwner(con,actor);
         await con.execute("DELETE FROM sessions WHERE user_id=?", [id]);
       } else fail("عملیات معتبر نیست");
       await con.execute(

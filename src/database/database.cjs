@@ -28,6 +28,7 @@ async function openDatabase(options) {
     ...require('./support-roles.cjs')(context),
     ...require('./ownership.cjs')(context),
     ...require('./owner-controls.cjs')(context),
+    ...require('./retention.cjs')(context),
     ...require('./notification-delivery.cjs')(context),
     ...require('./history.cjs')(context),
     ...require('./wallet.cjs')(context),

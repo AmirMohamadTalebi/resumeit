@@ -52,6 +52,7 @@
       "settings",
       "نسخهٔ سایت، اتصال سرویس‌ها و محدودیت‌های فعال.",
     ],
+    retention:['نگهداری و پاک‌سازی','history','پیش‌نمایش بازه، بایگانی قابل‌بازیابی اسناد و حذف محدود داده‌های قدیمی.'],
   };
   const section = document.body.dataset.section || "overview",
     $ = (s) => document.querySelector(s),
@@ -83,6 +84,9 @@
     total = 0,
     loadToken = 0;
   const actionNames = {
+    'owner-page-quota':'تعیین سقف ریزدامنه',
+    'catalog-product':'ویرایش محصول',
+    'retention-run':'نگهداری و پاک‌سازی',
     'owner-password':'بازنشانی رمز توسط مالک',
     'owner-subscription':'اصلاح اشتراک توسط مالک',
     'owner-profile':'ویرایش پیشرفتهٔ مشخصات',
@@ -262,6 +266,46 @@
     '">' +
     esc(name || "مشاهدهٔ حساب") +
     "</a>";
+  const recordKey=(r,kind=section)=>kind==='catalog'?r.ref:kind==='purchases'?r.user_id+':'+r.ref:kind==='pages'?r.id+':'+(r.slot||1):r.id;
+  let catalogData=null,catalogView='products',catalogPage=1;
+  let retentionBefore=Date.now()-90*86400000;
+  function retention(d){const labels={audit:'گزارش‌های مدیریت',payments:'گزارش پرداخت‌های نهایی',transactions:'گردش کیف پول',purchases:'گزارش دسترسی‌ها',tickets:'تیکت‌های بسته',otp:'رویدادهای OTP',notifications:'اعلان‌های خوانده‌شده'};return '<form id="retention-preview" class="catalog-filters"><label>داده‌های قدیمی‌تر از<input class="input" type="datetime-local" name="before" value="'+new Date(d.before-new Date(d.before).getTimezoneOffset()*60000).toISOString().slice(0,16)+'" required></label><button class="btn" type="submit">پیش‌نمایش تعداد</button></form><p class="notice">حداقل سن داده هفت روز؛ هر اجرا حداکثر ۲۰۰ رکورد. اسناد مالی و رسید عملیات مدیریت حذف نمی‌شوند: از فهرست جاری بایگانی و از همین صفحه قابل‌بازگردانی‌اند. تیکت باز، اعلان نخوانده و پرداخت در جریان پاک نمی‌شوند.</p>'+table(['بخش','واجد شرایط','بایگانی‌شده','عملیات'],d.rows.map(row=>[labels[row.kind],fa(row.eligible),row.mode==='archive'?fa(row.archived):'—','<div class="btnrow"><button class="btn" type="button" data-retention-kind="'+row.kind+'" data-retention-action="'+row.mode+'" '+(!row.eligible?'disabled':'')+'>'+(row.mode==='archive'?'بایگانی':'حذف قدیمی‌ها')+'</button>'+(row.mode==='archive'?'<button class="btn" type="button" data-retention-kind="'+row.kind+'" data-retention-action="restore" '+(!row.archived?'disabled':'')+'>بازگردانی</button>':'')+'</div>']))+'<p role="status" id="retention-result"></p>';}
+  function retentionDialog(kind,action){const phrase=action==='archive'?'بایگانی گزارش‌ها':action==='restore'?'بازگردانی گزارش‌ها':'اجرای پاک‌سازی',dialog=document.createElement('dialog');dialog.className='batch-dialog';dialog.innerHTML='<form><h2>'+phrase+'</h2><p>بخش '+esc(kind)+'؛ حداکثر ۲۰۰ مورد از بازهٔ انتخاب‌شده.'+(action==='delete'?' حذف این داده‌ها برگشت‌پذیر نیست.':'')+'</p><label>دلیل<input class="input" name="reason" required minlength="5" maxlength="500"></label><label>برای تأیید بنویس: '+phrase+'<input class="input" name="confirmation" required autocomplete="off"></label><div class="btnrow"><button class="btn btn-primary" type="submit">اجرای این نوبت</button><button class="btn" type="button" data-cancel>انصراف</button></div><p role="status"></p></form>';document.body.append(dialog);let busy=false;const requestId=crypto.randomUUID();dialog.oncancel=e=>{if(busy)e.preventDefault();};dialog.onclose=()=>dialog.remove();dialog.querySelector('[data-cancel]').onclick=()=>dialog.close();dialog.querySelector('form').onsubmit=async e=>{e.preventDefault();if(busy)return;busy=true;const form=e.target;form.querySelectorAll('button').forEach(b=>b.disabled=true);try{const result=await api('retention/run',{kind,action,before:retentionBefore,reason:form.elements.reason.value,confirmation:form.elements.confirmation.value,requestId});await load();$('#retention-result').textContent=fa(result.count)+' مورد پردازش شد؛ رسید عملیات ثبت شد. برای ادامه تعداد تازه را بررسی کن.';dialog.close();}catch(error){form.querySelector('[role=status]').textContent=error.message;}finally{busy=false;form.querySelectorAll('button').forEach(b=>b.disabled=false);}};dialog.showModal();}
+  const salesSummary=d=>d?'<div class="overview-kpis">'+[['today','خرید امروز'],['week','هفت روز اخیر'],['month','سی روز اخیر'],['total','کل خریدها']].map(([key,label])=>'<div class="kpi"><span>'+label+'</span><strong>'+fa(d.totals[key])+'</strong></div>').join('')+'</div>'+(Number(d.totals.unassigned)?'<p class="notice">'+fa(d.totals.unassigned)+' خرید قدیمی شناسهٔ محصول ندارد؛ در آمار کل هست اما به محصول خاص نسبت داده نمی‌شود.</p>':''):'';
+  const recordId=id=>'<button class="btn record-id" type="button" data-copy-id="'+esc(id)+'" title="کپی شناسهٔ '+esc(id)+'" aria-label="کپی شناسهٔ '+esc(id)+'">'+icon('copy')+'<span dir="ltr">'+esc(id)+'</span></button>';
+  function batchDialog(chosen,button){
+    const product=!!button.dataset.bulkCatalog,requestIds=chosen.map(()=>crypto.randomUUID()),dlg=document.createElement('dialog');dlg.className='batch-dialog';
+    dlg.innerHTML='<form><h2>'+esc(button.textContent)+'</h2><p>'+fa(chosen.length)+' مورد انتخاب شده؛ هر مورد جداگانه کنترل و ثبت می‌شود.</p><label>دلیل عملیات<input class="input" name="reason" required minlength="5" maxlength="500"></label><label>برای تأیید تعداد را با ارقام انگلیسی بنویس<input class="input" name="count" required inputmode="numeric"></label><div class="btnrow"><button class="btn btn-primary" type="submit">اجرای عملیات</button><button class="btn" type="button" data-cancel>انصراف</button></div><p role="status"></p></form>';document.body.append(dlg);let busy=false;
+    dlg.querySelector('[data-cancel]').onclick=()=>dlg.close();dlg.oncancel=e=>{if(busy)e.preventDefault();};dlg.onclose=()=>dlg.remove();
+    dlg.querySelector('form').onsubmit=async e=>{e.preventDefault();if(busy)return;const form=e.target,status=form.querySelector('[role=status]');if(form.elements.count.value!==String(chosen.length)){status.textContent='تعداد را دقیق وارد کن';return;}busy=true;form.querySelectorAll('button').forEach(b=>b.disabled=true);let ok=0;const failed=[];
+      for(let i=0;i<chosen.length;i++){const r=chosen[i];try{if(product)await api('catalog/product',{ref:r.ref,data:{paused:button.dataset.bulkCatalog==='pause'},expected:{price:r.price,paused:r.paused,metadata:catalogData.policy.products?.[r.ref]||null},confirmation:r.ref,reason:form.elements.reason.value,requestId:requestIds[i]});else await api('users/'+r.id+'/actions',{action:button.dataset.bulkUser,reason:form.elements.reason.value,requestId:requestIds[i]});ok++;}catch(error){failed.push(recordKey(r)+': '+error.message);}status.textContent=fa(ok+failed.length)+' از '+fa(chosen.length);}
+      busy=false;await load();status.textContent=fa(ok)+' موفق، '+fa(failed.length)+' ناموفق'+(failed.length?'\n'+failed.join('\n'):'');form.querySelector('[type=submit]').remove();form.querySelector('[data-cancel]').disabled=false;form.querySelector('[data-cancel]').textContent='بستن';
+    };dlg.showModal();
+  }
+  function advancedFilters(){
+    const select=(name,label,options)=>'<label>'+label+'<select class="select" data-list-filter="'+name+'">'+options.map(([value,text])=>'<option value="'+value+'">'+text+'</option>').join('')+'</select></label>';
+    const field=(name,label,type='number')=>'<label>'+label+'<input class="input" type="'+type+'" data-list-filter="'+name+'" '+(type==='number'?'min="0" step="0.0005"':'')+'></label>';
+    const common=select('pageSize','تعداد ردیف',[[10,'۱۰'],[25,'۲۵'],[50,'۵۰'],[100,'۱۰۰']])+select('sort','ترتیب',[['newest','جدیدترین'],['oldest','قدیمی‌ترین'],['name','نام'],['highest','بیشترین مبلغ/موجودی'],['lowest','کمترین مبلغ/موجودی']]);
+    const financial=['users','payments','purchases','transactions'].includes(section),dated=section!=='pages';
+    let html=common+(dated?field('after','از زمان','datetime-local')+field('before','تا زمان','datetime-local'):'')+(financial?field('min',section==='payments'?'حداقل تومان':'حداقل It')+field('max',section==='payments'?'حداکثر تومان':'حداکثر It'):'');
+    if(section==='users')html+=select('role','نقش',[['','همه'],['owner','مالک'],['admin','ادمین'],['support','ساپورت'],['user','کاربر']])+select('verified','تأیید شماره',[['','همه'],['yes','تأییدشده'],['no','تأییدنشده']])+select('plan','اشتراک',[['','همه'],['paid','فعال'],['free','بدون اشتراک فعال']]);
+    if(section==='payments')html+=select('provider','درگاه',[['','همه'],['zibal','زیبال'],['sep','سپ']]);
+    if(section==='transactions')html+=select('direction','جهت اعتبار',[['','همه'],['credit','افزایش'],['debit','کاهش']]);
+    if(section==='purchases')html+=field('ref','شناسهٔ محصول','search')+select('access','دسترسی',[['','همه'],['active','دارای تاریخ پایان و فعال'],['expired','پایان‌یافته'],['permanent','دائمی']]);
+    if(['payments','transactions','purchases','audit'].includes(section))html+=select('archive','فهرست',[['','جاری'],['archived','بایگانی'],['all','همهٔ سوابق']]);
+    $('#filters').insertAdjacentHTML('beforeend','<details class="advanced-filters"><summary>فیلترهای بیشتر</summary><div>'+html+'<button class="btn" type="button" data-reset-filters>پاک‌کردن فیلترها</button></div></details>');
+    const saved=new URL(location.href).searchParams;document.querySelector('[data-list-filter=pageSize]').value=matchMedia('(max-width:760px)').matches?'10':'25';document.querySelectorAll('[data-list-filter]').forEach(el=>{const value=saved.get(el.dataset.listFilter);if(value===null)return;if(el.type==='datetime-local'){const date=new Date(Number(value));if(Number.isFinite(date.getTime()))el.value=new Date(date.getTime()-date.getTimezoneOffset()*60000).toISOString().slice(0,16);}else el.value=value;});
+    for(const key of ['q','status','days'])if(saved.has(key))$('#'+({q:'search'}[key]||key)).value=saved.get(key);
+    if([...saved.keys()].some(key=>document.querySelector('[data-list-filter="'+key.replace(/[^a-zA-Z]/g,'')+'"]'))) $('.advanced-filters').open=true;
+  }
+  function detailTabs(){
+    const content=$('#content'),grid=content.querySelector('.admin-grid'),owner=content.querySelector('.owner-workspace');if(!grid)return;
+    const panels=[...grid.children].map((node,i)=>({node,key:i?'pages':'account',label:i?'صفحه‌ها و محصولات':'حساب و دسترسی'}));if(owner)panels.push({node:owner,key:'owner',label:'کنترل پیشرفتهٔ مالک'});
+    const tabs=document.createElement('div');tabs.className='tabs detail-tabs';tabs.setAttribute('role','tablist');tabs.setAttribute('aria-label','بخش‌های حساب');content.prepend(tabs);
+    for(const {node,key,label}of panels){node.id='detail-'+key;node.setAttribute('role','tabpanel');node.setAttribute('aria-labelledby','detail-tab-'+key);tabs.insertAdjacentHTML('beforeend','<button class="tab" role="tab" id="detail-tab-'+key+'" aria-controls="detail-'+key+'" data-detail-tab="'+key+'">'+label+'</button>');content.append(node);}grid.remove();const notice=content.querySelector(':scope>.notice');if(notice)content.append(notice);
+    const choose=(key,focus=false)=>{if(!panels.some(x=>x.key===key))key='account';for(const x of panels){const button=tabs.querySelector('[data-detail-tab='+x.key+']');x.node.hidden=x.key!==key;button.setAttribute('aria-selected',String(x.key===key));button.tabIndex=x.key===key?0:-1;if(focus&&x.key===key)button.focus();}const url=new URL(location.href);url.searchParams.set('detailTab',key);history.replaceState(null,'',url);};
+    choose(new URL(location.href).searchParams.get('detailTab'));tabs.addEventListener('click',e=>{const b=e.target.closest('[data-detail-tab]');if(b)choose(b.dataset.detailTab);});tabs.addEventListener('keydown',e=>{if(!['Home','End','ArrowLeft','ArrowRight'].includes(e.key))return;e.preventDefault();const buttons=[...tabs.children],index=buttons.indexOf(document.activeElement),next=e.key==='Home'?0:e.key==='End'?buttons.length-1:(index+(e.key==='ArrowLeft'?1:-1)+buttons.length)%buttons.length;choose(buttons[next].dataset.detailTab,true);});
+  }
   function publication(v) {
     const p = parse(v) || {};
     return (
@@ -377,21 +421,21 @@
         : "";
     const [headers, mapper] = configs[kind];
     return (
-      otpSummary +
+      otpSummary + salesSummary(data.sales)+
       '<section class="panel">' +
       (!data.rows.length
         ? '<div class="empty">موردی با این فیلتر پیدا نشد. بازه یا عبارت جست‌وجو را تغییر دهید.</div>'
-        : table(headers, data.rows.map(mapper))) +
+        : '<div class="bulk-tools"><label><input type="checkbox" class="checkbox" data-select-page>انتخاب این صفحه</label><button type="button" class="btn" data-export-selected>خروجی منتخب</button><button type="button" class="btn" data-copy-selected>کپی شناسه‌ها</button>'+(kind==='users'?'<button type="button" class="btn" data-bulk-user="suspend">تعلیق منتخب</button><button type="button" class="btn" data-bulk-user="restore">رفع تعلیق</button><button type="button" class="btn" data-bulk-user="revoke-sessions">خروج نشست‌ها</button>':'')+'<span role="status" data-bulk-status></span></div>'+table(['انتخاب','شناسه',...headers,...(['payments','transactions','purchases'].includes(kind)?['سند']:[])], data.rows.map((r,index)=>['<input class="checkbox" type="checkbox" data-record-key="'+esc(recordKey(r,kind))+'" aria-label="انتخاب '+esc(recordKey(r,kind))+'">',recordId(recordKey(r,kind)),...mapper(r),...(['payments','transactions','purchases'].includes(kind)?['<button type="button" class="btn" data-admin-receipt="'+index+'">رسید</button>']:[])]))) +
       '<div class="pager"><span>' +
       fa(data.total) +
       " مورد · صفحهٔ " +
       fa(data.page) +
       " از " +
-      fa(Math.max(1, Math.ceil(data.total / 25))) +
+      fa(Math.max(1, Math.ceil(data.total / data.pageSize))) +
       '</span><div><button class="btn" id="prev" ' +
       (page === 1 ? "disabled" : "") +
       '>قبلی</button><button class="btn" id="next" ' +
-      (page * 25 >= data.total ? "disabled" : "") +
+      (page * data.pageSize >= data.total ? "disabled" : "") +
       ">بعدی</button></div></div></section>"
     );
   }
@@ -407,6 +451,7 @@
       ) +
       "</h2>" +
       summary([
+        ["شناسه",recordId(u.id)],
         ["شماره", '<span class="ltr">' + esc(u.phone || "—") + "</span>"],
         ["تأیید شماره", badge(u.phone_verified)],
         ["نقش", roleNames[u.account_role] || (u.is_owner ? roleNames.owner : u.is_admin ? roleNames.admin : u.is_support ? roleNames.support : roleNames.user)],
@@ -474,45 +519,25 @@
     );
   }
   function catalog(d) {
-    const group = $("#catalog-kind").value,
-      items =
-        group === "plans"
-          ? Object.entries(d.plans).map(([id, v]) => ({ id, ...v }))
-          : d[group];
-    return (
-      '<div class="catalog-grid">' +
-      items
-        .map(
-          (x) =>
-            '<article class="catalog-item">' +
-            (["vista", "satiar"].includes(x.id)
-              ? '<img src="/brand/template-' +
-                x.id +
-                '-thumb.png" alt="نمای قالب ' +
-                esc(x.name) +
-                '" loading="lazy">'
-              : "") +
-            "<h2>" +
-            esc(x.name || x.id) +
-            "</h2><p>" +
-            esc(x.desc || x.description || x.id) +
-            "</p>" +
-            summary([
-              [
-                "قیمت",
-                x.price
-                  ? fa(x.price*d.rate/2000) + " تومان / " + fa(x.price / 2000) + " It"
-                  : "رایگان",
-              ],
-              ["شناسه", esc(x.id)],
-              ["دسترسی", esc(x.access || (x.months ? "اشتراک" : "رایگان"))],
-            ]) +
-            "</article>",
-        )
-        .join("") +
-      '</div><p class="notice">قیمت‌ها از فهرست فعال سایت خوانده می‌شوند. تغییر قیمت و توقف فروش در کنترل مالک انجام می‌شود؛ فاکتورهای قبلی حفظ می‌شوند.</p>'
-    );
+    catalogData=d;const group=$('#catalog-kind').value,items=group==='plans'?Object.values(d.plans):d[group],kind=({templates:'rt',linkTemplates:'lt',fonts:'font',palettes:'pal',plans:'subscription'})[group];
+    return '<div class="tabs detail-tabs catalog-tabs" role="tablist" aria-label="دستهٔ محصولات">'+[['templates','رزومه'],['linkTemplates','لینک'],['fonts','فونت'],['palettes','رنگ'],['plans','اشتراک']].map(([id,label])=>'<button class="tab" type="button" role="tab" data-catalog-group="'+id+'" aria-selected="'+(group===id&&catalogView==='products')+'">'+label+'</button>').join('')+(fullAdmin?'<button class="tab" type="button" role="tab" data-catalog-settings aria-selected="'+(catalogView==='settings')+'">نرخ It و محدودیت‌ها</button>':'')+'</div><section class="catalog-products">'+salesSummary(d.sales)+'<div class="catalog-filters"><label>جست‌وجوی محصول<input class="input" type="search" data-catalog-search placeholder="نام، توضیح یا شناسه"></label><label>فروش<select class="select" data-catalog-status><option value="">همه</option><option value="active">فعال</option><option value="paused">متوقف</option><option value="free">رایگان</option><option value="paid">پولی</option></select></label><label>ترتیب<select class="select" data-catalog-sort><option value="recent">آخرین ویرایش</option><option value="name">نام</option><option value="cheap">ارزان‌ترین It</option><option value="expensive">گران‌ترین It</option><option value="sales">پرفروش سی‌روزه</option></select></label></div><div data-catalog-results>'+table(['محصول','شناسه','قیمت It','فروش ۳۰ روز / کل','وضعیت فروش',...(fullAdmin?['ویرایش']:[])],items.map(x=>{const ref=kind+':'+x.id,sale=d.sales?.products.find(p=>p.ref===ref);return ['<b>'+esc(x.name)+'</b><p class="catalog-description">'+esc(x.desc||x.description||'')+'</p>',recordId(ref),x.price?fa(x.price/2000)+' It<br><small>'+fa(Math.round(x.price*d.rate/2000))+' تومان</small>':'رایگان',fa(sale?.month||0)+' / '+fa(sale?.total||0),fullAdmin&&x.price?'<label class="admin-channel-row catalog-toggle"><span>'+(x.paused?'متوقف':'فعال')+'</span><input class="toggle" type="checkbox" data-catalog-toggle="'+ref+'" '+(!x.paused?'checked':'')+' aria-label="فروش '+esc(x.name)+'"></label>':x.paused?'متوقف':x.price?'فعال':'رایگان',...(fullAdmin?['<div class="btnrow"><button class="btn" type="button" data-catalog-edit="'+ref+'" data-edit-mode="metadata">ویرایش مشخصات</button>'+(x.price?'<button class="btn" type="button" data-catalog-edit="'+ref+'" data-edit-mode="price">ویرایش قیمت</button>':'')+'</div>']:[])];}))+'</div><p class="notice">نرخ تومان به It یک تنظیم سراسری است؛ قیمت هر محصول به It مستقل است. رسیدهای قبلی تغییر نمی‌کنند.</p></section>';
   }
+  function catalogState(){
+    if(section!=='catalog')return;const products=$('.catalog-products');products.hidden=catalogView==='settings';const owner=$('#content>.owner-workspace');if(owner)owner.hidden=catalogView!=='settings';
+    if(!products.querySelector('[data-catalog-size]')){
+      const results=$('[data-catalog-results]');results.insertAdjacentHTML('beforebegin','<div class="bulk-tools"><label><input type="checkbox" class="checkbox" data-select-page>انتخاب این صفحه</label><button type="button" class="btn" data-export-selected>خروجی منتخب</button><button type="button" class="btn" data-copy-selected>کپی شناسه‌ها</button>'+(fullAdmin?'<button type="button" class="btn" data-bulk-catalog="pause">توقف فروش منتخب پولی</button><button type="button" class="btn" data-bulk-catalog="resume">ادامهٔ فروش منتخب پولی</button>':'')+'<span role="status" data-bulk-status></span></div>');
+      results.querySelector('thead tr').insertAdjacentHTML('afterbegin','<th>انتخاب</th>');results.querySelectorAll('tbody tr').forEach(row=>row.insertAdjacentHTML('afterbegin','<td><input class="checkbox" type="checkbox" data-record-key="'+esc(row.querySelector('[data-copy-id]').dataset.copyId)+'" aria-label="انتخاب محصول"></td>'));
+      products.insertAdjacentHTML('beforeend','<nav class="pager"><span data-catalog-count></span><label>تعداد ردیف<select class="select" data-catalog-size><option value="8">۸</option><option value="16">۱۶</option><option value="32">۳۲</option></select></label><div><button class="btn" type="button" data-catalog-page="-1">قبلی</button><button class="btn" type="button" data-catalog-page="1">بعدی</button></div></nav>');
+    }filterCatalog();
+  }
+  function filterCatalog(){
+    const q=$('[data-catalog-search]').value.trim().toLocaleLowerCase('fa'),status=$('[data-catalog-status]').value,sort=$('[data-catalog-sort]').value,group=$('#catalog-kind').value,items=group==='plans'?Object.values(catalogData.plans):catalogData[group],list=[...$('[data-catalog-results] tbody').rows],byRef=new Map(items.map(x=>[x.ref,x])),item=row=>byRef.get(row.querySelector('[data-copy-id]').dataset.copyId);
+    const matched=list.filter(row=>{const x=item(row);return (!q||row.textContent.toLocaleLowerCase('fa').includes(q))&&(!status||status==='free'&&!x.price||status==='paid'&&!!x.price||status==='paused'&&x.paused||status==='active'&&!x.paused);});
+    matched.sort((a,b)=>{const x=item(a),y=item(b);return sort==='name'?x.name.localeCompare(y.name,'fa'):sort==='cheap'?x.price-y.price:sort==='expensive'?y.price-x.price:sort==='sales'?Number(catalogData.sales?.products.find(p=>p.ref===y.ref)?.month||0)-Number(catalogData.sales?.products.find(p=>p.ref===x.ref)?.month||0):Number(y.updated_at||0)-Number(x.updated_at||0);});
+    const size=Number($('[data-catalog-size]').value),pages=Math.max(1,Math.ceil(matched.length/size));catalogPage=Math.max(1,Math.min(catalogPage,pages));const visible=new Set(matched.slice((catalogPage-1)*size,catalogPage*size));for(const row of list)row.hidden=!visible.has(row);for(const row of matched)row.parentElement.append(row);
+    $('[data-catalog-count]').textContent=fa(matched.length)+' محصول · صفحهٔ '+fa(catalogPage)+' از '+fa(pages);$('[data-catalog-page="-1"]').disabled=catalogPage===1;$('[data-catalog-page="1"]').disabled=catalogPage===pages;
+  }
+  function productDialog(ref,mode,paused){const item=[...catalogData.templates,...catalogData.linkTemplates,...catalogData.fonts,...catalogData.palettes,...Object.values(catalogData.plans)].find(x=>x.ref===ref);if(!item)return;const policy=catalogData.policy,expected={price:item.price,paused:item.paused,metadata:policy.products?.[ref]||null},dialog=document.createElement('dialog');dialog.className='batch-dialog';dialog.innerHTML='<form><h2>'+esc(mode==='price'?'ویرایش قیمت':mode==='toggle'?'تغییر وضعیت فروش':'ویرایش مشخصات')+' · '+esc(item.name)+'</h2><p dir="ltr">'+esc(ref)+'</p>'+(mode==='price'?'<label>قیمت It<input class="input" name="price" type="number" min="1" max="50000" step="1" value="'+item.price/2000+'" required></label>':mode==='metadata'?'<label>نام<input class="input" name="name" maxlength="80" value="'+esc(item.name)+'" required></label><label>توضیح<textarea class="textarea" name="desc" maxlength="500">'+esc(item.desc||item.description||'')+'</textarea></label>':'<p>'+(paused?'شروع خرید جدید متوقف می‌شود؛ خریدهای قبلی حفظ می‌شوند.':'فروش دوباره فعال می‌شود.')+'</p>')+'<label>دلیل<input class="input" name="reason" required minlength="5" maxlength="500"></label><label>برای تأیید شناسهٔ محصول را وارد کن<input class="input" name="confirmation" required autocomplete="off"></label><div class="btnrow"><button class="btn btn-primary" type="submit">ثبت تغییر</button><button class="btn" type="button" data-cancel>انصراف</button></div><p role="status"></p></form>';document.body.append(dialog);const requestId=crypto.randomUUID();let busy=false;dialog.onclose=()=>dialog.remove();dialog.oncancel=e=>{if(busy)e.preventDefault();};dialog.querySelector('[data-cancel]').onclick=()=>dialog.close();dialog.querySelector('form').onsubmit=async e=>{e.preventDefault();if(busy)return;busy=true;const form=e.target,status=form.querySelector('[role=status]');form.querySelectorAll('button').forEach(b=>b.disabled=true);try{const data=mode==='price'?{price:Number(form.elements.price.value)*2000}:mode==='metadata'?{name:form.elements.name.value,desc:form.elements.desc.value}:{paused};await api('catalog/product',{ref,data,expected,reason:form.elements.reason.value,confirmation:form.elements.confirmation.value,requestId});await load();dialog.close();}catch(error){status.textContent=error.message;}finally{busy=false;form.querySelectorAll('button').forEach(b=>b.disabled=false);}};dialog.showModal();}
   function health(d) {
     const channels=d.notificationChannels;
     return (
@@ -577,10 +602,13 @@
           days: $("#days").value,
           q: $("#search").value,
           status: $("#status").value,
-        }),
-        d = await api(route + "?" + params);
+        });
+      document.querySelectorAll('[data-list-filter]').forEach(el=>{if(el.value)params.set(el.dataset.listFilter,el.type==='datetime-local'?String(new Date(el.value).getTime()):el.value);});
+      if(section==='retention')params.set('before',String(retentionBefore));
+      if(!detailId&&document.querySelector('[data-list-filter]')){const url=new URL(location.href);url.search=params.toString();history.replaceState(null,'',url);}
+      const d = await api(route + "?" + params);
       if (token !== loadToken) return;
-      rows = d.rows || [];
+      rows = section==='catalog'?($('#catalog-kind').value==='plans'?Object.values(d.plans):d[$('#catalog-kind').value]):d.rows || [];
       total = d.total || 0;
       $("#content").innerHTML =
         section === "overview"
@@ -601,14 +629,16 @@
               "</section>"
             : section === "catalog"
               ? catalog(d)
-              : section === "health"
+              : section==='retention'?retention(d):section === "health"
                 ? health(d)
                 : detailId && section === "users"
                   ? detail(d)
                   : listContent(section, d);
       permissions(d,detailId);
       if(fullAdmin&&detailId&&section==='users')$('#content').insertAdjacentHTML('beforeend',window.ownerUserControls(d));
-      if(fullAdmin&&section==='catalog'&&d.policy)$('#content').insertAdjacentHTML('afterbegin',window.ownerCommerceControls(d));
+      if(detailId&&section==='users')detailTabs();
+      if(fullAdmin&&section==='catalog'&&d.policy)$('#content').insertAdjacentHTML('beforeend',window.ownerCommerceControls(d));
+      catalogState();
       document.querySelectorAll('.owner-product-row').forEach(row=>{if(!row.querySelector('[data-owner-price]'))row.querySelector('[data-owner-paused]').disabled=true;});
       $("#updated").textContent = "آخرین دریافت: " + date(Date.now());
       $("#export").disabled = !rows.length;
@@ -637,7 +667,7 @@
       if(detailId===ownerId)return;
       $('#content .detail-actions').insertAdjacentHTML('afterend','<form id="account-role-form" class="staff-role-form"><h3>نقش حساب</h3><p>مالک می‌تواند تنظیمات حساس و نقش مدیرها را تغییر دهد. ادمین به کنترل‌های سراسری سرویس‌ها و پاک‌کردن لاگ‌ها دسترسی ندارد.</p><label>سطح دسترسی<select class="select" name="role">'+Object.entries(roleNames).map(([id,label])=>'<option value="'+id+'" '+(role===id?'selected':'')+'>'+label+'</option>').join('')+'</select></label><label>دلیل تغییر<input class="input" name="reason" required minlength="5" maxlength="500"></label><label>برای تأیید، نام نقش انتخاب‌شده را بنویس<input class="input" name="confirmation" required autocomplete="off" placeholder="'+esc(roleNames[role])+'"></label><button class="btn" type="submit">ذخیرهٔ نقش حساب</button><p role="status"></p></form>');
     }
-    if(section==='audit')$('#content').insertAdjacentHTML('afterbegin','<section class="panel audit-purge"><h2>پاک‌سازی لاگ‌های مدیریتی</h2><p>حذف برگشت‌پذیر نیست؛ رسیدهای پاک‌سازی شامل عامل، دلیل و تعداد حذف‌شده باقی می‌مانند.</p><form id="audit-purge-form" class="staff-role-form"><label>بازهٔ حذف<select class="select" name="range"><option value="90">قدیمی‌تر از ۹۰ روز</option><option value="30">قدیمی‌تر از ۳۰ روز</option><option value="7">قدیمی‌تر از ۷ روز</option><option value="0">تمام لاگ‌ها تا همین لحظه</option></select></label><label>دلیل پاک‌سازی<input class="input" name="reason" required minlength="5" maxlength="500"></label><label>برای تأیید بنویس: حذف لاگ‌ها<input class="input" name="confirmation" required autocomplete="off"></label><button class="btn" type="submit">حذف لاگ‌های این بازه</button><p role="status"></p></form></section>');
+    if(section==='audit')$('#content').insertAdjacentHTML('afterbegin','<section class="panel audit-purge"><h2>بایگانی گزارش‌های مدیریتی</h2><p>گزارش‌ها از فهرست جاری کنار می‌روند؛ سند اصلی و رسید عملیات برای پیگیری حفظ می‌شوند. هر نوبت حداکثر ۲۰۰ گزارش بایگانی می‌شود. <a href="/admin/retention/">نگهداری و بازگردانی سوابق</a></p><form id="audit-purge-form" class="staff-role-form"><label>بازهٔ بایگانی<select class="select" name="range"><option value="90">قدیمی‌تر از ۹۰ روز</option><option value="30">قدیمی‌تر از ۳۰ روز</option><option value="7">قدیمی‌تر از ۷ روز</option><option value="0">تمام لاگ‌ها تا همین لحظه</option></select></label><label>دلیل بایگانی<input class="input" name="reason" required minlength="5" maxlength="500"></label><label>برای تأیید بنویس: بایگانی لاگ‌ها<input class="input" name="confirmation" required autocomplete="off"></label><button class="btn" type="submit">بایگانی گزارش‌های این بازه</button><p role="status"></p></form></section>');
   }
   function actionDialog(id, action) {
     const dlg = $("#action-dialog");
@@ -690,8 +720,9 @@
     $("#action-cancel").onclick = () => dlg.close();
     dlg.showModal();
   }
-  function exportCsv() {
-    const keys = Object.keys(rows[0] || {}),
+  function exportCsv(selected=rows) {
+    if(!Array.isArray(selected))selected=rows;
+    const keys = Object.keys(selected[0] || {}),
       cell = (v) =>
         '"' +
         String(typeof v === "object" ? JSON.stringify(v) : (v ?? ""))
@@ -700,7 +731,7 @@
         '"',
       csv =
         "\uFEFF" +
-        [keys, ...rows.map((r) => keys.map((k) => r[k]))]
+        [keys, ...selected.map((r) => keys.map((k) => r[k]))]
           .map((row) => row.map(cell).join(","))
           .join("\r\n");
     const url = URL.createObjectURL(
@@ -733,7 +764,7 @@
     $("#admin-name").textContent =
       [user.first_name, user.last_name].filter(Boolean).join(" ") ||
       "مدیر ResumeIt";
-    const groups=[['دید کلی','chart',['overview','traffic']],['کاربران و صفحات','user',['users','pages']],['امور مالی','card',['payments','transactions','purchases']],['محصولات','palette',['catalog']],['امنیت و سرویس‌ها','shield',['health','otp','audit']]],active=groups.find(g=>g[2].includes(section));
+    const groups=[['دید کلی','chart',['overview','traffic']],['کاربران و صفحات','user',['users','pages']],['امور مالی','card',['payments','transactions','purchases']],['محصولات','palette',['catalog']],['امنیت و سرویس‌ها','shield',['health','otp','audit',...(fullAdmin?['retention']:[])]]],active=groups.find(g=>g[2].includes(section));
     const href=id=>id==='overview'?'/admin/':'/admin/'+id+'/';
     $("#admin-nav").innerHTML='<ul class="menu">'+groups.map(([label,symbol,ids])=>'<li><a title="'+label+'" href="'+href(ids.includes(section)?section:ids[0])+'" '+(ids.includes(section)?'aria-current="page"':'')+'>'+icon(symbol)+'<span>'+label+'</span></a></li>').join('')+'<li><a href="/staff/" title="پنل پشتیبانی">'+icon('help')+'<span>پشتیبانی و تیکت‌ها</span></a></li></ul>';
     $("#admin-menu").innerHTML = icon("menu");
@@ -767,7 +798,8 @@
         : section === "users"
         ? '<option value="active">فعال</option><option value="suspended">تعلیق‌شده</option>'
         : '<option value="accepted">پذیرفته‌شده</option><option value="failed">ناموفق</option><option value="pending">در انتظار</option>');
-    $("#catalog-controls").hidden = section !== "catalog";
+    $("#catalog-controls").hidden = true;
+    if(section==='retention')$('#filters').hidden=true;
     $("#export").hidden = ["overview", "traffic", "catalog", "health"].includes(
       section,
     );
@@ -789,9 +821,11 @@
       load();
     };
     $("#catalog-kind").onchange = load;
+    if(['users','pages','transactions','payments','purchases','otp','audit'].includes(section))advancedFilters();
     $("#export").onclick = exportCsv;
     document.addEventListener('change',event=>{const form=event.target.closest('#account-role-form');if(form&&event.target.name==='role'){const confirmation=form.elements.namedItem('confirmation');confirmation.value='';confirmation.placeholder=roleNames[event.target.value];form.querySelector('[role=status]').textContent='';delete form.dataset.requestId;}});
     document.addEventListener('submit',async event=>{
+      if(event.target.id==='retention-preview'){event.preventDefault();retentionBefore=new Date(event.target.elements.before.value).getTime();await load();return;}
       if(['account-role-form','audit-purge-form'].includes(event.target.id)){
         event.preventDefault();const form=event.target,button=form.querySelector('[type=submit]'),status=form.querySelector('[role=status]');if(button.disabled)return;
         const role=form.elements.namedItem('role')?.value;
@@ -814,6 +848,18 @@
       catch(error){status.textContent=error.message;}finally{button.disabled=false;}
     });
     document.addEventListener("click", (e) => {
+      const retentionAction=e.target.closest('[data-retention-kind]');if(retentionAction){retentionDialog(retentionAction.dataset.retentionKind,retentionAction.dataset.retentionAction);return;}
+      const catalogGroup=e.target.closest('[data-catalog-group]');if(catalogGroup){$('#catalog-kind').value=catalogGroup.dataset.catalogGroup;catalogView='products';catalogPage=1;load();return;}
+      if(e.target.closest('[data-catalog-settings]')){catalogView='settings';document.querySelectorAll('[data-catalog-group]').forEach(b=>b.setAttribute('aria-selected','false'));$('[data-catalog-settings]').setAttribute('aria-selected','true');catalogState();return;}
+      const product=e.target.closest('[data-catalog-edit]');if(product){productDialog(product.dataset.catalogEdit,product.dataset.editMode);return;}
+      const receipt=e.target.closest('[data-admin-receipt]');if(receipt){const r=rows[Number(receipt.dataset.adminReceipt)];if(!r)return;const dialog=document.createElement('dialog');dialog.className='batch-dialog admin-receipt';const fields=section==='payments'?[['وضعیت',r.status],['مبلغ تومان',fa(r.amount_toman)],['درگاه',r.provider],['مرجع بانکی',r.rrn||'ثبت نشده'],['رهگیری',r.trace||'ثبت نشده'],['نرخ همین پرداخت',fa(r.it_rate||2000)+' تومان/It'],[r.status==='paid'?'اعتبار همین پرداخت':'اعتبار در صورت تأیید',fa(Number(r.credit_units??(Number(r.amount_toman)*2000/Number(r.it_rate||2000)))/2000)+' It']]:section==='transactions'?[['عنوان',r.label],['تغییر اعتبار',fa(r.delta_units/2000)+' It'],['موجودی بعد',fa(r.balance_units/2000)+' It'],['مرجع',r.reference||'—'],['محصول',r.product_ref||'ثبت نشده']]:[['محصول',r.ref],['قیمت ثبت‌شده',fa(r.price_units/2000)+' It'],['پایان دسترسی',r.expires_at?date(r.expires_at):'دائمی']];dialog.innerHTML='<h2>'+(section==='payments'&&r.status==='paid'?'رسید پرداخت تأییدشده':section==='payments'?'گزارش پرداخت؛ تأیید نشده':section==='transactions'?'رسید دفتر کیف پول':'گواهی دسترسی فعلی')+'</h2>'+summary([['شناسه',esc(recordKey(r))],['حساب',esc(r.name||r.phone||r.user_id||'حساب حذف‌شده')],['زمان ثبت',date(r.created_at)],...fields.map(([key,value])=>[key,esc(value)])])+'<p class="notice">'+(section==='purchases'?'این سند، دسترسی فعلی است و اثبات پرداخت بانکی یا فاکتور خرید تاریخی نیست.':'رسید داخلی رزومیت؛ وضعیت پرداخت بانکی فقط با تأیید درگاه تغییر می‌کند.')+'</p><div class="btnrow"><button class="btn" type="button" data-print>چاپ</button><button class="btn" type="button" data-download>خروجی سند</button><button class="btn" type="button" data-close>بستن</button></div>';document.body.append(dialog);dialog.querySelector('[data-close]').onclick=()=>dialog.close();dialog.querySelector('[data-print]').onclick=()=>window.print();dialog.querySelector('[data-download]').onclick=()=>exportCsv([r]);dialog.onclose=()=>dialog.remove();dialog.showModal();return;}
+      const copy=e.target.closest('[data-copy-id]');if(copy){navigator.clipboard.writeText(copy.dataset.copyId).then(()=>{copy.title='شناسه کپی شد';}).catch(()=>{copy.title='کپی ممکن نشد؛ شناسه را انتخاب و کپی کن';});return;}
+      if(e.target.closest('[data-reset-filters]')){document.querySelectorAll('[data-list-filter]').forEach(el=>el.value=el.tagName==='SELECT'?el.options[0].value:'');$('#search').value='';$('#status').value='';page=1;load();return;}
+      const selected=()=>{const keys=new Set([...document.querySelectorAll('[data-record-key]:checked')].map(el=>el.dataset.recordKey));return rows.filter(r=>keys.has(recordKey(r)));},feedback=$('[data-bulk-status]');
+      if(e.target.closest('[data-export-selected]')){const chosen=selected();if(chosen.length)exportCsv(chosen);else feedback.textContent='ابتدا ردیف‌ها را انتخاب کن';return;}
+      if(e.target.closest('[data-copy-selected]')){const chosen=selected();if(!chosen.length){feedback.textContent='ابتدا ردیف‌ها را انتخاب کن';return;}navigator.clipboard.writeText(chosen.map(r=>recordKey(r)).join('\n')).then(()=>feedback.textContent='شناسه‌ها کپی شدند').catch(()=>feedback.textContent='کپی ممکن نشد؛ از خروجی استفاده کن');return;}
+      const batch=e.target.closest('[data-bulk-user],[data-bulk-catalog]');if(batch){const chosen=selected().filter(r=>!batch.dataset.bulkCatalog||r.price>0);if(!chosen.length){feedback.textContent='ابتدا موارد مناسب را انتخاب کن؛ توقف فروش برای محصول پولی است';return;}batchDialog(chosen,batch);return;}
+      const catalogPaging=e.target.closest('[data-catalog-page]');if(catalogPaging){catalogPage+=Number(catalogPaging.dataset.catalogPage);filterCatalog();return;}
       const a = e.target.closest("[data-action]");
       if (a) actionDialog(a.dataset.user, a.dataset.action);
       if (e.target.closest("#prev")) {
@@ -826,6 +872,8 @@
       }
       if (e.target.closest("#retry")) load();
     });
+    document.addEventListener('input',e=>{if(e.target.matches('[data-catalog-search]')){catalogPage=1;filterCatalog();}});
+    document.addEventListener('change',e=>{if(e.target.matches('[data-select-page]'))document.querySelectorAll('[data-record-key]').forEach(el=>{if(!el.closest('tr')?.hidden)el.checked=e.target.checked;});if(e.target.matches('[data-catalog-status],[data-catalog-sort],[data-catalog-size]')){catalogPage=1;filterCatalog();}if(e.target.matches('[data-catalog-toggle]')){const paused=!e.target.checked;e.target.checked=!e.target.checked;productDialog(e.target.dataset.catalogToggle,'toggle',paused);}});
     const mobile = matchMedia("(max-width:760px)");
     const drawer = (open) => {
       const wasOpen = $("#admin-side").dataset.open === "true";

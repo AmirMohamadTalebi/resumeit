@@ -70,12 +70,13 @@ async function serveStatic(req, res, pathname, origin, account) {
   if(sample&&samplePage&&/^[a-z0-9]+$/.test(samplePage)&&samplePage!=='home')file=path.join(file,samplePage+'.html');
   const workspacePage=/^\/dashboard\/(support|notifications|studio)\/$/.exec(pathname);
   if(workspacePage)file=path.join(root,'dashboard/index.html');
+  const retentionPage=pathname==='/admin/retention/';if(retentionPage)file=path.join(root,'admin/health/index.html');
   try {
     const staffPath=pathname.toLowerCase()==='/staff'||pathname.toLowerCase().startsWith('/staff/');
     if(staffPath){res.setHeader('Cache-Control','no-store');const user=account&&await account(req);if(!user){res.writeHead(303,{Location:'/login/'});res.end();return;}if(!require('../admin/access.cjs').isSupport(user)){send(403,'Forbidden');return;}}
     // Authenticate the resolved file as well as the URL (case aliases and symlinks included).
     const adminPath=pathname.toLowerCase()==='/admin'||pathname.toLowerCase().startsWith('/admin/');
-    if(adminPath){const user=account&&await account(req);if(!user){res.writeHead(303,{Location:'/login/'});res.end();return;}if(!require('../admin/access.cjs').isAdmin(user)){send(403,'Forbidden');return;}}
+    if(adminPath){const user=account&&await account(req);if(!user){res.writeHead(303,{Location:'/login/'});res.end();return;}if(!require('../admin/access.cjs').isAdmin(user)||retentionPage&&!require('../admin/access.cjs').isOwner(user)){send(403,'Forbidden');return;}}
     const guarded = pathname.toLowerCase() === '/dashboard' || pathname.toLowerCase().startsWith('/dashboard/');
     if (guarded) {
       res.setHeader('Cache-Control', 'no-store');
@@ -105,6 +106,7 @@ async function serveStatic(req, res, pathname, origin, account) {
       }
     }
     if(workspacePage)body=Buffer.from(body.toString('utf8').replace('data-page="home"','data-page="'+workspacePage[1]+'"').replace('/dashboard/js/pages/home.js','/dashboard/js/pages/'+workspacePage[1]+'.js'));
+    if(retentionPage)body=Buffer.from(body.toString('utf8').replace('data-section="health"','data-section="retention"').replace('<title>','<title>پاک‌سازی و بایگانی | '));
     if(type.startsWith('text/html')&&!pathname.startsWith('/templates/')&&!body.includes('/notifications.js'))body=Buffer.from(body.toString('utf8').replace('</head>','<link rel="stylesheet" href="/notifications.css"><script defer src="/notifications.js"></script></head>'));
     if(type.startsWith('text/html')&&!pathname.startsWith('/templates/'))body=Buffer.from(body.toString('utf8').replace('</head>','<link rel="stylesheet" href="/control-surfaces.css"></head>'));
     if(type.startsWith('text/html')&&pathname.toLowerCase().startsWith('/admin/'))body=Buffer.from(body.toString('utf8').replace('<script defer src="/admin/admin.js">','<link rel="stylesheet" href="/admin/owner-controls.css"><script defer src="/admin/owner-controls.js"></script><script defer src="/admin/admin.js">'));

@@ -33,7 +33,7 @@
       else if (f.type === 'textarea') html = '<textarea class="textarea" rows="3" maxlength="' + (f.max || 1000) + '"' + extra + '>' + esc(value) + '</textarea>';
       else html = '<input class="input" type="' + (f.type === 'color' ? 'color' : 'text') + '"' + extra + ' value="' + esc(value) + '" maxlength="' + (f.max || 1000) + '"' + (['url','link','image','contact'].includes(f.type) ? ' dir="ltr"' : '') + '>';
       if (f.type === 'link') html += '<label class="field__label" for="' + key + '-target">یا یک صفحهٔ داخلی انتخاب کن</label><select class="select input" id="' + key + '-target" ' + attrs + ' data-tfield="' + f.key + '"><option value="">انتخاب صفحه</option>' + Object.entries(spec.pages).map(([page, p]) => '<option value="/?page=' + page + '">' + esc(p.title) + '</option>').join('') + '<option value="#ri-contact">راه‌های تماس عمومی</option></select>';
-      if (f.type === 'image') html += (value ? '<img src="' + esc(value) + '" alt="پیش‌نمایش" style="max-width:100%;height:100px;object-fit:contain">' : '') + '<label class="field__label" for="' + key + '-file">بارگذاری PNG، JPEG یا WebP (حداکثر ۲ مگابایت)</label><input class="file-input" type="file" id="' + key + '-file" accept="image/png,image/jpeg,image/webp" ' + attrs + ' data-tupload="' + f.key + '">';
+      if (f.type === 'image') html += (value ? '<img src="' + esc(value) + '" alt="پیش‌نمایش" style="max-width:100%;height:100px;object-fit:contain">' : '') + '<label class="field__label" for="' + key + '-file">بارگذاری PNG، JPEG یا WebP (حداکثر '+RI.fa(Math.floor(RI.imageLimit()/1024))+' کیلوبایت برای این حساب)</label><input class="file-input" type="file" id="' + key + '-file" accept="image/png,image/jpeg,image/webp" ' + attrs + ' data-tupload="' + f.key + '">';
       return '<div class="field"><label class="field__label" for="' + key + '">' + esc(f.label) + '</label>' + html + '<div class="field__error" id="' + key + '-error" role="alert" hidden></div></div>';
     };
     function rowsFor(def) {
@@ -100,7 +100,7 @@
     root.addEventListener('input', e => { const el = e.target; if (el.dataset.tfield) update(el, el.type === 'checkbox' ? el.checked : el.value); });
     root.addEventListener('change', e => {
       const el = e.target, file = el.files && el.files[0]; if (!el.dataset.tupload || !file) return;
-      if (!['image/png','image/jpeg','image/webp'].includes(file.type) || file.size > 2 * 1024 * 1024) { RI.toast('PNG، JPEG یا WebP تا ۲ مگابایت انتخاب کن.', { kind: 'error' }); el.value = ''; return; }
+      if (!['image/png','image/jpeg','image/webp'].includes(file.type) || file.size > RI.imageLimit()) { RI.toast('PNG، JPEG یا WebP تا '+RI.fa(Math.floor(RI.imageLimit()/1024))+' کیلوبایت برای این حساب انتخاب کن.', { kind: 'error' }); el.value = ''; return; }
       const reader = new FileReader(); reader.onload = () => { const image=new Image();image.onload=()=>{if(image.naturalWidth*image.naturalHeight>16000000){RI.toast('ابعاد تصویر بیش از حد بزرگ است.',{kind:'error'});return;}update(el,String(reader.result));paint();};image.onerror=()=>RI.toast('این فایل تصویر معتبر نیست.',{kind:'error'});image.src=String(reader.result); }; reader.onerror = () => RI.toast('خواندن تصویر انجام نشد.', { kind: 'error' }); reader.readAsDataURL(file);
     });
     itemHost.addEventListener('click', e => {

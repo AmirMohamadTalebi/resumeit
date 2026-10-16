@@ -2,6 +2,7 @@ const fs=require('node:fs/promises'),path=require('node:path'),assert=require('n
 (async()=>{
   const phase=process.env.UI_AUDIT_PHASE||'after',out=path.resolve('artifacts/full-ui-audit/'+phase);await fs.mkdir(out,{recursive:true});
   const {db,owner,target}=await require('./admin-fixture.cjs')(),store=require('./workspace-test-store.cjs')(db,[owner,target],{workspaces:true});
+  store.sql.exec('CREATE TABLE account_access(user_id TEXT,ref TEXT,price_units INTEGER,expires_at INTEGER,created_at INTEGER);CREATE TABLE otp_events(id TEXT,created_at INTEGER);');
   db.billing=async()=>({plan:{id:'y',end:Date.now()+300*86400000},purchases:[],payments:[]});db.wallet=async()=>({balance:120,rate:2000,transactions:[]});
   for(const id of [owner,target]){const content=structuredClone(RI.seed('full'));content.profile.name='آوا مهر';content.profile.title='طراح محصول و توسعه‌دهندهٔ تجربه‌های دیجیتال';await db.mutateDashboard(id,0,doc=>{doc.content=content;});}
   for(let i=0;i<4;i++)await db.notify(owner,i%2?'support':'product','رویداد آزمایشی '+i,'این پیام فقط برای بررسی چیدمان رابط و طول متن استفاده می‌شود.','/changes/',randomUUID());
@@ -15,7 +16,7 @@ const fs=require('node:fs/promises'),path=require('node:path'),assert=require('n
     const contexts={};for(const [name,token]of [['public',null],['owner','a'],['admin','b']]){const c=await browser.newContext({reducedMotion:'reduce'});if(token){await c.addCookies([{name:'ri_session',value:token.repeat(64),url:base}]);await c.addInitScript(id=>sessionStorage.setItem('ri-panel-choice',id),token==='a'?owner:target);}contexts[name]=c;}
     const publicRoutes=['/','/about/','/contact/','/privacy/','/terms/','/changes/','/login/','/register/','/forgot-password/','/demo/','/signature/'];
     const dashRoutes=['/dashboard/','/dashboard/resume/','/dashboard/links/','/dashboard/themes/','/dashboard/studio/','/dashboard/publish/','/dashboard/stats/','/dashboard/wallet/','/dashboard/billing/','/dashboard/settings/','/dashboard/support/','/dashboard/notifications/'];
-    const adminRoutes=['/admin/',...['users','pages','traffic','transactions','payments','purchases','catalog','otp','audit','health'].map(p=>'/admin/'+p+'/'),'/staff/'];
+    const adminRoutes=['/admin/',...['users','pages','traffic','transactions','payments','purchases','catalog','otp','audit','health','retention'].map(p=>'/admin/'+p+'/'),'/staff/'];
     const page=await contexts.public.newPage();let active=page;
     function track(p){p.on('pageerror',e=>report.errors.push({url:p.url(),message:e.message}));p.on('response',r=>{if(r.status()>=400&&r.url().startsWith(base)&&!r.url().includes('/brand/enamad'))report.failed.push({url:r.url().replace(base,''),status:r.status()});});}
     track(page);
@@ -34,8 +35,9 @@ const fs=require('node:fs/promises'),path=require('node:path'),assert=require('n
         }
         const clipped=[...main.querySelectorAll('button,h1,h2,h3,label')].filter(e=>visible(e)&&e.clientWidth>20&&e.scrollWidth>e.clientWidth+3&&getComputedStyle(e).textOverflow!=='ellipsis').slice(0,12).map(e=>({selector:selector(e),text:e.textContent.trim().slice(0,65),width:e.clientWidth,scroll:e.scrollWidth}));
         const images=[...document.images].filter(e=>visible(e)&&e.complete&&!e.naturalWidth&&!/enamad/.test(e.src)).map(e=>e.src);
-        return {width:innerWidth,scroll:document.documentElement.scrollWidth,overlaps:overlaps.slice(0,18),clipped,images};
+        return {width:innerWidth,scroll:document.documentElement.scrollWidth,height:document.documentElement.scrollHeight,viewportHeight:innerHeight,overlaps:overlaps.slice(0,18),clipped,images};
       });
+      if(result.height>result.viewportHeight*3)(report.longPages||=[]).push({...meta,screens:Number((result.height/result.viewportHeight).toFixed(1))});
       if(result.scroll>meta.width+1)record('horizontal-overflow',meta,result);
       if(result.overlaps.length)record('sibling-overlap',meta,result.overlaps);
       if(result.clipped.length)record('clipped-control-text',meta,result.clipped);
