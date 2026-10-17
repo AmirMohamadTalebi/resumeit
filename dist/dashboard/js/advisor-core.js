@@ -1,7 +1,7 @@
 /* Pure, bounded text analysis shared by the worker and Node tests. */
 (function (root) {
   'use strict';
-  const VERSION = '2.1.0';
+  const VERSION = '2.1.1';
   const normalize = value => String(value || '').normalize('NFC').replace(/ي/g, 'ی').replace(/ك/g, 'ک').replace(/[۰-۹٠-٩]/g, c => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(c) >= 0 ? '۰۱۲۳۴۵۶۷۸۹'.indexOf(c) : '٠١٢٣٤٥٦٧٨٩'.indexOf(c))).replace(/[\s\u200c]+/g, ' ').trim().toLowerCase();
   // Non-security identity only; apply additionally checks exact source text and input SHA-256.
   function key(value) { let n = 2166136261; for (const c of String(value)) n = Math.imul(n ^ c.charCodeAt(0), 16777619); return (n >>> 0).toString(36); }
@@ -13,6 +13,8 @@
     ['research', 'پژوهش|research'], ['analysis', 'تحلیل داده|data analysis'], ['design', 'طراحی محصول|طراحی رابط|product design'],
     ['support', 'پشتیبانی|customer support'], ['accounting', 'حسابداری|accounting'], ['operations', 'عملیات|operations']
   ].map(([id, aliases]) => ({ id, aliases: aliases.split('|').map(normalize) }));
+  const goalRoles=[{id:'teaching',aliases:['تدریس','معلم','مدرس','دبیر','آموزگار','teacher','teaching']},{id:'development',aliases:['برنامه نویس','برنامه نویسی','توسعه دهنده','توسعه نرم افزار','developer','programmer','software engineer']}].map(role=>({...role,aliases:role.aliases.map(normalize)}));
+  const goalRole=goal=>goalRoles.find(role=>mentions(normalize(goal),role))?.id||null;
   function mentions(text, skill) { return skill.aliases.some(alias => { let i = text.indexOf(alias); while (i >= 0) { const word = /[\p{L}\p{N}_]/u; if ((!i || !word.test(text[i - 1])) && (i + alias.length === text.length || !word.test(text[i + alias.length]))) return true; i = text.indexOf(alias, i + 1); } return false; }); }
   function clauses(raw) {
     const out = []; const expression = /[^؛;!?؟\n]+[؛;!?؟\n]?/g; let match;
@@ -58,10 +60,10 @@
   }
   const validSource = s => s.visibility === 'public' && ['user-authored', 'user-confirmed'].includes(s.provenance);
   function project(content, importedSpec) {
-    const sources = [], add = (section, itemId, field, raw, visibility = 'public', provenance = 'user-authored', maxLength = 300) => {
-      if (typeof raw === 'string' && raw.trim()) sources.push({ section, itemId, field, raw, visibility, provenance, maxLength });
+    const sources = [], add = (section, itemId, field, raw, visibility = 'public', provenance = 'user-authored', maxLength = 300, textRole) => {
+      if (typeof raw === 'string' && raw.trim()) sources.push({ section, itemId, field, raw, visibility, provenance, maxLength, ...(textRole?{textRole}:{}) });
     };
-    add('profile', 'profile', 'title', content.profile.title, 'public', 'user-authored', 90); add('profile', 'profile', 'bio', content.profile.bio, 'public', 'user-authored', 300);
+    for(const [field,maxLength]of [['title',90],['bio',300]])sources.push({section:'profile',itemId:'profile',field,raw:typeof content.profile[field]==='string'?content.profile[field]:'',visibility:'public',provenance:'user-authored',maxLength});
     const visible = name => content.sections.some(s => s.key === name && s.visible);
     for (const name of ['skills', 'experience', 'education', 'projects', 'certs', 'languages']) for (const item of content[name] || []) {
       for (const field of ['name', 'role', 'org', 'degree', 'school', 'title', 'desc', 'from', 'to', 'url']) if (!(field === 'to' && item.current)) add(name, item.id, field, item[field], visible(name) ? 'public' : 'hidden', 'user-authored', name === 'projects' ? 280 : name === 'education' ? 240 : 300);
@@ -70,12 +72,16 @@
       // Common resume fields not rendered by this template cannot supply public evidence.
       for (const s of sources) if (s.section !== 'profile' && !importedSpec.sections.includes(s.section)) s.visibility = 'hidden';
       const values = content.resumeTemplates?.[content.theme.resume] || {};
+      const fieldKeys=node=>{const keys=new Set();const walk=n=>{if(!n||typeof n!=='object')return;if(n.field)keys.add(n.field);if(n.icon)keys.add(n.icon);if(n.original)walk(n.original);if(n.attrs)Object.values(n.attrs).forEach(walk);if(n.children)n.children.forEach(walk);};walk(node);return keys;};
+      const collections=(importedSpec.collections||[]).filter(c=>importedSpec.groups.some(g=>g.key===c.group)).map(c=>({...c,fieldKeys:fieldKeys(c.node)}));
       for (const field of importedSpec.fields) {
         if (field.bind || field.legacy || !importedSpec.groups.some(g=>g.key===field.group) || !['text', 'textarea', 'percent'].includes(field.type)) continue;
         const visibility = values.settings?.['show_' + String(field.group).replace(/:/g, '_')] === false ? 'hidden' : 'public';
         const raw = Object.hasOwn(values.fields || {}, field.key) ? values.fields[field.key] : field.default;
-        add('template', content.theme.resume, field.key, raw, visibility, 'template-example', field.max || 1000);
-        for (const collection of importedSpec.collections || []) for (const row of values.collections?.[collection.key] || []) if (Object.hasOwn(row.fields || {}, field.key)) add('template', content.theme.resume + ':' + collection.key + ':' + row.id, field.key, row.fields[field.key], visibility, 'template-example', field.max || 1000);
+        const textRole=field.type==='textarea'?'description':'label';
+        const owners=collections.filter(c=>c.group===field.group&&c.fieldKeys.has(field.key));
+        if(!owners.length)add('template', content.theme.resume, field.key, raw, visibility, 'template-example', field.max || 1000,textRole);
+        for (const collection of owners) for (const row of values.collections?.[collection.key] ?? [{id:'original',fields:{}}]) add('template', content.theme.resume + ':' + collection.key + ':' + row.id, field.key,Object.hasOwn(row.fields||{},field.key)?row.fields[field.key]:raw, visibility, 'template-example', field.max || 1000,textRole);
       }
     }
     return sources;
@@ -110,9 +116,9 @@
       if (s.field === 'url' && s.raw && !/^https?:\/\/[^\s]+\.[^\s]+$/i.test(/^https?:/.test(s.raw) ? s.raw : 'https://' + s.raw)) add('URL-SYNTAX', s, 'این آدرس را با نام دامنهٔ کامل بررسی کن.', { type: 'issue' });
       if(s.field==='url'){try{const host=new URL(/^https?:/.test(s.raw)?s.raw:'https://'+s.raw).hostname;if(/^(?:localhost|127\.|10\.|192\.168\.|\[?::1\]?$)|\.(?:local|internal)$/.test(host))add('URL-SYNTAX',s,'این آدرس محلی است و احتمالاً برای بازدیدکنندهٔ رزومه در دسترس نیست؛ آدرس عمومی را جایگزین کن.',{type:'question'});}catch{}}
       if(s.section==='profile'&&s.field==='title'&&/^(?:رزومه|رزومه من|نمونه کار|متخصص|professional|my resume)$/.test(text))add('HEADLINE-CLARITY',s,'این عنوان حوزهٔ کارت را روشن نمی‌کند؛ یک عنوان واقعی حرفه‌ای یا تحصیلی انتخاب کن.',{confidence:'medium'});
-      if (['bio', 'desc'].includes(s.field)) {
+      if (['bio', 'desc'].includes(s.field)||s.section==='template'&&s.textRole==='description') {
         const after = s.raw.replace(/[ \t]{2,}/g, ' ').replace(/[ \t]+\n/g, '\n').trim();
-        if (after !== s.raw) add('TEXT-READABILITY', s, 'فاصله‌های اضافه را می‌توان مرتب کرد؛ متن و معنای جمله حفظ می‌شود.', { type: 'rewrite', before: s.raw, after });
+        if (after !== s.raw) add('TEXT-READABILITY', s, 'فاصله‌های اضافه را می‌توان مرتب کرد؛ متن و معنای جمله حفظ می‌شود.', { type: s.section==='template'?'question':'rewrite', before: s.raw, after });
         if (s.raw.length > 220 && !/[؛;.!?؟\n]/.test(s.raw)) add('TEXT-READABILITY', s, 'این جمله را در محل تغییر موضوع به دو جمله تقسیم کن.', { confidence: 'medium' });
       }
       if (s.field === 'desc' && s.section === 'experience' && /(?:تیم|team)/.test(text) && !/(?:نقش من|مسئول|کمک|همکاری|my role|responsible|contributed)/.test(text)) add('ROLE-OWNERSHIP', s, 'سهم خودت در این همکاری چه بود؟ همان نقش واقعی را در یک جمله اضافه کن.', { confidence: 'medium' });
@@ -137,6 +143,15 @@
       else priorRecords.set(signature,fields[0].itemId);
     }
     const goal = normalize(context.goal || ''), job = normalize(context.job || '');
+    const role=goalRole(goal),intro=assessed.filter(s=>s.section==='profile').map(s=>s.raw).join(' '),publicText=assessed.filter(s=>['profile','experience','projects'].includes(s.section)).map(s=>s.raw).join(' '),normalizedIntro=normalize(intro);
+    const guide=(field,id,message)=>{const target=assessed.find(s=>s.section==='profile'&&s.field===field);if(target)add(id,target,message,{basis:'goal',type:'question',confidence:'medium',evidence:[],dependencies:[goal,intro,publicText,unsupported,skipped.length]});};
+    if(role==='teaching'){
+      if(!/ریاضی|فیزیک|شیمی|زبان|زیست|ادبیات|فارسی|ابتدایی|متوسطه|دانشگاه|پایه [\p{L}\d]+|mathematics|physics|english|primary|secondary/u.test(normalizedIntro))guide('title','GOAL-CLARITY','برای هدف تدریس، چه درس یا مهارتی و برای چه گروهی آموزش می‌دهی؟ اگر هنوز ننوشته‌ای، حوزه و مخاطب واقعی‌ات را در عنوان مشخص کن.');
+      if(!/طرح درس|جزوه|کاربرگ|ویدیوی آموزشی|ویدئوی آموزشی|نمونه تدریس|lesson plan|teaching sample/.test(normalize(publicText)))guide('bio','GOAL-EXAMPLE','یک نمونهٔ واقعی مثل طرح درس، تمرین یا توضیح روش تدریست داری؟ اگر مناسب است، آن را در معرفی یا پروژه‌ها بیاور؛ لازم نیست سابقه یا نتیجه‌ای بسازی.');
+    }else if(role==='development'){
+      if(!/فرانت|بک اند|فول استک|وب|موبایل|داده|سیستم|frontend|backend|full stack|web|mobile|data/.test(normalizedIntro)&&!lexicon.some(skill=>['python','javascript','typescript','react','node','c++','c#','.net'].includes(skill.id)&&mentions(normalizedIntro,skill)))guide('title','GOAL-CLARITY','برای هدف برنامه‌نویسی، بیشتر روی چه شاخه‌ای کار می‌کنی؟ اگر هنوز روشن نیست، زمینهٔ واقعی مثل وب، موبایل یا داده را در عنوانت مشخص کن.');
+      if(!semantics(normalize(publicText)).action||!semantics(normalize(publicText)).artifact)guide('bio','GOAL-EXAMPLE','یک پروژهٔ واقعی یا تمرینی انتخاب کن و بگو چه ساختی، از چه ابزاری استفاده کردی و سهم خودت چه بود؛ اگر هنوز ننوشته‌ای، معرفی یا پروژه‌ها جای مناسبی است.');
+    }
     for (const skill of lexicon) {
       const rows = evidence[skill.id] || [], positive = rows.filter(x => x.weight > 0), groups = new Map();
       for (const row of positive) groups.set(row.sourceGroup, Math.max(groups.get(row.sourceGroup) || 0, row.weight));
@@ -165,6 +180,6 @@
   function safeRewrite(before, after, maxLength) {
     return typeof before === 'string' && typeof after === 'string' && after.length <= maxLength && before.replace(/[ \t]{2,}/g, ' ').replace(/[ \t]+\n/g, '\n').trim() === after;
   }
-  const api = { VERSION, normalize, key, semantics, dateRange, priority, lexicon, mentions, project, analyze, safeRewrite };
+  const api = { VERSION, normalize, key, semantics, dateRange, priority, lexicon, mentions, goalRole, project, analyze, safeRewrite };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.ResumeAdvisor = api;
 })(typeof self !== 'undefined' ? self : globalThis);

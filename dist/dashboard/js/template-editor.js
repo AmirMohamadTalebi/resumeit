@@ -25,7 +25,7 @@
     const control = (f, values, attrs, suffix) => {
       const value = RI.resumeValue(values || {}, f), key = 'tf-' + f.key + (suffix || '');
       let html;
-      if (f.bind) return '<p class="field__hint">' + esc(f.label) + ' — از بخش «معرفی» تنظیم می‌شود: ' + esc(c.profile[f.bind] || 'هنوز وارد نشده') + '</p>';
+      if (f.bind) return '<p class="field__hint">' + esc(f.label) + ' — از بخش «معرفی» تنظیم می‌شود: ' + esc(c.profile[f.bind] || 'هنوز وارد نشده') + RI.templateFieldHelp(f,spec)+'</p>';
       const extra = ' id="' + key + '" ' + attrs + ' data-tfield="' + f.key + '" data-ttype="' + f.type + '" aria-describedby="' + key + '-error"';
       if (f.type === 'checkbox') html = '<input type="checkbox" class="checkbox"' + extra + (value ? ' checked' : '') + '>';
       else if (f.type === 'icon') html = '<select class="select input"' + extra + '>' + [['original','آیکن اصلی قالب'],...RI.LINK_ICONS.map(key=>[key,RI.LINK_ICON_NAMES[key]])].map(o=>'<option value="'+esc(o[0])+'"'+(o[0]===value?' selected':'')+'>'+esc(o[1])+'</option>').join('') + '</select>';
@@ -34,7 +34,7 @@
       else html = '<input class="input" type="' + (f.type === 'color' ? 'color' : 'text') + '"' + extra + ' value="' + esc(value) + '" maxlength="' + (f.max || 1000) + '"' + (['url','link','image','contact'].includes(f.type) ? ' dir="ltr"' : '') + '>';
       if (f.type === 'link') html += '<label class="field__label" for="' + key + '-target">یا یک صفحهٔ داخلی انتخاب کن</label><select class="select input" id="' + key + '-target" ' + attrs + ' data-tfield="' + f.key + '"><option value="">انتخاب صفحه</option>' + Object.entries(spec.pages).map(([page, p]) => '<option value="/?page=' + page + '">' + esc(p.title) + '</option>').join('') + '<option value="#ri-contact">راه‌های تماس عمومی</option></select>';
       if (f.type === 'image') html += (value ? '<img src="' + esc(value) + '" alt="پیش‌نمایش" style="max-width:100%;height:100px;object-fit:contain">' : '') + '<label class="field__label" for="' + key + '-file">بارگذاری PNG، JPEG یا WebP (حداکثر '+RI.fa(Math.floor(RI.imageLimit()/1024))+' کیلوبایت برای این حساب)</label><input class="file-input" type="file" id="' + key + '-file" accept="image/png,image/jpeg,image/webp" ' + attrs + ' data-tupload="' + f.key + '">';
-      return '<div class="field"><label class="field__label" for="' + key + '">' + esc(f.label) + '</label>' + html + (['text','textarea'].includes(f.type)?'<div class="field__hint">متن پیش‌فرض را می‌توانی تغییر بدهی یا کاملاً پاک کنی.</div><button type="button" class="btn btn--ghost btn--sm" data-advisor-confirm="'+esc(f.key)+'" '+attrs+'>این متن اطلاعات واقعی من است</button>':'') + '<div class="field__error" id="' + key + '-error" role="alert" hidden></div></div>';
+      return '<div class="field"><label class="field__label" for="' + key + '">' + esc(f.label) +RI.templateFieldHelp(f,spec)+ '</label>' + html + (['text','textarea'].includes(f.type)?'<div class="field__hint">متن پیش‌فرض را می‌توانی تغییر بدهی یا کاملاً پاک کنی.</div><button type="button" class="btn btn--ghost btn--sm" data-advisor-confirm="'+esc(f.key)+'" '+attrs+'>این متن اطلاعات واقعی من است</button>':'') + '<div class="field__error" id="' + key + '-error" role="alert" hidden></div></div>';
     };
     function rowsFor(def) {
       const values = state(); values.collections ||= {};

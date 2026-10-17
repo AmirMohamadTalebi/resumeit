@@ -110,7 +110,7 @@
           const value = RI.resumeValue(values[group] || {}, f), id = 'template-' + group + '-' + f.key;
           const attrs = ' id="' + esc(id) + '" data-template-group="' + group + '" data-template-key="' + esc(f.key) + '"';
           const control = f.type === 'checkbox' ? '<input class="checkbox" type="checkbox"' + attrs + (value ? ' checked' : '') + '>' : f.type === 'select' ? '<select class="select input"' + attrs + '><option value="">انتخاب کن</option>' + f.options.map(o => '<option value="' + esc(o[0]) + '"' + (o[0] === value ? ' selected' : '') + '>' + esc(o[1]) + '</option>').join('') + '</select>' : f.type === 'textarea' ? '<textarea class="textarea input"' + attrs + ' maxlength="' + (f.max || 1000) + '">' + esc(value) + '</textarea>' : '<input class="input" type="text"' + attrs + ' maxlength="' + (f.max || 1000) + '" value="' + esc(value) + '">';
-          return '<div class="field"><label class="field__label" for="' + esc(id) + '">' + esc(f.label) + (f.required ? ' — پایهٔ انتشار' : ' — به انتخاب تو') + (group === 'fields' && f.public === true ? ' — عمومی' : '') + '</label>' + control + '</div>';
+          return '<div class="field"><label class="field__label" for="' + esc(id) + '">' + esc(f.label) + (f.required ? ' — پایهٔ انتشار' : ' — به انتخاب تو') + (group === 'fields' && f.public === true ? ' — عمومی' : '') + RI.templateFieldHelp(f,spec) + '</label>' + control + '</div>';
         }).join('')).join('') + '</div>';
       }
       function layoutPanel() {
@@ -135,6 +135,21 @@
         placeOutline();
         RI.animateBars(body);
         if (tab === 'layout') bindLayout();
+        addFieldHelp();
+      }
+      function addFieldHelp() {
+        const add=(selector,label,what,where,defaultValue)=>RI.$(selector,body)?.insertAdjacentHTML('beforeend',RI.fieldHelpHtml({label,what,where,defaultValue}));
+        if(tab==='layout') {
+          add('.panel__head h2','چیدمان بخش‌ها','ترتیب و نمایش بخش‌های عمومی را تنظیم می‌کند؛ پنهان‌کردن بخش، اطلاعاتش را حذف نمی‌کند.','رزومهٔ عمومی، در قالب‌هایی که این بخش‌ها را پشتیبانی می‌کنند','ترتیب اولیهٔ بخش‌ها؛ بخش خالی نمایش داده نمی‌شود');
+          return;
+        }
+        if(step==='profile') {
+          const hints={name:['نام و نام خانوادگی','نامی که می‌خواهی روی رزومه دیده شود.'],location:['شهر','شهر محل سکونت یا فعالیت؛ نشانی دقیق لازم نیست.'],title:['عنوان حرفه‌ای یا تحصیلی','حوزهٔ کاری یا رشتهٔ اصلی خودت را در یک خط بنویس.'],bio:['معرفی کوتاه','دو یا سه جمله دربارهٔ تخصص، تجربه و هدف واقعی خودت.']};
+          for(const [key,[label,what]]of Object.entries(hints))add('[data-field="'+key+'"] .field__label',label,what,'بخش معرفی در بالای رزومه','');
+          ['cover','avatar'].forEach((key,i)=>add('.profile-media>.field:nth-child('+(i+1)+')>.field__label',key==='cover'?'تصویر کاور':'عکس پروفایل',key==='cover'?'تصویر بالای رزومه؛ جای آن به قالب انتخابی بستگی دارد.':'چهره یا تصویر معرفی خودت؛ بارگذاری عکس اختیاری است.','سربرگ رزومه','بدون تصویر بارگذاری‌شده؛ ظاهر جایگزین را قالب تعیین می‌کند'));
+        }
+        if(step==='contacts')for(const contact of RI.C().contacts)add('[data-field="'+contact.id+'"] .field__label',contact.label,'راه ارتباط با تو؛ فقط اگر کلید عمومی آن روشن باشد به بازدیدکننده نشان داده می‌شود.','بخش اطلاعات تماس رزومه','');
+        if(LISTS[step])add('.panel__head h2',LISTS[step].title,LISTS[step].hint,'بخش '+LISTS[step].title+' در رزومه','بدون مورد؛ می‌توانی موارد جدید اضافه کنی');
       }
       function navButtons() {
         const i = STEPS.findIndex((s) => s.id === step), prev = STEPS[i - 1], next = STEPS[i + 1];
@@ -185,7 +200,9 @@
 
       function openForm(id) {
         const L = LISTS[step], list = RI.C()[step], cur = id ? list.find((x) => x.id === id) : null;
-        RI.formModal({ title: (cur ? 'ویرایش ' : '') + L.add.replace('افزودن ', cur ? '' : 'افزودن '), size: step === 'projects' ? 'lg' : 'md', fields: L.fields, values: cur ? RI.clone(cur) : Object.assign({}, L.defaults || {}), submitLabel: cur ? 'ذخیرهٔ تغییر' : 'افزودن',
+        const hints={desc:'شرح کوتاه و واقعی از کار، نتیجه یا سابقهٔ خودت؛ از ادعاهای ساختگی پرهیز کن.',from:'زمان شروع؛ می‌توانی سال یا سال و ماه بنویسی.',to:'زمان پایان؛ اگر هنوز ادامه دارد این مقدار نمایش داده نمی‌شود.',current:'اگر روشن باشد به‌جای تاریخ پایان، ادامه‌داشتن این سابقه نشان داده می‌شود.',url:'نشانی مقصد پروژه؛ بازدیدکننده از این لینک به پروژه می‌رود.',image:'تصویر معرفی پروژه، در بخش نمونه‌کارها و پنجرهٔ توضیح پروژه.',level:'ارزیابی خودت از سطح تسلط؛ این مقدار آزمون یا تأیید مهارت نیست.',handle:'فقط نام کاربری شبکه را بنویس، نه نشانی کامل آن.',platform:'شبکه‌ای که این نام کاربری به آن تعلق دارد.'};
+        const fields=L.fields.map(f=>({...f,help:{what:hints[f.key]||'مقدار «'+f.label+'» برای همین مورد از بخش '+L.title+'.',where:'بخش '+L.title+' در رزومه',defaultValue:f.type==='level'?f.levels[(L.defaults?.[f.key]||3)-1]:f.type==='select'?f.options.find(o=>o[0]===L.defaults?.[f.key])?.[1]:L.defaults?.[f.key]??(f.type==='checkbox'?false:'')}}));
+        RI.formModal({ title: (cur ? 'ویرایش ' : '') + L.add.replace('افزودن ', cur ? '' : 'افزودن '), size: step === 'projects' ? 'lg' : 'md', fields, values: cur ? RI.clone(cur) : Object.assign({}, L.defaults || {}), submitLabel: cur ? 'ذخیرهٔ تغییر' : 'افزودن',
           onSubmit: (v) => { if (cur) Object.assign(cur, v); else list.push(Object.assign({ id: RI.uid() }, v)); RI.touch(step); paint(); RI.toast(cur ? 'تغییر اعمال شد' : 'اضافه شد' + (list.length === 1 ? ' — بخش جان گرفت!' : '')); } });
       }
       async function remove(id) {

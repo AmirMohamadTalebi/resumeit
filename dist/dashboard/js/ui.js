@@ -3,6 +3,13 @@
   'use strict';
   const RI = (window.RI = window.RI || {});
   const esc = RI.esc;
+  RI.fieldHelpHtml = ({label,what,where,defaultValue}) => {
+    const initial=defaultValue===undefined||defaultValue===null||defaultValue===''?'خالی':typeof defaultValue==='boolean'?(defaultValue?'بله / فعال':'خیر / غیرفعال'):String(defaultValue);
+    const help={label:String(label).slice(0,100),what,where,initial};
+    return '<button type="button" class="btn btn--icon btn--ghost btn--sm field-help" data-field-help="'+esc(JSON.stringify(help))+'" aria-label="راهنمای '+esc(help.label)+'" title="'+esc(what+' · محل: '+where+' · پیش‌فرض: '+initial.slice(0,100)+(initial.length>100?'…؛ برای دیدن کامل کلیک کن':''))+'">'+RI.icon('help')+'</button>';
+  };
+  RI.templateFieldHelp = (field,spec) => RI.fieldHelpHtml({label:field.label,what:field.bind?'این مقدار از بخش معرفی می‌آید؛ برای تغییرش همان بخش را ویرایش کن.':field.key==='reviewed'?'تأیید می‌کنی که متن‌ها و تصاویر نمونه را برای انتشار بررسی کرده‌ای.':({text:'متن همین قسمت از قالب؛ می‌توانی تغییرش بدهی یا پاکش کنی.',textarea:'توضیح بلندتر همین قسمت از قالب؛ فقط اطلاعات واقعی خودت را بنویس.',image:'تصویر این قسمت از قالب؛ عکس معتبر انتخاب کن یا مقدار را پاک کن.',checkbox:'فعال یا غیرفعال‌بودن این گزینه را تعیین می‌کند.',select:'یکی از حالت‌های تعریف‌شدهٔ این گزینه را انتخاب می‌کند.',color:'رنگ اجزایی را که از این رنگ قالب استفاده می‌کنند عوض می‌کند.',link:'مقصد این دکمه یا لینک در صفحهٔ عمومی است.',url:'نشانی مقصد در صفحهٔ عمومی است.',percent:'عدد نمایشی این بخش؛ ادعا یا مقدار ساختگی وارد نکن.'})[field.type]||'تنظیم همین قسمت از قالب جاری است.',where:(spec.groups||[]).find(group=>group.key===field.group)?.label||'بخش ویژهٔ قالب و پیش‌نمایش رزومه',defaultValue:field.bind?'خالی؛ از بخش معرفی پر می‌شود':field.type==='select'?(field.options||[]).find(option=>option[0]===field.default)?.[1]??field.default:field.default});
+  if(typeof document!=='undefined')RI.delegate(document,'click','[data-field-help]',(event,button)=>{event.preventDefault();event.stopPropagation();const help=JSON.parse(button.dataset.fieldHelp);RI.modal({title:'راهنمای '+help.label,body:'<dl class="field-help-details"><dt>این چیست؟</dt><dd>'+esc(help.what)+'</dd><dt>کجا دیده می‌شود؟</dt><dd>'+esc(help.where)+'</dd><dt>مقدار پیش‌فرض</dt><dd>'+esc(help.initial)+'</dd></dl>',actions:[{label:'بستن',kind:'ghost'}]});});
 
   /* ---------- تصویر و پس‌زمینه ---------- */
   RI.presets = ['grad:#cfe0e8,#97b5c5', 'grad:#e4cdb6,#bd8e64', 'grad:#97b5c5,#52788d', 'grad:#f2e6da,#97b5c5', 'grad:#3d5c6f,#875a36'];
@@ -101,7 +108,7 @@
   /* ---------- فرم‌ساز ---------- */
   function fieldHtml(f, v) {
     const id = 'f_' + f.key;
-    const label = '<label class="field__label" for="' + id + '">' + esc(f.label) +
+    const label = '<label class="field__label" for="' + id + '">' + esc(f.label) +(f.help?RI.fieldHelpHtml({label:f.label,...f.help}):'')+
       (f.required ? '<span class="field__req">پایهٔ انتشار</span>' : '<span class="field__opt">به انتخاب تو</span>') +
       (f.max && (f.type === 'textarea' || f.type === 'text') ? '<span class="field__count" data-count-for="' + f.key + '"></span>' : '') + '</label>';
     let ctl = '';
@@ -110,9 +117,9 @@
     if (f.type === 'textarea') ctl = '<textarea class="textarea"' + common + ' rows="' + (f.rows || 4) + '">' + esc(v || '') + '</textarea>';
     else if (f.type === 'select') ctl = '<select class="select"' + common + '>' + f.options.map((o) => '<option value="' + esc(o[0]) + '"' + (String(v) === String(o[0]) ? ' selected' : '') + '>' + esc(o[1]) + '</option>').join('') + '</select>';
     else if(f.type==='icon')ctl='<input type="hidden"'+common+' value="'+esc(v||'link')+'"><div class="icon-picker" role="group" aria-label="'+esc(f.label)+'">'+RI.LINK_ICONS.map(key=>'<button type="button" data-icon-value="'+key+'" data-icon-field="'+f.key+'" aria-pressed="'+((v||'link')===key)+'">'+RI.icon(key)+'<span>'+esc(RI.LINK_ICON_NAMES[key])+'</span></button>').join('')+'</div>';
-    else if (f.type === 'checkbox') return '<div class="field" data-field="' + f.key + '"><label class="check"><input type="checkbox"' + common + (v ? ' checked' : '') + '> ' + esc(f.label) + '</label></div>';
+    else if (f.type === 'checkbox') return '<div class="field" data-field="' + f.key + '"><label class="check"><input type="checkbox"' + common + (v ? ' checked' : '') + '> ' + esc(f.label) + '</label>' + (f.help ? RI.fieldHelpHtml({label:f.label,...f.help}) : '') + '</div>';
     else if (f.type === 'level') ctl = '<input type="range" class="range" min="1" max="5" step="1"' + common + ' value="' + (v || 3) + '"><div class="field__hint" data-level-text>' + esc((f.levels || [])[(v || 3) - 1] || '') + '</div>';
-    else if (f.type === 'image') return '<div class="field" data-field="' + f.key + '"><div class="field__label">' + esc(f.label) + (f.required ? '<span class="field__req">پایهٔ انتشار</span>' : '<span class="field__opt">به انتخاب تو</span>') + '</div>' + RI.imageFieldHtml(f.key, { value: v, wide: f.wide, label: f.label }) + '</div>';
+    else if (f.type === 'image') return '<div class="field" data-field="' + f.key + '"><div class="field__label">' + esc(f.label) + (f.required ? '<span class="field__req">پایهٔ انتشار</span>' : '<span class="field__opt">به انتخاب تو</span>') + (f.help ? RI.fieldHelpHtml({label:f.label,...f.help}) : '') + '</div>' + RI.imageFieldHtml(f.key, { value: v, wide: f.wide, label: f.label }) + '</div>';
     else ctl = '<input type="' + (f.type === 'url' ? 'text' : f.type || 'text') + '"' + (f.type === 'url' ? ' inputmode="url"' : '') + dirAttr + common + ' value="' + esc(v || '') + '">';
     return '<div class="field' + (f.span ? ' span-2' : '') + '" data-field="' + f.key + '">' + label + ctl +
       (f.hint ? '<div class="field__hint" id="' + id + '_h">' + f.hint + '</div>' : '') + '<div class="field__error" id="' + id + '_e" role="alert" hidden></div></div>';

@@ -29,6 +29,19 @@ const run=(sources,context={})=>core.analyze({sources,context,analysisDate:'2026
  result=await run([source('۱۴۰۳',{section:'experience',field:'from'}),source('۱۴۰۱',{section:'experience',field:'to'})]);assert(result.findings.some(f=>f.ruleId==='DATE-ORDER'));
  for(const confidence of ['high','medium','low'])assert.equal(core.priority({I:.9,G:1,A:.75,D:1,E:0,confidence}),{high:90.5,medium:60,low:30}[confidence]);
  const content=RI.seed('full'),projected=core.project(content);assert(projected.every(s=>!s.raw.startsWith('data:image')));assert(projected.every(s=>s.raw.length<=10000));
+ const blank=RI.seed('empty');blank.profile.title='';blank.profile.bio='';
+ for(const goal of ['تدریس','معلم','مدرس','برنامه نویس','برنامه‌نویس','developer']){const guidance=await run(core.project(blank),{goal});assert(guidance.findings.some(f=>f.basis==='goal'),goal);assert(guidance.findings.filter(f=>f.basis==='goal').every(f=>f.type==='question'&&f.evidence.length===0&&!f.before&&!f.after));}
+ const taught=structuredClone(blank);taught.profile.title='معلم ریاضی پایه هفتم';taught.profile.bio='طرح درس و کاربرگ برای کلاس آماده کردم.';assert(!(await run(core.project(taught),{goal:'معلم'})).findings.some(f=>f.basis==='goal'));
+ assert.equal(core.goalRole('همکار برنامه‌نویس من'), 'development');assert.equal(core.goalRole('مهاجرت'),null);
+ const importedContent=structuredClone(content);importedContent.theme.resume='vista';
+ const importedSources=core.project(importedContent,{sections:[],groups:[{key:'about'}],fields:[{key:'f69',group:'about',type:'textarea',default:'با SQL  کار کردم.',max:1000}],collections:[]});
+ const description=importedSources.find(s=>s.section==='template');assert.equal(description.textRole,'description');
+ assert(!(await run(importedSources)).findings.some(f=>f.target.field==='f69'),'unconfirmed template text stays excluded');
+ description.provenance='user-confirmed';const importedFinding=(await run(importedSources)).findings.find(f=>f.target.field==='f69');assert(importedFinding);assert.equal(importedFinding.type,'question','template edits use the correct editor, not unsupported automatic rewriting');
+ const repeatedSpec={sections:[],groups:[{key:'about'}],fields:[{key:'f69',group:'about',type:'textarea',default:'متن نمونه'}],collections:[{key:'r1',group:'about',node:{field:'f69'}}]};
+ let repeatedSources=core.project(importedContent,repeatedSpec).filter(s=>s.section==='template');assert.deepEqual(repeatedSources.map(s=>s.itemId),['vista:r1:original']);
+ importedContent.resumeTemplates.vista={fields:{},settings:{},collections:{r1:[{id:'row1',fields:{f69:'متن واقعی من'}}]}};repeatedSources=core.project(importedContent,repeatedSpec).filter(s=>s.section==='template');assert.equal(repeatedSources[0].itemId,'vista:r1:row1');assert.equal(repeatedSources[0].raw,'متن واقعی من');
+ importedContent.resumeTemplates.vista.collections.r1=[];assert.equal(core.project(importedContent,repeatedSpec).filter(s=>s.section==='template').length,0,'removed original rows do not survive as phantom advisor sources');
  const privateResult=await core.analyze({sources:[source('شماره 09120000000')],privateContacts:['09120000000']});const leak=privateResult.findings.find(f=>f.ruleId==='PRIV-EXPOSE');assert(leak);assert.equal(leak.evidence.length,0);assert(!JSON.stringify(leak).includes('09120000000'));
  const big=Array.from({length:100},(_,i)=>source('با SQL نمودار ساختم. '.repeat(100),{itemId:'p'+i}));const started=performance.now();const partial=await run(big);assert.equal(partial.status,'partial');assert(partial.coverage.deferred>0);
  const elapsedMs=performance.now()-started;assert(elapsedMs<1500,`bounded analysis ${elapsedMs}ms`);

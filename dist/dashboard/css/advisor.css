@@ -1,5 +1,5 @@
-.advisor{margin-block:16px 22px;border:1px solid var(--ice-300);border-radius:var(--r-lg);background:var(--ice-50);color:var(--ink);overflow:clip}
-.advisor>summary{display:flex;align-items:center;gap:12px;padding:16px 20px;cursor:pointer;min-height:56px;list-style:none}
+.advisor{margin-block:16px 22px;border:1px solid var(--ice-300);border-radius:var(--r-lg);background:var(--ice-50);color:var(--ink)}
+.advisor>summary{position:relative;display:flex;align-items:center;gap:12px;padding:16px 20px;cursor:pointer;min-height:56px;list-style:none;border-radius:inherit}
 .advisor>summary>span{display:flex;align-items:center;gap:8px;font-weight:700}
 .advisor>summary>small{margin-inline-start:auto;color:var(--ink-2)}
 .advisor>summary::-webkit-details-marker{display:none}
@@ -14,5 +14,12 @@
 .advisor-filter{display:flex;align-items:end;gap:16px;flex-wrap:wrap}.advisor-filter .field{min-width:min(100%,220px)}.advisor [data-advisor-pager]{align-items:center}
 .advisor :focus-visible{outline:2px solid var(--ice-700);outline-offset:3px}
 .advisor [role=status]:empty{display:none}
+.advisor .advisor-help{width:30px;min-width:30px;height:30px;min-height:30px;padding:5px}.advisor__helptext{position:absolute;inset-inline-start:12px;top:calc(100% + 4px);inline-size:min(440px,calc(100% - 24px));z-index:20;padding:14px 16px;background:var(--ice-50);color:var(--ink);border:1px solid var(--ice-300);border-radius:var(--r-md);box-shadow:var(--sh-2);font-size:12px;font-weight:400;line-height:1.9;text-align:start;white-space:normal;cursor:default}.advisor-source-note{padding:14px 16px;border:1px solid var(--ice-300);border-radius:var(--r-md);background:var(--ice-100)}.advisor-source-note p{margin-bottom:10px;max-width:80ch}
 @media(max-width:600px){.advisor>summary{flex-wrap:wrap;padding:14px}.advisor>summary>small{margin-inline-start:0;flex:1}.advisor__body{padding:14px}.advisor__body .btn{white-space:normal;min-height:44px}}
 @media(prefers-reduced-motion:no-preference){.advisor[open] .advisor__body{animation:advisor-reveal .18s ease-out}@keyframes advisor-reveal{from{opacity:.5;transform:translateY(-4px)}to{opacity:1;transform:none}}}
+.field-help.btn{inline-size:28px;block-size:28px;min-block-size:28px;flex:none;padding:5px;margin-inline-start:6px;vertical-align:middle;color:var(--ink-2)}
+.field-help.btn:hover,.field-help.btn:focus-visible{color:var(--ink);background:var(--ice-200)}
+.field-help-details{margin:0;line-height:1.9;overflow-wrap:anywhere}
+.field-help-details dt{font-weight:700;margin-block-start:18px}
+.field-help-details dt:first-child{margin-block-start:0}
+.field-help-details dd{margin:4px 0 0;white-space:pre-wrap}
