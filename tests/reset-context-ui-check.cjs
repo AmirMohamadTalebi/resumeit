@@ -1,0 +1,20 @@
+const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),{randomUUID}=require('node:crypto'),{chromium}=require('playwright'),{createServer}=require('../src/http/server.cjs');
+(async()=>{
+ const f=await require('./advisor-release-fixture.cjs')(),server=createServer(f.db,f.options);await new Promise(r=>server.listen(0,'127.0.0.1',r));const base='http://127.0.0.1:'+server.address().port;let browser;
+ try{
+  browser=await chromium.launch({channel:process.platform==='win32'?'msedge':undefined,headless:true});const context=await browser.newContext({viewport:{width:390,height:844},reducedMotion:'reduce'});await context.addCookies([{name:'ri_session',value:'a'.repeat(64),url:base}]);await context.addInitScript(id=>sessionStorage.setItem('ri-panel-choice',id),f.owner);const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
+  const requestRoute=/\/api\/dashboard\/reset\/request(?:\?|$)/,resetRoute=/\/api\/dashboard\/reset(?:\?|$)/;
+  await page.route(requestRoute,r=>r.fulfill({json:{challengeId:randomUUID(),expiresIn:120,retryAfter:60}}));
+  await page.goto(base+'/dashboard/resume/');await page.locator('[data-reset-page=resume]').click();await page.getByRole('button',{name:'دریافت کد تأیید',exact:true}).click();await page.locator('#reset-code').fill('123456');
+  let release;const arrived=new Promise(resolve=>page.route(resetRoute,async route=>{const doc=await page.evaluate(()=>({content:structuredClone(RI.C()),pub:RI.state.pub,revision:RI.revision+1}));doc.content.profile.name='پاسخ دیررس جایگاه اول';release=()=>route.fulfill({json:doc});resolve();}));
+  await page.getByRole('button',{name:'پاک‌کردن محتوای رزومه با تأیید کد',exact:true}).click();await arrived;
+  await page.evaluate(()=>{RI.workspaceSlot=2;RI.state.content.profile.name='اطلاعات جایگاه دوم';});await release();await page.waitForTimeout(150);
+  assert.equal(await page.evaluate(()=>RI.C().profile.name),'اطلاعات جایگاه دوم','late reset response cannot replace another workspace');
+  await page.unroute(resetRoute);await page.reload();await page.locator('[data-reset-page=resume]').click();await page.evaluate(()=>RI.workspaceSlot=2);let requests=0;await page.route(requestRoute,r=>{requests++;return r.fulfill({json:{challengeId:randomUUID()}});});await page.getByRole('button',{name:'دریافت کد تأیید',exact:true}).click();assert.equal(requests,0,'stale modal cannot send a reset request for the new workspace');
+  await page.reload();let finishStats;const statsArrived=new Promise(resolve=>page.route(/\/api\/dashboard\/stats(?:\?|$)/,route=>{finishStats=()=>route.fulfill({json:{rows:[{total:111}]}});resolve();}));
+  await page.evaluate(()=>{void RI.loadStats();});await statsArrived;await page.evaluate(()=>{RI.workspaceSlot=2;RI.statsRows=[{total:222}];});await finishStats();await page.waitForTimeout(150);assert.equal(await page.evaluate(()=>RI.statsRows[0].total),222,'late statistics cannot replace the new workspace statistics');
+  await page.reload();await page.locator('[data-reset-page=resume]').click();await page.evaluate(()=>RI.ownerId='another-account');await page.getByRole('button',{name:'دریافت کد تأیید',exact:true}).click();assert.equal(requests,0,'stale account modal cannot send SMS');
+  await page.reload();await page.locator('[data-reset-page=resume]').click();await page.getByRole('button',{name:'دریافت کد تأیید',exact:true}).click();await page.locator('#reset-code').waitFor();const out=path.resolve('artifacts/three-pass-review');fs.mkdirSync(out,{recursive:true});await page.evaluate(()=>document.fonts.ready);await page.screenshot({path:path.join(out,'reset-mobile.png')});await page.setViewportSize({width:1440,height:1000});await page.screenshot({path:path.join(out,'reset-desktop.png')});
+  assert.deepEqual(errors,[]);console.log('PASS reset modal and late statistics stay bound to their original account/workspace; late responses and stale clicks are ignored.');
+ }finally{await browser?.close();await new Promise(r=>server.close(r));f.store.close();}
+})().catch(e=>{console.error(e);process.exitCode=1;});

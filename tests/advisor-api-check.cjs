@@ -3,6 +3,10 @@ const assert=require('node:assert/strict'),{randomUUID}=require('node:crypto'),{
  const f=await require('./advisor-release-fixture.cjs')(),{db,owner,target}=f,server=createServer(db,f.options);await new Promise(r=>server.listen(0,'127.0.0.1',r));const base='http://127.0.0.1:'+server.address().port;
  const request=async(route,data,who='a',slot=1)=>{const r=await fetch(base+'/api/dashboard/'+route+(route.includes('?')?'&':'?')+'workspace='+slot,{method:data?'POST':'GET',headers:{Cookie:'ri_session='+who.repeat(64),...(data?{Origin:base,'Content-Type':'application/json'}:{})},body:data?JSON.stringify(data):undefined});return {status:r.status,body:await r.json()};};
  try{
+  for(const route of ['advisor','support','reset/request'])for(const body of ['{','null','[]','"text"']){
+   const response=await fetch(base+'/api/dashboard/'+route,{method:'POST',headers:{Cookie:'ri_session='+'a'.repeat(64),Origin:base,'Content-Type':'application/json'},body});
+   assert.equal(response.status,400,route+' rejects malformed/non-object JSON as a client error');
+  }
   let state=await request('advisor');assert.equal(state.body.version,0);assert.equal((await request('advisor',{version:0,operations:[{kind:'context',goal:'تحلیل داده'}]})).status,200);
   assert.equal((await request('advisor',null,'b')).body.state.context.goal,'');assert.equal((await request('advisor',null,'a',2)).body.state.context.goal,'');
   assert.equal((await request('advisor',{version:0,operations:[]})).status,409);

@@ -23,16 +23,17 @@ module.exports=({execute,transaction})=>({
   async ticketAttachment(owner,id){const [file]=await execute('SELECT a.* FROM support_attachments a JOIN support_messages m ON m.id=a.message_id JOIN support_tickets t ON t.id=m.ticket_id WHERE a.id=?'+(owner?' AND t.user_id=?':''),[id,...(owner?[owner]:[])]);return file;},
   async createTicket(owner,input){return transaction(async con=>{
     await con.execute('SELECT id FROM users WHERE id=? FOR UPDATE',[owner]);
-    const [[count]]=await con.execute('SELECT COUNT(*) total FROM support_tickets WHERE user_id=? AND created_at>?',[owner,Date.now()-3600000]);if(Number(count.total)>=5)fail('تا یک ساعت می‌توانی پنج تیکت بسازی؛ گفت‌وگوی موجود را ادامه بده',429);
     const [[prior]]=await con.execute('SELECT id FROM support_tickets WHERE user_id=? AND request_id=?',[owner,input.requestId]);if(prior)return {id:prior.id};
+    const [[count]]=await con.execute('SELECT COUNT(*) total FROM support_tickets WHERE user_id=? AND created_at>?',[owner,Date.now()-3600000]);if(Number(count.total)>=5)fail('تا یک ساعت می‌توانی پنج تیکت بسازی؛ گفت‌وگوی موجود را ادامه بده',429);
     const id=randomUUID(),now=Date.now();await con.execute('INSERT INTO support_tickets(id,user_id,subject,category,priority,status,request_id,created_at,updated_at) VALUES(?,?,?,?,?,\'open\',?,?,?)',[id,owner,input.subject,input.category,input.priority,input.requestId,now,now]);
     const message=randomUUID();await con.execute('INSERT INTO support_messages(id,ticket_id,staff,body,request_id,created_at) VALUES(?,?,FALSE,?,?,?)',[message,id,input.body,input.requestId,now]);await require('../dashboard/attachments.cjs').insert(con,message,input.attachments);return {id};
   });},
   async replyTicket(owner,id,body,requestId,staff,attachments){return transaction(async con=>{
     if(staff)await staffAccess(con,owner);
-    const [[ticket]]=await con.execute('SELECT * FROM support_tickets WHERE id=?'+(staff?'':' AND user_id=?')+' FOR UPDATE',[id,...(staff?[]:[owner])]);if(!ticket)fail('تیکت پیدا نشد',404);if(ticket.status==='closed')fail('ابتدا تیکت را دوباره باز کن',409);
-    const [[count]]=await con.execute('SELECT COUNT(*) total FROM support_messages WHERE ticket_id=? AND created_at>?',[id,Date.now()-60000]);if(Number(count.total)>=10)fail('پیام‌ها را در یک پاسخ جمع کن و کمی بعد دوباره بفرست',429);
+    const [[ticket]]=await con.execute('SELECT * FROM support_tickets WHERE id=?'+(staff?'':' AND user_id=?')+' FOR UPDATE',[id,...(staff?[]:[owner])]);if(!ticket)fail('تیکت پیدا نشد',404);
     const [[prior]]=await con.execute('SELECT id FROM support_messages WHERE ticket_id=? AND request_id=?',[id,requestId]);if(prior)return {id};
+    if(ticket.status==='closed')fail('ابتدا تیکت را دوباره باز کن',409);
+    const [[count]]=await con.execute('SELECT COUNT(*) total FROM support_messages WHERE ticket_id=? AND created_at>?',[id,Date.now()-60000]);if(Number(count.total)>=10)fail('پیام‌ها را در یک پاسخ جمع کن و کمی بعد دوباره بفرست',429);
     const now=Date.now(),message=randomUUID();await con.execute('INSERT INTO support_messages(id,ticket_id,staff,body,request_id,created_at) VALUES(?,?,?,?,?,?)',[message,id,staff,body,requestId,now]);await require('../dashboard/attachments.cjs').insert(con,message,attachments);await con.execute('UPDATE support_tickets SET status=?,updated_at=? WHERE id=?',[staff?'answered':'open',now,id]);
     if(staff){await staffAudit(con,owner,ticket,'support-reply','support:'+requestId);await con.execute('INSERT INTO user_notifications(id,user_id,kind,title,body,url,created_at) VALUES(?,?,\'support\',?,?,?,?)',[randomUUID(),ticket.user_id,'پاسخ پشتیبانی',ticket.subject,'/dashboard/support/?ticket='+id,now]);}return {id};
   });},

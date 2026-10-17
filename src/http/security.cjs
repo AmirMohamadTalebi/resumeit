@@ -34,8 +34,10 @@ async function readJson(req, limit = 2048) {
     if (size > limit) oversized();
     chunks.push(chunk);
   }
-  const input = JSON.parse(Buffer.concat(chunks).toString('utf8'));
-  if (!input || typeof input !== 'object' || Array.isArray(input)) throw new SyntaxError('Expected JSON object');
+  let input;
+  try { input = JSON.parse(Buffer.concat(chunks).toString('utf8')); }
+  catch { throw Object.assign(new SyntaxError('ساختار درخواست معتبر نیست'), {status:400}); }
+  if (!input || typeof input !== 'object' || Array.isArray(input)) throw Object.assign(new SyntaxError('درخواست باید یک شیء JSON باشد'), {status:400});
   return input;
 }
 
