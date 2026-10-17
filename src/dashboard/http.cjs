@@ -100,7 +100,8 @@ function dashboardHandler(database,auth,notifications,options){const reset=requi
       model.ready(doc.content,k,billing,!!doc.slug&&doc.slug===doc.content.slug);doc.slug=doc.content.slug;doc.published[k]=structuredClone(doc.content);doc.pub[k]={status:'published',version:doc.pub[k].version+1,at:Date.now(),snap:JSON.stringify(pubData(doc.content,k))};
     },{draftOnly:saving,workspace,checkAccess:!pathname.endsWith('/unpublish')});
     if(!saving&&database.notify)await database.notify(user.id,'publication',pathname.endsWith('/unpublish')?'صفحه از انتشار برداشته شد':'نسخهٔ تازه منتشر شد',input.kind==='resume'?'رزومه':'صفحهٔ لینک‌ها','/dashboard/publish/','pub:'+user.id+':'+workspace+':'+result.revision).catch(()=>{});
-    reply(200,saving&&input.compact===true?{revision:result.revision,slug:result.slug,preferences:result.preferences}:result);
+    const compact=input.compact===true?(saving?{revision:result.revision,slug:result.slug,preferences:result.preferences}:{revision:result.revision,slug:result.slug,pub:require('./media.cjs').lightweight({pub:result.pub},workspace).pub}):result;
+    reply(200,compact);
   }catch(e){reply(e.status||503,{error:e.status?e.message:'درخواست انجام نشد؛ دوباره تلاش کن',code:['REVISION_CONFLICT','ACCOUNT_CHANGED','ADVISOR_CONFLICT'].includes(e.code)?e.code:undefined});}return true;
 };}
 module.exports={dashboardHandler};

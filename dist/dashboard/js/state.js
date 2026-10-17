@@ -296,13 +296,28 @@
 
   /* انتشار آخرین محتوای ذخیره‌شده روی سرور */
   RI.publish = async function (k, onStep) {
+    const owner=RI.ownerId,slot=RI.workspaceSlot;
+    const sameContext=()=>owner===RI.ownerId&&slot===RI.workspaceSlot;
+    const changed=()=>Object.assign(new Error('حساب یا صفحهٔ فعال تغییر کرده؛ وضعیت انتشار را در صفحهٔ اصلی بررسی کن'),{code:'ACCOUNT_CHANGED'});
     const eligibility=await RI.accountRequest('publication-check');
+    if(!sameContext())throw changed();
     if(!eligibility.canPublish){RI.toast('قبل از انتشار '+eligibility.missing.join('، ')+' رو در تنظیمات کامل کن',{kind:'error'});throw new Error('account-incomplete');}
     const steps = ['بررسی اطلاعات صفحه', 'ساخت نسخهٔ جدید', 'آماده‌سازی آدرس عمومی'];
     onStep && onStep(0,steps);
     if(RI.state.ui.dirty||!RI.revision){if(!await RI.save())throw new Error('ابتدا تغییرات را ذخیره کن');}
+    if(!sameContext())throw changed();
     onStep && onStep(1,steps);
-    const doc=await RI.dashboardRequest('publish',{revision:RI.revision,kind:k});
+    const revision=RI.revision,version=Number(RI.state.pub[k].version);let doc;
+    try{doc=await RI.dashboardRequest('publish',{revision,kind:k,compact:true});}
+    catch(error){
+      if(!sameContext())throw changed();
+      if(!['NETWORK_ERROR','INVALID_RESPONSE'].includes(error.code))throw error;
+      // A lost response is not a failed transaction. Read once; never repeat the publication POST.
+      try{const fresh=await RI.dashboardRequest('document');if(fresh.revision===revision+1&&fresh.pub?.[k]?.status==='published'&&Number(fresh.pub[k].version)===version+1)doc=fresh;}catch{}
+      if(!sameContext())throw changed();
+      if(!doc)throw error;
+    }
+    if(!sameContext()||RI.revision!==revision)throw changed();
     RI.revision=doc.revision;RI.state.pub=doc.pub;RI.savedSlug=doc.slug;
     onStep && onStep(steps.length, steps);
     RI.emit('pub');

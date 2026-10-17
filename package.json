@@ -1,6 +1,6 @@
 {
   "name": "resumeit",
-  "version": "0.24.1-beta",
+  "version": "0.24.2-beta",
   "private": true,
   "engines": {
     "node": ">=24.15.0"
@@ -8,7 +8,7 @@
   "scripts": {
     "start": "node server.cjs",
     "posttest": "node tests/advisor-core-check.cjs && node tests/advisor-api-check.cjs && node tests/readjson-limit-check.cjs && node tests/support-retry-check.cjs",
-    "check:advisor": "node tests/advisor-core-check.cjs && node tests/advisor-api-check.cjs && node tests/advisor-coordinator-ui-check.cjs && node tests/advisor-journey-check.cjs && node tests/compact-pages-ui-check.cjs && node tests/reset-context-ui-check.cjs && node tests/advisor-guidance-ui-check.cjs && node tests/resume-field-help-ui-check.cjs",
+    "check:advisor": "node tests/advisor-core-check.cjs && node tests/advisor-api-check.cjs && node tests/advisor-coordinator-ui-check.cjs && node tests/advisor-journey-check.cjs && node tests/compact-pages-ui-check.cjs && node tests/reset-context-ui-check.cjs && node tests/advisor-guidance-ui-check.cjs && node tests/resume-field-help-ui-check.cjs && node tests/vista-publication-recovery-ui-check.cjs",
     "check:database": "node tests/database-check.cjs && node tests/payments-database-check.cjs",
     "check:auth": "node tests/auth-check.cjs",
     "check:sms": "node tests/smsir-check.cjs && node tests/otp-check.cjs",
