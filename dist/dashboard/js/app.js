@@ -89,6 +89,8 @@
   let navigating=false,pendingNavigation=null,currentUrl=location.pathname+location.search;
   RI.setRouteTab=(tab,initial)=>{const url=new URL(location.href);if(tab===initial)url.searchParams.delete('tab');else url.searchParams.set('tab',tab);history.replaceState(history.state,'',url.pathname+url.search+url.hash);currentUrl=url.pathname+url.search;};
   const pageLoads=new Map();
+  RI.loadPage=async id=>{if(!NAV.some(g=>g.items.some(i=>i[0]===id)))throw new Error('بخش نامعتبر است');if(!RI.pages[id])await loadScript('/dashboard/js/pages/'+id+'.js');return RI.pages[id];};
+  RI.setRouteStep=step=>{const url=new URL(location.href);url.searchParams.set('step',step);history.replaceState(history.state,'',url.pathname+url.search);currentUrl=url.pathname+url.search;};
   function loadScript(path) {
     if(!pageLoads.has(path)) pageLoads.set(path,new Promise((resolve,reject)=>{
       const script=document.createElement('script');
@@ -108,6 +110,7 @@
       if (!(await RI.leaveGuard())) { if(back)history.replaceState(null,'',previous);return; }
       window.resumeitPageLoading?.start(true);
       if(id==='resume') {
+        if(!RI.ResumeJourney)await loadScript('/dashboard/js/resume-journey.js');
         if(!RI.mountImportedEditor) await loadScript('/dashboard/js/template-editor.js');
         await RI.loadTemplates([RI.C().theme.resume]);
       }
@@ -239,6 +242,7 @@
     const legacy = /^#\/([a-z]+)$/.exec(location.hash);
     if (legacy && NAV.some(g => g.items.some(i => i[0] === legacy[1]))) { location.replace(RI.routeUrl(legacy[1])); return; }
     RI.routeOpts = Object.fromEntries(new URLSearchParams(location.search));
+    if(document.body.dataset.page==='resume'&&!RI.ResumeJourney)await loadScript('/dashboard/js/resume-journey.js');
     await render(document.body.dataset.page);
     document.dispatchEvent(new Event('ri:dashboard-ready'));
     RI.startInbox?.();

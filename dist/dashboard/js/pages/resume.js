@@ -40,14 +40,15 @@
   RI.registerPage('resume', {
     title: 'ساخت و ویرایش رزومه',
     render(ctx) {
-      return RI.pageHead({ title: 'طراحی رزومه', desc:esc(RI.findTemplate('resume',RI.C().theme.resume).name)+' · '+RI.fa(RI.completion().pct)+'٪ تکمیل',
+      return RI.pageHead({ title: 'ساخت رزومه', desc:esc(RI.findTemplate('resume',RI.C().theme.resume).name),
         actions: '<button type="button" class="btn btn--soft btn--sm show-sm" data-live>' + RI.icon('eye') + 'پیش‌نمایش زنده</button><a class="btn btn--ghost btn--sm" href="/dashboard/themes/" data-go="themes">' + RI.icon('palette') + 'ظاهر و قالب</a><button type="button" class="btn btn--ghost btn--sm" data-reset-page="resume">'+RI.icon('trash')+'پاک‌کردن رزومه</button>' }) +
-        RI.completionStrip('resume')+'<div id="resume-advisor"></div><div class="resume-tabs-host"></div><div class="editor"><div class="editor__main"><div class="segmented" role="tablist" aria-label="حالت ویرایش" id="rtabs"><button type="button" role="tab" data-tab="content" aria-selected="true">' + RI.icon('edit') + 'محتوا</button><button type="button" role="tab" data-tab="layout" aria-selected="false">' + RI.icon('section') + 'چیدمان بخش‌ها</button></div><div id="rbody"></div></div>' +
-        '<aside class="editor__side" aria-label="پیش‌نمایش زندهٔ رزومه"><div class="sticky"><div id="rpv"></div></div></aside></div>';
+        '<div id="resume-journey"></div><div class="resume-tabs-host"></div><div class="editor"><div class="editor__main"><div class="segmented" role="tablist" aria-label="حالت ویرایش" id="rtabs"><button type="button" role="tab" data-tab="content" aria-selected="true">' + RI.icon('edit') + 'محتوا</button><button type="button" role="tab" data-tab="layout" aria-selected="false">' + RI.icon('section') + 'چیدمان بخش‌ها</button></div><div id="rbody"></div></div>' +
+        '<aside class="editor__side" aria-label="پیش‌نمایش زندهٔ رزومه"><div class="sticky"><div id="rpv"></div></div></aside></div><section class="journey-quality" id="resume-advisor-shell" aria-label="راهنمای کیفیت رزومه"><div id="resume-advisor"></div></section>';
     },
     mount(root, ctx) {
-      const spec = RI.resumeSpec(RI.C().theme.resume);
-      const STEPS = [{ id: 'profile', label: 'معرفی', icon: 'user', req: true }, ...Object.keys(SECTION_META).filter(k => spec.sections.includes(k)).map(k => ({ id: k, label: SECTION_META[k][0], icon: SECTION_META[k][1], req: spec.requiredSections.includes(k) || k === 'contacts' })), ...(spec.fields.length || spec.settings.length ? [{ id: 'template', label: 'ویژهٔ قالب', icon: 'palette', req: spec.fields.concat(spec.settings).some(f => f.required) }] : [])];
+      const mountOwner=RI.ownerId,mountSlot=RI.workspaceSlot,sameContext=()=>root.isConnected&&RI.ownerId===mountOwner&&RI.workspaceSlot===mountSlot;
+      let spec,STEPS;const syncSpec=()=>{spec=RI.resumeSpec(RI.C().theme.resume);STEPS=[{id:'profile',label:'معرفی',icon:'user',req:true},...Object.keys(SECTION_META).filter(k=>spec.sections.includes(k)).map(k=>({id:k,label:SECTION_META[k][0],icon:SECTION_META[k][1],req:spec.requiredSections.includes(k)||k==='contacts'})),...(spec.fields.length||spec.settings.length?[{id:'template',label:'ویژهٔ قالب',icon:'palette',req:true}]:[])];};syncSpec();
+      const journey=RI.ResumeJourney.initial(ctx.opts),journeyHost=root.querySelector('#resume-journey');let storyStep='',lookCleanup,renderSerial=0,publishing=false;
       let tab = 'content', step = (ctx.opts && ctx.opts.step) || 'profile';
       if (!STEPS.some((s) => s.id === step)) step = 'profile';
       const body = RI.$('#rbody', root);
@@ -61,8 +62,9 @@
       RI.bindBranding(root);
       const pv = new RI.Preview(RI.$('#rpv', root), { kind: 'resume', device: 'mobile', fitHeight: 200 });
       let raf = 0;
-      const refresh = () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(() => pv.refresh(false)); };
+      const refresh = () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(() => {syncSpec();pv.refresh(false);updateJourneyStatus();if(journey.guided&&journey.phase==='review'&&!publishing)paint(true);}); };
       const off = RI.on('change', refresh);
+      const offSave=RI.on('save',()=>updateJourneyStatus());
 
       function stepper() {
         const groups=[['هویت و ارتباط',['profile','contacts','socials']],['مسیر حرفه‌ای',['experience','education','skills','languages']],['کارها و دستاوردها',['projects','certs']],['جزئیات قالب',['template']]],current=STEPS.find(s=>s.id===step);
@@ -73,7 +75,7 @@
         }).join('')+'</nav></details>';
       }
 
-      function profilePanel() {
+      function fullProfilePanel() {
         const p = RI.C().profile;
         return '<div class="panel"><div class="panel__head"><h2>خودت را معرفی کن</h2><p>اولین چیزی که بازدیدکننده می‌بیند <span class="field__req">پایهٔ انتشار</span> برای انتشار: نام و عنوان</p></div>' +
           '<div class="profile-media"><div class="field"><div class="field__label">تصویر کاور<span class="field__opt">به انتخاب تو</span></div>' + RI.imageFieldHtml('cover', { value: p.cover, wide: true, label: 'کاور' }) + '</div>' +
@@ -84,6 +86,16 @@
           '<div class="field span-2" data-field="title"><label class="field__label" for="p_title">عنوان حرفه‌ای یا تحصیلی<span class="field__req">پایهٔ انتشار</span></label><input class="input" id="p_title" data-p="title" value="' + esc(p.title) + '" maxlength="90" placeholder="مثلاً دانشجوی کامپیوتر | طراح رابط کاربری"><div class="field__hint">یک خط که بگوید کی هستی و چه می‌کنی</div><div class="field__error" role="alert" hidden></div></div>' +
           '<div class="field span-2" data-field="bio"><label class="field__label" for="p_bio">معرفی کوتاه<span class="field__opt">به انتخاب تو</span><span class="field__count" id="bioCount"></span></label><textarea class="textarea" id="p_bio" data-p="bio" maxlength="300" rows="4" placeholder="دو سه جمله دربارهٔ آنچه دوست داری و می‌سازی">' + esc(p.bio) + '</textarea></div></div>'+RI.brandingHtml('resume')+'</div>';
       }
+      function profilePanel(){
+        const holder=document.createElement('div');holder.innerHTML=fullProfilePanel();const panel=holder.firstElementChild,head=panel.querySelector('.panel__head'),grid=panel.querySelector('#pform'),media=panel.querySelector('.profile-media'),account=[...panel.querySelectorAll('.syncrow')],brand=panel.querySelector('.branding-controls');
+        head.querySelector('p').textContent='نام و عنوانت را بنویس؛ همین حالا شکل می‌گیرد.';
+        const optional=document.createElement('details');optional.className='journey-details';optional.open=!journey.guided;optional.innerHTML='<summary>معرفی کوتاه و شهر · به انتخاب تو</summary><div class="form-grid"></div>';
+        for(const key of ['location','bio'])optional.lastElementChild.append(grid.querySelector('[data-field="'+key+'"]'));
+        panel.replaceChildren(head,grid,optional);
+        if(!journey.guided){const extra=document.createElement('details');extra.className='journey-details';extra.innerHTML='<summary>عکس، امضا و مشخصات حساب</summary>';extra.append(media,...account,brand);panel.append(extra);}
+        return panel.outerHTML;
+      }
+      function mediaPanel(){const holder=document.createElement('div');holder.innerHTML=fullProfilePanel();return '<details class="journey-details"><summary>عکس و کاور · به انتخاب تو</summary>'+holder.querySelector('.profile-media').outerHTML+'</details><details class="journey-details"><summary>امضای پایین صفحه</summary>'+RI.brandingHtml('resume')+'</details>';}
 
       function contactsPanel() {
         const ic = { email: 'mail', phone: 'phone', website: 'globe' };
@@ -123,8 +135,20 @@
       }
 
       function paint(keepScroll) {
+        syncSpec();lookCleanup?.();lookCleanup=null;const serial=++renderSerial;
+        pv.setTemplateSection(null);
+        root.classList.add('resume-build');root.dataset.journeyPhase=journey.guided?journey.phase:'direct';
+        journeyHost.innerHTML=RI.ResumeJourney.nav(journey);RI.$('#rtabs',root).hidden=journey.guided;const quality=root.querySelector('#resume-advisor-shell');quality.hidden=journey.guided&&journey.phase!=='review'&&!quality.querySelector('details[open]');
         tabsHost.replaceChildren();
-        if (tab === 'layout') body.innerHTML = layoutPanel();
+        if(journey.guided){
+          if(journey.phase==='start')step='profile';else if(journey.phase==='contact'&&!['contacts','socials'].includes(step))step='contacts';
+          const story=journey.phase==='story';if(story)step=storyStep||'story';
+          const content=journey.phase==='start'?profilePanel():story&&!storyStep?RI.ResumeJourney.story(STEPS):story?'<button type="button" class="btn btn--ghost btn--sm" data-journey-choices>'+RI.icon('chevR')+'بخش‌های رزومه</button>'+(step==='template'?templatePanel():listPanel(step)):journey.phase==='contact'?(step==='socials'?listPanel('socials'):contactsPanel())+(STEPS.some(s=>s.id==='socials')?'<button type="button" class="btn btn--ghost" data-step="'+(step==='socials'?'contacts':'socials')+'">'+RI.icon(step==='socials'?'mail':'globe')+(step==='socials'?'بازگشت به راه تماس':'شبکه‌های اجتماعی · به انتخاب تو')+'</button>':''):journey.phase==='look'?mediaPanel()+'<div class="journey-appearance" aria-busy="true">در حال آماده‌سازی ظاهر…</div><div class="btnrow"><button type="button" class="btn btn--ghost" data-journey-layout>'+RI.icon('section')+'چیدمان بخش‌ها</button>'+(STEPS.some(s=>s.id==='template')?'<button type="button" class="btn btn--ghost" data-journey-advanced>تنظیمات کامل قالب</button>':'')+'</div>':RI.ResumeJourney.review();
+          body.innerHTML='<div id="panel">'+content+'</div>'+RI.ResumeJourney.footer(journey);
+          if(['start','story','contact'].includes(journey.phase)&&step!=='story')bindPanel();
+          if(journey.phase==='look'){bindMedia();const host=body.querySelector('.journey-appearance');RI.loadPage('themes').then(page=>{if(serial!==renderSerial||!root.isConnected)return;host.innerHTML=page.render();host.querySelector('.page-head')?.remove();host.querySelector('[data-tab="lt"]')?.remove();host.removeAttribute('aria-busy');lookCleanup=page.mount(host,{journey:true});}).catch(error=>{if(serial===renderSerial&&host.isConnected){host.removeAttribute('aria-busy');host.innerHTML='<p role="alert">'+esc(error.message)+'</p><button type="button" class="btn btn--soft" data-journey-retry>تلاش دوباره</button>';}});}
+        }
+        else if (tab === 'layout') body.innerHTML = layoutPanel();
         else {
           body.innerHTML = stepper() + '<div id="panel">' + (step === 'profile' ? profilePanel() : step === 'contacts' ? contactsPanel() : step === 'template' ? templatePanel() : listPanel(step)) + '</div>' + navButtons();
           bindPanel();
@@ -134,8 +158,13 @@
         RI.$$('#rtabs [data-tab]', root).forEach((b) => b.setAttribute('aria-selected', b.dataset.tab === tab));
         placeOutline();
         RI.animateBars(body);
-        if (tab === 'layout') bindLayout();
+        if (!journey.guided&&tab === 'layout') bindLayout();
         addFieldHelp();
+        updateJourneyStatus();RI.ResumeJourney.remember(journey);
+      }
+      function updateJourneyStatus(){
+        if(!root.isConnected)return;const save=root.querySelector('[data-journey-save]'),ui=RI.state.ui;if(save){save.textContent=ui.saveError?'ذخیره انجام نشد؛ تغییراتت حفظ است':ui.saving?'در حال ذخیره…':ui.dirty?'تغییرات هنوز ذخیره نشده':'ذخیره شده';if(ui.saveError||ui.dirty&&!ui.saving)save.innerHTML+='<button class="textlink" type="button" data-journey-save-retry>'+(ui.saveError?'تلاش دوباره':'ذخیرهٔ پیش‌نویس')+'</button>';}
+        const feedback=root.querySelector('[data-journey-feedback]');if(feedback){const p=RI.C().profile;feedback.textContent=!journey.guided?'همهٔ بخش‌ها در دسترس‌اند؛ فقط قسمت موردنظرت را ویرایش کن.':journey.phase==='start'?(p.name.trim()&&p.title.trim()?'معرفی اصلی آماده است؛ می‌توانی ادامه بدهی.':'با نام و عنوانت شروع کن؛ جزئیات بیشتر به انتخاب توست.'):journey.phase==='story'?'یک تجربه، پروژه یا مهارت واقعی کافی است تا شروع کنی.':journey.phase==='contact'?'فقط راه‌های تماسی که عمومی می‌کنی به بازدیدکننده نمایش داده می‌شوند.':journey.phase==='look'?'انتخاب ظاهر، اطلاعاتت را حذف نمی‌کند و چیزی را خودکار منتشر نمی‌کند.':'پیش‌نویس محفوظ است؛ انتشار فقط با تأیید تو انجام می‌شود.';}
       }
       function addFieldHelp() {
         const add=(selector,label,what,where,defaultValue)=>RI.$(selector,body)?.insertAdjacentHTML('beforeend',RI.fieldHelpHtml({label,what,where,defaultValue}));
@@ -155,16 +184,20 @@
         const i = STEPS.findIndex((s) => s.id === step), prev = STEPS[i - 1], next = STEPS[i + 1];
         return '<div class="stepnav">' + (prev ? '<button type="button" class="btn btn--ghost" data-step="' + prev.id + '">' + RI.icon('chevR') + prev.label + '</button>' : '<span></span>') + (next ? '<button type="button" class="btn btn--ice" data-step="' + next.id + '">' + next.label + RI.icon('chevL') + '</button>' : '<button type="button" class="btn btn--primary" data-go="publish">' + RI.icon('rocket') + 'به مرحلهٔ انتشار' + '</button>') + '</div>';
       }
-      function setStep(s) { step = s; paint(); if(innerWidth<1101)RI.$('#panel',root)?.scrollIntoView({block:'start',behavior:'instant'}); if (!RI.reduceMotion()) RI.$('#panel', root).animate([{ opacity: .5, transform: 'translateY(7px)' }, { opacity: 1, transform: 'none' }], { duration: 200, easing: 'cubic-bezier(.16,1,.3,1)' }); }
+      function setStep(s) {syncSpec();if(!STEPS.some(x=>x.id===s))return;step=s;tab='content';if(journey.guided){journey.phase=s==='profile'?'start':['contacts','socials'].includes(s)?'contact':'story';if(journey.phase==='story')storyStep=s;}RI.setRouteStep(journey.guided?journey.phase:s);paint();focusPanel();}
+      function focusPanel(){const heading=body.querySelector('h2');if(heading){heading.tabIndex=-1;heading.focus({preventScroll:true});}if(innerWidth<1101)body.scrollIntoView({block:'start',behavior:'instant'});if(!RI.reduceMotion())body.animate([{opacity:.65,transform:'translateY(6px)'},{opacity:1,transform:'none'}],{duration:180,easing:'ease-out'});}
+      function phase(id){if(!RI.ResumeJourney.stages.some(([key])=>key===id))return;journey.phase=id;storyStep='';tab='content';step=id==='contact'?'contacts':'profile';RI.setRouteStep(id);paint();focusPanel();}
+      const publicationReview=()=>{if(!journey.guided||!sameContext())return false;phase('review');return true;};RI.resumePublicationReview=publicationReview;
+      function bindMedia(){const panel=RI.$('#panel',root),p=RI.C().profile;for(const key of ['cover','avatar'])if(panel.querySelector('[data-img="'+key+'"]'))RI.bindImageField(panel,key,{set:v=>{if(!sameContext())return;p[key]=v;RI.touch(key);}});}
 
       function bindPanel() {
         const c = RI.C(), p = c.profile;
-        if (step === 'template' && RI.IMPORTED_TEMPLATES && RI.IMPORTED_TEMPLATES[c.theme.resume]) RI.mountImportedEditor(body, pv);
+        if (step === 'template' && RI.IMPORTED_TEMPLATES && RI.IMPORTED_TEMPLATES[c.theme.resume]) RI.mountImportedEditor(RI.$('#panel',root), pv,{guided:journey.guided});
         if (step === 'profile') {
           const panel = RI.$('#panel', root);
           RI.delegate(panel,'click','[data-account-phone]',()=>RI.phoneDialog());
-          RI.bindImageField(panel, 'cover', { set: (v) => { p.cover = v; RI.touch('cover'); } });
-          RI.bindImageField(panel, 'avatar', { set: (v) => { p.avatar = v; RI.touch('avatar'); } });
+          RI.bindImageField(panel, 'cover', { set: (v) => {if(!sameContext())return; p.cover = v; RI.touch('cover'); } });
+          RI.bindImageField(panel, 'avatar', { set: (v) => {if(!sameContext())return; p.avatar = v; RI.touch('avatar'); } });
           const cnt = () => { const e = RI.$('#bioCount', panel); if (e) e.textContent = RI.fa(p.bio.length) + '/۳۰۰'; }; cnt();
           RI.$$('[data-p]', panel).forEach((el) => {
             el.addEventListener('input', () => { p[el.dataset.p] = el.value; RI.touch('profile'); if (el.dataset.p === 'bio') cnt(); if (el.value.trim()) RI.showFieldError(panel, el.dataset.p, ''); });
@@ -199,19 +232,19 @@
       });
 
       function openForm(id) {
-        const L = LISTS[step], list = RI.C()[step], cur = id ? list.find((x) => x.id === id) : null;
+        const section=step,owner=RI.ownerId,slot=RI.workspaceSlot,L = LISTS[section], list = RI.C()[section], cur = id ? list.find((x) => x.id === id) : null;
         const hints={desc:'شرح کوتاه و واقعی از کار، نتیجه یا سابقهٔ خودت؛ از ادعاهای ساختگی پرهیز کن.',from:'زمان شروع؛ می‌توانی سال یا سال و ماه بنویسی.',to:'زمان پایان؛ اگر هنوز ادامه دارد این مقدار نمایش داده نمی‌شود.',current:'اگر روشن باشد به‌جای تاریخ پایان، ادامه‌داشتن این سابقه نشان داده می‌شود.',url:'نشانی مقصد پروژه؛ بازدیدکننده از این لینک به پروژه می‌رود.',image:'تصویر معرفی پروژه، در بخش نمونه‌کارها و پنجرهٔ توضیح پروژه.',level:'ارزیابی خودت از سطح تسلط؛ این مقدار آزمون یا تأیید مهارت نیست.',handle:'فقط نام کاربری شبکه را بنویس، نه نشانی کامل آن.',platform:'شبکه‌ای که این نام کاربری به آن تعلق دارد.'};
         const fields=L.fields.map(f=>({...f,help:{what:hints[f.key]||'مقدار «'+f.label+'» برای همین مورد از بخش '+L.title+'.',where:'بخش '+L.title+' در رزومه',defaultValue:f.type==='level'?f.levels[(L.defaults?.[f.key]||3)-1]:f.type==='select'?f.options.find(o=>o[0]===L.defaults?.[f.key])?.[1]:L.defaults?.[f.key]??(f.type==='checkbox'?false:'')}}));
         RI.formModal({ title: (cur ? 'ویرایش ' : '') + L.add.replace('افزودن ', cur ? '' : 'افزودن '), size: step === 'projects' ? 'lg' : 'md', fields, values: cur ? RI.clone(cur) : Object.assign({}, L.defaults || {}), submitLabel: cur ? 'ذخیرهٔ تغییر' : 'افزودن',
-          onSubmit: (v) => { if (cur) Object.assign(cur, v); else list.push(Object.assign({ id: RI.uid() }, v)); RI.touch(step); paint(); RI.toast(cur ? 'تغییر اعمال شد' : 'اضافه شد' + (list.length === 1 ? ' — بخش جان گرفت!' : '')); } });
+          onSubmit: (v) => {if(!root.isConnected||owner!==RI.ownerId||slot!==RI.workspaceSlot){RI.toast('صفحه تغییر کرده؛ دوباره مورد را باز کن',{kind:'info'});return;} if (cur) Object.assign(cur, v); else list.push(Object.assign({ id: RI.uid() }, v)); RI.touch(section); paint(); RI.toast(cur ? 'تغییر اعمال شد' : 'اضافه شد' + (list.length === 1 ? ' — بخش جان گرفت!' : '')); } });
       }
       async function remove(id) {
-        const L = LISTS[step], list = RI.C()[step], x = list.find((k) => k.id === id);
+        const section=step,L = LISTS[section], list = RI.C()[section], x = list.find((k) => k.id === id);
         const ok = await RI.confirm({ title: 'حذف «' + esc(L.title_(x)) + '»', text: 'این مورد از رزومه حذف می‌شود تا زمانی که ذخیره نکنی می‌توانی با «دور انداختن تغییرات» برش گردانی', danger: true, icon: 'trash', confirmLabel: 'حذف' });
-        if (!ok) return;
+        if (!ok||!sameContext()) return;
         const el = RI.$('[data-id="' + id + '"]', body);
         if (el && !RI.reduceMotion()) await el.animate([{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'translateX(24px)' }], { duration: 220, easing: 'ease-in' }).finished.catch(() => {});
-        list.splice(list.findIndex((k) => k.id === id), 1); RI.touch(step); paint(); RI.toast('حذف شد', { kind: 'info' });
+        if(!sameContext())return;const index=list.findIndex(k=>k.id===id);if(index<0)return;list.splice(index, 1); RI.touch(section); paint(); RI.toast('حذف شد', { kind: 'info' });
       }
       function shift(id, d) {
         const list = RI.C()[step], i = list.findIndex((k) => k.id === id), j = i + d; if (j < 0 || j >= list.length) return;
@@ -222,14 +255,25 @@
         RI.delegate(ul, 'click', '[data-sup],[data-sdown]', (e, b) => { const k = b.dataset.sup || b.dataset.sdown, i = secs.findIndex((s) => s.key === k), j = i + (b.dataset.sup ? -1 : 1); if (j < 0 || j >= secs.length) return; RI.flip(ul, () => { RI.move(secs, i, j); RI.touch('sections'); paint(); }); });
         RI.sortable(ul, { onReorder: (f, t) => RI.flip(ul, () => { const shown=secs.filter(x=>spec.sections.includes(x.key)); RI.move(secs, secs.indexOf(shown[f]), secs.indexOf(shown[t])); RI.touch('sections'); paint(); }) });
       }
-      RI.delegate(root, 'click', '[data-tab]', (e, b) => { tab = b.dataset.tab; paint(); });
+      RI.delegate(root, 'click', '#rtabs [data-tab]', (e, b) => { tab = b.dataset.tab; paint(); });
+      RI.delegate(root,'click','button[data-journey-phase]',(e,b)=>{if(journey.guided)phase(b.dataset.journeyPhase);else{journey.guided=true;phase(b.dataset.journeyPhase);}});
+      RI.delegate(root,'click','[data-journey-mode]',()=>{journey.guided=!journey.guided;step='profile';tab='content';RI.setRouteStep(journey.guided?journey.phase:step);paint();});
+      RI.delegate(root,'click','[data-journey-choices]',()=>{storyStep='';paint();focusPanel();});
+      RI.delegate(root,'click','[data-journey-next]',()=>{if(journey.phase==='start'){const p=RI.C().profile,key=!p.name.trim()?'name':!p.title.trim()?'title':null;if(key){RI.showFieldError(body,key,'برای نمایش روی رزومه، این قسمت را بنویس');body.querySelector('[data-p="'+key+'"]')?.focus();return;}}const index=RI.ResumeJourney.stages.findIndex(([id])=>id===journey.phase);phase(RI.ResumeJourney.stages[index+1]?.[0]);});
+      RI.delegate(root,'click','[data-journey-layout],[data-journey-advanced]',(e,b)=>{journey.guided=false;tab=b.hasAttribute('data-journey-layout')?'layout':'content';step='template';RI.setRouteStep('template');paint();focusPanel();});
+      RI.delegate(root,'click','[data-journey-retry]',()=>paint());
+      RI.delegate(root,'click','[data-journey-save-retry]',()=>RI.doSave());
+      RI.delegate(root,'click','[data-journey-names]',()=>RI.ResumeJourney.names());
+      RI.delegate(root,'click','[data-account-phone]',()=>{if(journey.guided&&journey.phase==='review')RI.phoneDialog();});
+      root.addEventListener('change',e=>{if(!e.target.hasAttribute('data-journey-reviewed'))return;const c=RI.C(),values=c.resumeTemplates[c.theme.resume]||(c.resumeTemplates[c.theme.resume]={fields:{},settings:{},collections:{}});values.settings.reviewed=e.target.checked;RI.touch('resumeTemplates');});
+      RI.delegate(root,'click','[data-journey-publish]',async(e,button)=>{if(publishing)return;publishing=true;button.disabled=true;button.setAttribute('aria-busy','true');const owner=RI.ownerId,slot=RI.workspaceSlot;try{const ok=await RI.publish('resume');if(root.isConnected&&owner===RI.ownerId&&slot===RI.workspaceSlot&&ok!==false){RI.toast('رزومه منتشر شد');paint();const status=body.querySelector('.journey-publish-state');if(status)status.textContent='نسخهٔ عمومی رزومه به‌روز است.';}}catch(error){if(root.isConnected&&owner===RI.ownerId&&slot===RI.workspaceSlot){const message=error.message==='account-incomplete'?'نام حساب و شمارهٔ تأییدشده را کامل کن.':error.message,status=body.querySelector('.journey-publish-state');if(status){status.setAttribute('role','alert');status.textContent=message;}RI.toast(message,{kind:'error'});}}finally{publishing=false;if(button.isConnected){button.disabled=false;button.removeAttribute('aria-busy');}}});
       RI.delegate(root, 'click', '[data-live]', () => RI.openPreview('resume'));
       paint();
       let advisorCleanup, mounted=true;
       if(!RI.advisorScripts)RI.advisorScripts=(async()=>{for(const name of ['advisor-core','advisor-ui'])await new Promise((resolve,reject)=>{const script=document.createElement('script');script.src='/dashboard/js/'+name+'.js?v='+encodeURIComponent(document.documentElement.dataset.assetVersion||'');script.onload=resolve;script.onerror=reject;document.head.append(script);});})().catch(error=>{RI.advisorScripts=null;throw error;});
-      RI.advisorScripts.then(()=>{if(mounted)advisorCleanup=RI.mountAdvisor(RI.$('#resume-advisor',root),target=>{tab='content';setStep(target.section==='template'?'template':target.section);if(target.section==='template')body.dispatchEvent(new CustomEvent('ri:template-focus',{detail:target}));else if(target.section!=='profile')openForm(target.itemId);else requestAnimationFrame(()=>RI.$('[data-p="'+target.field+'"]',root)?.focus());});}).catch(()=>{if(mounted)RI.$('#resume-advisor',root).textContent='راهنمای کیفیت دریافت نشد؛ ویرایش و انتشار همچنان در دسترس‌اند.';});
+      RI.advisorScripts.then(()=>{if(mounted)advisorCleanup=RI.mountAdvisor(RI.$('#resume-advisor',root),target=>{tab='content';setStep(target.section==='template'?'template':target.section);if(target.section==='template')body.querySelector('#panel').dispatchEvent(new CustomEvent('ri:template-focus',{detail:target}));else if(target.section!=='profile')openForm(target.itemId);else requestAnimationFrame(()=>{const input=RI.$('[data-p="'+target.field+'"]',root),details=input?.closest('details');if(details)details.open=true;input?.focus();});});}).catch(()=>{if(mounted)RI.$('#resume-advisor',root).textContent='راهنمای کیفیت دریافت نشد؛ ویرایش و انتشار همچنان در دسترس‌اند.';});
       if (ctx.opts && ctx.opts.step) { /* رفتن مستقیم به مرحلهٔ پیشنهادی */ }
-      return () => { mounted=false;advisorCleanup?.();cancelAnimationFrame(raf);off(); pv.destroy(); desktop.removeEventListener('change', placeOutline); };
+      return () => {if(RI.resumePublicationReview===publicationReview)delete RI.resumePublicationReview;mounted=false;renderSerial++;lookCleanup?.();advisorCleanup?.();cancelAnimationFrame(raf);off();offSave(); pv.destroy(); desktop.removeEventListener('change', placeOutline); };
     },
   });
 })();

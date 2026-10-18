@@ -12,8 +12,10 @@
         '<div class="tabs" role="tablist" id="ttabs">' + [['rt', 'قالب رزومه'], ['lt', 'قالب صفحهٔ لینک'], ['font', 'فونت'], ['pal', 'رنگ‌ها و شکل']].filter(([id])=>RI.workspaceSlot!==3||id!=='rt').map((t, i) => '<button type="button" role="tab" data-tab="' + t[0] + '" aria-selected="' + (i === 0) + '">' + t[1] + '</button>').join('') + '</div>' +
         '<div id="tbody"></div>';
     },
-    mount(root) {
-      const initialTab=RI.workspaceSlot===3?'lt':'rt',requestedTab=new URLSearchParams(location.search).get('tab');
+    mount(root,options={}) {
+      const owner=RI.ownerId,slot=RI.workspaceSlot;let alive=true;
+      const current=()=>alive&&root.isConnected&&owner===RI.ownerId&&slot===RI.workspaceSlot;
+      const initialTab=RI.workspaceSlot===3?'lt':'rt',requestedTab=options.journey?null:new URLSearchParams(location.search).get('tab');
       let tab = ['lt','font','pal',...(RI.workspaceSlot===3?[]:['rt'])].includes(requestedTab)?requestedTab:initialTab, cat = 'all', acc = 'all', galleryPage = 0,query='',sort='newest',searchTimer;
       const body = RI.$('#tbody', root);
       const compactGallery = matchMedia('(max-width:600px)');
@@ -21,13 +23,14 @@
       compactGallery.addEventListener('change', resizeGallery);
       const th = () => RI.C().theme;
 
-      function applyTheme(patch, msg) { Object.assign(th(), patch); RI.touch('theme'); RI.toast(msg || 'ظاهر انتخاب شد'); paint(); }
+      function applyTheme(patch, msg) {if(!current())return; Object.assign(th(), patch); RI.touch('theme'); RI.toast(msg || 'ظاهر انتخاب شد'); paint(); }
 
 
       async function choose(kind, id) {
         const list = kind === 'rt' ? RI.RESUME_TEMPLATES : RI.LINK_TEMPLATES, it = list.find((x) => x.id === id), ref = kind + ':' + id;
         if (!RI.canUse(ref, it)) { const ok = await RI.lockedExplain(Object.assign({ kind: kind }, it)); if (!ok) return paint(); }
-        if(kind==='rt')try{if(!RI.templateTransition)await import('/dashboard/js/template-loading.js?v='+encodeURIComponent(document.documentElement.dataset.assetVersion||''));await RI.templateTransition(id);}catch(error){if(error.name!=='AbortError')RI.toast(error.message,{kind:'error'});return;}
+        if(!current())return;
+        if(kind==='rt')try{if(!RI.templateTransition)await import('/dashboard/js/template-loading.js?v='+encodeURIComponent(document.documentElement.dataset.assetVersion||''));if(!current())return;await RI.templateTransition(id);}catch(error){if(current()&&error.name!=='AbortError')RI.toast(error.message,{kind:'error'});return;}
         applyTheme(kind === 'rt' ? { resume: id } : { links: id }, 'قالب «' + it.name + '» انتخاب شد');
       }
 
@@ -41,7 +44,7 @@
         if(sort==='cheap')list.sort((a,b)=>price(a)-price(b));else if(sort==='expensive')list.sort((a,b)=>price(b)-price(a));else if(sort==='name')list.sort((a,b)=>a.name.localeCompare(b.name,'fa'));
         const curId = kind === 'rt' ? th().resume : th().links;
         const cur = RI.findTemplate(kind === 'rt' ? 'resume' : 'links', curId);
-        const pageSize = compactGallery.matches ? 2 : 6;
+        const pageSize = compactGallery.matches ? 2 : options.journey ? 4 : 6;
         const pageCount = Math.ceil(list.length / pageSize);
         galleryPage = Math.min(galleryPage, Math.max(0, pageCount - 1));
         const cards = list.slice(galleryPage * pageSize, (galleryPage + 1) * pageSize).map((t) => {
@@ -50,7 +53,7 @@
             '<div class="tcard__body"><div class="tcard__title"><h3>' + t.name + '</h3>' + RI.accessBadge(ref, t) + '</div><p>' + t.desc + '</p><div class="tcard__cats">' + t.cats.map((c) => '<span class="chip">' + CATS.find((x) => x[0] === c)[1] + '</span>').join('') + '</div>' +
             '<div class="tcard__actions"><button type="button" class="btn btn--soft btn--sm" data-use="'+t.id+'" '+(on?'disabled':'')+'>'+RI.icon(on?'check':usable?'plus':'lock')+(on?'در حال استفاده':'استفاده')+'</button></div></div></article>';
         }).join('');
-        return '<div class="current"><div><span>' + RI.icon('check') + 'قالب فعلی</span><b>' + cur.name + '</b></div>' + RI.accessBadge(kind + ':' + cur.id, cur) + '</div>' + filters() +
+        return '<div class="current"><div><span>' + RI.icon('check') + 'قالب فعلی</span><b>' + cur.name + '</b></div>' + RI.accessBadge(kind + ':' + cur.id, cur) + '</div>' + (options.journey?'<details class="journey-details"><summary>جست‌وجو و فیلتر قالب‌ها</summary>'+filters()+'</details>':filters()) +
           (list.length ? '<div class="tgrid">' + cards + '</div>' + (pageCount > 1 ? '<nav class="btnrow gallery-pages" aria-label="صفحه‌های قالب‌ها"><button type="button" class="btn btn--soft" data-gallery-page="'+(galleryPage-1)+'" '+(galleryPage===0?'disabled':'')+'>قبلی</button><span role="status">صفحهٔ '+RI.fa(galleryPage+1)+' از '+RI.fa(pageCount)+'</span><button type="button" class="btn btn--soft" data-gallery-page="'+(galleryPage+1)+'" '+(galleryPage===pageCount-1?'disabled':'')+'>بعدی</button></nav>' : '') : RI.empty({ icon: 'search', title: 'قالبی با این فیلتر پیدا نشد', text: 'فیلتر دسته یا دسترسی را عوض کن', action: '<button type="button" class="btn btn--soft" data-reset>پاک کردن فیلترها</button>' }));
       }
 
@@ -75,11 +78,12 @@
       }
 
       function paint() {
+        if(!current())return;
         body.innerHTML = tab === 'rt' ? gallery('rt') : tab === 'lt' ? gallery('lt') : tab === 'font' ? fonts() : palettes();
         RI.$$('#ttabs [data-tab]', root).forEach((b) => b.setAttribute('aria-selected', b.dataset.tab === tab));
       }
 
-      RI.delegate(root, 'click', '[data-tab]', (e, b) => { tab = b.dataset.tab;RI.setRouteTab(tab,initialTab); galleryPage = 0; paint(); });
+      RI.delegate(root, 'click', '[data-tab]', (e, b) => { tab = b.dataset.tab;if(!options.journey)RI.setRouteTab(tab,initialTab); galleryPage = 0; paint(); });
       body.addEventListener('input',e=>{if(e.target.id!=='template-query')return;query=e.target.value;galleryPage=0;clearTimeout(searchTimer);searchTimer=setTimeout(()=>{const position=e.target.selectionStart;paint();const input=body.querySelector('#template-query');input?.focus();if(input?.type==='search'&&position!==null)input.setSelectionRange(position,position);},200);});
       body.addEventListener('change',e=>{if(e.target.id==='template-sort'){sort=e.target.value;galleryPage=0;paint();}});
       function previewTemplate(id){const kind=tab==='rt'?'resume':'links',it=RI.findTemplate(kind,id),url='/'+(kind==='resume'?'resume':'link')+id+'/';return RI.modal({title:'پیش‌نمایش «'+it.name+'»',body:'<p>نمونه با اطلاعات آزمایشی در پنجرهٔ تازه باز می‌شود؛ ویرایشگر و تغییراتت همین‌جا باقی می‌مانند.</p>',actions:[{label:'انصراف',kind:'ghost'},{label:'باز کردن نمونه',kind:'primary',icon:'external',onClick:()=>{window.open(url,'_blank','noopener,noreferrer');}}]});}
@@ -102,7 +106,7 @@
       });
       RI.delegate(body, 'click', '[data-radius]', (e, b) => applyTheme({ radius: b.dataset.radius }, 'گردی گوشه‌ها تغییر کرد'));
       paint();
-      return () => {clearTimeout(searchTimer);compactGallery.removeEventListener('change',resizeGallery);};
+      return () => {alive=false;clearTimeout(searchTimer);compactGallery.removeEventListener('change',resizeGallery);};
     },
   });
 })();

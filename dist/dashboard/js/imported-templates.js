@@ -24,7 +24,7 @@
     const compose = [['compose_title','عنوان فرم تماس','نوشتن پیام'],['compose_name','برچسب نام فرستنده','نام شما'],['compose_email','برچسب ایمیل فرستنده','ایمیل شما'],['compose_message','برچسب پیام','پیام شما'],['compose_submit','متن دکمهٔ تماس','باز کردن برنامهٔ ایمیل']].map(([key,label,defaultValue])=>({key,label,default:defaultValue,type:'text',max:120,public:true,group:'home:compose'}));
     return { sections: ['contacts', 'socials','projects'], bodySections: [], requiredSections: [], fields: t.fields.concat(compose),
       settings: [{ key: 'reviewed', label: 'متن‌ها، تصاویر، آمار و لینک‌های نمونه را بررسی و برای انتشار تأیید کرده‌ام', type: 'checkbox', required: true, default: false },
-        { key: 'mode', label: 'حالت پیش‌فرض قالب', type: 'select', options: [['dark','تیره'],['light','روشن']], default: 'dark' },
+        { key: 'mode', label: 'حالت پیش‌فرض قالب', type: 'select', options: [...(id==='vista'?[['system','طبق دستگاه بازدیدکننده']]:[]),['dark','تیره'],['light','روشن']], default: id==='vista'?'system':'dark' },
         { key: 'font', label: 'فونت نوشته‌ها', type: 'select', options: [['theme','طبق انتخاب ظاهر و قالب'],['original','فونت اصلی قالب'],...RI.FONTS.map(f=>[f.id,f.name+(f.access==='buy'?' · '+RI.it(f.price):' · رایگان')])], default: 'theme' },
         { key: 'compose', label: 'نمایش فرم تماس با برنامهٔ ایمیل', type: 'checkbox', default: true, group: 'home:compose' },
         { key: 'section_order', label: 'ترتیب بخش‌ها', type: 'order', keys: t.groups.map(g=>g.key).concat(t.legacyGroups||[]), default: '', max: 50000 },
@@ -35,6 +35,7 @@
   RI.bindImportedPage = function (doc, openPage) {
     const root = doc.querySelector('.ri-imported');
     if (!root) return;
+    if(['vista','satiar'].includes(root.dataset.template)&&window.bindVistaPage){window.bindVistaPage(doc,{preview:true,onExternal:()=>RI.toast('این لینک در نسخهٔ منتشرشده باز می‌شود.',{kind:'info'})});return;}
     const body = root.querySelector('.ri-imported-body');
     if (body) doc.body.className = body.className;
     doc.documentElement.setAttribute('data-theme', root.dataset.templateMode || 'dark');
@@ -89,6 +90,13 @@
     const pageId = Object.hasOwn(t.pages, options.page || '') ? options.page : 'home', page = t.pages[pageId];
     const spec = RI.importedSpec(id), fields = new Map(spec.fields.map(f => [f.key, f]));
     const settings = values.settings || {}, base = options.publicBase || '';
+    const vista=id==='vista',satiar=id==='satiar',vistaSections={'home:f35bcdf':['skills','مهارت‌ها'],'home:2b3e890':['experience','سوابق کاری'],'home:64f750e':['education','تحصیلات و دوره‌ها'],'home:67d220d':['social','شبکه‌های اجتماعی']};
+    const hasProjects=c.projects.length>0&&c.sections.some(s=>s.key==='projects'&&s.visible)&&(!vista||settings.show_home_07793c2!==false);
+    const satiarStats=Array.from({length:6},(_,i)=>'f'+(268+i*3)).some(key=>(values.fields?.[key]||'').trim())||Array.from({length:6},(_,i)=>'r'+(27+i)).some(key=>values.collections?.[key]?.length);
+    const vistaGroupVisible=key=>settings['show_'+key.replace(/:/g,'_')]!==false&&t.collections.filter(collection=>collection.group===key).some(collection=>values.collections?.[collection.key]?.length!==0);
+    const vistaLinks=[['ri-resume-top','معرفی'],...(vista?Object.entries(vistaSections).filter(([key])=>vistaGroupVisible(key)).map(([,v])=>['ri-vista-'+v[0],v[1]]):[['home:about','دربارهٔ من'],['home:resume','سوابق و مهارت‌ها']].filter(([key])=>settings['show_'+key.replace(':','_')]!==false).map(([key,label])=>['ri-satiar-'+key.split(':')[1],label])),...(hasProjects?[['ri-projects','پروژه‌ها']]:[]),['ri-contact','تماس']];
+    const vistaNav=()=>vistaLinks.map(([href,label])=>'<a href="#'+href+'">'+esc(label)+'</a>').join('');
+    const vistaHeader=()=>'<header class="site-header vista-header"><div class="header-inner"><a class="vista-wordmark" href="#ri-resume-top">'+esc(c.profile.name||'رزومه')+'</a><nav class="vista-desktop-nav" aria-label="بخش‌های رزومه">'+vistaNav()+'</nav><div class="vista-header-actions"><button type="button" class="btn theme-toggle-btn" id="themeToggleBtn" aria-label="تغییر حالت روشن و تیره" title="تغییر حالت روشن و تیره">'+RI.icon('sun')+'</button><a class="btn vista-contact-button" href="#ri-contact">'+RI.icon('mail')+'<span>تماس</span></a><button type="button" class="btn vista-menu-toggle" id="menuToggle" aria-label="باز کردن منو" aria-controls="mobile-nav-panel" aria-expanded="false">'+RI.icon('menu')+'</button></div></div></header><div class="vista-menu-overlay" id="mobileNavOverlay" hidden></div><nav class="vista-mobile-nav" id="mobile-nav-panel" aria-label="بخش‌های رزومه" inert hidden><div class="vista-mobile-head"><b>'+esc(c.profile.name||'رزومه')+'</b><button type="button" class="btn" id="mobileNavClose" aria-label="بستن منو">'+RI.icon('x')+'</button></div>'+vistaNav()+'</nav>';
     const value = (ref, overrides) => {
       const f = fields.get(ref.field); if (!f) return '';
       if (f.bind) return c.profile[f.bind] || (f.bind === 'avatar' ? f.default : '');
@@ -98,6 +106,27 @@
     };
     const renderNode = (n, overrides, suffix) => {
       if (typeof n === 'string') return esc(n);
+      const cls=n.attrs?.class||'';
+      if(satiar){
+        if(n.tag==='header')return vistaHeader();
+        if(cls.includes('elementor-element-8b3a5bb'))return '';
+        if(cls.includes('elementor-element-063df28')&&!Array.from({length:10},(_,i)=>'r'+(i+4)).some(key=>values.collections?.[key]?.length))return '';
+        if(cls.includes('elementor-element-ff29c48')&&!['f70','f73'].some(key=>Object.hasOwn(values.fields||{},key)))return '';
+        if(cls.includes('elementor-element-6662a80')&&!['f256','f259'].some(key=>Object.hasOwn(values.fields||{},key)))return '';
+        if(cls.includes('elementor-element-4da8416')&&!satiarStats)return '';
+        if(cls.includes('elementor-element-fa4a638')&&!satiarStats&&!['f256','f259'].some(key=>Object.hasOwn(values.fields||{},key)))return '';
+        if(cls.includes('elementor-element-57273bd')&&!Object.hasOwn(values.fields||{},'f51'))return '';
+        if(n.field==='f50'&&!Object.hasOwn(values.fields||{},'f50'))return esc(c.profile.bio||'');
+      }
+      if(vista){
+        if(vistaSections[n.group]&&!vistaGroupVisible(n.group))return '';
+        if(n.attrs?.href?.field==='f76'&&!hasProjects)return '';
+        if(n.tag==='header')return vistaHeader();
+        if(n.tag==='footer'||['mobileNavOverlay','mobile-nav-panel'].includes(n.attrs?.id))return '';
+        if(cls.includes('vista-hi-badge')){const key=cls.includes('badge-tl')?'f57':cls.includes('badge-tr')?'f60':'f63';if(!Object.hasOwn(values.fields||{},key)||!(values.fields[key]||'').trim())return '';}
+        if(cls.includes('elementor-element-46a5646')&&!Object.hasOwn(values.fields||{},'f73'))return '';
+        if(cls.includes('vista-typed-wrapper'))return c.profile.title?'<p class="vista-profession">'+esc(c.profile.title)+'</p>':'';
+      }
       if(/(?:^|\s)(?:testimonial|wp-active-we-testimonials|stat-card)(?:\s|$)/.test(n.attrs?.class||''))return '';
       if(n.group&&t.groups.some(g=>g.key===n.group&&/(?:portfolio|نمونه کار|نمونه‌کار)/i.test(g.key+' '+g.label)))return projects;
       if(n.group==='home:contact')return '';
@@ -106,11 +135,17 @@
       if (n.collection) {
         const collection = t.collections.find(x => x.key === n.collection);
         const rows = (values.collections || {})[n.collection];
+        if(satiar&&/^r(27|28|29|30|31|32)$/.test(n.collection)&&rows===undefined&&!(values.fields?.['f'+(268+(Number(n.collection.slice(1))-27)*3)]||'').trim())return '';
         return (rows === undefined ? [{ id: 'original', fields: {} }] : rows).map(row => renderNode(collection.node, row.fields, '-' + row.id)).join('');
       }
       if (n.group && settings['show_' + n.group.replace(/:/g, '_')] === false) return '';
       const nodeAttrs=Object.assign({},n.attrs);if(n.progress)nodeAttrs.style=(nodeAttrs.style||'')+';width:'+(parseInt(value({field:n.progress},overrides),10)||0)+'%';
-      if(n.tag==='img'){nodeAttrs.loading='lazy';nodeAttrs.decoding='async';}
+      if(n.tag==='img'){nodeAttrs.loading='lazy';nodeAttrs.decoding='async';if((vista&&nodeAttrs.src?.field==='f65')||(satiar&&nodeAttrs.src?.field==='f68')){nodeAttrs.loading='eager';nodeAttrs.fetchpriority='high';nodeAttrs.alt=c.profile.avatar&&c.profile.name?'تصویر '+c.profile.name:'تصویر نمونهٔ قالب';}else if(satiar&&(!nodeAttrs.alt||/^(asset|resume-)/i.test(typeof nodeAttrs.alt==='string'?nodeAttrs.alt:value(nodeAttrs.alt))))nodeAttrs.alt='';}
+      if(satiar&&n.group&&['home:about','home:resume'].includes(n.group))nodeAttrs.id='ri-satiar-'+n.group.split(':')[1];
+      if(satiar&&n.tag==='a'&&nodeAttrs.href?.field){const key=nodeAttrs.href.field;if(['f52','f85'].includes(key)&&!Object.hasOwn(values.fields||{},key))nodeAttrs.href='#ri-contact';if(['f56','f89'].includes(key)&&!Object.hasOwn(values.fields||{},key)){if(!hasProjects)return '';nodeAttrs.href='#ri-projects';}}
+      if(vista&&n.tag==='a'&&nodeAttrs.href?.field==='f76')nodeAttrs.href='#ri-projects';
+      if(vista&&n.tag==='a'&&nodeAttrs.href?.field==='f79')nodeAttrs.href='#ri-contact';
+      if(vista&&vistaSections[n.group])nodeAttrs.id='ri-vista-'+vistaSections[n.group][0];
       const attrs = Object.entries(nodeAttrs).map(([key, raw]) => {
         let v = raw;
         if (raw && typeof raw === 'object') {
@@ -127,9 +162,14 @@
       const children=n.children.slice(),slots=children.map((child,index)=>({child,index})).filter(x=>x.child&&x.child.group),order=(settings.section_order||'').split(',');
       const sorted=slots.map(x=>x.child).sort((a,b)=>{const ai=order.indexOf(a.group),bi=order.indexOf(b.group);return (ai<0?99999:ai)-(bi<0?99999:bi);});slots.forEach((slot,i)=>children[slot.index]=sorted[i]);
       if (n.tag === 'body') return '<div class="' + esc(page.bodyClass) + ' ri-imported-body">' + children.map(child => renderNode(child, overrides, suffix)).join('') + '</div>';
-      const html='<' + n.tag + attrs + (n.group?' data-ri-section="'+esc(n.group)+'"':'') + '>' + (voids.has(n.tag) ? '' : children.map(child => renderNode(child, overrides, suffix)).join('') + '</' + n.tag + '>');
+      const tag=(vista&&n.tag==='h2'&&n.children.some(child=>child?.field==='f68'))||(satiar&&n.children.some(child=>child?.field==='f48'))?'h1':(vista&&n.tag==='h5'&&n.children.some(child=>child?.field==='f67'))||(satiar&&n.children.some(child=>child?.field==='f49'))?'p':n.tag;
+      const inner=voids.has(tag)?'':children.map(child=>renderNode(child,overrides,suffix)).join('');
+      if(/^h[1-6]$/.test(tag)&&!inner.trim())return '';
+      const html='<' + tag + attrs + (n.group?' data-ri-section="'+esc(n.group)+'"':'') + '>' + (voids.has(tag) ? '' : inner + '</' + tag + '>');
       const group=n.group&&spec.groups.find(g=>g.key===n.group);
-      return group&&!n.group.endsWith(':body')&&n.group!==t.groups[1]?.key?'<details class="ri-resume-section"><summary>'+esc(group.label)+'</summary>'+html+'</details>':html;
+      let latest='';if(vista&&n.group==='home:2b3e890'){for(const [collection,key]of [['r11','f116'],['r12','f132'],['r13','f147']]){const rows=values.collections?.[collection];if(rows?.length===0)continue;const title=value({field:key},rows?.[0]?.fields);if(title){latest='<small class="vista-experience-summary">'+esc(title)+'</small>';break;}}}
+      const satiarSummary=satiar&&n.group==='home:resume'?'<small class="vista-experience-summary">'+esc([value({field:'f290'}),...['f301','f303','f305'].map((key,i)=>values.collections?.['r'+(33+i)]?.length===0?'':value({field:key},values.collections?.['r'+(33+i)]?.[0]?.fields))].filter(Boolean).join(' · '))+'</small>':'';
+      return group&&!n.group.endsWith(':body')&&n.group!==t.groups[1]?.key?'<details class="ri-resume-section"'+(vista&&n.group==='home:f35bcdf'?' open':'')+'><summary>'+(vista&&vistaSections[n.group]?vistaSections[n.group][1]:esc(group.label))+satiarSummary+latest+'</summary>'+html+'</details>':html;
     };
     const palette = RI.PALETTES.find(p => p.id === options.theme.palette);
     const accents = id === 'vista' ? ['#00b894','#f59e0b'] : ['#a04dff','#0a4b78'];
@@ -142,20 +182,19 @@
     const font = settings.font && settings.font !== 'theme' ? settings.font : options.theme.font;
     const selectedFont = RI.FONTS.find(f=>f.id===font) || RI.FONTS[0];
     const radius = { sharp: '6px', soft: '16px', round: '28px' }[options.theme.radius] || '16px';
-    const fontCss = font === 'original' ? '' : '.ri-imported{font-family:'+selectedFont.stack+'!important}.ri-imported p,.ri-imported a,.ri-imported button,.ri-imported span,.ri-imported label,.ri-imported input,.ri-imported textarea{font-family:'+selectedFont.stack+'!important}.ri-imported h1,.ri-imported h2,.ri-imported h3,.ri-imported h4,.ri-imported h5,.ri-imported h6{font-family:'+(selectedFont.heading||selectedFont.stack)+'!important}';
+    const fontCss = font === 'original' ? '' : '.ri-imported{font-family:'+selectedFont.stack+'!important}.ri-imported p,.ri-imported a,.ri-imported button,.ri-imported span,.ri-imported label,.ri-imported input,.ri-imported textarea{font-family:'+selectedFont.stack+'!important}.ri-imported h1,.ri-imported h2,.ri-imported h3,.ri-imported h4,.ri-imported h5,.ri-imported h6{font-family:'+(vista&&selectedFont.id==='vazir'?"'VistaHeading',Vazirmatn":selectedFont.heading||selectedFont.stack)+'!important}';
     const contactsVisible = c.sections.some(s => s.key === 'contacts' && s.visible);
     const contacts = contactsVisible ? c.contacts.filter(x => x.public && x.value.trim()) : [];
     const socialUrls = { github: 'https://github.com/', linkedin: 'https://linkedin.com/in/', telegram: 'https://t.me/', instagram: 'https://instagram.com/', twitter: 'https://x.com/', youtube: 'https://youtube.com/@' };
     const socials = c.sections.some(s => s.key === 'socials' && s.visible) ? c.socials : [];
     const mail=contacts.find(x=>x.type==='email'),label=key=>value({field:'compose_'+key});
     const compose=mail&&settings.compose!==false?'<form class="ri-compose" data-email="'+esc(mail.value)+'"><h3>'+esc(label('title'))+'</h3><p>پیام با برنامهٔ ایمیل دستگاه شما ارسال می‌شود.</p>'+[['name','text'],['email','email']].map(([key,type])=>'<label for="ri-compose-'+key+'">'+esc(label(key))+'</label><input class="input" id="ri-compose-'+key+'" name="'+key+'" type="'+type+'" required maxlength="120">').join('')+'<label for="ri-compose-message">'+esc(label('message'))+'</label><textarea class="textarea" id="ri-compose-message" name="message" required maxlength="3000"></textarea><button class="btn" type="submit">'+esc(label('submit'))+'</button></form>':'';
-    const contact = '<section id="ri-contact" class="ri-template-contact"><h2>' + esc(c.profile.name) + '</h2><p>' + esc(c.profile.title) + '</p>' + contacts.map(x => '<a data-pv-link="1" href="' + esc(x.type === 'email' ? 'mailto:' + x.value : x.type === 'phone' ? 'tel:' + x.value.replace(/[^+0-9]/g, '') : RI.normUrl(x.value)) + '">' + esc(x.label) + ': ' + esc(x.value) + '</a>').join('') + socials.map(s => '<a data-pv-link="1" href="' + esc(RI.isUrl(s.handle) ? RI.normUrl(s.handle) : (socialUrls[s.platform] || 'https://resumeit.ir/') + encodeURIComponent(s.handle.replace(/^@/, ''))) + '">' + esc(s.platform) + '</a>').join('') + compose + '</section>';
-    const nav = '<nav class="ri-template-nav" aria-label="صفحه‌های رزومه"><a href="' + esc(base + '/') + '">رزومه</a><a href="' + esc(base + '/links') + '" data-pv-go="links">لینک‌ها</a>' +
-      (pageId !== 'home' ? '<a href="' + esc(base + '/') + '">صفحه اصلی</a>' : '') + '</nav>';
-    const brand = '<div class="ri-template-brand">'+RI.brandFoot(c,'resume')+'</div>';
-    const projects=c.sections.some(s=>s.key==='projects'&&s.visible)&&c.projects.length?'<section class="ri-user-projects" id="ri-projects"><h2>پروژه‌ها و نمونه‌کارها</h2>'+RI.projectCards(c)+'</section>':'';
-    return '<div class="ri-imported" data-template="' + id + '" data-template-mode="' + (settings.mode==='light'?'light':'dark') + '" data-template-page="' + pageId + '" style="' + esc(vars) + '">' +
-      '<link rel="stylesheet" href="/fonts/fonts.css">' + page.css.map(url => '<link rel="stylesheet" href="' + url + '">').join('') + '<link rel="stylesheet" href="/templates/template-support.css">' +
-      '<style>:root{' + vars + '}' + page.inline.replace(/<\/style/gi, '') + fontCss + '.ri-imported .pf-card,.ri-imported .blog-card,.ri-imported .tech-card,.ri-imported .soc-card{border-radius:' + radius + '}</style>' + nav + '<span id="ri-resume-top"></span>'+renderNode(page.node) + contact + brand + '</div>';
+    const contact = '<section id="ri-contact" class="ri-template-contact"><h2>' + esc(c.profile.name) + '</h2><p>' + esc(c.profile.title) + '</p>' + contacts.map(x => '<a data-pv-link="1" href="' + esc(x.type === 'email' ? 'mailto:' + x.value : x.type === 'phone' ? 'tel:' + x.value.replace(/[^+0-9]/g, '') : RI.normUrl(x.value)) + '">' + esc(x.label) + ': ' + esc(x.value) + '</a>').join('') + socials.map(s => '<a data-pv-link="1" href="' + esc(RI.isUrl(s.handle) ? RI.normUrl(s.handle) : (socialUrls[s.platform] || 'https://resumeit.ir/') + encodeURIComponent(s.handle.replace(/^@/, ''))) + '">' + esc(s.platform) + '</a>').join('') + (vista&&compose?'<details class="vista-compose-details"><summary>نوشتن پیام از طریق ایمیل</summary>'+compose+'</details>':compose) + '</section>';
+    const projects=hasProjects?'<section class="ri-user-projects" id="ri-projects"><h2>پروژه‌ها و نمونه‌کارها</h2>'+RI.projectCards(c,{compact:true})+'</section>':'';
+    const vistaFooter='<footer class="vista-footer"><a href="#ri-resume-top">'+esc(c.profile.name||'رزومه')+'</a>'+RI.brandFoot(c,'resume')+'</footer>';
+    const css=satiar&&font!=='original'?['/templates/satiar/core.css']:page.css.map(url=>vista&&font!=='original'&&url.endsWith('/bf851831979d2f46.css')?'/templates/vista/core.css':url).filter(url=>!vista||!url.endsWith('/f719a64cb90df301.css'));
+    return '<div class="ri-imported" data-template="' + id + '" data-template-mode="' + (vista&&(!Object.hasOwn(settings,'mode')||settings.mode==='system')?'system':settings.mode==='light'?'light':'dark') + '" data-template-page="' + pageId + '" style="' + esc(vars) + '">' +
+      '<link rel="stylesheet" href="/fonts/fonts.css">' + css.map(url => '<link rel="stylesheet" href="' + url + '">').join('') + '<link rel="stylesheet" href="/templates/template-support.css"><link rel="stylesheet" href="/templates/'+id+'-support.css">' +
+      '<style>:root{' + vars + '}' + page.inline.replace(/<\/style/gi, '') + fontCss +(font!=='original'?'html:has(.ri-imported[data-template='+id+']),body:has(.ri-imported[data-template='+id+']),.ri-imported[data-template='+id+'] :is(div,b,strong,small,summary){font-family:'+selectedFont.stack+'!important}':'')+ '.ri-imported .pf-card,.ri-imported .blog-card,.ri-imported .tech-card,.ri-imported .soc-card{border-radius:' + radius + '}</style><span id="ri-resume-top"></span>'+renderNode(page.node) + (satiar&&compose?contact.replace(compose,'<details class="vista-compose-details"><summary>نوشتن پیام از طریق ایمیل</summary>'+compose+'</details>'):contact) + vistaFooter + '</div>';
   };
 })();

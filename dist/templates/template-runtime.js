@@ -2,6 +2,7 @@
 (function () {
   'use strict';
   const root = document.querySelector('.ri-imported'); if (!root) return;
+  if(['vista','satiar'].includes(root.dataset.template)&&window.bindVistaPage){window.bindVistaPage(document);return;}
   document.documentElement.setAttribute('data-theme',root.dataset.templateMode||'dark');
   document.body.classList.toggle('satiar-theme-light',root.dataset.template==='satiar'&&root.dataset.templateMode==='light');
   const mode = document.getElementById('themeToggleBtn');

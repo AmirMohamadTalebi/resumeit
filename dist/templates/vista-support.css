@@ -1,0 +1,104 @@
+/* Vista-specific repairs; shared navigation behavior lives in vista-runtime.js. */
+@font-face{font-family:VistaHeading;src:url('/templates/vista/15b4448a4625fb1c.woff2') format('woff2');font-weight:700;font-display:swap}
+.ri-imported[data-template=vista]{--vista-bg:#0b0d0e;--vista-surface:#15191b;--vista-ink:#f4f7f6;--vista-muted:#b0bfc0;--vista-line:#384b4e;--vista-accent:#7ce9ce;color:var(--vista-ink);background:var(--vista-bg);font-size:15px;line-height:1.8;overflow-wrap:anywhere}
+html[data-theme=light] .ri-imported[data-template=vista]{--vista-bg:#f5f9f8;--vista-surface:#fff;--vista-ink:#182d2d;--vista-muted:#405d60;--vista-line:#b5cbcb;--vista-accent:#12634f}
+.ri-imported[data-template=vista] :is(.reveal,.rv,.soc-wrap){opacity:1!important;visibility:visible!important;transform:none!important}
+.ri-imported[data-template=vista] :is(h1,h2,h3,h4,h5,p){letter-spacing:0!important}
+.ri-imported[data-template=vista] :is(.section-label,.subtitle,.tl-meta,.edu-desc,.tech-level){color:var(--vista-muted)!important}
+.ri-imported[data-template=vista] :is(.vista-typed-wrapper,.vista-typed-headline){height:auto!important;min-height:0!important}
+.ri-imported[data-template=vista] .vista-profession{font-size:20px;font-weight:600;line-height:1.7;margin:8px 0 14px;color:var(--vista-accent)}
+.ri-imported[data-template=vista] .site-header{position:relative;top:auto;max-width:1100px;margin:20px auto 0;padding:0 20px;z-index:30}
+.ri-imported[data-template=vista] .header-inner{display:flex;align-items:center;gap:16px;justify-content:space-between;max-width:none;min-height:64px;padding:10px 18px;border:1px solid var(--vista-line);border-radius:24px;background:var(--vista-surface);box-sizing:border-box}
+.vista-wordmark{font-size:16px;font-weight:700;max-width:180px;color:var(--vista-ink)!important;text-decoration:none}
+.vista-desktop-nav{display:flex;gap:16px;flex-wrap:wrap;justify-content:center}
+.vista-desktop-nav a{font-size:13px;color:var(--vista-muted);text-decoration:none;white-space:nowrap}
+.vista-desktop-nav a:hover{color:var(--vista-ink);text-decoration:underline;text-underline-offset:6px}
+.vista-header-actions{display:flex;align-items:center;gap:8px;flex:none}
+.ri-imported[data-template=vista] .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-width:44px;min-height:44px;padding:8px 12px;border:1px solid var(--vista-line);border-radius:14px;background:var(--vista-surface);color:var(--vista-ink);font:inherit;text-decoration:none;cursor:pointer;box-sizing:border-box}
+.ri-imported[data-template=vista] .btn svg{width:20px;height:20px;flex:none}
+.ri-imported[data-template=vista] .btn:hover{background:var(--vista-line)}
+.ri-imported[data-template=vista] .vista-menu-toggle{display:none}
+.vista-mobile-nav[hidden],.vista-menu-overlay[hidden]{display:none!important}
+.vista-mobile-nav{position:fixed;inset:12px 12px 12px auto;z-index:102;width:min(340px,calc(100% - 24px));padding:20px;border-radius:24px;background:var(--vista-surface);border:1px solid var(--vista-line);box-shadow:0 18px 50px #0005;display:flex;flex-direction:column;gap:8px;overflow:auto;box-sizing:border-box;animation:vista-menu-in .22s ease-out}
+.vista-mobile-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:20px}
+.vista-mobile-nav>a{display:flex;align-items:center;min-height:48px;border-radius:12px;padding:8px 12px;color:var(--vista-ink);text-decoration:none}
+.vista-mobile-nav>a:hover{background:var(--vista-line)}
+.vista-menu-overlay{position:fixed;inset:0;background:#0009;backdrop-filter:blur(6px);z-index:101}
+html:has(body.vista-menu-open),body.vista-menu-open{overflow:hidden!important}
+@keyframes vista-menu-in{from{opacity:.2;transform:translateX(16px)}to{opacity:1;transform:none}}
+.ri-imported[data-template=vista] [data-ri-section]{scroll-margin-top:24px}
+.ri-imported[data-template=vista] .elementor-element-f015240{padding-block:46px!important;min-height:0!important}
+.ri-imported[data-template=vista] .elementor-element-f015240>.e-con-inner{gap:36px!important;align-items:center!important}
+.ri-imported[data-template=vista] .elementor-element-c02aa02{width:100%!important;display:grid!important;grid-template-columns:minmax(0,.85fr) minmax(0,1.15fr);gap:40px!important;align-items:center!important;direction:ltr}
+.ri-imported[data-template=vista] .elementor-element-c02aa02>*{direction:rtl}
+.ri-imported[data-template=vista] .elementor-element-3f81626{width:100%!important}
+.ri-imported[data-template=vista] .elementor-element-f015240>.e-con-inner{padding:12px 20px!important}
+.ri-imported[data-template=vista] .elementor-element-2174e71{display:flex!important;flex-flow:row wrap!important;gap:12px!important;align-items:center!important}
+.ri-imported[data-template=vista] .elementor-element-2174e71>.elementor-element{width:auto!important;max-width:100%!important;flex:0 1 auto!important}
+.ri-imported[data-template=vista] h1.vista-section-title{font-size:40px!important;line-height:1.4!important;margin:0}
+.ri-imported[data-template=vista] .bio{max-width:60ch;font-size:15px;line-height:2;color:var(--vista-muted)}
+.ri-imported[data-template=vista] .vista-btn:not(.vista-btn-icon-after){color:var(--vista-ink)!important;border-color:var(--vista-line)!important}
+.ri-imported[data-template=vista] .vista-experience-summary{display:inline-block;margin-inline-start:16px;color:var(--vista-muted);font-size:13px;font-weight:400}
+.ri-imported[data-template=vista] .vista-hi-img-col{width:min(100%,340px)!important;margin:auto!important}
+.ri-imported[data-template=vista] :is(.vista-hi-photo-wrap,.vista-hi-ring-solid,.vista-hi-ring-dashed){width:100%!important;height:100%!important}
+.ri-imported[data-template=vista] .vista-hi-img-col{aspect-ratio:1;height:auto!important}
+.ri-imported[data-template=vista] :is(.vista-hi-badge,.vista-hi-orbit,.vista-hi-ring-solid){animation:none!important}
+.ri-imported[data-template=vista] .vista-hi-ring-dashed{animation-duration:40s!important}
+.ri-imported[data-template=vista] .vista-offscreen *{animation-play-state:paused!important}
+.ri-imported[data-template=vista] .elementor-element-f015240{--min-height:0!important}
+.ri-imported[data-template=vista] .vista-hi-badge .lbl{font-size:13px;color:var(--vista-muted)}
+.ri-imported[data-template=vista] .ri-resume-section{max-width:1060px;margin:12px auto;border-color:var(--vista-line);border-radius:20px;background:var(--vista-bg)}
+.ri-imported[data-template=vista] .ri-resume-section>summary{color:var(--vista-ink);padding:14px 20px;font-size:16px}
+.ri-imported[data-template=vista] .ri-resume-section[open]>summary{border-color:var(--vista-line)}
+.ri-imported[data-template=vista] .ri-resume-section [data-ri-section]{padding:12px 20px 20px!important}
+.ri-imported[data-template=vista] .ri-resume-section [data-ri-section]>.e-con-inner{padding:0!important;gap:12px!important}
+.ri-imported[data-template=vista] .ri-resume-section .elementor-widget-vista-section-title{display:none}
+.ri-imported[data-template=vista] .tech-stack{gap:10px!important}
+.ri-imported[data-template=vista] .tech-card{padding:14px!important;min-height:0!important;background:var(--vista-surface)!important;border:1px solid var(--vista-line)!important}
+.ri-imported[data-template=vista] .tech-level{font-size:12px;text-transform:none;letter-spacing:0}
+.ri-imported[data-template=vista] .vista-skill-toggle{margin:12px auto 0}
+@media(min-width:1101px){.ri-imported[data-template=vista] .techstack-grid:not([data-expanded]){grid-template-columns:repeat(6,minmax(0,1fr))!important}}
+.ri-imported[data-template=vista] .techstack-grid:not([data-expanded])>.vista-extra-skill{display:none!important}
+.ri-imported[data-template=vista] :is(.tl-card,.edu-card,.soc-card){background:var(--vista-surface)!important;border:1px solid var(--vista-line)!important;color:var(--vista-ink)!important}
+.ri-imported[data-template=vista] :is(.tl-item,.edu-card){margin-bottom:12px!important}
+.ri-imported[data-template=vista] :is(.tl-date,.edu-date){direction:rtl;unicode-bidi:plaintext}
+.ri-imported[data-template=vista] .ri-user-projects{max-width:1100px;padding:20px;margin:12px auto;box-sizing:border-box}
+.ri-imported[data-template=vista] .ri-user-projects>h2{font-size:20px;margin:0 0 16px}
+.ri-imported[data-template=vista] .pv-proj{align-items:stretch;gap:14px}
+.ri-imported[data-template=vista] .pv-proj>article{display:flex;min-width:0}
+.ri-imported[data-template=vista] .project-trigger{background:var(--vista-surface);color:var(--vista-ink);border:1px solid var(--vista-line);height:100%;border-radius:20px;text-align:start;transition:transform .18s ease-out}
+.ri-imported[data-template=vista] .project-trigger:hover{filter:none;transform:translateY(-3px)}
+.ri-imported[data-template=vista] .pv-proj__body{padding:20px;gap:10px}
+.ri-imported[data-template=vista] .pv-proj__body>span{font-size:14px;color:var(--vista-muted)}
+.ri-imported[data-template=vista] .pv-proj__body small{font-size:13px;color:var(--vista-accent)}
+.ri-imported[data-template=vista] .project-dialog{position:fixed;inset:0;margin:auto;max-width:calc(100% - 32px);max-height:calc(100dvh - 48px);background:var(--vista-surface);color:var(--vista-ink);border:1px solid var(--vista-line);padding:24px;box-shadow:0 20px 64px #0006}
+.ri-imported[data-template=vista] .project-dialog a{color:var(--vista-accent)}
+.ri-imported[data-template=vista] .project-address{font-size:13px;color:var(--vista-muted);text-align:start}
+.ri-imported[data-template=vista] .project-close{background:var(--vista-line);color:var(--vista-ink);margin:0 0 12px auto;position:sticky;top:0}
+.ri-imported[data-template=vista] .ri-template-contact{max-width:1060px;margin:24px auto;padding:24px 0;display:grid;grid-template-columns:1fr 1fr;gap:12px 40px;background:var(--vista-bg);color:var(--vista-ink);font:inherit;border-top:1px solid var(--vista-line);align-items:start}
+.ri-imported[data-template=vista] .ri-template-contact>h2{font-size:22px;grid-column:1;line-height:1.5;margin:0}
+.ri-imported[data-template=vista] .ri-template-contact>p{grid-column:1;margin:0;color:var(--vista-muted)}
+.ri-imported[data-template=vista] .ri-template-contact>a{grid-column:1;color:var(--vista-accent);font-size:14px;overflow-wrap:anywhere;text-underline-offset:4px;min-height:28px}
+.ri-imported[data-template=vista] .ri-compose{grid-column:2;grid-row:1 / span 12;display:grid;gap:8px;width:100%;max-width:none;margin:0}
+.ri-imported[data-template=vista] .ri-compose h3{font-size:18px;margin:0}.ri-imported[data-template=vista] .ri-compose p{font-size:13px;color:var(--vista-muted);margin:0 0 8px}
+.ri-imported[data-template=vista] .ri-compose :is(input,textarea){width:100%;border:1px solid var(--vista-line);border-radius:14px;background:var(--vista-surface);color:var(--vista-ink);padding:10px 12px;min-height:44px;font:inherit;box-sizing:border-box}
+.ri-imported[data-template=vista] .ri-compose textarea{min-height:100px;resize:vertical}
+.ri-imported[data-template=vista] .ri-compose input[type=email]{direction:ltr;text-align:left}
+.ri-imported[data-template=vista] .ri-compose .btn{justify-self:start}
+.ri-imported[data-template=vista] .vista-compose-details{grid-column:2;grid-row:1 / span 12;border:1px solid var(--vista-line);border-radius:18px;overflow:hidden;min-width:0}
+.ri-imported[data-template=vista] .vista-compose-details>summary{padding:14px 18px;cursor:pointer;font-size:15px;min-height:48px;box-sizing:border-box}
+.ri-imported[data-template=vista] .vista-compose-details[open]>.ri-compose{padding:0 18px 18px;box-sizing:border-box}
+.ri-imported[data-template=vista] .vista-footer{max-width:1060px;margin:0 auto;padding:16px 0 24px;display:flex;align-items:center;justify-content:space-between;gap:16px;border-top:1px solid var(--vista-line);color:var(--vista-muted)}
+.vista-footer>a{color:var(--vista-ink);font-size:14px;text-decoration:none}
+.ri-imported[data-template=vista] .pv-foot{display:flex;align-items:center;justify-content:center;gap:8px;font-size:12px;padding:0;margin:0;color:var(--vista-muted);background:none}
+.ri-imported[data-template=vista] .pv-foot .ri-logo{display:inline-flex;max-width:108px}
+.ri-imported[data-template=vista] .pv-foot img{display:block;width:108px;height:36px;object-fit:contain}
+.ri-imported[data-template=vista] :is(a,button,input,textarea,summary):focus-visible{outline:3px solid var(--vista-accent)!important;outline-offset:4px}
+body:has(.ri-imported[data-template=vista])>.sample-label{position:static;display:block;width:fit-content;margin:8px auto;max-width:calc(100% - 24px);box-sizing:border-box}
+@media(max-width:1100px){.vista-desktop-nav{display:none}.ri-imported[data-template=vista] .vista-menu-toggle{display:inline-flex}.ri-imported[data-template=vista] :is(.ri-resume-section,.ri-template-contact,.vista-footer){margin-inline:20px}.ri-imported[data-template=vista] .site-header{padding-inline:16px}}
+@media(max-width:767px){.ri-imported[data-template=vista] .header-inner{gap:8px;padding:8px 12px}.vista-wordmark{font-size:14px;max-width:140px}.vista-contact-button span{display:none}.ri-imported[data-template=vista] .site-header{margin-top:12px;padding-inline:12px}.ri-imported[data-template=vista] .elementor-element-f015240{padding:24px 20px!important}.ri-imported[data-template=vista] .elementor-element-f015240>.e-con-inner{display:flex;flex-direction:column-reverse!important;gap:24px!important}.ri-imported[data-template=vista] h1.vista-section-title{font-size:30px!important}.ri-imported[data-template=vista] .vista-profession{font-size:17px}.ri-imported[data-template=vista] .vista-hi-img-col{width:200px!important}.ri-imported[data-template=vista] .bio{font-size:14px;line-height:1.9}.ri-imported[data-template=vista] .vista-btn{min-height:44px!important}.ri-imported[data-template=vista] :is(.ri-resume-section,.ri-template-contact,.vista-footer){margin-inline:12px}.ri-imported[data-template=vista] .ri-template-contact{display:flex;flex-direction:column;gap:10px;padding:20px 8px}.ri-imported[data-template=vista] .ri-compose{margin-top:16px}.ri-imported[data-template=vista] .vista-footer{padding:16px 4px;flex-wrap:wrap}.ri-imported[data-template=vista] .ri-resume-section [data-ri-section]{padding:12px!important}}
+@media(prefers-reduced-motion:reduce){.vista-mobile-nav{animation:none}.ri-imported[data-template=vista] *{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+@media(max-width:767px){.ri-imported[data-template=vista] .elementor-element-c02aa02{display:flex!important;flex-direction:column-reverse!important;gap:20px!important}.ri-imported[data-template=vista] :is(.elementor-element-c02aa02,.elementor-element-3f81626){width:100%!important}.ri-imported[data-template=vista] .elementor-element-f015240>.e-con-inner{padding:0!important}.ri-imported[data-template=vista] .tech-stack{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important}.ri-imported[data-template=vista] .tech-card{padding:10px 6px!important}.ri-imported[data-template=vista] .tech-name{font-size:13px!important}.ri-imported[data-template=vista] .tech-icon{width:30px!important;height:30px!important}.ri-imported[data-template=vista] .tech-icon i{font-size:20px!important}}
+@media(max-width:767px){.ri-imported[data-template=vista] .techstack-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:8px!important}.ri-imported[data-template=vista] .tech-card{gap:6px!important}.ri-imported[data-template=vista] .vista-hi-img-col{width:160px!important}.ri-imported[data-template=vista] .ri-template-contact{gap:6px}.ri-imported[data-template=vista] .ri-compose{gap:6px}.ri-imported[data-template=vista] .ri-user-projects{padding:12px}.ri-imported[data-template=vista] .pv-proj__body{padding:16px}.ri-imported[data-template=vista] .bio{margin:0!important}}
+@media(max-width:767px){.ri-imported[data-template=vista] .pv-proj__body>span{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}.ri-imported[data-template=vista] .pv-proj__body{padding:12px;gap:6px}}
+@media(max-width:360px){.ri-imported[data-template=vista] .vista-hi-img-col{width:120px!important}.ri-imported[data-template=vista] .elementor-element-f015240{padding:16px 12px!important}.ri-imported[data-template=vista] .tech-card{padding:8px 4px!important}.ri-imported[data-template=vista] .pv-proj__body{font-size:14px}.ri-imported[data-template=vista] .ri-template-contact{padding:12px 4px}}

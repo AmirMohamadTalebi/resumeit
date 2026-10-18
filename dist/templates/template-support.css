@@ -1,5 +1,6 @@
 /* Keep the supplied designs, replacing plugin-dependent visibility and navigation. */
 .ri-imported { min-height:100vh; direction:rtl; }
+html[data-theme=dark] .ri-imported .pv-foot img{filter:grayscale(1) brightness(0) invert(1)}
 html,body{height:auto!important;min-height:100vh;overflow-y:auto!important}
 .ri-imported .preloader{display:none!important}
 .ri-imported .nav-menu.ri-menu-open{pointer-events:auto!important;opacity:1!important;transform:none!important}

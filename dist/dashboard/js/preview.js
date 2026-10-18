@@ -20,7 +20,7 @@
     const n = parseInt(m[1], 16), f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
     return 0.2126 * f((n >> 16) & 255) + 0.7152 * f((n >> 8) & 255) + 0.0722 * f(n & 255);
   }
-  const onColor = (hex) => (lum(hex) > 0.42 ? '#10181e' : '#ffffff');
+  const onColor = (hex) => {const l=lum(hex);return (l+.05)/.05>=1.05/(l+.05)?'#000000':'#ffffff';};
 
   function palColors(palId) {
     const p = RI.PALETTES.find((x) => x.id === palId);
@@ -35,7 +35,7 @@
     const r = (RI.RADII[theme.radius] || RI.RADII.soft)[1];
     return '--pv-bg:' + v.bg + ';--pv-surface:' + v.surface + ';--pv-ink:' + v.ink + ';--pv-muted:' + v.muted + ';--pv-accent:' + v.accent + ';--pv-accent2:' + v.accent2 +
       ';--pv-on:' + onColor(v.accent) + ';--pv-hero:' + v.hero + ';--pv-line:' + v.line + ';--pv-r:' + r + ';--pv-font:' + (t.mono && f.id === 'vazir' ? "'Vazirmatn', ui-monospace, Consolas, monospace" : f.stack) +
-      ';--pv-hw:' + f.hw + ';--pv-ls:' + (f.spacing || '0') + ';--pv-hfont:' + (f.heading || (t.serif ? "'Noto Naskh Arabic','Times New Roman',serif" : 'inherit'));
+      ';--pv-hw:' + f.hw + ';--pv-ls:' + (f.spacing || '0') + ';--pv-brand-filter:'+(lum(v.ink)>.5?'grayscale(1) brightness(0) invert(1)':'none')+';--pv-hfont:' + (f.heading || (t.serif ? "'Noto Naskh Arabic','Times New Roman',serif" : f.stack));
   };
   RI.linksVars = function (t, theme, style) {
     const v = Object.assign({}, t.v), pc = palColors(theme.linksPalette);
@@ -44,7 +44,7 @@
     if (bgo && bgo.bg) { v.bg = bgo.bg; v.ink = bgo.ink; v.muted = bgo.muted; }
     const f = RI.FONTS.find((x) => x.id === theme.font) || RI.FONTS[0];
     const r = (RI.RADII[theme.radius] || RI.RADII.soft)[1];
-    return '--lv-bg:' + v.bg + ';--lv-ink:' + v.ink + ';--lv-muted:' + v.muted + ';--lv-btn:' + v.btnBg + ';--lv-btn-ink:' + v.btnInk + ';--lv-btn-bd:' + v.btnBd + ';--lv-accent:' + v.accent + ';--lv-r:' + r + ';--pv-font:' + f.stack + ';--pv-hw:' + f.hw + ';--pv-ls:' + (f.spacing || '0');
+    return '--lv-bg:' + v.bg + ';--lv-ink:' + v.ink + ';--lv-muted:' + v.muted + ';--lv-btn:' + v.btnBg + ';--lv-btn-ink:' + v.btnInk + ';--lv-btn-bd:' + v.btnBd + ';--lv-accent:' + v.accent + ';--lv-r:' + r + ';--pv-font:' + f.stack + ';--pv-hw:' + f.hw + ';--pv-brand-filter:'+(lum(v.ink)>.5?'grayscale(1) brightness(0) invert(1)':'none')+';--pv-ls:' + (f.spacing || '0');
   };
 
   const LV = (n) => (RI.LANG_LEVELS[(n || 3) - 1] || '');
@@ -66,7 +66,7 @@
 
   const SEC_TITLES = { skills: ['مهارت‌ها', 'sparkle'], experience: ['تجربه‌های کاری', 'briefcase'], education: ['تحصیلات', 'book'], projects: ['پروژه‌ها و نمونه‌کارها', 'code'], certs: ['دوره‌ها، گواهی‌ها و افتخارات', 'award'], languages: ['زبان‌ها', 'language'] };
 
-  RI.projectCards = c => '<link rel="stylesheet" href="/templates/projects.css"><div class="pv-proj">'+c.projects.map(x=>{const id='project-'+x.id;return '<article><button type="button" class="project-trigger" data-project-open="'+esc(id)+'" aria-haspopup="dialog"><span class="pv-proj__img" style="'+esc(RI.bg(x.image)||'background:var(--pv-line,#dfebf0)')+'"></span><span class="pv-proj__body"><b>'+esc(x.title)+'</b><span>'+esc(x.desc.slice(0,90))+(x.desc.length>90?'…':'')+'</span><small>دربارهٔ پروژه</small></span></button><dialog class="project-dialog" id="'+esc(id)+'" aria-labelledby="'+esc(id)+'-title"><button type="button" class="project-close" data-project-close aria-label="بستن جزئیات پروژه">'+RI.icon('x')+'</button><h2 id="'+esc(id)+'-title">'+esc(x.title)+'</h2>'+(x.image&&!x.image.startsWith('grad:')?'<img src="'+esc(x.image)+'" alt="'+esc('تصویر پروژهٔ '+x.title)+'">':'')+'<p>'+esc(x.desc)+'</p>'+(x.url&&RI.isUrl(x.url)?'<a href="'+esc(RI.normUrl(x.url))+'" target="_blank" rel="noopener noreferrer" data-pv-link="1">دیدن پروژه</a>':'')+'</dialog></article>';}).join('')+'</div>';
+  RI.projectCards = (c,options={}) => '<link rel="stylesheet" href="/templates/projects.css"><div class="pv-proj">'+c.projects.map(x=>{const id='project-'+x.id,limit=options.compact?55:90,photo=x.image&&!x.image.startsWith('grad:'),url=x.url&&RI.isUrl(x.url)?RI.normUrl(x.url):'';return '<article><button type="button" class="project-trigger" data-project-open="'+esc(id)+'" aria-haspopup="dialog">'+(!options.compact||photo?'<span class="pv-proj__img" style="'+esc(RI.bg(x.image)||'background:var(--pv-line,#dfebf0)')+'"></span>':'')+'<span class="pv-proj__body"><b>'+esc(x.title)+'</b><span>'+esc(x.desc.slice(0,limit))+(x.desc.length>limit?'…':'')+'</span><small>دربارهٔ پروژه</small></span></button><dialog class="project-dialog" id="'+esc(id)+'" aria-labelledby="'+esc(id)+'-title"><button type="button" class="project-close" data-project-close aria-label="بستن جزئیات پروژه">'+RI.icon('x')+'</button><h2 id="'+esc(id)+'-title">'+esc(x.title)+'</h2>'+(photo?'<img src="'+esc(x.image)+'" alt="'+esc('تصویر پروژهٔ '+x.title)+'">':'')+'<p>'+esc(x.desc)+'</p>'+(options.compact&&url?'<p class="project-address" dir="ltr">'+esc(new URL(url).hostname)+'</p>':'')+(url?'<a href="'+esc(url)+'" target="_blank" rel="noopener noreferrer" data-pv-link="1">دیدن پروژه</a>':'')+'</dialog></article>';}).join('')+'</div>';
 
   function bodySection(key, c) {
     const items = c[key];
@@ -75,10 +75,10 @@
     if (key === 'skills') inner = '<ul class="pv-chips">' + items.map((s) => '<li>' + esc(s.name) + dots(s.level) + '</li>').join('') + '</ul>';
     if (key === 'experience') inner = '<ol class="pv-tl">' + items.map((x) => '<li><b>' + esc(x.role) + '</b><span class="pv-sub">' + esc(x.org) + ' · ' + esc(when(x)) + '</span>' + (x.desc ? '<p>' + esc(x.desc) + '</p>' : '') + '</li>').join('') + '</ol>';
     if (key === 'education') inner = '<ol class="pv-tl">' + items.map((x) => '<li><b>' + esc(x.degree) + '</b><span class="pv-sub">' + esc(x.school) + ' · ' + esc(when(x)) + '</span>' + (x.desc ? '<p>' + esc(x.desc) + '</p>' : '') + '</li>').join('') + '</ol>';
-    if (key === 'projects') inner = RI.projectCards(c);
+    if (key === 'projects') inner = RI.projectCards(c,{compact:true});
     if (key === 'certs') inner = '<ul class="pv-list">' + items.map((x) => '<li><b>' + esc(x.title) + '</b><span class="pv-sub">' + esc(x.issuer) + (x.year ? ' · ' + esc(x.year) : '') + '</span></li>').join('') + '</ul>';
     if (key === 'languages') inner = '<ul class="pv-list pv-list--inline">' + items.map((x) => '<li><b>' + esc(x.name) + '</b><span class="pv-sub">' + LV(x.level) + '</span></li>').join('') + '</ul>';
-    return '<section class="pv-sec pv-sec--' + key + '"><h3>' + esc(SEC_TITLES[key][0]) + '</h3>' + inner + '</section>';
+    return '<section class="pv-sec pv-sec--' + key + '"><h2>' + esc(SEC_TITLES[key][0]) + '</h2>' + inner + '</section>';
   }
 
   RI.resumeHtml = function (c, o) {
@@ -94,7 +94,7 @@
     const socials = vis('socials') ? c.socials : [];
     const ICON = { email: 'mail', phone: 'phone', website: 'globe' };
     const idBlock =
-      '<div class="pv-id"><img class="pv-avatar" src="' + esc(RI.avatarOf(p)) + '" alt="">' +
+      '<div class="pv-id"><img class="pv-avatar" src="' + esc(RI.avatarOf(p)) + '" alt="'+esc(p.name?'تصویر '+p.name:'تصویر پروفایل')+'" width="112" height="112">' +
       '<h1 class="pv-name">' + (p.name.trim() ? esc(p.name) : '<span class="pv-ph">نام شما</span>') + '</h1>' +
       '<p class="pv-title">' + (p.title.trim() ? esc(p.title) : '<span class="pv-ph">عنوان حرفه‌ای یا تحصیلی</span>') + '</p>' +
       (p.location ? '<p class="pv-loc">' + RI.icon('pin') + esc(p.location) + '</p>' : '') +
@@ -104,7 +104,7 @@
     const extras = spec.fields.filter(f => f.public === true && RI.resumeValue(templateValues.fields || {}, f)).map(f => '<section class="pv-sec"><h2>' + esc(f.label) + '</h2><p>' + esc(f.type === 'checkbox' ? 'بله' : RI.resumeValue(templateValues.fields || {}, f)) + '</p></section>').join('');
     const body = order.map((k) => bodySection(k, c)).join('') + extras;
     const bio = p.bio.trim() ? '<section class="pv-sec pv-about"><p>' + esc(p.bio) + '</p></section>' : '';
-    const empty = !body && !bio ? '<section class="pv-sec pv-empty"><p>هنوز محتوایی اضافه نشده است. از بخش «رزومه» شروع کنید؛ این‌جا همان لحظه ساخته می‌شود.</p></section>' : '';
+    const empty = !body && !bio ? '<section class="pv-sec pv-empty"><p>هنوز محتوایی برای نمایش اضافه نشده است.</p></section>' : '';
     const cover = '<div class="pv-cover" style="' + esc(RI.bg(p.cover) || 'background:var(--pv-hero)') + '"></div>';
     return '<div class="pv pv--' + t.layout + (t.mono ? ' pv--mono' : '') + '" style="' + esc(RI.resumeVars(t, theme)) + '">' + nav(c, 'resume', o.publicBase) + cover +
       '<div class="pv-wrap">' + idBlock + '<main class="pv-main">' + bio + body + empty + '</main></div>' + brandFoot(c,'resume') + '</div>';
@@ -128,7 +128,7 @@
         '<span class="lv-btn__txt"><b>' + esc(i.title) + '</b>' + (i.featured ? '<small class="ltr">' + esc(RI.hostOf(i.url || '')) + '</small>' : '') + '</span>' + (i.featured ? '<span class="lv-btn__star">' + RI.icon('star') + '</span>' : '') + '</a></li>';
     }).join('');
     const socials = c.socials.length ? '<ul class="lv-soc">' + c.socials.map((s) => '<li title="' + esc(s.platform) + '"><a data-pv-link="1" href="'+esc(socialUrl(s))+'" rel="noopener noreferrer" aria-label="'+esc(s.platform)+'">' + RI.icon(s.platform) + '</a></li>').join('') + '</ul>' : '';
-    const empty = !items.length ? '<li class="lv-empty">لینکی برای نمایش نیست؛ از «لینک‌ها» یک لینک فعال اضافه کنید.</li>' : '';
+    const empty = !items.length ? '<li class="lv-empty">هنوز لینکی منتشر نشده است.</li>' : '';
     return '<div class="lv lv--' + (['start','end'].includes(st.align)?st.align:'center') + '" style="' + esc(RI.linksVars(t, theme, st)) + '">' + nav(c, 'links', o.publicBase) +
       '<div class="lv-head"><img class="lv-avatar' + (st.ring ? ' lv-avatar--ring' : '') + '" src="' + esc(RI.avatarOf(p)) + '" alt="تصویر پروفایل '+esc(name)+'">' +
       '<h1>' + (name ? esc(name) : '<span class="pv-ph">نام شما</span>') + '</h1>' + (bio ? '<p>' + esc(bio) + '</p>' : '') + '</div>' +
@@ -147,10 +147,22 @@
         '<button type="button" data-dev="mobile" aria-pressed="' + (st.device === 'mobile') + '">' + RI.icon('phone') + 'موبایل</button>' +
         '<button type="button" data-dev="desktop" aria-pressed="' + (st.device === 'desktop') + '">' + RI.icon('monitor') + 'دسکتاپ</button></div>') +
       (o.switchKind ? '<div class="segmented" role="group" aria-label="صفحه"><button type="button" data-kind="resume" aria-pressed="' + (st.kind === 'resume') + '">رزومه</button><button type="button" data-kind="links" aria-pressed="' + (st.kind === 'links') + '">لینک‌ها</button></div>' : '') +
-      '</div><div class="pvhost__stage"><div class="device device--' + st.device + '"><div class="device__bar"><span class="device__dots"><i></i><i></i><i></i></span><span class="device__url ltr"></span></div>' +
+      '</div><p class="pvhost__focus" role="status" hidden></p><div class="pvhost__stage"><div class="device device--' + st.device + '"><div class="device__bar"><span class="device__dots"><i></i><i></i><i></i></span><span class="device__url ltr"></span></div>' +
       '<div class="device__box"><div class="device__scaler"><div class="device__vp"></div></div></div></div></div>';
     const stage = RI.$('.pvhost__stage', host), dev = RI.$('.device', host), box = RI.$('.device__box', host);
     const scaler = RI.$('.device__scaler', host), vp = RI.$('.device__vp', host), urlEl = RI.$('.device__url', host);
+    const focusLabel=RI.$('.pvhost__focus',host);
+    function revealTemplateSection(scroll){
+      const doc=vp.querySelector('iframe')?.contentDocument;
+      doc?.querySelectorAll('[data-ri-editing]').forEach(el=>el.removeAttribute('data-ri-editing'));
+      const section=st.templateSection&&doc?.querySelector('[data-ri-section="'+st.templateSection+'"]');
+      focusLabel.hidden=!section||!st.sectionLabel;focusLabel.textContent=section&&st.sectionLabel?'در پیش‌نمایش: '+st.sectionLabel:'';
+      if(!section)return;
+      for(let parent=section;parent;parent=parent.parentElement)if(parent.tagName==='DETAILS')parent.open=true;
+      if(!doc.getElementById('ri-editor-focus')){const style=doc.createElement('style');style.id='ri-editor-focus';style.textContent='[data-ri-editing]{outline:3px solid #246e7d!important;outline-offset:-4px!important;box-shadow:inset 0 0 0 7px #e5f5f9!important}';doc.head.append(style);}
+      section.setAttribute('data-ri-editing','true');
+      if(scroll){const scroller=doc.scrollingElement;if(scroller)scroller.scrollTo({top:Math.max(0,section.getBoundingClientRect().top+scroller.scrollTop-84),behavior:RI.reduceMotion()?'instant':'smooth'});}
+    }
 
     function fit() {
       const nat = NAT[st.device];
@@ -172,12 +184,13 @@
       const html = st.kind === 'resume' ? RI.resumeHtml(c, { theme: theme, page: st.templatePage }) : RI.linksHtml(c, { theme: theme });
       const imported = st.kind === 'resume' && RI.IMPORTED_TEMPLATES && RI.IMPORTED_TEMPLATES[(theme || c.theme).resume];
       if (imported) {
+        const oldScroll=vp.querySelector('iframe')?.contentDocument?.scrollingElement?.scrollTop;
         const frame = document.createElement('iframe'); frame.title = 'پیش‌نمایش قالب رزومه'; frame.setAttribute('sandbox', 'allow-same-origin');
         frame.style.cssText = 'width:100%;height:100%;border:0;display:block;background:#fff';
         frame.srcdoc = '<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body style="margin:0">' + html + '</body></html>';
-        frame.addEventListener('load', () => { const doc = frame.contentDocument; if (!doc) return; window.bindResumeProjects?.(doc); RI.bindImportedPage(doc, () => {});const section=st.templateSection&&doc.querySelector('[data-ri-section="'+st.templateSection+'"]');if(section?.closest('details'))section.closest('details').open=true; });
+        frame.addEventListener('load', () => { const doc = frame.contentDocument; if (!doc||frame!==vp.querySelector('iframe')) return; window.bindResumeProjects?.(doc); RI.bindImportedPage(doc, () => {});revealTemplateSection(oldScroll==null);if(oldScroll!=null&&doc.scrollingElement)doc.scrollingElement.scrollTop=oldScroll; });
         vp.replaceChildren(frame);
-      } else vp.innerHTML = html;
+      } else {vp.innerHTML = html;focusLabel.hidden=true;}
       vp.scrollTop = top;
       const u = RI.urls();
       urlEl.textContent = st.kind === 'resume' ? u.resume : u.links;
@@ -194,8 +207,8 @@
     });
     const api = {
       refresh: render,
-      setTemplatePage(id) { st.templatePage = id; render(false); },
-      setTemplateSection(key) {st.templateSection=key;const doc=vp.querySelector('iframe')?.contentDocument,section=key&&doc?.querySelector('[data-ri-section="'+key+'"]');if(section?.closest('details'))section.closest('details').open=true;},
+      setTemplatePage(id) {if(st.templatePage===id)return; st.templatePage = id; render(false); },
+      setTemplateSection(key,label) {const changed=st.templateSection!==key;st.templateSection=key;st.sectionLabel=label||'';revealTemplateSection(changed);},
       setDevice(d) {
         if (d === st.device) return;
         st.device = d;
