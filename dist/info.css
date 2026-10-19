@@ -4,3 +4,25 @@
 
 .contact-row a{display:inline-flex;align-items:center;min-height:32px}
 .info-accordion{padding:16px 0;border-bottom:1px solid #cadde5}.info-accordion summary{cursor:pointer;min-height:44px;display:flex;align-items:center;gap:12px}.info-accordion summary::before{content:'+';font-size:22px}.info-accordion[open] summary::before{content:'−'}.info-accordion summary h2{margin:0}.info-accordion summary:focus-visible{outline:2px solid #477e92;outline-offset:4px}
+
+.footer-bottom>div a,.footer-note a,.info-footer .ri-support-links a{display:inline-flex;align-items:center;min-height:44px;padding:8px 10px;font-size:13px;line-height:1.8;border-radius:12px;text-decoration:none}
+.footer-bottom>div,.info-footer .ri-support-links{gap:4px 8px;flex-wrap:wrap}
+.footer-bottom>div a:hover,.footer-note a:hover,.info-footer .ri-support-links a:hover{background:#ffffff60;text-decoration:underline;text-underline-offset:4px}
+.info-nav a[aria-current="page"]{font-weight:700;text-decoration:underline;text-underline-offset:6px;text-decoration-thickness:2px}
+.info-footer a[aria-current="page"]{font-weight:700;text-decoration:underline;text-underline-offset:5px}
+@media(max-width:760px){.footer-note{flex-wrap:wrap}.footer-bottom>div{width:100%;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 8px}.footer-bottom>div a{justify-content:flex-start}.info-footer .ri-support-links{width:100%;display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.footer-note a{padding-inline:6px}}
+.closing-actions{display:flex;align-items:center;justify-content:center;gap:24px;flex-wrap:wrap}
+.closing-actions .link{font-size:14px;min-height:44px;display:inline-flex;align-items:center}
+.sample-address-note{font-size:12px!important;margin-top:16px!important}
+.guide-start[hidden],[data-gallery][hidden]{display:none!important}
+.game-bottom{flex-wrap:wrap}
+@media(max-width:760px){#how .steps-layout{display:flex;flex-direction:column;gap:18px}#how .step-list{width:100%;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}#how .step{padding:10px;gap:7px;min-height:66px;width:100%}#how .step h3{font-size:13px}#how .step p,#how .step>b{display:none}#how .game-preview{width:100%;padding:20px;transform:none}#how .game-symbol{display:none}#how .game-preview h3{font-size:21px}#how .game-bottom{margin-top:16px}}
+.sig-scene-note>span:first-child{font-size:11px}
+@media(max-width:760px){#how .section-heading{display:block}#how .section-heading>p{margin-top:16px}#how .step-list>button{min-width:0}}
+#plan-total{font-size:18px;font-weight:700;line-height:1.9;margin-block:12px}
+.catalog-message{margin:24px auto;text-align:center;font-size:14px;line-height:2}
+.catalog-message .btn{margin-top:12px}.catalog-message [hidden]{display:none!important}
+.faq-help{padding:20px 0;font-size:14px}.faq-help a{display:inline-block;padding:8px}
+.shop-actions{display:flex;flex-direction:column;gap:12px;grid-column:1/-1;font-size:12px}
+.release-link{display:inline-block;padding:8px 4px;font-size:12px;min-height:44px}
+.info-content section[id]{scroll-margin-top:110px}.info-content details{margin-top:20px}.info-content summary{cursor:pointer;padding:10px 0}

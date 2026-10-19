@@ -125,3 +125,5 @@
     gap:10px;
   }
 }
+
+.site-footer nav>a,.site-footer__bottom>a{display:inline-flex;align-items:center;min-height:44px;padding-block:8px}.public-header nav a[aria-current="page"],.site-footer a[aria-current="page"]{font-weight:700;text-decoration:underline;text-underline-offset:6px}

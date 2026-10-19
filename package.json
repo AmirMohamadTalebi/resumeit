@@ -1,11 +1,12 @@
 {
   "name": "resumeit",
-  "version": "0.24.4-beta",
+  "version": "0.24.5-beta",
   "private": true,
   "engines": {
     "node": ">=24.15.0"
   },
   "scripts": {
+    "check:public-audit": "node tests/public-audit-migration-check.cjs",
     "check:resume-journey": "node tests/resume-journey-ui-check.cjs && node tests/editor-polish-ui-check.cjs",
     "check:templates": "node tests/imported-templates-check.cjs && node tests/vista-contract-check.cjs && node tests/satiar-refinement-check.cjs && node tests/all-template-ui-check.cjs && node tests/template-edge-check.cjs && node tests/template-sample-navigation-check.cjs",
     "check:vista": "node tests/vista-contract-check.cjs && node tests/vista-refinement-ui-check.cjs && node tests/vista-contrast-motion-ui-check.cjs",

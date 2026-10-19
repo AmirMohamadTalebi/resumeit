@@ -2,17 +2,16 @@
 (() => {
  'use strict';
  const menu=document.querySelector('.mobile-menu'),nav=document.querySelector('[data-public-nav]');
- if(!document.querySelector('script[src*="/app.js"]')){
-  menu?.addEventListener('click',()=>{const open=menu.getAttribute('aria-expanded')!=='true';menu.setAttribute('aria-expanded',String(open));nav?.classList.toggle('open',open);});
-  nav?.addEventListener('click',e=>{if(e.target.closest('a')){menu?.setAttribute('aria-expanded','false');nav.classList.remove('open');}});
- }
+ function setMenu(open){menu?.setAttribute('aria-expanded',String(open));menu?.setAttribute('aria-label',open?'بستن منو':'باز کردن منو');nav?.classList.toggle('open',open);}
+ if(nav&&menu){nav.id='public-navigation';menu.setAttribute('aria-controls',nav.id);menu.addEventListener('click',()=>setMenu(menu.getAttribute('aria-expanded')!=='true'));nav.addEventListener('click',e=>{if(e.target.closest('a'))setMenu(false);});}
+ document.querySelectorAll('[data-public-nav] a,.site-footer a,.footer-bottom a').forEach(link=>{const url=new URL(link.href,location.href);if(url.origin===location.origin&&!url.hash&&url.pathname===location.pathname)link.setAttribute('aria-current','page');});
  const original=document.querySelector('[data-session-link]')?.cloneNode(true),startLinks=[...document.querySelectorAll('a[href="/register/"],[data-start-link]')];
  let pending=false,identity='',control=null,trigger=null,popover=null;
  const icons=new Promise(resolve=>{if(window.RI?.icon){resolve();return;}const script=document.createElement('script');script.src='/public-assets/icons.js';script.onload=resolve;script.onerror=resolve;document.head.append(script);});
  const icon=name=>window.RI?.icon(name,'account-icon')||'';
  function close(){if(!popover)return;popover.hidden=true;trigger.setAttribute('aria-expanded','false');}
  document.addEventListener('pointerdown',e=>{if(control&&!control.contains(e.target))close();});
- document.addEventListener('keydown',e=>{if(e.key!=='Escape')return;if(popover&&!popover.hidden){close();trigger.focus();}if(menu?.getAttribute('aria-expanded')==='true'){menu.setAttribute('aria-expanded','false');nav?.classList.remove('open');menu.focus();}});
+ document.addEventListener('keydown',e=>{if(e.key!=='Escape')return;if(popover&&!popover.hidden){close();trigger.focus();}if(menu?.getAttribute('aria-expanded')==='true'){setMenu(false);menu.focus();}});
  async function paint(user){
   if(!original)return;
   if(!user){control?.replaceWith(original.cloneNode(true));control=trigger=popover=null;identity='';return;}
