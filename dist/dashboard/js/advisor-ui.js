@@ -70,7 +70,7 @@
     }
     async function capture(expected) {
       if (!active() || expected !== generation) return null;
-      const template = RI.C().theme.resume, imported = RI.IMPORTED_TEMPLATES?.[template] ? RI.importedSpec(template) : null;
+      const template = RI.C().theme.resume, imported = RI.IMPORTED_TEMPLATES?.[template] ? RI.effectiveTemplateSpec(template) : null;
       const captured = core.project(RI.C(), imported), output = [];let characters=0;nextBatch=null;
       for (let i = 0; i < captured.length; i += 16) {
         if (!active() || expected !== generation || RI.C().theme.resume !== template) return null;

@@ -9,8 +9,8 @@ const {chromium}=require('playwright'),{createServer}=require('../src/http/serve
  const context=await browser.newContext({viewport:{width:1440,height:1000},reducedMotion:'reduce'});await context.addCookies([{name:'ri_session',value:'a'.repeat(64),url:base}]);await context.addInitScript(id=>sessionStorage.setItem('ri-panel-choice',id),f.owner);const page=await context.newPage();
  const errors=[];page.on('pageerror',e=>errors.push(e.message));
  for(const template of ['vista','satiar']){
-  const doc=await f.db.loadDashboard(f.owner);await f.db.mutateDashboard(f.owner,doc.revision,d=>{d.content.theme.resume=template;});await page.goto(base+'/dashboard/resume/?step=profile');await page.locator('#resume-section-tabs').waitFor();
-  const expected=await page.evaluate(()=>{const s=RI.resumeSpec(RI.C().theme.resume);return ['fields','settings'].flatMap(kind=>s[kind].filter(f=>!f.group||s.groups.some(g=>g.key===f.group)).map(f=>({kind,key:f.key,type:f.type,label:f.label,group:f.group||'appearance',bound:f.bind||null})));});
+  const doc=await f.db.loadDashboard(f.owner);await f.db.mutateDashboard(f.owner,doc.revision,d=>{d.content.theme.resume=template;});await page.goto(base+'/dashboard/resume/?step=profile');await page.locator('#rpv iframe').waitFor();
+  const expected=await page.evaluate(()=>{const s=RI.effectiveTemplateSpec(RI.C().theme.resume);return ['fields','settings'].flatMap(kind=>s[kind].filter(f=>!f.group||s.groups.some(g=>g.key===f.group)).map(f=>({kind,key:f.key,type:f.type,label:f.label,group:f.group||'appearance',bound:f.bind||null})));});
   const before=await page.evaluate(()=>JSON.stringify(RI.C()));const seen=new Map();
   const tabs=await page.locator('#resume-section-tabs [data-template-group]').evaluateAll(rows=>rows.map(e=>({step:e.dataset.step,group:e.dataset.templateGroup})));
   for(const tab of tabs){
@@ -32,6 +32,6 @@ const {chromium}=require('playwright'),{createServer}=require('../src/http/serve
   assert.equal(await page.evaluate(()=>JSON.stringify(RI.C())),before,'browsing every option must not change content');
   report.push({template,total:expected.length,missing:0,options:expected.map(item=>({...item,destination:seen.get(item.kind+':'+item.key)}))});console.log('PASS reachable option inventory',template,expected.length);
  }
- assert.deepEqual(errors,[]);fs.mkdirSync('artifacts/template-editor-2026-10-20',{recursive:true});fs.writeFileSync('artifacts/template-editor-2026-10-20/options-verified.json',JSON.stringify(report,null,2));console.log('PASS all 924 active options reached through real tabs, collection selectors and pagination without mutating data.');
+ assert.deepEqual(errors,[]);fs.mkdirSync('artifacts/template-editor-2026-10-20',{recursive:true});fs.writeFileSync('artifacts/template-editor-2026-10-20/options-verified.json',JSON.stringify(report,null,2));console.log('PASS all effective active options reached through real tabs, collection selectors and pagination without mutating data.');
  }finally{await browser.close();await new Promise(r=>server.close(r));f.store.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});

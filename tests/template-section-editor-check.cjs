@@ -34,7 +34,12 @@ const {chromium}=require('playwright'),{createServer}=require('../src/http/serve
   }
   await page.locator('#resume-section-tabs [data-step=template]').click();await page.locator('[data-tfield=reviewed]').waitFor();
   const boxes=await page.locator('.template-toggle input[type=checkbox]').evaluateAll(rows=>rows.map(e=>({w:e.getBoundingClientRect().width,h:e.getBoundingClientRect().height})));assert(boxes.every(b=>b.w<=24&&b.h<=24));
-  const upload=page.locator('#template-controls [data-tupload]').first();assert(await upload.count(),'image upload is exercised');{
+  async function openEffectiveField(type){
+   const target=await page.evaluate(type=>{const spec=RI.effectiveTemplateSpec(RI.C().theme.resume),field=spec.fields.find(f=>f.type===type&&!f.bind);if(!field)return null;const uses=(node,key)=>{if(!node||typeof node!=='object')return false;return node.field===key||node.icon===key||Object.values(node).some(v=>Array.isArray(v)?v.some(n=>uses(n,key)):typeof v==='object'&&uses(v,key));};return {key:field.key,group:field.group,collection:spec.collections.find(c=>uses(c.node,field.key))?.key||''};},type);if(!target)return null;
+   await page.locator('#resume-section-tabs [data-template-group="'+target.group+'"]').click();await page.locator('#template-collection').selectOption(target.collection);if(await page.locator('[data-template-advanced]').getAttribute('aria-expanded')==='false')await page.locator('[data-template-advanced]').click();
+   while(!await page.locator('#template-controls [data-tfield="'+target.key+'"]').count()&&!await page.locator('#template-next').isDisabled())await page.locator('#template-next').click();return target;
+  }
+  const imageTarget=await openEffectiveField('image');const upload=page.locator('#template-controls [data-tupload]').first();if(imageTarget){assert(await upload.count(),'effective image upload is exercised');
    const key=await upload.getAttribute('data-tupload'),fileId=await upload.getAttribute('id');assert((await upload.getAttribute('aria-describedby')).includes(fileId.replace(/-file$/,'')+'-error'));
    await upload.setInputFiles({name:'invalid.txt',mimeType:'text/plain',buffer:Buffer.from('invalid')});await page.locator('#'+fileId.replace(/-file$/,'')+'-error').waitFor({state:'visible'});assert.equal(await upload.getAttribute('aria-invalid'),'true');
    const avatar=await page.evaluate(()=>RI.C().profile.avatar);await upload.setInputFiles({name:'pixel.png',mimeType:'image/png',buffer:Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScLbtAAAAABJRU5ErkJggg==','base64')});
@@ -46,12 +51,12 @@ const {chromium}=require('playwright'),{createServer}=require('../src/http/serve
    await page.evaluate(()=>pendingReaders[1]());await clear.click();await page.evaluate(()=>{pendingReaders[0]();window.FileReader=originalReader;});await page.waitForTimeout(80);
    assert.equal(await page.evaluate(key=>RI.resumeValues(RI.C()).fields[key]??RI.resumeValues(RI.C()).settings[key],key),'','late earlier upload cannot restore a cleared image');assert.equal(await page.evaluate(()=>RI.C().profile.avatar),avatar);
   }
-  await page.locator('#template-search').fill('مقصد');const address=page.locator('#template-controls input[data-ttype=link]').first();assert(await address.count(),'link mode is exercised');{
-   const field=await address.getAttribute('data-tfield'),kind=await address.getAttribute('data-tgroup')||'fields',id=await address.getAttribute('id'),select=page.locator('#'+id+'-target');
-   await select.selectOption('');await address.fill('https://example.test/work');assert.equal(await page.evaluate(({field,kind})=>RI.resumeValues(RI.C())[kind][field],{field,kind}),'https://example.test/work');
-   await select.selectOption('#ri-contact');assert.equal(await page.evaluate(({field,kind})=>RI.resumeValues(RI.C())[kind][field],{field,kind}),'#ri-contact');assert.equal(await address.isVisible(),false);await select.selectOption('');assert.equal(await address.inputValue(),'#ri-contact');assert.equal(await address.isVisible(),true);
+  assert(await openEffectiveField('link'),'effective link exists');await page.locator('#template-search').fill('مقصد');const address=page.locator('#template-controls input[data-ttype=link]').first();assert(await address.count(),'link mode is exercised');{
+   const field=await address.getAttribute('data-tfield'),kind=await address.getAttribute('data-tgroup')||'fields',id=await address.getAttribute('id'),select=page.locator('#'+id+'-target');const readAddress=()=>address.evaluate(el=>{const values=RI.resumeValues(RI.C());return el.dataset.tcollection?values.collections[el.dataset.tcollection].find(row=>row.id===el.dataset.trow).fields[el.dataset.tfield]:values[el.dataset.tgroup||'fields'][el.dataset.tfield];});
+   await select.selectOption('');await address.fill('https://example.test/work');assert.equal(await readAddress(),'https://example.test/work');
+   await select.selectOption('#ri-contact');assert.equal(await readAddress(),'#ri-contact');assert.equal(await address.isVisible(),false);await select.selectOption('');assert.equal(await address.inputValue(),'#ri-contact');assert.equal(await address.isVisible(),true);
   }await page.locator('#template-search').fill('');
-  await page.screenshot({path:path.join(out,template+'-general-desktop.png')});
+  await page.locator('#resume-section-tabs [data-step=template]').click();await page.screenshot({path:path.join(out,template+'-general-desktop.png')});
   await page.locator('[data-template-advanced]').click();assert.equal(await page.locator('[data-template-advanced]').getAttribute('aria-expanded'),'true');
   await page.locator('#rtabs [data-tab=layout]').click();const move=page.locator('[data-template-shift][data-direction="1"]').first();const key=await move.getAttribute('data-template-shift');await move.click();
   const reordered=await page.evaluate(()=>RI.templateEditorGroups(RI.C()).map(g=>g.key));assert.notEqual(reordered[0],key);

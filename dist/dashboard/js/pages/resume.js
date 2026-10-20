@@ -41,13 +41,13 @@
     title: 'ساخت و ویرایش رزومه',
     render(ctx) {
       return RI.pageHead({ title: 'ساخت رزومه', desc:esc(RI.findTemplate('resume',RI.C().theme.resume).name),
-        actions: '<button type="button" class="btn btn--soft btn--sm show-sm" data-live>' + RI.icon('eye') + 'پیش‌نمایش زنده</button><a class="btn btn--ghost btn--sm" href="/dashboard/themes/" data-go="themes">' + RI.icon('palette') + 'ظاهر و قالب</a><button type="button" class="btn btn--ghost btn--sm" data-reset-page="resume">'+RI.icon('trash')+'پاک‌کردن رزومه</button>' }) +
+        actions: '<button type="button" class="btn btn--soft btn--sm" data-detach-preview aria-pressed="false">جداکردن پیش‌نمایش</button><button type="button" class="btn btn--soft btn--sm show-sm" data-live>' + RI.icon('eye') + 'پیش‌نمایش زنده</button><a class="btn btn--ghost btn--sm" href="/dashboard/themes/" data-go="themes">' + RI.icon('palette') + 'ظاهر و قالب</a><button type="button" class="btn btn--ghost btn--sm" data-reset-page="resume">'+RI.icon('trash')+'پاک‌کردن رزومه</button>' }) +
         '<div id="resume-journey"></div><div class="resume-tabs-host"></div><div class="editor"><div class="editor__main"><div class="segmented" role="tablist" aria-label="حالت ویرایش" id="rtabs"><button type="button" role="tab" data-tab="content" aria-selected="true">' + RI.icon('edit') + 'محتوا</button><button type="button" role="tab" data-tab="layout" aria-selected="false">' + RI.icon('section') + 'چیدمان بخش‌ها</button></div><div id="rbody"></div></div>' +
         '<aside class="editor__side" aria-label="پیش‌نمایش زندهٔ رزومه"><div class="sticky"><div id="rpv"></div></div></aside></div><section class="journey-quality" id="resume-advisor-shell" aria-label="راهنمای کیفیت رزومه"><div id="resume-advisor"></div></section>';
     },
     mount(root, ctx) {
       const mountOwner=RI.ownerId,mountSlot=RI.workspaceSlot,sameContext=()=>root.isConnected&&RI.ownerId===mountOwner&&RI.workspaceSlot===mountSlot;
-      let spec,STEPS;
+      let spec,STEPS,step=(ctx.opts&&ctx.opts.step)||'profile';
       const syncSpec=()=>{
         const c=RI.C();spec=RI.resumeSpec(c.theme.resume);
         if(RI.IMPORTED_TEMPLATES?.[c.theme.resume]){
@@ -59,13 +59,14 @@
             if(group.key==='home:67d220d')return {id:'socials',label:'شبکه‌های اجتماعی',icon:'globe',group:group.key};
             return {id:'template-'+group.key.replace(/:/g,'-'),label:group.label,icon:'section',group:group.key};
           });
-          for(const id of ['contacts','socials'])if(!STEPS.some(step=>step.id===id))STEPS.push({id,label:SECTION_META[id][0],icon:SECTION_META[id][1],req:id==='contacts',group:id==='contacts'&&spec.groups.some(g=>g.key==='home:contact')?'home:contact':undefined});
+          for(const id of ['contacts','socials'])if(!STEPS.some(step=>step.id===id))STEPS.push({id,label:SECTION_META[id][0],icon:SECTION_META[id][1],req:id==='contacts',group:undefined});
           STEPS.push({id:'template-home-compose',label:'فرم پیام',icon:'mail',group:'home:compose'},{id:'template',label:'منو، رنگ و تنظیمات کلی',icon:'settings',group:'general'});
         }else STEPS=[{id:'profile',label:'معرفی',icon:'user',req:true},...['contacts','socials',...c.sections.map(section=>section.key).filter(key=>!['contacts','socials'].includes(key))].filter(k=>spec.sections.includes(k)).map(k=>({id:k,label:SECTION_META[k][0],icon:SECTION_META[k][1],req:spec.requiredSections.includes(k)||k==='contacts'})),...(spec.fields.length||spec.settings.length?[{id:'template',label:'تنظیمات قالب',icon:'palette',req:true}]:[])];
+      if(['vista','satiar'].includes(c.theme.resume)&&(!RI.IMPORTED_TEMPLATES[c.theme.resume]||!RI.mountImportedEditor)&&step.startsWith('template-')&&!STEPS.some(s=>s.id===step))STEPS.push({id:step,label:'جزئیات قالب',icon:'section'});
       };syncSpec();
       const journey=RI.ResumeJourney.initial(ctx.opts),journeyHost=root.querySelector('#resume-journey');let storyStep='',lookCleanup,renderSerial=0,publishing=false;
-      let tab = 'content', step = (ctx.opts && ctx.opts.step) || 'profile';
-      if (!STEPS.some((s) => s.id === step)) step = 'profile';
+      let tab = 'content';
+      if (!STEPS.some((s) => s.id === step)){if(step.startsWith('template-')&&['vista','satiar'].includes(RI.C().theme.resume)&&(!RI.IMPORTED_TEMPLATES[RI.C().theme.resume]||!RI.mountImportedEditor))STEPS.push({id:step,label:'جزئیات قالب',icon:'section'});else step='profile';}
       const body = RI.$('#rbody', root);
       const tabsHost = RI.$('.resume-tabs-host', root), desktop = matchMedia('(min-width:1101px)');
       function placeOutline() {
@@ -75,7 +76,30 @@
       }
       desktop.addEventListener('change', placeOutline);
       RI.bindBranding(root);
-      const pv = new RI.Preview(RI.$('#rpv', root), { kind: 'resume', device: 'mobile', fitHeight: 200 });
+      const previewHost=RI.$('#rpv',root),templateId=RI.C().theme.resume;
+      let actualPreview=null,templateReady=!['vista','satiar'].includes(templateId)||(!!RI.IMPORTED_TEMPLATES[templateId]&&!!RI.mountImportedEditor),templateFailed=false,templateLoading=false,previewSection=null,previewPage='home';
+      const pv={refresh:()=>actualPreview?.refresh(false),setTemplatePage:id=>{previewPage=id;actualPreview?.setTemplatePage(id);},setTemplateSection:(key,label)=>{previewSection=[key,label];actualPreview?.setTemplateSection(key,label);},destroy:()=>actualPreview?.destroy()};
+      const detachCleanup=RI.detachPreviewToggle(root,root.querySelector('.editor__side'),root.querySelector('[data-detach-preview]'));
+      function pendingTemplate(){return '<div data-resume-template-loading>'+RI.sectionLoading('در حال دریافت بخش‌های اختصاصی قالب…')+'</div>';}
+      function failedTemplate(){return '<div class="section-loading"><p role="alert">قالب دریافت نشد؛ اطلاعات اصلی همچنان قابل ویرایش است.</p><button type="button" class="btn btn--soft" data-resume-template-retry>تلاش دوباره</button></div>';}
+      previewHost.innerHTML=pendingTemplate();
+      function startPreview(){if(!sameContext()||RI.C().theme.resume!==templateId)return;actualPreview?.destroy();actualPreview=new RI.Preview(previewHost,{kind:'resume',device:'mobile',fitHeight:200});actualPreview.setTemplatePage(previewPage);if(previewSection)actualPreview.setTemplateSection(...previewSection);}
+      async function loadTemplateParts(){
+        if(templateLoading||!sameContext())return;templateLoading=true;templateFailed=false;previewHost.innerHTML=pendingTemplate();const pendingPanel=body.querySelector('[data-template-pending-panel]');if(pendingPanel)pendingPanel.innerHTML=pendingTemplate();
+        try{
+          await Promise.all([RI.loadTemplates([templateId]),RI.loadResumeEditor()]);
+          if(!sameContext()||RI.C().theme.resume!==templateId)return;
+          templateReady=true;syncSpec();if(!STEPS.some(s=>s.id===step)){step='profile';paint(true);}
+          const focusedStep=document.activeElement?.closest('#resume-section-tabs [data-step]')?.dataset.step;const outline=root.querySelector('.resume-outline');if(outline){outline.outerHTML=stepper();placeOutline();if(focusedStep)root.querySelector('#resume-section-tabs [data-step="'+CSS.escape(STEPS.some(s=>s.id===focusedStep)?focusedStep:step)+'"]')?.focus({preventScroll:true});}
+          const panel=body.querySelector('#panel');
+          if(tab==='content'&&!journey.guided&&['profile','contacts','socials','projects'].includes(step)){
+            const section=STEPS.find(s=>s.id===step);if(section?.group&&panel&&!panel.querySelector('.template-workspace')){panel.insertAdjacentHTML('beforeend',RI.importedEditorHtml({section:true,title:'جزئیات '+section.label}));RI.mountImportedEditor(panel,pv,{group:section.group,legacy:section.group==='home:contact'});}
+          }else paint(true);
+          requestAnimationFrame(()=>requestAnimationFrame(startPreview));startAdvisor();
+        }catch(error){if(!sameContext()||RI.C().theme.resume!==templateId)return;templateFailed=true;previewHost.innerHTML=failedTemplate();body.querySelector('[data-template-pending-panel]')?.replaceChildren();const pending=body.querySelector('[data-template-pending-panel]');if(pending)pending.innerHTML=failedTemplate();}finally{templateLoading=false;}
+      }
+      root.addEventListener('click',event=>{if(event.target.closest('[data-resume-template-retry]'))loadTemplateParts();});
+      previewHost.addEventListener('click',event=>{if(event.target.closest('[data-resume-template-retry]')&&!root.contains(previewHost))loadTemplateParts();});
       let raf = 0;
       const refresh = () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(() => {syncSpec();pv.refresh(false);updateJourneyStatus();if(journey.guided&&journey.phase==='review'&&!publishing)paint(true);}); };
       const off = RI.on('change', refresh);
@@ -89,7 +113,7 @@
       function contentPanel(){
         const section=STEPS.find(s=>s.id===step);
         const base=step==='profile'?profilePanel():step==='contacts'?contactsPanel():isTemplateStep()?templatePanel():listPanel(step);
-        return base+(!isTemplateStep()&&section?.group?RI.importedEditorHtml({section:true,title:'جزئیات '+section.label}):'');
+        return base+(templateReady&&!isTemplateStep()&&section?.group?RI.importedEditorHtml({section:true,title:'جزئیات '+section.label}):'');
       }
       function fullProfilePanel() {
         const p = RI.C().profile;
@@ -132,6 +156,7 @@
       }
 
       function templatePanel() {
+        if(!templateReady)return '<div data-template-pending-panel>'+ (templateFailed?failedTemplate():pendingTemplate())+'</div>';
         if (RI.IMPORTED_TEMPLATES && RI.IMPORTED_TEMPLATES[RI.C().theme.resume]) return RI.importedEditorHtml({section:!journey.guided,title:STEPS.find(s=>s.id===step)?.label||'تنظیمات قالب'});
         const t = RI.findTemplate('resume', RI.C().theme.resume), values = RI.resumeValues(RI.C());
         return '<div class="panel"><div class="panel__head"><h2>اطلاعات و تنظیمات «' + esc(t.name) + '»</h2><p>اطلاعات هر قالب جدا ذخیره می‌شود؛ با تغییر قالب از بین نمی‌رود. فقط فیلدهایی که «عمومی» هستند نمایش داده می‌شوند.</p></div>' + ['fields', 'settings'].map(group => spec[group].map(f => {
@@ -207,12 +232,12 @@
       function setStep(s) {syncSpec();if(!STEPS.some(x=>x.id===s))return;step=s;tab='content';if(journey.guided){journey.phase=s==='profile'?'start':['contacts','socials'].includes(s)?'contact':'story';if(journey.phase==='story')storyStep=s;}RI.setRouteStep(journey.guided?journey.phase:s);paint();focusPanel();}
       function focusPanel(){const heading=body.querySelector('h2');if(heading){heading.tabIndex=-1;heading.focus({preventScroll:true});}if(innerWidth<1101)body.scrollIntoView({block:'start',behavior:'instant'});if(!RI.reduceMotion())body.animate([{opacity:.65,transform:'translateY(6px)'},{opacity:1,transform:'none'}],{duration:180,easing:'ease-out'});}
       function phase(id){if(!RI.ResumeJourney.stages.some(([key])=>key===id))return;journey.phase=id;storyStep='';tab='content';step=id==='contact'?'contacts':'profile';RI.setRouteStep(id);paint();focusPanel();}
-      const publicationReview=()=>{if(!journey.guided||!sameContext())return false;phase('review');return true;};RI.resumePublicationReview=publicationReview;
+      const publicationReview=()=>{if(!sameContext())return false;if(!templateReady){RI.toast('برای بررسی انتشار، دریافت قالب باید کامل شود.',{kind:'info'});return true;}if(!journey.guided)return false;phase('review');return true;};RI.resumePublicationReview=publicationReview;
       function bindMedia(){const panel=RI.$('#panel',root),p=RI.C().profile;for(const key of ['cover','avatar'])if(panel.querySelector('[data-img="'+key+'"]'))RI.bindImageField(panel,key,{set:v=>{if(!sameContext())return;p[key]=v;RI.touch(key);}});}
 
       function bindPanel() {
         const c = RI.C(), p = c.profile;
-        if (RI.IMPORTED_TEMPLATES?.[c.theme.resume]&&RI.$('.template-workspace',root)) RI.mountImportedEditor(RI.$('#panel',root),pv,{guided:journey.guided,group:journey.guided?undefined:STEPS.find(s=>s.id===step)?.group||'general',legacy:STEPS.find(s=>s.id===step)?.group==='home:contact'});
+        if (templateReady&&RI.IMPORTED_TEMPLATES?.[c.theme.resume]&&RI.$('.template-workspace',root)) RI.mountImportedEditor(RI.$('#panel',root),pv,{guided:journey.guided,group:journey.guided?undefined:STEPS.find(s=>s.id===step)?.group||'general',legacy:STEPS.find(s=>s.id===step)?.group==='home:contact'});
         if (step === 'profile') {
           const panel = RI.$('#panel', root);
           RI.delegate(panel,'click','[data-account-phone]',()=>RI.phoneDialog());
@@ -292,10 +317,14 @@
       RI.delegate(root, 'click', '[data-live]', () => RI.openPreview('resume'));
       paint();
       let advisorCleanup, mounted=true;
+      if(templateReady)requestAnimationFrame(()=>requestAnimationFrame(startPreview));else loadTemplateParts();
+      function startAdvisor(){if(advisorCleanup||!sameContext())return;
       if(!RI.advisorScripts)RI.advisorScripts=(async()=>{for(const name of ['advisor-core','advisor-ui'])await new Promise((resolve,reject)=>{const script=document.createElement('script');script.src='/dashboard/js/'+name+'.js?v='+encodeURIComponent(document.documentElement.dataset.assetVersion||'');script.onload=resolve;script.onerror=reject;document.head.append(script);});})().catch(error=>{RI.advisorScripts=null;throw error;});
       RI.advisorScripts.then(()=>{if(mounted)advisorCleanup=RI.mountAdvisor(RI.$('#resume-advisor',root),target=>{tab='content';setStep(target.section==='template'?'template':target.section);if(target.section==='template'){const field=spec.fields.find(f=>f.key===target.field),destination=STEPS.find(s=>s.group===field?.group);if(destination)setStep(destination.id);body.querySelector('#panel').dispatchEvent(new CustomEvent('ri:template-focus',{detail:target}));}else if(target.section!=='profile')openForm(target.itemId);else requestAnimationFrame(()=>{const input=RI.$('[data-p="'+target.field+'"]',root),details=input?.closest('details');if(details)details.open=true;input?.focus();});});}).catch(()=>{if(mounted)RI.$('#resume-advisor',root).textContent='راهنمای کیفیت دریافت نشد؛ ویرایش و انتشار همچنان در دسترس‌اند.';});
+      }
+      if(templateReady)startAdvisor();else RI.$('#resume-advisor',root).innerHTML=RI.sectionLoading('راهنمای کیفیت پس از دریافت قالب آماده می‌شود…');
       if (ctx.opts && ctx.opts.step) { /* رفتن مستقیم به مرحلهٔ پیشنهادی */ }
-      return () => {if(RI.resumePublicationReview===publicationReview)delete RI.resumePublicationReview;mounted=false;renderSerial++;lookCleanup?.();advisorCleanup?.();cancelAnimationFrame(raf);off();offSave(); pv.destroy(); desktop.removeEventListener('change', placeOutline); };
+      return () => {if(RI.resumePublicationReview===publicationReview)delete RI.resumePublicationReview;mounted=false;renderSerial++;lookCleanup?.();advisorCleanup?.();cancelAnimationFrame(raf);off();offSave(); detachCleanup();pv.destroy(); desktop.removeEventListener('change', placeOutline); };
     },
   });
 })();

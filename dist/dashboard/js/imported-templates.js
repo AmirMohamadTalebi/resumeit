@@ -3,6 +3,17 @@
   'use strict';
   const RI = window.RI, esc = RI.esc;
   RI.IMPORTED_TEMPLATES = Object.create(null);
+  const nodeReplacement=(id,template,node)=>{
+    const cls=node.attrs?.class||'';
+    if(node.tag==='header')return 'header';
+    if(id==='vista'&&(node.tag==='footer'||['mobileNavOverlay','mobile-nav-panel'].includes(node.attrs?.id)))return 'empty';
+    if(id==='satiar'&&cls.includes('elementor-element-8b3a5bb'))return 'empty';
+    if(id==='vista'&&cls.includes('vista-typed-wrapper'))return 'title';
+    if(/(?:^|\s)(?:testimonial|wp-active-we-testimonials|stat-card)(?:\s|$)/.test(cls)||node.group==='home:contact')return 'empty';
+    if(node.group&&template.groups.some(group=>group.key===node.group&&/(?:portfolio|نمونه کار|نمونه‌کار)/i.test(group.key+' '+group.label)))return 'projects';
+    return '';
+  };
+  const overriddenAttribute=(id,node,key)=>key==='href'&&id==='vista'&&['f76','f79'].includes(node.attrs?.href?.field)||key==='alt'&&node.tag==='img'&&((id==='vista'&&node.attrs?.src?.field==='f65')||(id==='satiar'&&node.attrs?.src?.field==='f68'));
   RI.orderTemplateChildren = (children, saved) => {
     const result=children.slice(),slots=result.map((node,index)=>({node,index})).filter(x=>x.node?.group),order=(saved||'').split(',');
     const sorted=slots.map(x=>x.node).sort((a,b)=>{const ai=order.indexOf(a.group),bi=order.indexOf(b.group);return (ai<0?99999:ai)-(bi<0?99999:bi);});
@@ -44,6 +55,24 @@
         ...Object.entries(t.colors).map(([color, key]) => ({ key, label: 'رنگ ' + color, type: 'color', default: color })),
         ...Object.entries(t.backgrounds || {}).map(([url, key]) => ({ key, label: 'تصویر زمینه ' + key.replace('background', ''), type: 'image', default: url, max: 3 * 1024 * 1024 })),
         ...[...t.groups,...(t.legacyGroups||[]).map(key=>({key,label:'',legacy:true}))].map(g => ({ key: 'show_' + g.key.replace(/:/g, '_'), label: 'نمایش ' + g.label, type: 'checkbox', default: true, group: g.key }))], collections: t.collections, groups: groups.concat({key:'home:compose',label:'فرم تماس از طریق ایمیل',page:'home'}), pages: t.pages,legacyPages:t.legacyPages||[] };
+  };
+  RI.effectiveTemplateSpec=id=>{
+    const spec=RI.importedSpec(id),template=RI.IMPORTED_TEMPLATES[id];if(!template)return spec;
+    const fields=new Set(),collections=new Set(),groups=new Set(['home:compose']);
+    const visit=node=>{
+      if(!node||typeof node!=='object')return;
+      if(nodeReplacement(id,template,node))return;
+      if(node.group)groups.add(node.group);
+      if(node.field)fields.add(node.field);
+      if(node.icon){fields.add(node.icon);visit(node.original);}
+      if(node.progress)fields.add(node.progress);
+      if(node.collection){collections.add(node.collection);visit(template.collections.find(collection=>collection.key===node.collection)?.node);return;}
+      for(const [key,ref]of Object.entries(node.attrs||{}))if(ref?.field&&!overriddenAttribute(id,node,key))fields.add(ref.field);
+      node.children?.forEach(visit);
+    };
+    visit(template.pages.home.node);
+    const effectiveGroups=spec.groups.filter(group=>groups.has(group.key));
+    return {...spec,fields:spec.fields.filter(field=>fields.has(field.key)||field.key.startsWith('compose_')),collections:spec.collections.filter(collection=>collections.has(collection.key)),groups:effectiveGroups,settings:spec.settings.filter(setting=>!setting.group||groups.has(setting.group)||(id==='vista'&&setting.key==='show_home_07793c2')).map(setting=>setting.group&&!effectiveGroups.some(group=>group.key===setting.group)?{...setting,group:undefined}:setting)};
   };
   RI.bindImportedPage = function (doc, openPage) {
     const root = doc.querySelector('.ri-imported');
@@ -120,9 +149,12 @@
     const renderNode = (n, overrides, suffix) => {
       if (typeof n === 'string') return esc(n);
       const cls=n.attrs?.class||'';
+      const replacement=nodeReplacement(id,t,n);
+      if(replacement==='header')return vistaHeader();
+      if(replacement==='empty')return '';
+      if(replacement==='title')return c.profile.title?'<p class="vista-profession">'+esc(c.profile.title)+'</p>':'';
+      if(replacement==='projects')return projects;
       if(satiar){
-        if(n.tag==='header')return vistaHeader();
-        if(cls.includes('elementor-element-8b3a5bb'))return '';
         if(cls.includes('elementor-element-063df28')&&!Array.from({length:10},(_,i)=>'r'+(i+4)).some(key=>values.collections?.[key]?.length))return '';
         if(cls.includes('elementor-element-ff29c48')&&!['f70','f73'].some(key=>Object.hasOwn(values.fields||{},key)))return '';
         if(cls.includes('elementor-element-6662a80')&&!['f256','f259'].some(key=>Object.hasOwn(values.fields||{},key)))return '';
@@ -134,15 +166,9 @@
       if(vista){
         if(vistaSections[n.group]&&!vistaGroupVisible(n.group))return '';
         if(n.attrs?.href?.field==='f76'&&!hasProjects)return '';
-        if(n.tag==='header')return vistaHeader();
-        if(n.tag==='footer'||['mobileNavOverlay','mobile-nav-panel'].includes(n.attrs?.id))return '';
         if(cls.includes('vista-hi-badge')){const key=cls.includes('badge-tl')?'f57':cls.includes('badge-tr')?'f60':'f63';if(!Object.hasOwn(values.fields||{},key)||!(values.fields[key]||'').trim())return '';}
         if(cls.includes('elementor-element-46a5646')&&!Object.hasOwn(values.fields||{},'f73'))return '';
-        if(cls.includes('vista-typed-wrapper'))return c.profile.title?'<p class="vista-profession">'+esc(c.profile.title)+'</p>':'';
       }
-      if(/(?:^|\s)(?:testimonial|wp-active-we-testimonials|stat-card)(?:\s|$)/.test(n.attrs?.class||''))return '';
-      if(n.group&&t.groups.some(g=>g.key===n.group&&/(?:portfolio|نمونه کار|نمونه‌کار)/i.test(g.key+' '+g.label)))return projects;
-      if(n.group==='home:contact')return '';
       if (n.field) return esc(value(n, overrides));
       if (n.icon) { const choice = value({field:n.icon},overrides); return choice && choice !== 'original' ? RI.icon(choice) : renderNode(n.original,overrides,suffix); }
       if (n.collection) {
@@ -153,11 +179,10 @@
       }
       if (n.group && settings['show_' + n.group.replace(/:/g, '_')] === false) return '';
       const nodeAttrs=Object.assign({},n.attrs);if(n.progress)nodeAttrs.style=(nodeAttrs.style||'')+';width:'+(parseInt(value({field:n.progress},overrides),10)||0)+'%';
-      if(n.tag==='img'){nodeAttrs.loading='lazy';nodeAttrs.decoding='async';if((vista&&nodeAttrs.src?.field==='f65')||(satiar&&nodeAttrs.src?.field==='f68')){nodeAttrs.loading='eager';nodeAttrs.fetchpriority='high';nodeAttrs.alt=c.profile.avatar&&c.profile.name?'تصویر '+c.profile.name:'تصویر نمونهٔ قالب';}else if(satiar&&(!nodeAttrs.alt||/^(asset|resume-)/i.test(typeof nodeAttrs.alt==='string'?nodeAttrs.alt:value(nodeAttrs.alt))))nodeAttrs.alt='';}
+      if(n.tag==='img'){nodeAttrs.loading='lazy';nodeAttrs.decoding='async';if(overriddenAttribute(id,n,'alt')){nodeAttrs.loading='eager';nodeAttrs.fetchpriority='high';nodeAttrs.alt=c.profile.avatar&&c.profile.name?'تصویر '+c.profile.name:'تصویر نمونهٔ قالب';}else if(satiar&&(!nodeAttrs.alt||/^(asset|resume-)/i.test(typeof nodeAttrs.alt==='string'?nodeAttrs.alt:value(nodeAttrs.alt))))nodeAttrs.alt='';}
       if(satiar&&n.group&&['home:about','home:resume'].includes(n.group))nodeAttrs.id='ri-satiar-'+n.group.split(':')[1];
       if(satiar&&n.tag==='a'&&nodeAttrs.href?.field){const key=nodeAttrs.href.field;if(['f52','f85'].includes(key)&&!Object.hasOwn(values.fields||{},key))nodeAttrs.href='#ri-contact';if(['f56','f89'].includes(key)&&!Object.hasOwn(values.fields||{},key)){if(!hasProjects)return '';nodeAttrs.href='#ri-projects';}}
-      if(vista&&n.tag==='a'&&nodeAttrs.href?.field==='f76')nodeAttrs.href='#ri-projects';
-      if(vista&&n.tag==='a'&&nodeAttrs.href?.field==='f79')nodeAttrs.href='#ri-contact';
+      if(overriddenAttribute(id,n,'href'))nodeAttrs.href=nodeAttrs.href.field==='f76'?'#ri-projects':'#ri-contact';
       if(vista&&vistaSections[n.group])nodeAttrs.id='ri-vista-'+vistaSections[n.group][0];
       const attrs = Object.entries(nodeAttrs).map(([key, raw]) => {
         let v = raw;

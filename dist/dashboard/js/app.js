@@ -100,6 +100,7 @@
     }));
     return pageLoads.get(path);
   }
+  RI.loadResumeEditor=()=>RI.mountImportedEditor?Promise.resolve():loadScript('/dashboard/js/template-editor.js');
   async function navigate(id, opts, back=false) {
     if (!NAV.some(g => g.items.some(i => i[0] === id))) return;
     if(bootstrapping){location.assign(RI.routeUrl(id,opts));return;}
@@ -110,9 +111,9 @@
       const allowed=await navigationGuard;if(!latest())return;
       if(!allowed){if(back)history.replaceState(null,'',previous);return;}
       RI.$('#routeLoading')?.remove();
-      const pending=document.createElement('div');pending.id='routeLoading';pending.innerHTML=RI.sectionLoading('در حال آماده‌سازی بخش…');RI.$('#view').before(pending);RI.$('#view').inert=true;
+      if(!RI.pages[id]||(id==='resume'&&!RI.ResumeJourney)){RI.$('#topTitle').setAttribute('aria-busy','true');RI.$('#view').inert=true;}
       if(id==='resume') {
-        await Promise.all([!RI.ResumeJourney?loadScript('/dashboard/js/resume-journey.js'):null,!RI.mountImportedEditor?loadScript('/dashboard/js/template-editor.js'):null,RI.loadTemplates([RI.C().theme.resume])]);
+        if(!RI.ResumeJourney)await loadScript('/dashboard/js/resume-journey.js');
       }
       if(!RI.pages[id]) await loadScript('/dashboard/js/pages/'+id+'.js');
       if(!latest())return;
@@ -124,7 +125,7 @@
       paintSave();
       if(['home','links','stats'].includes(id)&&RI.statsRows===null&&!RI.statsLoading)RI.loadStats();
     } catch(e) { if(!latest())return;if(back)history.replaceState(null,'',previous);RI.toast(e.message,{kind:'error'}); }
-    finally { if(latest()){RI.$('#routeLoading')?.remove();RI.$('#view').inert=false;} }
+    finally { if(latest()){RI.$('#routeLoading')?.remove();RI.$('#topTitle').removeAttribute('aria-busy');RI.$('#view').inert=false;} }
   }
 
   async function render(id, force) {
@@ -250,7 +251,7 @@
     async function openInitialPage(){
       const epoch=navigationEpoch,host=RI.$('#view');host.innerHTML=RI.sectionLoading(document.body.dataset.page==='resume'?'در حال آماده‌سازی ویرایشگر و قالب رزومه…':'در حال آماده‌سازی صفحه…');
       try{
-        if(document.body.dataset.page==='resume')await Promise.all([!RI.ResumeJourney?loadScript('/dashboard/js/resume-journey.js'):null,!RI.mountImportedEditor?loadScript('/dashboard/js/template-editor.js'):null,RI.loadTemplates([RI.C().theme.resume])]);
+        if(document.body.dataset.page==='resume'&&!RI.ResumeJourney)await loadScript('/dashboard/js/resume-journey.js');
         if(!host.isConnected||epoch!==navigationEpoch)return;
         await render(document.body.dataset.page);
       }catch(error){if(!host.isConnected||epoch!==navigationEpoch)return;host.innerHTML='<section class="section-loading"><p role="alert">'+RI.esc(error.message)+'</p><button type="button" class="btn btn--soft" data-initial-retry>تلاش دوباره</button></section>';host.querySelector('[data-initial-retry]').addEventListener('click',openInitialPage,{once:true});}

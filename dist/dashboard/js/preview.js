@@ -170,7 +170,7 @@
       const horizontal=style=>['paddingLeft','paddingRight','borderLeftWidth','borderRightWidth'].reduce((sum,key)=>sum+(parseFloat(style[key])||0),0);
       const w = Math.max(20,(stage.clientWidth || host.clientWidth || 360)-horizontal(stageStyle)-horizontal(frameStyle));
       let k = Math.min(1, w / nat[0]);
-      if (o.fitHeight) k = Math.min(k, Math.max(0.05, (window.innerHeight - o.fitHeight) / (nat[1] + 40)));
+      if (o.fitHeight) k = Math.min(k, Math.max(0.05, ((host.ownerDocument.defaultView?.innerHeight || window.innerHeight) - o.fitHeight) / (nat[1] + 40)));
       k=Math.max(0.05,k);
       if (o.maxScale) k = Math.min(k, o.maxScale);
       scaler.style.width = nat[0] + 'px'; scaler.style.height = nat[1] + 'px';
@@ -234,6 +234,35 @@
   };
 
   /* ---------- بندانگشتی قالب‌ها برای گالری ---------- */
+  RI.detachPreviewToggle = (root, side, button) => {
+    const marker=document.createComment('preview-position'),editor=side.closest('.editor');
+    side.before(marker);
+    let popup=null,disposed=false;
+    const label=()=>{button.textContent=popup?'بازگرداندن پیش‌نمایش':'نمایش پیش‌نمایش در پنجرهٔ جدا';button.setAttribute('aria-pressed',String(!!popup));};
+    const restore=()=>{
+      const previous=popup;popup=null;
+      if(marker.parentNode)marker.after(side);
+      editor?.classList.remove('is-preview-detached');label();
+      if(previous&&!previous.closed){previous.removeEventListener('pagehide',restore);previous.close();}
+      window.dispatchEvent(new Event('resize'));
+    };
+    const toggle=()=>{
+      if(disposed)return;
+      if(popup){restore();return;}
+      const opened=window.open('about:blank','_blank','popup,width=900,height=900');
+      if(!opened){RI.toast('مرورگر پنجرهٔ پیش‌نمایش را مسدود کرد؛ اجازهٔ بازشدن پنجره را بده و دوباره تلاش کن.',{kind:'info'});return;}
+      try{
+        const doc=opened.document;doc.title='پیش‌نمایش زندهٔ رزومه';doc.documentElement.lang='fa';doc.documentElement.dir='rtl';
+        document.querySelectorAll('link[rel=stylesheet]').forEach(source=>{const link=doc.createElement('link');link.rel='stylesheet';link.href=source.href;doc.head.append(link);});
+        const style=doc.createElement('style');style.textContent='body{margin:0;padding:20px;min-width:0}.editor__side{display:block!important;width:100%;max-width:100%;padding:0}.editor__side .sticky{position:static}.pvhost{width:100%}';doc.head.append(style);
+        doc.body.append(side);popup=opened;editor?.classList.add('is-preview-detached');label();opened.addEventListener('pagehide',restore);opened.focus();
+      }catch{opened.close();restore();RI.toast('پنجرهٔ پیش‌نمایش باز نشد؛ دوباره تلاش کن.',{kind:'error'});}
+    };
+    label();button.addEventListener('click',toggle);
+    window.addEventListener('pagehide',restore);
+    return ()=>{disposed=true;button.removeEventListener('click',toggle);window.removeEventListener('pagehide',restore);restore();marker.remove();};
+  };
+
   RI.thumbHtml = function (kind, tplId, theme) {
     return '<img src="/brand/template-thumbs/'+kind+'-'+tplId+'.jpg" alt="نمای قالب '+esc(RI.findTemplate(kind,tplId)?.name||tplId)+'" loading="lazy" decoding="async" width="480" height="343" style="width:100%;height:100%;object-fit:cover;object-position:top">';
   };

@@ -99,7 +99,7 @@
       return '<p class="field__hint">' + (RI.workspaceSlot===3?'جایگاه فعال: آدرس مسیری · فقط لینک':'جایگاه فعال: زیردامنهٔ '+RI.fa(RI.workspaceSlot<3?RI.workspaceSlot:RI.workspaceSlot-1)) + '</p><section class="hero' + (RI.workspaceSlot===3?' hero--links':'') + '"><div class="hero__text"><div class="eyebrow">' + RI.icon('sparkle') + 'میز کار شما</div><h1 id="page-title" tabindex="-1">' + t.h + '</h1><p>' + t.p + '</p>' +
         '<div class="hero__cta">' + (next ? '<a class="btn btn--primary btn--lg" href="' + RI.routeUrl(next.route) + '" data-go="' + next.route + '"' + (next.step ? ' data-step="' + next.step + '"' : '') + (next.tab ? ' data-tab="' + next.tab + '"' : '') + (next.anchor ? ' data-anchor="' + next.anchor + '"' : '') + '>' + RI.icon('zap') + (empty ? (RI.workspaceSlot===3?'تکمیل: '+esc(next.label):'شروع ساخت پروفایل') : 'ادامه: ' + esc(next.label)) + '</a>' : '<button type="button" class="btn btn--primary btn--lg" data-publish="' + kind + '">' + RI.icon('rocket') + 'انتشار صفحه</button>') +
         '<button type="button" class="btn btn--soft btn--lg" data-preview="' + kind + '">' + RI.icon('eye') + 'پیش‌نمایش</button></div>' +
-        '<div class="hero__progress">' + RI.ring(comp.pct, 96, 9) + '<div><b>مسیر ساخت هویت</b><small>درصد تکمیل محتوا؛ شرایط انتشار در بخش آمادگی بررسی می‌شود</small></div></div></div>' + stage() + '</section>' +
+        '<div class="hero__progress">' + RI.ring(comp.pct, 96, 9) + '<div><b>مسیر ساخت هویت</b><small>درصد تکمیل محتوا؛ شرایط انتشار در بخش آمادگی بررسی می‌شود</small></div></div></div>' + (RI.workspaceSlot===3?'':'<div data-home-stage>'+RI.sectionLoading('در حال آماده‌سازی نمای صفحه‌ها…')+'</div>') + '</section>' +
         '<section class="block"><div class="block__head"><h2>مسیر تو</h2><p>قدم‌های تکمیل صفحه و بررسی آمادگی انتشار</p></div>' + (RI.workspaceSlot===3?'':journey(comp)) +
         '<details class="allsteps"><summary>' + RI.icon('check') + 'فهرست قدم‌ها (' + RI.fa(comp.items.filter((i) => i.done).length) + ' از ' + RI.fa(comp.items.length) + ')' + RI.icon('chevD') + '</summary>' + checklist(comp) + '</details></section>' +
         '<section class="block"><div class="block__head"><h2>وضعیت صفحه‌ها</h2><p>' + (RI.workspaceSlot===3?'صفحهٔ لینک‌های جایگاه فعال':'دو صفحهٔ مستقل در جایگاه فعال') + '</p></div><div class="pstat-grid">' + RI.pageKinds().map(pageStatus).join('') + '</div></section>' +
@@ -109,6 +109,7 @@
         '<section class="block">' + guide(empty || comp.pct < 40) + '</section>';
     },
     mount(root) {
+      let stageFrame=requestAnimationFrame(()=>{stageFrame=requestAnimationFrame(()=>{const host=root.querySelector('[data-home-stage]');if(!root.isConnected||!host)return;host.innerHTML=stage();fitMini(root);});});
       fitMini(root);
       const ro = new ResizeObserver(() => fitMini(root));
       ro.observe(root);
@@ -116,7 +117,7 @@
       RI.delegate(root, 'click', '[data-publish]', () => RI.go('publish'));
       RI.delegate(root,'click','[data-retry-stats]',()=>RI.loadStats());
       const offStats=RI.on('stats',()=>{ RI.$('#homeStats',root).innerHTML=sampleStrip(); });
-      return () => {offStats(); ro.disconnect();};
+      return () => {cancelAnimationFrame(stageFrame);offStats(); ro.disconnect();};
     },
   });
 })();

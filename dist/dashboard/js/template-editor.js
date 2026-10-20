@@ -16,7 +16,7 @@
       '<div id="template-items"></div><div id="template-controls" class="template-fields"></div><div id="template-pager" class="template-pager"></div><div id="template-review" class="template-review"></div></section>';
   };
   RI.mountImportedEditor = function (root, preview, options={}) {
-    const c = RI.C(), id = c.theme.resume, spec = RI.importedSpec(id),owner=RI.ownerId,slot=RI.workspaceSlot,guided=options.guided===true;
+    const c = RI.C(), id = c.theme.resume, spec = RI.effectiveTemplateSpec(id),owner=RI.ownerId,slot=RI.workspaceSlot,guided=options.guided===true;
     const current=()=>root.isConnected&&owner===RI.ownerId&&slot===RI.workspaceSlot&&RI.C()===c;
     const uploads=new Map();
     const groupLabel=RI.templateGroupLabel;
