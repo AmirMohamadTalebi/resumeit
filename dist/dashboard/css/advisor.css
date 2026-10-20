@@ -23,3 +23,5 @@
 .field-help-details dt{font-weight:700;margin-block-start:18px}
 .field-help-details dt:first-child{margin-block-start:0}
 .field-help-details dd{margin:4px 0 0;white-space:pre-wrap}
+
+.field-help-tooltip{position:fixed;z-index:10020;max-width:min(300px,calc(100vw - 16px));padding:12px 14px;border-radius:12px;background:var(--ink);color:#fff;box-shadow:var(--sh-2);font-size:12px;line-height:1.9;direction:rtl;overflow-wrap:anywhere}

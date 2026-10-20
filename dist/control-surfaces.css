@@ -17,8 +17,8 @@ body .admin-main .btn-primary:not(:disabled):hover,body .admin-main .btn-primary
 body .admin-main .btn-error:not(:disabled):is(:hover,:focus-visible){background:#803b4b;color:#fff;border-color:#642838}
 .public-account__logout:hover,.public-account__logout:focus-visible{background:#f1d9df;color:#803b4b;box-shadow:inset 0 0 0 1px #b16d7b}
 /* State contrast belongs to shared controls, not to the previewed template artwork. */
-:is(.app,.staff-main) .btn:not(:disabled):not(.btn--primary,.btn--ice,.btn--danger,.btn--danger-soft,.btn-primary):is(:hover,:focus-visible),.app :is(.workspace-tabs button,.tabs button,.segmented button,.filter-chip,.outline-item,.icon-picker button):not(:disabled):is(:hover,:focus-visible),.app .menu[role=menu] button:is(:hover,:focus-visible),body .admin-profile-menu a:is(:hover,:focus-visible){background:#365f73;color:#fff;box-shadow:inset 0 0 0 1px #264b5d,0 4px 12px #23495d26}
-.app .outline-item:is(:hover,:focus-visible) :is(.outline-item__label,.outline-item__icon,.outline-item__state,small),.app .menu[role=menu] button:is(:hover,:focus-visible)>svg{color:#fff;background:transparent}
+:is(.app,.staff-main) .btn:not(:disabled):not(.btn--primary,.btn--ice,.btn--danger,.btn--danger-soft,.btn-primary):is(:hover,:focus-visible),.app :is(.workspace-tabs button,.tabs button,.segmented button,.filter-chip,.icon-picker button):not(:disabled):is(:hover,:focus-visible),.app .menu[role=menu] button:is(:hover,:focus-visible),body .admin-profile-menu a:is(:hover,:focus-visible){background:#365f73;color:#fff;box-shadow:inset 0 0 0 1px #264b5d,0 4px 12px #23495d26}
+.app .menu[role=menu] button:is(:hover,:focus-visible)>svg{color:#fff;background:transparent}
 .staff-main .ticket-row:is(:hover,:focus-visible){background:#d0e3ec;box-shadow:inset 0 0 0 1px #6b95a8}
 .staff-main .ticket-row:is(:hover,:focus-visible) :is(small,time){color:#284d60}
 .app .switch input:checked~.switch__track{background:#346777}

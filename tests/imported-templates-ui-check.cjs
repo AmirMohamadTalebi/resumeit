@@ -27,27 +27,27 @@ const {chromium}=require('playwright'),{createServer}=require('../src/http/serve
    }
    await page.setViewportSize({width:1440,height:1000});
    for(const name of Object.keys(RI.IMPORTED_TEMPLATES[template].pages)){await page.goto(base+'/u/design-test/?page='+name);assert.equal(await page.locator('.ri-imported').getAttribute('data-template-page'),name);}
-   await page.goto(base+'/dashboard/resume/');await page.locator('[data-step="template"]').click();await page.locator('#template-page').waitFor();
-   const groups=await page.locator('#template-section option').evaluateAll(options=>options.map(x=>({value:x.value,text:x.textContent})));assert(groups.length>1);
-   const group=RI.IMPORTED_TEMPLATES[template].collections.find(x=>x.group.startsWith('home:')).group;await page.locator('#template-section').selectOption(group);
+   await page.goto(base+'/dashboard/resume/?step=profile');await page.locator('#resume-section-tabs').waitFor();
+   const group=RI.IMPORTED_TEMPLATES[template].collections.find(x=>x.group.startsWith('home:')&&!x.group.endsWith(':body')&&!/portfolio|07793c2/.test(x.group)).group;
+   const openGroup=async()=>{await page.locator('#resume-section-tabs [data-template-group="'+group+'"]').click();};await openGroup();
    const collection=RI.IMPORTED_TEMPLATES[template].collections.find(x=>x.group===group);
    await page.locator('#template-collection').selectOption(collection.key);
    const field=page.locator('#template-controls input[data-ttype="text"],#template-controls textarea[data-ttype="textarea"]').first();
    const fieldKey=await field.getAttribute('data-tfield');await field.fill('متن شخصی‌سازی‌شده');
    const confirmed=page.waitForResponse(r=>r.url().includes('/api/dashboard/advisor')&&r.request().method()==='POST');await page.locator('[data-advisor-confirm="'+fieldKey+'"]').click();assert.equal((await confirmed).status(),200);const advisor=await(await page.request.get(base+'/api/dashboard/advisor')).json();assert(Object.entries(advisor.state.confirmations).some(([target,digest])=>target.endsWith(':'+fieldKey)&&digest==='sha256:'+require('node:crypto').createHash('sha256').update('متن شخصی‌سازی‌شده').digest('hex')),'template confirmation binds exact text, field and repeated row');
-   assert.equal(await page.locator('[data-tfield="reviewed"]').isChecked(),false);
+   assert.equal(await page.evaluate(()=>RI.resumeValues(RI.C()).settings.reviewed),false);
    assert((await page.locator('#template-controls > .field').count())<=8,'bounded fields');
    await page.locator('[data-tadd]').click();assert.equal(await page.locator('#template-row option').count(),2);
    await page.locator('[data-tmove="-1"]').click();assert.equal(await page.locator('#template-row').inputValue(),'0');
    await page.locator('[data-tremove]').click();assert.equal(await page.locator('#template-row option').count(),1);
-   await page.locator('[data-tcategory="media"]').click();assert.equal(await page.locator('#template-controls [data-ttype="text"]').count(),0);
-   await page.locator('[data-tcategory="all"]').click();
+   assert.equal(await page.locator('.template-categories').isVisible(),false);
+   await page.locator('#resume-section-tabs [data-step=template]').click();
    await page.locator('[data-tfield="reviewed"]').check();await page.locator('#saveBtn').click();await page.locator('#saveState[data-state="saved"]').waitFor();
    await page.evaluate(()=>scrollTo(0,0));await page.screenshot({path:'artifacts/imported-templates/editor-'+template+'.png',fullPage:false});
    for(const width of [320,390]){await page.setViewportSize({width,height:850});assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'editor overflow');await page.screenshot({path:'artifacts/imported-templates/editor-'+template+'-'+width+'.png'});}
    await page.setViewportSize({width:1440,height:1000});
    const frame=page.frameLocator('.device__vp iframe');assert((await frame.locator('body').innerText()).includes('متن شخصی‌سازی‌شده'));
-   await page.reload();await page.locator('[data-step="template"]').click();await page.locator('#template-section').selectOption(group);await page.locator('#template-collection').selectOption(collection.key);assert.equal(await page.locator('#template-controls [data-tfield="'+fieldKey+'"]').first().inputValue(),'متن شخصی‌سازی‌شده');
+   await page.reload();await openGroup();await page.locator('#template-collection').selectOption(collection.key);assert.equal(await page.locator('#template-controls [data-tfield="'+fieldKey+'"]').first().inputValue(),'متن شخصی‌سازی‌شده');
   }
   assert.deepEqual(errors,[]);assert.deepEqual(failed,[]);console.log('PASS: all pages load, responsive designs, local assets, isolated live preview, per-section editing, repeated-item add/remove, review reset and saved reload.');
  }finally{await browser?.close();await new Promise(r=>server.close(r));store.close();}

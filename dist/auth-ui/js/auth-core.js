@@ -45,7 +45,7 @@
       const providers=await RIA.providersPromise;
       if(!container.isConnected)return;
       const buttons=[['google','گوگل'],['github','گیت‌هاب']];
-      container.innerHTML=buttons.length?'<div class="or">یا با حساب دیگه‌ات</div><div class="social">'+buttons.map(([key,name])=>providers[key]===true?'<a class="btn btn--social" data-social="'+key+'" href="/api/auth/'+key+'/start">'+RIA.icon(key)+name+'</a>':'<button class="btn btn--social" type="button" disabled title="ورود با این سرویس فعلاً آماده نیست">'+RIA.icon(key)+name+'</button>').join('')+'</div>':'';
+      container.innerHTML=buttons.length?'<div class="or">یا با حساب دیگه‌ات</div><div class="social">'+buttons.map(([key,name])=>providers[key]===true?'<a class="btn btn--social" data-social="'+key+'" href="/api/auth/'+key+'/start?next='+encodeURIComponent(RIA.destination())+'">'+RIA.icon(key)+name+'</a>':'<button class="btn btn--social" type="button" disabled title="ورود با این سرویس فعلاً آماده نیست">'+RIA.icon(key)+name+'</button>').join('')+'</div>':'';
       if(buttons.some(([key])=>providers[key]!==true))container.insertAdjacentHTML('beforeend','<p class="field__hint">روش‌های غیرفعال فعلاً آماده نیستند؛ با شماره موبایل وارد شو.</p>');container.hidden=false;container.addEventListener('click',e=>{if(e.target.closest('[data-social]')&&!RIA.requireTerms(root))e.preventDefault();});
     } catch {container.hidden=true;}
   };
@@ -87,6 +87,18 @@
     if (!RIA.reduce()) e.animate([{ transform: 'translateX(-6px)' }, { transform: 'translateX(6px)' }, { transform: 'none' }], { duration: 260 });
   };
   RIA.handleError=(root,error)=>{RIA.formError(root,error.message);RIA.toast(error.message,'error');};
+  RIA.expiredProof = (root, error, restart) => {
+    RIA.handleError(root, error);
+    if (error.code !== 'expired') return;
+    root.querySelectorAll('input[autocomplete=new-password]').forEach(input => { input.value = ''; input.dispatchEvent(new Event('input')); });
+    root.querySelector('[type=submit]').disabled = true;
+    if (root.querySelector('[data-reverify]')) return;
+    const button = document.createElement('button');
+    button.type = 'button'; button.className = 'btn btn--soft btn--block';
+    button.dataset.reverify = ''; button.textContent = 'تأیید دوبارهٔ شماره و دریافت کد تازه';
+    button.addEventListener('click', restart); root.append(button); button.focus();
+  };
+
   RIA.fieldError = function (field, msg) {
     const g = field.closest('.field'), e = $('.field__error', g), inp = $('input', g);
     if (msg) { e.innerHTML = RIA.icon('alert') + RIA.esc(msg); e.hidden = false; inp.setAttribute('aria-invalid', 'true'); }
@@ -107,7 +119,7 @@
   /* ---------- رمز عبور ---------- */
   RIA.passField = (o) => {
     const id = o.id || 'pass';
-    return '<div class="field"><label class="field__label" for="' + id + '">' + RIA.esc(o.label || 'رمز عبور') + (o.extra || '') + '</label><div class="inputwrap">' + RIA.icon('lock') + '<input class="input" id="' + id + '" name="' + id + '" type="password" maxlength="128" dir="ltr" autocomplete="' + (o.auto || 'current-password') + '" aria-describedby="' + id + '_e"><button type="button" class="eye" data-eye="' + id + '" aria-label="نمایش رمز" aria-pressed="false">' + RIA.icon('eye') + '</button></div><div class="field__error" id="' + id + '_e" hidden></div></div>';
+    return '<div class="field"><div class="field__label"><label for="' + id + '">' + RIA.esc(o.label || 'رمز عبور') + '</label>' + (o.extra || '') + '</div><div class="inputwrap">' + RIA.icon('lock') + '<input class="input" id="' + id + '" name="' + id + '" type="password" maxlength="128" dir="ltr" autocomplete="' + (o.auto || 'current-password') + '" aria-describedby="' + id + '_e"><button type="button" class="eye" data-eye="' + id + '" aria-label="نمایش رمز" aria-pressed="false">' + RIA.icon('eye') + '</button></div><div class="field__error" id="' + id + '_e" hidden></div></div>';
   };
   RIA.bindEyes = function (root) {
     $$('[data-eye]', root).forEach((b) => b.addEventListener('click', () => { const i = $('#' + b.dataset.eye, root), show = i.type === 'password'; i.type = show ? 'text' : 'password'; b.setAttribute('aria-pressed', show); b.setAttribute('aria-label', show ? 'پنهان کردن رمز' : 'نمایش رمز'); b.innerHTML = RIA.icon(show ? 'eyeOff' : 'eye'); i.focus(); }));
@@ -157,7 +169,7 @@
   /* شمارندهٔ ارسال مجدد */
   RIA.resend = function (root, onResend) {
     const el = $('#resend', root); let left = RIA.cfg.otpResendSeconds, t;
-    const draw = () => { el.innerHTML = left > 0 ? 'ارسال دوبارهٔ کد تا <b class="num">' + RIA.fa(String(Math.floor(left / 60)).padStart(2, '0') + ':' + String(left % 60).padStart(2, '0')) + '</b> دیگر' : '<button type="button" class="link" id="resendBtn">ارسال دوبارهٔ کد</button>'; const b = $('#resendBtn', el); if (b) b.addEventListener('click', async () => { b.disabled = true; try { await onResend(); left = RIA.cfg.otpResendSeconds; start(); draw(); RIA.toast('درخواست کد تازه ثبت شد', 'success'); } catch (e) { RIA.toast(e.message, 'error'); draw(); } }); };
+    const draw = () => { el.innerHTML = left > 0 ? 'ارسال دوبارهٔ کد تا <b class="num">' + String(Math.floor(left / 60)).padStart(2, '0').replace(/\d/g, d => '۰۱۲۳۴۵۶۷۸۹'[d]) + ':' + String(left % 60).padStart(2, '0').replace(/\d/g, d => '۰۱۲۳۴۵۶۷۸۹'[d]) + '</b> دیگر' : '<button type="button" class="link" id="resendBtn">ارسال دوبارهٔ کد</button>'; const b = $('#resendBtn', el); if (b) b.addEventListener('click', async () => { b.disabled = true; try { await onResend(); left = RIA.cfg.otpResendSeconds; start(); draw(); RIA.toast('درخواست کد تازه ثبت شد', 'success'); } catch (e) { RIA.toast(e.message, 'error'); draw(); } }); };
     const start = () => { clearInterval(t); t = setInterval(() => { if (left > 0) { left--; draw(); } else clearInterval(t); }, 1000); };
     draw(); start();
     return { stop: () => clearInterval(t) };
@@ -169,13 +181,13 @@
     RIA.swap(view, RIA.successHtml({ icon: 'check', title: o.title, text: o.text, note: o.note, actions: '<button type="button" class="btn btn--primary btn--block" id="goDash">' + RIA.icon('rocket') + 'ورود به داشبورد</button>' }), (r) => {
       $('#goDash', r).addEventListener('click', (e) => {
         e.currentTarget.disabled=true;
-        window.location.assign(RIA.cfg.dashboardUrl);
+        window.location.assign(RIA.destination());
       });
     });
   };
 
   /* ---------- لودینگ اولیهٔ صفحه ---------- */
-  RIA.boot = function(root,render){sessionStorage.removeItem('ri-panel-choice');render();fetch('/api/auth/session').then(r=>r.json()).then(s=>{if(s.restricted)location.replace('/account-status/');}).catch(()=>{});const url=new URL(location.href),error=url.searchParams.get('social_error');if(error){const messages={unavailable:'این روش ورود هنوز تنظیم نشده',invalid:'درخواست ورود معتبر نبود، دوباره امتحان کن',expired:'زمان ورود تموم شد، دوباره امتحان کن',cancelled:'ورود رو لغو کردی، می‌تونی دوباره امتحان کنی',limited:'چند بار تلاش کردی، یه کم صبر کن',failed:'اتصال به سرویس ورود انجام نشد، دوباره امتحان کن'};RIA.toast(messages[error]||messages.failed,'error');url.searchParams.delete('social_error');history.replaceState(null,'',url.pathname+url.search+url.hash);}};
+  RIA.boot = function(root,render){sessionStorage.removeItem('ri-panel-choice');render();fetch('/api/auth/session').then(r=>r.json()).then(s=>{if(s.restricted){location.replace('/account-status/');return;}if(s.user&&location.pathname==='/login/'&&!root.parentElement.querySelector('[data-current-account]')){const box=document.createElement('div');box.className='note';box.dataset.currentAccount='';const link=document.createElement('a');link.className='link';link.href=RIA.destination();link.textContent='ادامه با حساب فعلی';box.append(link);root.before(box);}}).catch(()=>{});const url=new URL(location.href),error=url.searchParams.get('social_error');if(error){const messages={unavailable:'این روش ورود هنوز تنظیم نشده',invalid:'درخواست ورود معتبر نبود، دوباره امتحان کن',expired:'زمان ورود تموم شد، دوباره امتحان کن',cancelled:'ورود رو لغو کردی، می‌تونی دوباره امتحان کنی',limited:'چند بار تلاش کردی، یه کم صبر کن',failed:'اتصال به سرویس ورود انجام نشد، دوباره امتحان کن'};RIA.toast(messages[error]||messages.failed,'error');url.searchParams.delete('social_error');history.replaceState(null,'',url.pathname+url.search+url.hash);}};
 
   /* ---------- پوستهٔ مشترک صفحه ---------- */
   RIA.shell = function (o) {

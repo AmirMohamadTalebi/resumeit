@@ -36,7 +36,7 @@ document.addEventListener('DOMContentLoaded', function () {
       $('#f', root).addEventListener('submit', async (e) => {
         e.preventDefault(); if(sh.card.dataset.pending)return; RIA.formError($('#f', root), ''); if (!np.validate()) return;
         try { await RIA.run(sh.card, () => RIA.api.setPassword(mobile, np.value(), 'signup'), 'در حال ساخت حساب…', $('#sb', root), true); RIA.enterDashboard(sh.card, sh.view, { title: 'حسابت ساخته شد 🎉', text: 'خوش آمدی! حالا می‌تونی رزومه و صفحه لینکت رو بسازی' }); }
-        catch (er) { if (er.code === 'weak') np.setError(er.message); else RIA.handleError($('#f', root), er); }
+        catch (er) { if (er.code === 'weak') np.setError(er.message); else RIA.expiredProof($('#f', root), er, step1); }
       });
     });
   }

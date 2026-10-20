@@ -233,6 +233,7 @@
   /* ---------- پیشرفت و چک‌لیست ---------- */
   RI.completion = function () {
     const c = RI.C(), p = c.profile;
+    if(RI.workspaceSlot===3){const items=RI.readiness().links;return {items,pct:Math.round(100*items.filter(i=>i.done).length/items.length),next:items.find(i=>!i.done)||null};}
     const items = [
       { id: 'name', label: 'نام و عنوان حرفه‌ای', w: 15, done: !!(p.name.trim() && p.title.trim()), route: 'resume', step: 'profile' },
       { id: 'bio', label: 'معرفی کوتاه (حداقل ۴۰ نویسه)', w: 10, done: p.bio.trim().length >= 40, route: 'resume', step: 'profile' },
@@ -254,7 +255,7 @@
     { id: 'start', label: 'شروع‌کننده', at: 15, icon: 'flag' },
     { id: 'alive', label: 'پروفایل جان‌دار', at: 50, icon: 'sparkle' },
     { id: 'serious', label: 'رزومهٔ جدی', at: 75, icon: 'award' },
-    { id: 'ready', label: 'آمادهٔ انتشار', at: 90, icon: 'rocket' },
+    { id: 'ready', label: 'محتوای پربار', at: 90, icon: 'rocket' },
     { id: 'live', label: 'منتشر شد', at: 101, icon: 'trophy' },
   ];
   RI.badgeState = function () {
@@ -270,7 +271,7 @@
       {id:'account-last',req:true,label:'نام خانوادگی حساب',done:!!RI.state.account.lastName,route:'settings'},
       {id:'account-phone',req:true,label:'تأیید شمارهٔ موبایل',done:RI.state.account.mobileVerified&&!!RI.state.account.mobile,route:'settings'},
       ...RI.resumeRequirements(c),
-      { id: 'slug', req: true, label: 'نام صفحهٔ معتبر و آزاد', done: slug.state === 'ok', route: 'publish', anchor: 'slug' },
+      { id: 'slug', req: true, label: 'قالب معتبر نام صفحه', done: slug.state === 'ok', route: 'publish', anchor: 'slug' },
       { id: 'avatar', req: false, label: 'عکس پروفایل', done: !!p.avatar, route: 'resume', step: 'profile' },
       { id: 'bio', req: false, label: 'معرفی کوتاه', done: p.bio.trim().length >= 40, route: 'resume', step: 'profile' },
       { id: 'proj', req: false, label: 'حداقل یک پروژه', done: c.projects.length > 0, route: 'resume', step: 'projects' },
@@ -280,7 +281,7 @@
       {id:'account-first',req:true,label:'نام حساب',done:!!RI.state.account.firstName,route:'settings'},
       {id:'account-last',req:true,label:'نام خانوادگی حساب',done:!!RI.state.account.lastName,route:'settings'},
       {id:'account-phone',req:true,label:'تأیید شمارهٔ موبایل',done:RI.state.account.mobileVerified&&!!RI.state.account.mobile,route:'settings'},
-      { id: 'lslug', req: true, label: 'نام صفحهٔ معتبر و آزاد', done: slug.state === 'ok', route: 'publish', anchor: 'slug' },
+      { id: 'lslug', req: true, label: 'قالب معتبر نام صفحه', done: slug.state === 'ok', route: 'publish', anchor: 'slug' },
       { id: 'litem', req: true, label: 'حداقل یک لینک فعال', done: c.links.items.some((i) => i.type === 'link' && i.active), route: 'links' },
       { id: 'lname', req: true, label: 'نام نمایشی بالای صفحه', done: !!((c.links.header.sync ? p.name : c.links.header.name).trim()), route: 'links', tab: 'header' },
       { id: 'lbio', req: false, label: 'معرفی کوتاه بالای صفحه', done: !!((c.links.header.sync ? p.bio : c.links.header.bio).trim()), route: 'links', tab: 'header' },

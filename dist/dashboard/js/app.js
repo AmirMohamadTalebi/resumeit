@@ -28,7 +28,7 @@
       '<nav class="nav" aria-label="بخش‌های داشبورد">' + NAV.map(navGroup).join('')+'</nav>' +
       '<div class="sidebar__foot">'+(acc.isAdmin?'<a class="panel-switch" href="/admin/">'+RI.icon('shield')+'<span>ورود به مدیریت</span>'+RI.icon('chevL')+'</a>':'')+'<a class="panel-help" href="/dashboard/support/" data-route="support">'+RI.icon('help')+'پشتیبانی</a><button type="button" class="account-btn" id="accountBtn" aria-haspopup="menu"><img class="avatar" id="accAvatar" alt="تصویر پروفایل" src="/brand/resumeit-mark-v1.png"><span class="account-btn__info"><span class="account-btn__name" id="accName"></span><span class="account-btn__sub">پروفایل و دسترسی سریع</span></span>'+RI.icon('chevL')+'</button><small><a href="/changes/" data-site-version>تغییرات رزومیت</a></small></div></div>';
     if(acc.isSupport||acc.isAdmin)RI.$('.sidebar__foot').insertAdjacentHTML('afterbegin','<a class="panel-switch" href="/staff/">'+RI.icon('help')+'<span>پنل پشتیبانی</span>'+RI.icon('chevL')+'</a>');
-    RI.$('#bottomNav').innerHTML = BOTTOM.map(i=>'<a href="'+RI.routeUrl(i[0])+'" data-route="'+i[0]+'">'+RI.icon(i[2])+'<span>'+i[1]+'</span></a>').join('')+'<button type="button" data-all-pages aria-label="همهٔ بخش‌ها">'+RI.icon('menu')+'<span>بیشتر</span></button>';
+    RI.$('#bottomNav').innerHTML = BOTTOM.filter(i=>RI.workspaceSlot!==3||i[0]!=='resume').map(i=>'<a href="'+RI.routeUrl(i[0])+'" data-route="'+i[0]+'">'+RI.icon(i[2])+'<span>'+i[1]+'</span></a>').join('')+'<button type="button" data-all-pages aria-label="همهٔ بخش‌ها">'+RI.icon('menu')+'<span>بیشتر</span></button>';
     paintAccount();RI.polishShell?.();
     const mobileGroups=matchMedia('(max-width:960px)'),groups=RI.$$('.nav__group--collapse');
     const syncGroups=()=>groups.forEach(g=>{const closed=mobileGroups.matches&&g.dataset.open!=='true',panel=g.querySelector('.nav__children');panel.inert=closed;if(closed)panel.setAttribute('aria-hidden','true');else panel.removeAttribute('aria-hidden');});
@@ -86,7 +86,7 @@
     for (const key of ['step', 'tab', 'anchor']) if (opts && opts[key]) url.searchParams.set(key, opts[key]);
     return url.pathname + url.search;
   };
-  let navigating=false,pendingNavigation=null,currentUrl=location.pathname+location.search;
+  let navigationEpoch=0,navigating=false,pendingNavigation=null,currentUrl=location.pathname+location.search;
   RI.setRouteTab=(tab,initial)=>{const url=new URL(location.href);if(tab===initial)url.searchParams.delete('tab');else url.searchParams.set('tab',tab);history.replaceState(history.state,'',url.pathname+url.search+url.hash);currentUrl=url.pathname+url.search;};
   const pageLoads=new Map();
   RI.loadPage=async id=>{if(!NAV.some(g=>g.items.some(i=>i[0]===id)))throw new Error('بخش نامعتبر است');if(!RI.pages[id])await loadScript('/dashboard/js/pages/'+id+'.js');return RI.pages[id];};
@@ -108,11 +108,10 @@
     const previous=currentUrl;
     try {
       if (!(await RI.leaveGuard())) { if(back)history.replaceState(null,'',previous);return; }
-      window.resumeitPageLoading?.start(true);
+      navigationEpoch++;
+      const pending=document.createElement('div');pending.id='routeLoading';pending.innerHTML=RI.sectionLoading('در حال آماده‌سازی بخش…');RI.$('#view').before(pending);RI.$('#view').inert=true;
       if(id==='resume') {
-        if(!RI.ResumeJourney)await loadScript('/dashboard/js/resume-journey.js');
-        if(!RI.mountImportedEditor) await loadScript('/dashboard/js/template-editor.js');
-        await RI.loadTemplates([RI.C().theme.resume]);
+        await Promise.all([!RI.ResumeJourney?loadScript('/dashboard/js/resume-journey.js'):null,!RI.mountImportedEditor?loadScript('/dashboard/js/template-editor.js'):null,RI.loadTemplates([RI.C().theme.resume])]);
       }
       if(!RI.pages[id]) await loadScript('/dashboard/js/pages/'+id+'.js');
       if(!RI.pages[id])throw new Error('بارگذاری بخش کامل نشد؛ صفحه را دوباره باز کن');
@@ -123,7 +122,7 @@
       paintSave();
       if(['home','links','stats'].includes(id)&&RI.statsRows===null&&!RI.statsLoading)RI.loadStats();
     } catch(e) { if(back)history.replaceState(null,'',previous);RI.toast(e.message,{kind:'error'}); }
-    finally { navigating=false;window.resumeitPageLoading?.finish();if(pendingNavigation){const next=pendingNavigation;pendingNavigation=null;navigate(...next);} }
+    finally { navigating=false;RI.$('#routeLoading')?.remove();RI.$('#view').inert=false;if(pendingNavigation){const next=pendingNavigation;pendingNavigation=null;navigate(...next);} }
   }
 
   async function render(id, force) {
@@ -131,7 +130,7 @@
     const previousView = RI.$('#view');
     if (cleanup) { try { cleanup(); } catch (e) { /* ok */ } cleanup = null; }
     // Each mount owns its listeners; replacing the root discards the previous mount's handlers.
-    const view=previousView.cloneNode(false);previousView.replaceWith(view);
+    const view=previousView.cloneNode(false);view.inert=false;previousView.replaceWith(view);
     current = id;
     RI.$$('[data-route]').forEach((a) => { if (a.dataset.route === id && (!a.closest('#sidebar') || (a.dataset.tab||'') === (RI.routeOpts?.tab||''))) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
     RI.$('#topTitle').textContent = id === 'resume' ? 'رزومهٔ من' : page.title;
@@ -146,6 +145,7 @@
     RI.$$('a[data-go]', view).forEach(a => { a.href = RI.routeUrl(a.dataset.go, a.dataset); });
     cleanup = page.mount ? page.mount(view, ctx) : null;
     RI.polishView?.(view,id);
+    RI.$$('#sidebar [data-route=resume]').forEach(link=>{link.hidden=RI.workspaceSlot===3;});
     RI.animateRings(view); RI.animateBars(view);
     window.scrollTo({ top: 0, behavior: 'instant' in window ? 'instant' : 'auto' });
     if (!force) { const h = RI.$('#page-title', view); if (h) h.focus({ preventScroll: true }); }
@@ -162,7 +162,9 @@
     RI.$('#sidebar').inert=!open&&mobile.matches;
     if(open)RI.$('#drawerClose').focus();
   }
-  function openDrawer(){setDrawer(true);}
+  let drawerOpener;
+  function openDrawer(event){drawerOpener=event?.target?.closest('button')||document.activeElement;setDrawer(true);}
+  function restoreDrawerFocus(){(drawerOpener?.isConnected?drawerOpener:RI.$('#menuBtn')).focus();}
   function closeDrawer(){setDrawer(false);}
 
   /* ---------- راه‌اندازی ---------- */
@@ -170,14 +172,15 @@
     const user = await window.resumeitSession;
     if (!user) return;
     RI.applyAccount(user);buildShell();
-    RI.$('#view').innerHTML='<p role="status">در حال دریافت اطلاعات این بخش…</p>';
+    RI.$('#view').innerHTML=RI.sectionLoading('در حال دریافت اطلاعات صفحه…');
+    window.resumeitPageLoading?.finish();
     RI.$('#topPreview').disabled=true;
     RI.delegate(document,'click','[data-route]',(e,b)=>{if(!bootstrapping||e.ctrlKey||e.metaKey||e.shiftKey||e.altKey||e.button!==0)return;e.preventDefault();navigate(b.dataset.route);});
     RI.$('#menuBtn').addEventListener('click',openDrawer);
-    RI.$('#scrim').addEventListener('click',()=>{closeDrawer();RI.$('#menuBtn').focus();});
-    RI.$('#drawerClose').addEventListener('click',()=>{closeDrawer();RI.$('#menuBtn').focus();});
+    RI.$('#scrim').addEventListener('click',()=>{closeDrawer();restoreDrawerFocus();});
+    RI.$('#drawerClose').addEventListener('click',()=>{closeDrawer();restoreDrawerFocus();});
     RI.delegate(document,'click','[data-all-pages]',openDrawer);mobile.addEventListener('change',closeDrawer);closeDrawer();
-    try{await RI.loadDashboard(user.id); const page=document.body.dataset.page; await RI.loadTemplates(page==='resume'?[RI.C().theme.resume]:[]);}catch(e){RI.$('#view').textContent=e.message;const retry=document.createElement('button');retry.className='btn';retry.textContent='تلاش دوباره';retry.addEventListener('click',()=>location.reload());RI.$('#view').appendChild(retry);document.dispatchEvent(new Event('ri:dashboard-ready'));return;}
+    try{await RI.loadDashboard(user.id);}catch(e){RI.$('#view').textContent=e.message;const retry=document.createElement('button');retry.className='btn';retry.textContent='تلاش دوباره';retry.addEventListener('click',()=>location.reload());RI.$('#view').appendChild(retry);document.dispatchEvent(new Event('ri:dashboard-ready'));return;}
     RI.applyAccount(user);
     paintAccount();bootstrapping=false;RI.$('#topPreview').disabled=false;
     if(user.is_admin&&sessionStorage.getItem('ri-panel-choice')!==user.id){
@@ -191,7 +194,7 @@
     RI.on('demo', paintAccount);
 
     document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape'&&RI.$('#sidebar').dataset.open==='true') {closeDrawer();RI.$('#menuBtn').focus();}
+      if (e.key === 'Escape'&&RI.$('#sidebar').dataset.open==='true') {closeDrawer();restoreDrawerFocus();}
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); if (RI.state.ui.dirty&&RI.manualSave()) RI.doSave(); }
       const list=e.target.closest('[role="tablist"]');
       if(!list||e.altKey||e.ctrlKey||e.metaKey||!['ArrowLeft','ArrowRight','Home','End'].includes(e.key))return;
@@ -223,7 +226,7 @@
         { label: 'خروج از حساب', icon: 'logout', danger: true, onClick: () => RI.logout() },
       ], { up: true });
     });
-    const bell=document.createElement('button');bell.type='button';bell.className='btn btn--icon btn--soft topbar__bell';bell.setAttribute('aria-label','اعلان‌ها');bell.innerHTML=RI.icon('bell');bell.addEventListener('click',()=>RI.go('notifications'));RI.$('.topbar__actions').append(bell);
+    const bell=document.createElement('button');bell.type='button';bell.className='btn btn--icon btn--soft btn--sm topbar__bell';bell.setAttribute('aria-label','اعلان‌ها');bell.innerHTML=RI.icon('bell');bell.addEventListener('click',()=>RI.go('notifications'));RI.$('.topbar__actions').append(bell);
     RI.on('inbox',()=>{const count=RI.inbox?.unread||0;bell.classList.toggle('has-unread',count>0);bell.setAttribute('aria-label',count?'اعلان‌ها؛ '+RI.fa(count)+' خوانده‌نشده':'اعلان‌ها');bell.title=bell.getAttribute('aria-label');});
     RI.delegate(document, 'click', '[data-copy]', (e, b) => RI.copy(b.dataset.copy));
     RI.delegate(document,'click','a[href="/admin/"]',async e=>{
@@ -242,8 +245,16 @@
     const legacy = /^#\/([a-z]+)$/.exec(location.hash);
     if (legacy && NAV.some(g => g.items.some(i => i[0] === legacy[1]))) { location.replace(RI.routeUrl(legacy[1])); return; }
     RI.routeOpts = Object.fromEntries(new URLSearchParams(location.search));
-    if(document.body.dataset.page==='resume'&&!RI.ResumeJourney)await loadScript('/dashboard/js/resume-journey.js');
-    await render(document.body.dataset.page);
+    async function openInitialPage(){
+      const epoch=navigationEpoch,host=RI.$('#view');host.innerHTML=RI.sectionLoading(document.body.dataset.page==='resume'?'در حال آماده‌سازی ویرایشگر و قالب رزومه…':'در حال آماده‌سازی صفحه…');
+      try{
+        if(document.body.dataset.page==='resume')await Promise.all([!RI.ResumeJourney?loadScript('/dashboard/js/resume-journey.js'):null,!RI.mountImportedEditor?loadScript('/dashboard/js/template-editor.js'):null,RI.loadTemplates([RI.C().theme.resume])]);
+        if(!host.isConnected||epoch!==navigationEpoch)return;
+        await render(document.body.dataset.page);
+      }catch(error){if(!host.isConnected||epoch!==navigationEpoch)return;host.innerHTML='<section class="section-loading"><p role="alert">'+RI.esc(error.message)+'</p><button type="button" class="btn btn--soft" data-initial-retry>تلاش دوباره</button></section>';host.querySelector('[data-initial-retry]').addEventListener('click',openInitialPage,{once:true});}
+    }
+    await openInitialPage();
+    if(navigationEpoch===0&&['home','links','stats'].includes(document.body.dataset.page))requestAnimationFrame(()=>setTimeout(()=>{if(navigationEpoch===0)RI.loadStats();},0));
     document.dispatchEvent(new Event('ri:dashboard-ready'));
     RI.startInbox?.();
   }

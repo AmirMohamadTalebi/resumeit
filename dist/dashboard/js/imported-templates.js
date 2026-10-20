@@ -3,6 +3,19 @@
   'use strict';
   const RI = window.RI, esc = RI.esc;
   RI.IMPORTED_TEMPLATES = Object.create(null);
+  RI.orderTemplateChildren = (children, saved) => {
+    const result=children.slice(),slots=result.map((node,index)=>({node,index})).filter(x=>x.node?.group),order=(saved||'').split(',');
+    const sorted=slots.map(x=>x.node).sort((a,b)=>{const ai=order.indexOf(a.group),bi=order.indexOf(b.group);return (ai<0?99999:ai)-(bi<0?99999:bi);});
+    slots.forEach((slot,index)=>{result[slot.index]=sorted[index];});return result;
+  };
+  RI.templateGroupLabel = group => ({'home:body':'منو و تنظیمات کلی','home:f015240':'معرفی و تصویر','home:f35bcdf':'مهارت‌ها و ابزارها','home:2b3e890':'سوابق کاری','home:07793c2':'پروژه‌ها و نمونه‌کارها','home:64f750e':'تحصیلات و دوره‌ها','home:67d220d':'شبکه‌های اجتماعی','home:intro':'معرفی و تصویر','home:about':'دربارهٔ من','home:resume':'سوابق و مهارت‌ها','home:portfolio':'پروژه‌ها و نمونه‌کارها','home:contact':'اطلاعات تماس','home:compose':'فرم پیام از طریق ایمیل'}[group.key]||group.label.replace(/\s+/g,' ').trim().split('·')[0].trim());
+  RI.templateEditorGroups = content => {
+    const template=RI.IMPORTED_TEMPLATES[content.theme.resume];if(!template)return [];
+    const order=RI.resumeValues(content).settings?.section_order,groups=[],seen=new Set();
+    const visit=node=>{if(!node||typeof node!=='object')return;if(node.group&&node.group!=='home:contact'&&!node.group.endsWith(':body')&&!seen.has(node.group)){const group=template.groups.find(g=>g.key===node.group);if(group){groups.push({...group,label:RI.templateGroupLabel(group)});seen.add(node.group);}}
+      if(node.collection)return;RI.orderTemplateChildren(node.children||[],order).forEach(visit);};
+    visit(template.pages.home.node);return groups;
+  };
   const templateLoads = new Map();
   RI.releaseInactiveTemplates=id=>{for(const key of Object.keys(RI.IMPORTED_TEMPLATES))if(key!==id)delete RI.IMPORTED_TEMPLATES[key];for(const key of templateLoads.keys())if(key!==id)templateLoads.delete(key);};
   RI.loadTemplates = (ids,options={}) => Promise.all([...new Set(ids)].filter(id=>['vista','satiar'].includes(id)).map(id=>{
@@ -19,7 +32,7 @@
   RI.importedSpec = function (id) {
     const t = RI.IMPORTED_TEMPLATES[id];
     if (!t) return ['vista','satiar'].includes(id) ? {sections:['contacts','socials','projects'],bodySections:[],requiredSections:[],fields:[],settings:[{key:'reviewed',label:'متن‌ها، تصاویر، آمار و لینک‌های نمونه را بررسی و برای انتشار تأیید کرده‌ام',type:'checkbox',required:true,default:false}]} : null;
-    const groupName=g=>{const key=g.key.split(':')[1];const names={body:'سربرگ، منو و پابرگ',intro:'معرفی و تصویر اصلی',about:'دربارهٔ من',services:'خدمات',resume:'سوابق، مهارت‌ها و آمار',portfolio:'نمونه‌کارها',blog:'مقالات',contact:'تماس'};return names[key]||g.label.replace(/\s+/g,' ').trim();};
+    const groupName=RI.templateGroupLabel;
     const groups=t.groups.filter(g=>!/(?:portfolio|نمونه کار|نمونه‌کار)/i.test(g.key+' '+g.label)).map(g=>({...g,label:groupName(g)}));
     const compose = [['compose_title','عنوان فرم تماس','نوشتن پیام'],['compose_name','برچسب نام فرستنده','نام شما'],['compose_email','برچسب ایمیل فرستنده','ایمیل شما'],['compose_message','برچسب پیام','پیام شما'],['compose_submit','متن دکمهٔ تماس','باز کردن برنامهٔ ایمیل']].map(([key,label,defaultValue])=>({key,label,default:defaultValue,type:'text',max:120,public:true,group:'home:compose'}));
     return { sections: ['contacts', 'socials','projects'], bodySections: [], requiredSections: [], fields: t.fields.concat(compose),
@@ -159,8 +172,7 @@
         if (key === 'id' && suffix) v += suffix;
         return ' ' + key + '="' + esc(v) + '"';
       }).join('');
-      const children=n.children.slice(),slots=children.map((child,index)=>({child,index})).filter(x=>x.child&&x.child.group),order=(settings.section_order||'').split(',');
-      const sorted=slots.map(x=>x.child).sort((a,b)=>{const ai=order.indexOf(a.group),bi=order.indexOf(b.group);return (ai<0?99999:ai)-(bi<0?99999:bi);});slots.forEach((slot,i)=>children[slot.index]=sorted[i]);
+      const children=RI.orderTemplateChildren(n.children,settings.section_order);
       if (n.tag === 'body') return '<div class="' + esc(page.bodyClass) + ' ri-imported-body">' + children.map(child => renderNode(child, overrides, suffix)).join('') + '</div>';
       const tag=(vista&&n.tag==='h2'&&n.children.some(child=>child?.field==='f68'))||(satiar&&n.children.some(child=>child?.field==='f48'))?'h1':(vista&&n.tag==='h5'&&n.children.some(child=>child?.field==='f67'))||(satiar&&n.children.some(child=>child?.field==='f49'))?'p':n.tag;
       const inner=voids.has(tag)?'':children.map(child=>renderNode(child,overrides,suffix)).join('');

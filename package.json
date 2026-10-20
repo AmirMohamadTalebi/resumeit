@@ -6,6 +6,9 @@
     "node": ">=24.15.0"
   },
   "scripts": {
+    "check:staged-loading": "node tests/dashboard-staged-loading-check.cjs && node tests/dashboard-loading-check.cjs",
+    "check:template-editor": "node tests/template-section-editor-check.cjs && node tests/template-option-coverage-check.cjs",
+    "check:account-audit": "node tests/auth-audit-check.cjs && node tests/login-destination-check.cjs && node tests/dashboard-audit-check.cjs && node tests/studio-audit-check.cjs",
     "check:public-audit": "node tests/public-audit-migration-check.cjs",
     "check:resume-journey": "node tests/resume-journey-ui-check.cjs && node tests/editor-polish-ui-check.cjs",
     "check:templates": "node tests/imported-templates-check.cjs && node tests/vista-contract-check.cjs && node tests/satiar-refinement-check.cjs && node tests/all-template-ui-check.cjs && node tests/template-edge-check.cjs && node tests/template-sample-navigation-check.cjs",

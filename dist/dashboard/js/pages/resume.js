@@ -47,7 +47,22 @@
     },
     mount(root, ctx) {
       const mountOwner=RI.ownerId,mountSlot=RI.workspaceSlot,sameContext=()=>root.isConnected&&RI.ownerId===mountOwner&&RI.workspaceSlot===mountSlot;
-      let spec,STEPS;const syncSpec=()=>{spec=RI.resumeSpec(RI.C().theme.resume);STEPS=[{id:'profile',label:'معرفی',icon:'user',req:true},...Object.keys(SECTION_META).filter(k=>spec.sections.includes(k)).map(k=>({id:k,label:SECTION_META[k][0],icon:SECTION_META[k][1],req:spec.requiredSections.includes(k)||k==='contacts'})),...(spec.fields.length||spec.settings.length?[{id:'template',label:'ویژهٔ قالب',icon:'palette',req:true}]:[])];};syncSpec();
+      let spec,STEPS;
+      const syncSpec=()=>{
+        const c=RI.C();spec=RI.resumeSpec(c.theme.resume);
+        if(RI.IMPORTED_TEMPLATES?.[c.theme.resume]){
+          const source=RI.IMPORTED_TEMPLATES[c.theme.resume],hero=source.groups[1]?.key;
+          STEPS=RI.templateEditorGroups(c).map(group=>{
+            if(group.key===hero)return {id:'profile',label:'معرفی و تصویر',icon:'user',req:true,group:group.key};
+            if(/portfolio|نمونه کار|نمونه‌کار/i.test(group.key+' '+group.label))return {id:'projects',label:'پروژه‌ها و نمونه‌کارها',icon:'code'};
+            if(group.key==='home:contact')return {id:'contacts',label:'اطلاعات تماس',icon:'phone',req:true,group:group.key};
+            if(group.key==='home:67d220d')return {id:'socials',label:'شبکه‌های اجتماعی',icon:'globe',group:group.key};
+            return {id:'template-'+group.key.replace(/:/g,'-'),label:group.label,icon:'section',group:group.key};
+          });
+          for(const id of ['contacts','socials'])if(!STEPS.some(step=>step.id===id))STEPS.push({id,label:SECTION_META[id][0],icon:SECTION_META[id][1],req:id==='contacts',group:id==='contacts'&&spec.groups.some(g=>g.key==='home:contact')?'home:contact':undefined});
+          STEPS.push({id:'template-home-compose',label:'فرم پیام',icon:'mail',group:'home:compose'},{id:'template',label:'منو، رنگ و تنظیمات کلی',icon:'settings',group:'general'});
+        }else STEPS=[{id:'profile',label:'معرفی',icon:'user',req:true},...['contacts','socials',...c.sections.map(section=>section.key).filter(key=>!['contacts','socials'].includes(key))].filter(k=>spec.sections.includes(k)).map(k=>({id:k,label:SECTION_META[k][0],icon:SECTION_META[k][1],req:spec.requiredSections.includes(k)||k==='contacts'})),...(spec.fields.length||spec.settings.length?[{id:'template',label:'تنظیمات قالب',icon:'palette',req:true}]:[])];
+      };syncSpec();
       const journey=RI.ResumeJourney.initial(ctx.opts),journeyHost=root.querySelector('#resume-journey');let storyStep='',lookCleanup,renderSerial=0,publishing=false;
       let tab = 'content', step = (ctx.opts && ctx.opts.step) || 'profile';
       if (!STEPS.some((s) => s.id === step)) step = 'profile';
@@ -67,14 +82,15 @@
       const offSave=RI.on('save',()=>updateJourneyStatus());
 
       function stepper() {
-        const groups=[['هویت و ارتباط',['profile','contacts','socials']],['مسیر حرفه‌ای',['experience','education','skills','languages']],['کارها و دستاوردها',['projects','certs']],['جزئیات قالب',['template']]],current=STEPS.find(s=>s.id===step);
-        const done=s=>s.id==='template'?RI.resumeRequirements(RI.C()).filter(x=>x.step==='template').every(x=>x.done):stepDone(s.id);
-        return '<details class="resume-outline" '+(innerWidth>1100?'open':'')+'><summary><span>'+RI.icon('section')+'نقشهٔ رزومه</span><small>'+esc(current.label)+'</small>'+RI.icon('chevD')+'</summary><nav role="tablist" aria-label="بخش‌های رزومه">'+groups.map(([label,ids])=>{
-          const items=ids.map(id=>STEPS.find(s=>s.id===id)).filter(Boolean);if(!items.length)return '';
-          return '<div class="outline-group"><h3>'+label+'</h3>'+items.map(s=>'<button type="button" role="tab" class="outline-item" data-step="'+s.id+'" aria-selected="'+(s.id===step)+'" aria-controls="panel"><span class="outline-item__icon">'+RI.icon(s.icon)+'</span><span class="outline-item__label">'+s.label+'<small>'+(done(s)?'تکمیل‌شده':s.req?'برای انتشار':'به انتخاب تو')+'</small></span><span class="outline-item__state" aria-label="'+(done(s)?'تکمیل‌شده':s.req?'نیازمند تکمیل':'افزودنی')+'">'+RI.icon(done(s)?'check':s.req?'edit':'plus')+'</span></button>').join('')+'</div>';
-        }).join('')+'</nav></details>';
+        const current=STEPS.find(s=>s.id===step)||STEPS[0];
+        return '<details class="resume-outline" '+(innerWidth>1100?'open':'')+'><summary><span>'+RI.icon('section')+'بخش‌های رزومه</span><small>'+esc(current.label)+'</small>'+RI.icon('chevD')+'</summary><nav role="tablist" id="resume-section-tabs" aria-label="بخش‌های رزومه">'+STEPS.map(s=>'<button type="button" role="tab" id="resume-step-'+s.id+'" class="outline-item" data-step="'+s.id+'"'+(s.group?' data-template-group="'+s.group+'"':'')+' aria-selected="'+(s.id===step)+'" tabindex="'+(s.id===step?'0':'-1')+'" aria-controls="panel"><span class="outline-item__label">'+esc(s.label)+'</span></button>').join('')+'</nav></details>';
       }
-
+      const isTemplateStep=()=>step==='template'||step.startsWith('template-');
+      function contentPanel(){
+        const section=STEPS.find(s=>s.id===step);
+        const base=step==='profile'?profilePanel():step==='contacts'?contactsPanel():isTemplateStep()?templatePanel():listPanel(step);
+        return base+(!isTemplateStep()&&section?.group?RI.importedEditorHtml({section:true,title:'جزئیات '+section.label}):'');
+      }
       function fullProfilePanel() {
         const p = RI.C().profile;
         return '<div class="panel"><div class="panel__head"><h2>خودت را معرفی کن</h2><p>اولین چیزی که بازدیدکننده می‌بیند <span class="field__req">پایهٔ انتشار</span> برای انتشار: نام و عنوان</p></div>' +
@@ -116,7 +132,7 @@
       }
 
       function templatePanel() {
-        if (RI.IMPORTED_TEMPLATES && RI.IMPORTED_TEMPLATES[RI.C().theme.resume]) return RI.importedEditorHtml();
+        if (RI.IMPORTED_TEMPLATES && RI.IMPORTED_TEMPLATES[RI.C().theme.resume]) return RI.importedEditorHtml({section:!journey.guided,title:STEPS.find(s=>s.id===step)?.label||'تنظیمات قالب'});
         const t = RI.findTemplate('resume', RI.C().theme.resume), values = RI.resumeValues(RI.C());
         return '<div class="panel"><div class="panel__head"><h2>اطلاعات و تنظیمات «' + esc(t.name) + '»</h2><p>اطلاعات هر قالب جدا ذخیره می‌شود؛ با تغییر قالب از بین نمی‌رود. فقط فیلدهایی که «عمومی» هستند نمایش داده می‌شوند.</p></div>' + ['fields', 'settings'].map(group => spec[group].map(f => {
           const value = RI.resumeValue(values[group] || {}, f), id = 'template-' + group + '-' + f.key;
@@ -126,6 +142,10 @@
         }).join('')).join('') + '</div>';
       }
       function layoutPanel() {
+        if(RI.IMPORTED_TEMPLATES?.[RI.C().theme.resume]){
+          const c=RI.C(),values=RI.resumeValues(c),groups=RI.templateEditorGroups(c);
+          return '<section class="panel"><div class="panel__head"><h2>ترتیب بخش‌های قالب</h2><p>این ترتیب با پیش‌نمایش و تب‌های ویرایش یکی است. تغییر ترتیب، محتوای بخش‌ها را پاک نمی‌کند.</p></div><ul class="rows">'+groups.map((group,index)=>'<li class="row"><span class="row__main">'+esc(group.label)+'</span><div class="row__actions"><button type="button" class="btn btn--ghost btn--sm" data-template-shift="'+esc(group.key)+'" data-direction="-1" aria-label="'+esc('انتقال '+group.label+' به بالا')+'"'+(!index?' disabled':'')+'>بالا</button><button type="button" class="btn btn--ghost btn--sm" data-template-shift="'+esc(group.key)+'" data-direction="1" aria-label="'+esc('انتقال '+group.label+' به پایین')+'"'+(index===groups.length-1?' disabled':'')+'>پایین</button></div></li>').join('')+'</ul></section>';
+        }
         const c = RI.C();
         const rows = c.sections.filter(s => spec.sections.includes(s.key)).map((s, i) => { const m = SECTION_META[s.key];
           return '<li class="row' + (s.visible ? '' : ' is-off') + '" data-id="' + s.key + '"><span class="row__grip" aria-hidden="true">' + RI.icon('grip') + '</span><span class="row__ico">' + RI.icon(m[1]) + '</span><div class="row__main"><div class="row__title">' + m[0] + '</div><div class="row__sub">' + (s.key === 'contacts' ? 'ضروری برای انتشار' : (c[s.key] && c[s.key].length ? RI.fa(c[s.key].length) + ' مورد' : 'خالی؛ تا پر نشود نمایش داده نمی‌شود')) + '</div></div>' +
@@ -138,19 +158,19 @@
         syncSpec();lookCleanup?.();lookCleanup=null;const serial=++renderSerial;
         pv.setTemplateSection(null);
         root.classList.add('resume-build');root.dataset.journeyPhase=journey.guided?journey.phase:'direct';
-        journeyHost.innerHTML=RI.ResumeJourney.nav(journey);RI.$('#rtabs',root).hidden=journey.guided;const quality=root.querySelector('#resume-advisor-shell');quality.hidden=journey.guided&&journey.phase!=='review'&&!quality.querySelector('details[open]');
+        journeyHost.innerHTML=journey.guided?RI.ResumeJourney.nav(journey):'<div class="resume-editor-intro"><p>بخش‌ها به ترتیب نمایش در رزومه‌اند؛ تنظیمات کلی در آخر قرار دارند.</p><button type="button" class="btn btn--ghost btn--sm" data-journey-mode>راهنمای مرحله‌به‌مرحله</button></div>';RI.$('#rtabs',root).hidden=journey.guided;const quality=root.querySelector('#resume-advisor-shell');quality.hidden=journey.guided&&journey.phase!=='review'&&!quality.querySelector('details[open]');
         tabsHost.replaceChildren();
         if(journey.guided){
           if(journey.phase==='start')step='profile';else if(journey.phase==='contact'&&!['contacts','socials'].includes(step))step='contacts';
           const story=journey.phase==='story';if(story)step=storyStep||'story';
-          const content=journey.phase==='start'?profilePanel():story&&!storyStep?RI.ResumeJourney.story(STEPS):story?'<button type="button" class="btn btn--ghost btn--sm" data-journey-choices>'+RI.icon('chevR')+'بخش‌های رزومه</button>'+(step==='template'?templatePanel():listPanel(step)):journey.phase==='contact'?(step==='socials'?listPanel('socials'):contactsPanel())+(STEPS.some(s=>s.id==='socials')?'<button type="button" class="btn btn--ghost" data-step="'+(step==='socials'?'contacts':'socials')+'">'+RI.icon(step==='socials'?'mail':'globe')+(step==='socials'?'بازگشت به راه تماس':'شبکه‌های اجتماعی · به انتخاب تو')+'</button>':''):journey.phase==='look'?mediaPanel()+'<div class="journey-appearance" aria-busy="true">در حال آماده‌سازی ظاهر…</div><div class="btnrow"><button type="button" class="btn btn--ghost" data-journey-layout>'+RI.icon('section')+'چیدمان بخش‌ها</button>'+(STEPS.some(s=>s.id==='template')?'<button type="button" class="btn btn--ghost" data-journey-advanced>تنظیمات کامل قالب</button>':'')+'</div>':RI.ResumeJourney.review();
+          const content=journey.phase==='start'?profilePanel():story&&!storyStep?RI.ResumeJourney.story(STEPS):story?'<button type="button" class="btn btn--ghost btn--sm" data-journey-choices>'+RI.icon('chevR')+'بخش‌های رزومه</button>'+(isTemplateStep()?templatePanel():listPanel(step)):journey.phase==='contact'?(step==='socials'?listPanel('socials'):contactsPanel())+(STEPS.some(s=>s.id==='socials')?'<button type="button" class="btn btn--ghost" data-step="'+(step==='socials'?'contacts':'socials')+'">'+RI.icon(step==='socials'?'mail':'globe')+(step==='socials'?'بازگشت به راه تماس':'شبکه‌های اجتماعی · به انتخاب تو')+'</button>':''):journey.phase==='look'?mediaPanel()+'<div class="journey-appearance" aria-busy="true">در حال آماده‌سازی ظاهر…</div><div class="btnrow"><button type="button" class="btn btn--ghost" data-journey-layout>'+RI.icon('section')+'چیدمان بخش‌ها</button>'+(STEPS.some(s=>s.id==='template')?'<button type="button" class="btn btn--ghost" data-journey-advanced>تنظیمات کامل قالب</button>':'')+'</div>':RI.ResumeJourney.review();
           body.innerHTML='<div id="panel">'+content+'</div>'+RI.ResumeJourney.footer(journey);
           if(['start','story','contact'].includes(journey.phase)&&step!=='story')bindPanel();
           if(journey.phase==='look'){bindMedia();const host=body.querySelector('.journey-appearance');RI.loadPage('themes').then(page=>{if(serial!==renderSerial||!root.isConnected)return;host.innerHTML=page.render();host.querySelector('.page-head')?.remove();host.querySelector('[data-tab="lt"]')?.remove();host.removeAttribute('aria-busy');lookCleanup=page.mount(host,{journey:true});}).catch(error=>{if(serial===renderSerial&&host.isConnected){host.removeAttribute('aria-busy');host.innerHTML='<p role="alert">'+esc(error.message)+'</p><button type="button" class="btn btn--soft" data-journey-retry>تلاش دوباره</button>';}});}
         }
         else if (tab === 'layout') body.innerHTML = layoutPanel();
         else {
-          body.innerHTML = stepper() + '<div id="panel">' + (step === 'profile' ? profilePanel() : step === 'contacts' ? contactsPanel() : step === 'template' ? templatePanel() : listPanel(step)) + '</div>' + navButtons();
+          body.innerHTML = stepper() + '<div id="panel" role="tabpanel" aria-labelledby="resume-step-' + step + '">' + contentPanel() + '</div>' + navButtons();
           bindPanel();
           const ul = RI.$('#rlist', body);
           if (ul) { const L = RI.C()[step]; RI.sortable(ul, { onReorder: (f, t) => RI.flip(ul, () => { RI.move(L, f, t); RI.touch(step); paint(); }) }); }
@@ -167,7 +187,7 @@
         const feedback=root.querySelector('[data-journey-feedback]');if(feedback){const p=RI.C().profile;feedback.textContent=!journey.guided?'همهٔ بخش‌ها در دسترس‌اند؛ فقط قسمت موردنظرت را ویرایش کن.':journey.phase==='start'?(p.name.trim()&&p.title.trim()?'معرفی اصلی آماده است؛ می‌توانی ادامه بدهی.':'با نام و عنوانت شروع کن؛ جزئیات بیشتر به انتخاب توست.'):journey.phase==='story'?'یک تجربه، پروژه یا مهارت واقعی کافی است تا شروع کنی.':journey.phase==='contact'?'فقط راه‌های تماسی که عمومی می‌کنی به بازدیدکننده نمایش داده می‌شوند.':journey.phase==='look'?'انتخاب ظاهر، اطلاعاتت را حذف نمی‌کند و چیزی را خودکار منتشر نمی‌کند.':'پیش‌نویس محفوظ است؛ انتشار فقط با تأیید تو انجام می‌شود.';}
       }
       function addFieldHelp() {
-        const add=(selector,label,what,where,defaultValue)=>RI.$(selector,body)?.insertAdjacentHTML('beforeend',RI.fieldHelpHtml({label,what,where,defaultValue}));
+        const add=(selector,label,what,where,defaultValue)=>{const target=RI.$(selector,body);if(!target)return;let host=target;if(target.tagName==='LABEL'){host=document.createElement('div');host.className='template-field-label';target.replaceWith(host);host.append(target);}host.insertAdjacentHTML('beforeend',RI.fieldHelpHtml({label,what,where,defaultValue}));};
         if(tab==='layout') {
           add('.panel__head h2','چیدمان بخش‌ها','ترتیب و نمایش بخش‌های عمومی را تنظیم می‌کند؛ پنهان‌کردن بخش، اطلاعاتش را حذف نمی‌کند.','رزومهٔ عمومی، در قالب‌هایی که این بخش‌ها را پشتیبانی می‌کنند','ترتیب اولیهٔ بخش‌ها؛ بخش خالی نمایش داده نمی‌شود');
           return;
@@ -192,7 +212,7 @@
 
       function bindPanel() {
         const c = RI.C(), p = c.profile;
-        if (step === 'template' && RI.IMPORTED_TEMPLATES && RI.IMPORTED_TEMPLATES[c.theme.resume]) RI.mountImportedEditor(RI.$('#panel',root), pv,{guided:journey.guided});
+        if (RI.IMPORTED_TEMPLATES?.[c.theme.resume]&&RI.$('.template-workspace',root)) RI.mountImportedEditor(RI.$('#panel',root),pv,{guided:journey.guided,group:journey.guided?undefined:STEPS.find(s=>s.id===step)?.group||'general',legacy:STEPS.find(s=>s.id===step)?.group==='home:contact'});
         if (step === 'profile') {
           const panel = RI.$('#panel', root);
           RI.delegate(panel,'click','[data-account-phone]',()=>RI.phoneDialog());
@@ -207,6 +227,8 @@
       }
 
       /* رویدادهای کلی بدنه */
+      RI.delegate(root,'click','[data-template-shift]',(event,button)=>{const c=RI.C(),groups=RI.templateEditorGroups(c).map(g=>g.key),from=groups.indexOf(button.dataset.templateShift),to=from+Number(button.dataset.direction);if(from<0||to<0||to>=groups.length)return;RI.move(groups,from,to);c.resumeTemplates ||= {};const values=c.resumeTemplates[c.theme.resume] ||= {fields:{},settings:{},collections:{}};values.settings.section_order=groups.join(',');values.settings.reviewed=false;RI.touch('resumeTemplates');paint();});
+      RI.delegate(root,'click','[data-template-source]',(event,button)=>{const key=button.dataset.templateSource;setStep('profile');requestAnimationFrame(()=>{const target=root.querySelector('[data-p="'+key+'"]')||root.querySelector('[data-img="'+key+'"] input');if(!target)return;for(let d=target.closest('details');d;d=d.parentElement?.closest('details'))d.open=true;target.focus();target.scrollIntoView({block:'center',behavior:'instant'});});});
       RI.delegate(root, 'click', '[data-step]', (e, b) => setStep(b.dataset.step));
       RI.delegate(body, 'click', '[data-add]', () => openForm(null));
       RI.delegate(body, 'click', '[data-edit]', (e, b) => openForm(b.dataset.edit));
@@ -251,7 +273,7 @@
         RI.flip(RI.$('#rlist', body), () => { RI.move(list, i, j); RI.touch(step); paint(); });
       }
       function bindLayout() {
-        const ul = RI.$('#slist', body); const secs = RI.C().sections;
+        const ul = RI.$('#slist', body);if(!ul)return; const secs = RI.C().sections;
         RI.delegate(ul, 'click', '[data-sup],[data-sdown]', (e, b) => { const k = b.dataset.sup || b.dataset.sdown, i = secs.findIndex((s) => s.key === k), j = i + (b.dataset.sup ? -1 : 1); if (j < 0 || j >= secs.length) return; RI.flip(ul, () => { RI.move(secs, i, j); RI.touch('sections'); paint(); }); });
         RI.sortable(ul, { onReorder: (f, t) => RI.flip(ul, () => { const shown=secs.filter(x=>spec.sections.includes(x.key)); RI.move(secs, secs.indexOf(shown[f]), secs.indexOf(shown[t])); RI.touch('sections'); paint(); }) });
       }
@@ -271,7 +293,7 @@
       paint();
       let advisorCleanup, mounted=true;
       if(!RI.advisorScripts)RI.advisorScripts=(async()=>{for(const name of ['advisor-core','advisor-ui'])await new Promise((resolve,reject)=>{const script=document.createElement('script');script.src='/dashboard/js/'+name+'.js?v='+encodeURIComponent(document.documentElement.dataset.assetVersion||'');script.onload=resolve;script.onerror=reject;document.head.append(script);});})().catch(error=>{RI.advisorScripts=null;throw error;});
-      RI.advisorScripts.then(()=>{if(mounted)advisorCleanup=RI.mountAdvisor(RI.$('#resume-advisor',root),target=>{tab='content';setStep(target.section==='template'?'template':target.section);if(target.section==='template')body.querySelector('#panel').dispatchEvent(new CustomEvent('ri:template-focus',{detail:target}));else if(target.section!=='profile')openForm(target.itemId);else requestAnimationFrame(()=>{const input=RI.$('[data-p="'+target.field+'"]',root),details=input?.closest('details');if(details)details.open=true;input?.focus();});});}).catch(()=>{if(mounted)RI.$('#resume-advisor',root).textContent='راهنمای کیفیت دریافت نشد؛ ویرایش و انتشار همچنان در دسترس‌اند.';});
+      RI.advisorScripts.then(()=>{if(mounted)advisorCleanup=RI.mountAdvisor(RI.$('#resume-advisor',root),target=>{tab='content';setStep(target.section==='template'?'template':target.section);if(target.section==='template'){const field=spec.fields.find(f=>f.key===target.field),destination=STEPS.find(s=>s.group===field?.group);if(destination)setStep(destination.id);body.querySelector('#panel').dispatchEvent(new CustomEvent('ri:template-focus',{detail:target}));}else if(target.section!=='profile')openForm(target.itemId);else requestAnimationFrame(()=>{const input=RI.$('[data-p="'+target.field+'"]',root),details=input?.closest('details');if(details)details.open=true;input?.focus();});});}).catch(()=>{if(mounted)RI.$('#resume-advisor',root).textContent='راهنمای کیفیت دریافت نشد؛ ویرایش و انتشار همچنان در دسترس‌اند.';});
       if (ctx.opts && ctx.opts.step) { /* رفتن مستقیم به مرحلهٔ پیشنهادی */ }
       return () => {if(RI.resumePublicationReview===publicationReview)delete RI.resumePublicationReview;mounted=false;renderSerial++;lookCleanup?.();advisorCleanup?.();cancelAnimationFrame(raf);off();offSave(); pv.destroy(); desktop.removeEventListener('change', placeOutline); };
     },

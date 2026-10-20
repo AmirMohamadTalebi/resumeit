@@ -38,7 +38,7 @@
         for (const [key, rows] of Object.entries(collections)) {
           if (!Array.isArray(rows) || rows.length > 30 || new Set(rows.map(x => x && x.id)).size !== rows.length) return bad();
           const def = spec.collections.find(x => x.key === key), allowed = new Set();
-          const visit = n => { if (!n || typeof n !== 'object') return; if (n.field) allowed.add(n.field); if (n.icon) allowed.add(n.icon); if (n.original) visit(n.original); if (n.attrs) Object.values(n.attrs).forEach(visit); if (n.children) n.children.forEach(visit); };
+          const visit = n => { if (!n || typeof n !== 'object') return; if (n.field) allowed.add(n.field); if (n.icon) allowed.add(n.icon); if (n.progress) allowed.add(n.progress); if (n.original) visit(n.original); if (n.attrs) Object.values(n.attrs).forEach(visit); if (n.children) n.children.forEach(visit); };
           visit(def.node);
           clean.collections[key] = rows.map(row => {
             if (!row || typeof row !== 'object' || Object.keys(row).some(k => !['id', 'fields'].includes(k)) || !/^[a-z0-9_-]{1,64}$/i.test(row.id) || !row.fields || typeof row.fields !== 'object' || Array.isArray(row.fields)) return bad();

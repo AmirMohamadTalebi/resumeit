@@ -21,7 +21,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_PATH || 'playwright');
     assert.equal(redirect.headers.get('location'), '/login/');
     for (const route of ['resume','links','themes','publish','billing','stats','settings']) {
       const response = await fetch(base + '/dashboard/' + route + '/', {redirect:'manual'});
-      assert.equal(response.status,303); assert.equal(response.headers.get('location'),'/login/');
+      assert.equal(response.status,303); assert.equal(response.headers.get('location'),'/login/?next='+encodeURIComponent('/dashboard/'+route+'/'));
     }
     assert.equal((await fetch(base + '/.env')).status, 400);
     browser = await chromium.launch({ channel: process.platform === 'win32' ? 'msedge' : undefined, headless: true });
@@ -78,7 +78,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_PATH || 'playwright');
       }
     }
     await page.locator('#sidebar [data-route="resume"]').click();
-    await page.locator('[role="tab"][data-step="skills"]').click();
+    await page.goto(base + '/dashboard/resume/?step=skills');await page.locator('[data-add]').first().waitFor();
     const originalSkills = await page.evaluate(() => RI.C().skills.length);
     await page.locator('[data-add]').first().click();
     await page.getByRole('dialog').locator('[data-field="name"] input').fill('QA Skill');
@@ -114,7 +114,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_PATH || 'playwright');
     assert.equal(await page.evaluate(() => localStorage.getItem('resumeit-demo-draft')), null);
     const otherTab = await page.context().newPage();
     await otherTab.goto(base + '/dashboard/resume/?step=skills'); await otherTab.waitForSelector('#page-title');
-    assert.equal(await otherTab.locator('[data-step="skills"][role="tab"]').getAttribute('aria-selected'), 'true');
+    assert.equal(await otherTab.locator('#rlist').getByText('QA Skill',{exact:true}).isVisible(),true);
     assert.equal(await otherTab.evaluate(() => RI.C().skills.some(item => item.name === 'QA Skill')), true);
     await otherTab.close();
     const savedTitle = await page.evaluate(() => RI.C().profile.title);

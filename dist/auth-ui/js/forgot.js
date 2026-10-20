@@ -8,7 +8,7 @@ document.addEventListener('DOMContentLoaded', function () {
   let mobile = '';
 
   function step1() {
-    const html = RIA.stepper(LABELS, 1) + '<h1 data-focus>فراموشی رمز عبور</h1><p>شماره موبایل حسابت رو بنویس تا کد بازیابی رو برات بفرستیم</p><form id="f" novalidate>' + RIA.mobileField({ value: mobile }) +
+    const html = RIA.stepper(LABELS, 1) + '<h1 data-focus>فراموشی رمز عبور</h1><p>شماره موبایلت رو بنویس؛ اگر حسابی با این شماره وجود داشته باشد، کد بازیابی برایش درخواست می‌شود</p><form id="f" novalidate>' + RIA.mobileField({ value: mobile }) +
       '<button type="submit" class="btn btn--primary btn--block" id="sb">ارسال کد بازیابی</button></form><div class="note">' + RIA.icon('shield') + '<span>اول شماره‌ات رو تأیید می‌کنیم، با تغییر رمز از دستگاه‌های قبلی خارج می‌شی</span></div>';
     RIA.swap(sh.view, html, (root) => {
       const m = RIA.bindMobile(root);
@@ -29,7 +29,7 @@ document.addEventListener('DOMContentLoaded', function () {
       $('#f', root).addEventListener('submit', async (e) => {
         e.preventDefault(); if(sh.card.dataset.pending)return; RIA.formError($('#f', root), ''); if (!np.validate()) return;
         try { await RIA.run(sh.card, () => RIA.api.setPassword(mobile, np.value(), 'reset'), 'در حال ذخیرهٔ رمز جدید…', $('#sb', root), true); finish(); }
-        catch (er) { if (er.code === 'weak') np.setError(er.message); else RIA.handleError($('#f', root), er); }
+        catch (er) { if (er.code === 'weak') np.setError(er.message); else RIA.expiredProof($('#f', root), er, step1); }
       });
     });
   }

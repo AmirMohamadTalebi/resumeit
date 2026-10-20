@@ -46,6 +46,8 @@ function oauthHandler(database,{oauthFetch=fetch}={}) {
         if(link&&!owner){fail('expired');return true;}
         await database.createOAuthState(hash(state),name,verifier,Date.now()+600000,owner?.id||null);
         res.setHeader('Set-Cookie',cookie(state,600));
+        const destination=require('./return-to.cjs')(new URL(req.url,settings.origin).searchParams.get('next'));
+        res.appendHeader('Set-Cookie',`ri_return=${encodeURIComponent(destination)}; Path=/api/auth/${name}/; HttpOnly; SameSite=Lax; Max-Age=600${settings.origin.startsWith('https:')?'; Secure':''}`);
         const url=new URL(settings.authorize);
         url.search=new URLSearchParams({client_id:settings.clientId,redirect_uri:settings.callback,response_type:'code',scope:settings.scope,state,code_challenge:createHash('sha256').update(verifier).digest('base64url'),code_challenge_method:'S256',...(name==='google'?{prompt:'select_account'}:{})});
         redirect(url.href);return true;
@@ -74,7 +76,9 @@ function oauthHandler(database,{oauthFetch=fetch}={}) {
       const previous=/(?:^|;\s*)ri_session=([a-f0-9]{64})(?:;|$)/.exec(req.headers.cookie||'')?.[1];
       if(previous)await database.deleteSession(hash(previous));
       res.setHeader('Set-Cookie',[cookie('',0),`ri_session=${session}; Path=/; HttpOnly; SameSite=Lax; Max-Age=604800${settings.origin.startsWith('https:')?'; Secure':''}` ,`ri_restriction=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0${settings.origin.startsWith('https:')?'; Secure':''}`]);
-      redirect('/dashboard/');
+      let destination='/dashboard/';try{destination=require('./return-to.cjs')(decodeURIComponent(/(?:^|;\s*)ri_return=([^;]*)/.exec(req.headers.cookie||'')?.[1]||''));}catch{}
+      res.appendHeader('Set-Cookie',`ri_return=; Path=/api/auth/${name}/; HttpOnly; SameSite=Lax; Max-Age=0${settings.origin.startsWith('https:')?'; Secure':''}`);
+      redirect(destination);
     } catch {fail('failed');}
     return true;
   };

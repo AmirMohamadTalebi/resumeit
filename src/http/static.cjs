@@ -44,7 +44,12 @@ function requestPath(url) {
 }
 
 async function serveStatic(req, res, pathname, origin, account, restricted) {
-  const signin=async()=>restricted&&await restricted(req)?'/account-status/':'/login/';
+  const signin=async()=>{
+    if(restricted&&await restricted(req))return '/account-status/';
+    const destination=require('../auth/return-to.cjs')(req.url);
+    if(destination==='/dashboard/')return '/login/';
+    return '/login/?next='+encodeURIComponent(destination);
+  };
   const send = (status, body, type = 'text/plain; charset=utf-8') => {
     if(status===200&&/^\/dashboard\/template-data\/(vista|satiar)\.json$/.test(pathname))res.setHeader('X-Uncompressed-Length',body.length);
     if (/^(text\/|application\/(javascript|json|xml)|image\/svg)/.test(type)) res.setHeader('Vary','Accept-Encoding');
