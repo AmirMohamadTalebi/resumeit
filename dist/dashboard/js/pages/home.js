@@ -47,7 +47,7 @@
   }
 
   function sampleStrip() {
-    if(RI.statsLoading)return RI.sectionLoading('در حال دریافت آمار بازدیدها…');
+    if(RI.statsLoading||(!RI.statsError&&RI.statsRows===null))return RI.sectionLoading('در حال دریافت آمار بازدیدها…');
     if(RI.statsRows===null)return '<div class="section-loading"><p role="alert">آمار دریافت نشد؛ بقیهٔ صفحه آماده است.</p><button type="button" class="btn btn--soft btn--sm" data-retry-stats>تلاش دوباره</button></div>';
     const ser = RI.metricSeries(7);
     const sum = (a) => a.reduce((x, y) => x + y, 0);

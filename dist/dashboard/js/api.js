@@ -9,13 +9,13 @@
     let result;try{if(!r.headers.get('content-type')?.includes('application/json'))throw Error();result=await r.json();}catch{throw Object.assign(new Error('پاسخ سرور کامل دریافت نشد؛ تغییراتت حفظ شده، دوباره تلاش کن'),{status:r.status,code:'INVALID_RESPONSE'});}if(!r.ok){if(r.status===401||result.code==='ACCOUNT_CHANGED')RI.advisorClear?.();throw Object.assign(new Error(result.error||'درخواست انجام نشد'),{status:r.status,code:result.code});}return RI.restorePublication(result);
   };
   let statsRequest=0;
-  RI.loadStats=()=>{const request=++statsRequest,owner=RI.ownerId,slot=RI.workspaceSlot;RI.statsLoading=true;RI.emit('stats');return RI.dashboardRequest('stats').then(r=>r.rows).catch(()=>null).then(rows=>{if(request!==statsRequest||owner!==RI.ownerId||slot!==RI.workspaceSlot)return;RI.statsRows=rows;RI.statsLoading=false;RI.emit('stats');});};
+  RI.loadStats=()=>{const request=++statsRequest,owner=RI.ownerId,slot=RI.workspaceSlot;RI.statsLoading=true;RI.emit('stats');return RI.dashboardRequest('stats').then(r=>r.rows).catch(()=>null).then(rows=>{if(request!==statsRequest||owner!==RI.ownerId||slot!==RI.workspaceSlot)return;RI.statsRows=rows;RI.statsError=rows===null;RI.statsLoading=false;RI.emit('stats');});};
   RI.paymentRequest=async(route,data)=>{
     let r;try{r=await fetch('/api/payments/'+route,{method:data?'POST':'GET',credentials:'same-origin',headers:{...(data?{'Content-Type':'application/json'}:{}),...(RI.ownerId?{'X-ResumeIt-Owner':RI.ownerId}:{})},body:data?JSON.stringify(data):undefined,signal:AbortSignal.timeout(20000)});}catch{throw new Error('ارتباط پرداخت قطع شد؛ وضعیت کیف پول را بررسی کن و دوباره تلاش کن');}
     let result;try{if(!r.headers.get('content-type')?.includes('application/json'))throw Error();result=await r.json();}catch{throw new Error('پاسخ سرویس پرداخت دریافت نشد؛ قبل از تلاش دوباره وضعیت پرداخت‌های بانکی را بررسی کن');}if(!r.ok)throw new Error(result.error||'درخواست پرداخت انجام نشد');return result;
   };
   RI.loadDashboard=async(owner)=>{
-    RI.statsRows=null; RI.statsLoading=false;
+    statsRequest++;RI.statsRows=null; RI.statsLoading=false;RI.statsError=false;
     let doc=RI.restorePublication(window.resumeitDocument?await window.resumeitDocument:await RI.dashboardRequest('document'));
     let previousOwner;try{previousOwner=sessionStorage.getItem('ri-workspace-owner');}catch{}
     if(previousOwner&&previousOwner!==owner){RI.workspaceSlot=1;doc=await RI.dashboardRequest('document?workspace=1');}
@@ -24,7 +24,6 @@
     if(doc.ownerId&&doc.ownerId!==owner)throw new Error('حساب فعال تغییر کرده؛ صفحه را دوباره باز کن');
     RI.workspaceSlot=doc.workspace||1;
     RI.applyCommerce(doc.commerce);RI.ownerSettings=doc.ownerSettings||{};
-    if(['home','links','stats'].includes(document.body.dataset.page))RI.statsLoading=true;
     let legacy=false;try{legacy=RI.workspaceSlot===1&&!!sessionStorage.getItem('resumeit-draft-v1:'+owner);}catch{}
     if(!doc.revision&&legacy){let id;try{id=JSON.parse(sessionStorage.getItem('resumeit-draft-v1:'+owner))?.content?.theme?.resume;}catch{}if(id)await RI.loadTemplates([id]);}
     RI.restoreDraft(owner,doc.revision>0);

@@ -86,7 +86,7 @@
     for (const key of ['step', 'tab', 'anchor']) if (opts && opts[key]) url.searchParams.set(key, opts[key]);
     return url.pathname + url.search;
   };
-  let navigationEpoch=0,navigating=false,pendingNavigation=null,currentUrl=location.pathname+location.search;
+  let navigationEpoch=0,navigationGuard=null,currentUrl=location.pathname+location.search;
   RI.setRouteTab=(tab,initial)=>{const url=new URL(location.href);if(tab===initial)url.searchParams.delete('tab');else url.searchParams.set('tab',tab);history.replaceState(history.state,'',url.pathname+url.search+url.hash);currentUrl=url.pathname+url.search;};
   const pageLoads=new Map();
   RI.loadPage=async id=>{if(!NAV.some(g=>g.items.some(i=>i[0]===id)))throw new Error('بخش نامعتبر است');if(!RI.pages[id])await loadScript('/dashboard/js/pages/'+id+'.js');return RI.pages[id];};
@@ -102,18 +102,20 @@
   }
   async function navigate(id, opts, back=false) {
     if (!NAV.some(g => g.items.some(i => i[0] === id))) return;
-    if(navigating){pendingNavigation=[id,opts,back];return;}
     if(bootstrapping){location.assign(RI.routeUrl(id,opts));return;}
-    navigating=true;
-    const previous=currentUrl;
+    const epoch=++navigationEpoch,owner=RI.ownerId,slot=RI.workspaceSlot,previous=currentUrl;
+    const latest=()=>epoch===navigationEpoch&&owner===RI.ownerId&&slot===RI.workspaceSlot;
     try {
-      if (!(await RI.leaveGuard())) { if(back)history.replaceState(null,'',previous);return; }
-      navigationEpoch++;
+      navigationGuard ||= RI.leaveGuard().finally(()=>{navigationGuard=null;});
+      const allowed=await navigationGuard;if(!latest())return;
+      if(!allowed){if(back)history.replaceState(null,'',previous);return;}
+      RI.$('#routeLoading')?.remove();
       const pending=document.createElement('div');pending.id='routeLoading';pending.innerHTML=RI.sectionLoading('در حال آماده‌سازی بخش…');RI.$('#view').before(pending);RI.$('#view').inert=true;
       if(id==='resume') {
         await Promise.all([!RI.ResumeJourney?loadScript('/dashboard/js/resume-journey.js'):null,!RI.mountImportedEditor?loadScript('/dashboard/js/template-editor.js'):null,RI.loadTemplates([RI.C().theme.resume])]);
       }
       if(!RI.pages[id]) await loadScript('/dashboard/js/pages/'+id+'.js');
+      if(!latest())return;
       if(!RI.pages[id])throw new Error('بارگذاری بخش کامل نشد؛ صفحه را دوباره باز کن');
       if(!back)history.pushState(null,'',RI.routeUrl(id,opts));
       document.body.dataset.page=id;
@@ -121,8 +123,8 @@
       await render(id);currentUrl=location.pathname+location.search;
       paintSave();
       if(['home','links','stats'].includes(id)&&RI.statsRows===null&&!RI.statsLoading)RI.loadStats();
-    } catch(e) { if(back)history.replaceState(null,'',previous);RI.toast(e.message,{kind:'error'}); }
-    finally { navigating=false;RI.$('#routeLoading')?.remove();RI.$('#view').inert=false;if(pendingNavigation){const next=pendingNavigation;pendingNavigation=null;navigate(...next);} }
+    } catch(e) { if(!latest())return;if(back)history.replaceState(null,'',previous);RI.toast(e.message,{kind:'error'}); }
+    finally { if(latest()){RI.$('#routeLoading')?.remove();RI.$('#view').inert=false;} }
   }
 
   async function render(id, force) {
@@ -254,7 +256,7 @@
       }catch(error){if(!host.isConnected||epoch!==navigationEpoch)return;host.innerHTML='<section class="section-loading"><p role="alert">'+RI.esc(error.message)+'</p><button type="button" class="btn btn--soft" data-initial-retry>تلاش دوباره</button></section>';host.querySelector('[data-initial-retry]').addEventListener('click',openInitialPage,{once:true});}
     }
     await openInitialPage();
-    if(navigationEpoch===0&&['home','links','stats'].includes(document.body.dataset.page))requestAnimationFrame(()=>setTimeout(()=>{if(navigationEpoch===0)RI.loadStats();},0));
+    if(navigationEpoch===0&&['home','links','stats'].includes(document.body.dataset.page))requestAnimationFrame(()=>setTimeout(()=>{if(navigationEpoch===0&&RI.statsRows===null&&!RI.statsLoading&&!RI.statsError)RI.loadStats();},0));
     document.dispatchEvent(new Event('ri:dashboard-ready'));
     RI.startInbox?.();
   }
