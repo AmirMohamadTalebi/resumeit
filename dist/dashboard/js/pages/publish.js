@@ -26,16 +26,17 @@
         return '<div class="slugstat is-bad" role="alert">' + RI.icon('alert') + r.msg + '</div>' + sug;
       }
       function addressTab() {
-        const u = RI.urls(), r = RI.slugCheck(C().slug), ok = r.state === 'ok';
-        const pubR = RI.state.pub.resume.status === 'published', pubL = RI.state.pub.links.status === 'published';
+        const r = RI.slugCheck(C().slug);
         return '<div class="panel"><div class="panel__head"><h2>نام صفحه (زیردامنه)</h2><p>یک نام کوتاه و ماندگار؛ حروف کوچک انگلیسی، عدد و خط تیره <span class="field__req">پایهٔ انتشار</span></p></div>' +
           '<div class="field" id="slugField"><label class="field__label" for="slug">نام صفحه</label><div class="input-group"><input class="input" id="slug" value="' + esc(C().slug) + '" maxlength="24" autocomplete="off" spellcheck="false" aria-describedby="slugmsg" aria-invalid="' + (r.state === 'invalid' || r.state === 'taken') + '"><span class="input-group__addon">.' + RI.DOMAIN + '</span></div><div id="slugmsg" aria-live="polite">' + slugMsg(r) + '</div>' +
           '<div class="field__hint">نام‌هایی مانند admin و www برای سرویس رزرو شده‌اند.</div></div>' +
-          (RI.state.pub.resume.status === 'published' && C().slug !== RI.savedSlug ? '<div class="banner banner--warn">' + RI.icon('alert') + '<div class="banner__body"><b>آدرس منتشرشده عوض می‌شود</b>پس از ذخیرهٔ نام جدید، آدرس قبلی دیگر کار نمی‌کند و لینک‌های اشتراک‌گذاری‌شده باید عوض شوند</div></div>' : '') + '</div>' +
-          '<div class="panel"><div class="panel__head"><h2>آدرس‌های شما</h2><p>رزومه و صفحهٔ لینک دو صفحهٔ مستقل‌اند که از منوی خودشان به هم وصل می‌شوند</p></div><div class="urlrows">' +
-          [['resume', 'صفحهٔ رزومه', 'resume', u.resume, pubR], ['links', 'صفحهٔ لینک‌ها', 'link', u.links, pubL]].map((x) => '<div class="urlrow ' + (ok ? '' : 'is-off') + '"><span class="row__ico">' + RI.icon(x[2]) + '</span><div class="row__main"><div class="row__title">' + x[1] + ' ' + (x[4] ? '<span class="chip chip--ok">منتشر شده</span>' : '<span class="chip">پیش‌نویس</span>') + '</div>' + (ok ? RI.urlChip(x[3], { open: x[3] }) : '<div class="field__hint">با انتخاب یک نام معتبر، آدرس این‌جا ظاهر می‌شود</div>') + '</div></div>').join('') + '</div></div>';
+          '<div data-address-warning>'+addressWarning()+'</div>' + '</div>' +
+          '<div class="panel"><div class="panel__head"><h2>آدرس‌های شما</h2><p>رزومه و صفحهٔ لینک دو صفحهٔ مستقل‌اند که از منوی خودشان به هم وصل می‌شوند</p></div><div class="urlrows" data-address-rows>' +
+          addressRows() + '</div></div>';
       }
 
+      function addressWarning(){return RI.pageKinds().some(k=>RI.state.pub[k].status==='published')&&C().slug!==RI.savedSlug?'<div class="banner banner--warn">'+RI.icon('alert')+'<div class="banner__body"><b>آدرس منتشرشده عوض می‌شود</b>پس از ذخیرهٔ نام جدید، آدرس قبلی دیگر کار نمی‌کند و لینک‌های اشتراک‌گذاری‌شده باید عوض شوند</div></div>':'';}
+      function addressRows(){const u=RI.urls(),ok=RI.slugCheck(C().slug).state==='ok',pubR=RI.state.pub.resume.status==='published',pubL=RI.state.pub.links.status==='published';return [['resume', 'صفحهٔ رزومه', 'resume', u.resume, pubR], ['links', 'صفحهٔ لینک‌ها', 'link', u.links, pubL]].filter(x=>RI.pageKinds().includes(x[0])).map((x) => '<div class="urlrow ' + (ok ? '' : 'is-off') + '"><span class="row__ico">' + RI.icon(x[2]) + '</span><div class="row__main"><div class="row__title">' + x[1] + ' ' + (x[4] ? '<span class="chip chip--ok">منتشر شده</span>'+(RI.pubDirty(x[0])?'<span class="chip chip--warn">تغییرات منتشرنشده</span>':'') : '<span class="chip">پیش‌نویس</span>') + '</div>' + (x[4]&&RI.pubDirty(x[0])?'<div class="field__hint">آدرس بر اساس پیش‌نویس فعلی است.</div>':'') + (ok ? RI.urlChip(x[3], { open: x[3] }) : '<div class="field__hint">با انتخاب یک نام معتبر، آدرس این‌جا ظاهر می‌شود</div>') + '</div></div>').join('');}
       /* ---- دامنه ---- */
       function domainTab() { return '<div class="panel"><h2>آدرس شخصی شما</h2><p>رزومه و لینک‌ها روی زیردامنهٔ resumeit.ir منتشر می‌شوند. اتصال دامنهٔ مستقل فعلاً فعال نیست.</p><a class="btn btn--soft" href="/contact/">ارتباط با پشتیبانی</a></div>'; }
 
@@ -53,7 +54,7 @@
 
       /* ---- چک‌لیست و انتشار ---- */
       function pubCard(k, rd) {
-        const s = RI.state.pub[k], live = s.status === 'published', dirty = RI.pubDirty(k), ok = (k === 'resume' ? rd.resumeOk : rd.linksOk) && (RI.workspaceSlot===1||RI.hasSub()), u = RI.urls();
+        const s = RI.state.pub[k], live = s.status === 'published', dirty = RI.pubDirty(k), ok = (k === 'resume' ? rd.resumeOk : rd.linksOk) && RI.canWorkspace(RI.workspaceSlot), u = RI.urls();
         return '<section class="panel pubcard"><div class="panel__head panel__head--row"><div><h2>' + (k === 'resume' ? 'صفحهٔ رزومه' : 'صفحهٔ لینک‌ها') + '</h2><p>' + (live ? (dirty ? 'نسخهٔ ' + RI.fa(s.version) + ' منتشر است و تغییرات تازه‌ای هنوز منتشر نشده' : 'نسخهٔ ' + RI.fa(s.version) + ' منتشر است، آخرین به‌روزرسانی ' + RI.date(s.at) + '.') : 'هنوز منتشر نشده؛ فقط تو می‌بینی‌اش') + '</p></div>' + (live ? (dirty ? '<span class="chip chip--warn">تغییرات منتشرنشده</span>' : '<span class="chip chip--ok">' + RI.icon('check') + 'منتشر شده</span>') : '<span class="chip">پیش‌نویس</span>') + '</div>' +
           '<div class="workspace-band">'+RI.urlChip(k==='resume'?u.resume:u.links,{})+'</div>'+
           (!ok ? '<p><a class="textlink" href="/dashboard/studio/" data-go="studio">ادامهٔ تکمیل در استودیو '+RI.icon('chevL')+'</a></p>' : '<p class="field__hint">آمادهٔ ساخت نسخهٔ عمومی</p>') +
@@ -61,20 +62,20 @@
           (live ? '<button type="button" class="btn btn--primary" data-pub="' + k + '" ' + (dirty && ok ? '' : 'disabled') + '>' + RI.icon('refresh') + 'به‌روزرسانی نسخهٔ منتشرشده</button><button type="button" class="btn btn--danger-soft" data-unpub="' + k + '">' + RI.icon('eyeOff') + 'برداشتن از انتشار</button>' : '<button type="button" class="btn btn--primary" data-pub="' + k + '" ' + (ok ? '' : 'disabled') + '>' + RI.icon('rocket') + 'انتشار</button>') + '</div>' +
           (live ? '<div style="margin-top:12px">' + RI.urlChip(k === 'resume' ? u.resume : u.links, { open: k === 'resume' ? u.resume : u.links }) + '</div>' : '') + '</section>';
       }
-      function goTab() { const rd = RI.readiness(),paused=!RI.canWorkspace(RI.workspaceSlot);return (paused?'<div class="banner banner--warn"><div class="banner__body"><b>این جایگاه با پایان اشتراک از نمایش عمومی خارج شده است.</b>پیش‌نویس و نسخه‌های قبلی حفظ شده‌اند؛ با تمدید اشتراک دوباره در دسترس قرار می‌گیرند.</div><a class="btn btn--soft" href="/dashboard/billing/" data-go="billing">تمدید اشتراک</a></div>':'')+'<div class="publication-grid">' + RI.pageKinds().map(kind=>pubCard(kind,rd)).join('') + '</div>'; }
+      function goTab() { const rd = RI.readiness(),paused=!RI.canWorkspace(RI.workspaceSlot);return (paused?'<div class="banner banner--warn"><div class="banner__body"><b>این جایگاه با دسترسی یا سهمیهٔ فعلی قابل انتشار نیست.</b>پیش‌نویس و نسخه‌های قبلی حفظ شده‌اند؛ سهمیه و وضعیت اشتراک را بررسی کن.</div><a class="btn btn--soft" href="/dashboard/billing/" data-go="billing">بررسی دسترسی</a></div>':'')+'<div class="publication-grid">' + RI.pageKinds().map(kind=>pubCard(kind,rd)).join('') + '</div>'; }
 
       function paint() {
         body.innerHTML = tab === 'address' ? addressTab() : tab === 'domain' ? domainTab() : tab === 'share' ? shareTab() : goTab();
         if(tab==='address'){
           const routes=C().routing||(C().routing={resume:'',links:'link'}),extra=document.createElement('section');extra.className='workspace-band route-settings';extra.innerHTML='<h2>قانون انتخاب آدرس</h2><p>نام صفحه: ۳ تا ۲۴ حرف کوچک انگلیسی، عدد یا خط تیره؛ بدون فاصله، فارسی، خط تیرهٔ ابتدا/انتها یا دو خط تیرهٔ متوالی. نام گرفته‌شده و نام‌های سیستمی مثل admin، api، contact و payments قابل انتخاب نیستند.</p>'+(RI.workspaceSlot===3?'<p>این جایگاه فقط صفحهٔ لینک است: <b class="ltr-inline">resumeit.ir/'+esc(C().slug||'name3')+'</b></p>':'<div class="form-grid"><div class="field"><label class="field__label" for="resume-path">مسیر رزومه · به انتخاب تو</label><input class="input" id="resume-path" dir="ltr" maxlength="24" value="'+esc(routes.resume)+'" placeholder="خالی = ریشهٔ زیردامنه"><p class="field__hint">مثال: name.resumeit.ir/resume؛ ریشهٔ قدیمی هم کار می‌کند.</p></div><div class="field"><label class="field__label" for="links-path">مسیر صفحهٔ لینک · همیشه دارای نام</label><input class="input" id="links-path" dir="ltr" maxlength="24" value="'+esc(routes.links)+'" placeholder="link"><p class="field__hint">پیش‌فرض: /link؛ خالی مجاز نیست. /links قدیمی محفوظ است.</p></div></div><p>مسیرها ۱ تا ۲۴ نویسه‌اند و نباید یکسان یا سیستمی باشند؛ out، share-image، api و admin قابل انتخاب نیستند. تغییر مسیر بعد از انتشار دوباره عمومی می‌شود.</p>')+'<p role="status" data-route-message></p>';body.append(extra);
-          if(RI.workspaceSlot===3){body.querySelector('#slugField .input-group__addon').textContent='resumeit.ir/';body.querySelector('.panel__head h2').textContent='نام صفحه روی دامنهٔ اصلی';body.querySelectorAll('.urlrow').forEach((row,index)=>{if(index===0)row.remove();});}
+          if(RI.workspaceSlot===3){body.querySelector('#slugField .input-group__addon').textContent='resumeit.ir/';body.querySelector('.panel__head h2').textContent='نام صفحه روی دامنهٔ اصلی';}
         }
         RI.$$('#ptabs [data-tab]', root).forEach((b) => b.setAttribute('aria-selected', b.dataset.tab === tab));
         if (tab === 'share') { RI.bindImageField(body, 'shimg', { set: (v) => { C().share.image = v; RI.touch('share'); paint(); } }); counts(); }
         if (tab === 'address') { const i = RI.$('#slug', body); if (ctx.opts && ctx.opts.anchor === 'slug' && i) { i.focus(); ctx.opts = {}; } }
       }
       function counts() { const s = C().share; const a = RI.$('#shc1', body), b = RI.$('#shc2', body); if (a) a.textContent = RI.fa(s.title.length) + '/۶۰'; if (b) b.textContent = RI.fa(s.desc.length) + '/۱۶۰'; }
-      function refreshAddresses(){const urls=RI.urls(),kinds=RI.pageKinds();body.querySelectorAll('.urlrow').forEach((row,index)=>{const chip=row.querySelector('.url-chip');if(chip)chip.outerHTML=RI.urlChip(urls[kinds[index]],{open:urls[kinds[index]]});});}
+      function refreshAddresses(){const rows=body.querySelector('[data-address-rows]');if(rows)rows.innerHTML=addressRows();const warning=body.querySelector('[data-address-warning]');if(warning)warning.innerHTML=addressWarning();}
 
       /* رویدادها */
       RI.delegate(root, 'click', '[data-tab]', (e, b) => { tab = b.dataset.tab; paint(); });
@@ -86,7 +87,7 @@
         if(['resume-path','links-path'].includes(t.id)){const kind=t.id==='resume-path'?'resume':'links',value=t.value.trim().toLowerCase();C().routing[kind]=value;const valid=(kind==='resume'&&!value||RI.pagePathValid(value))&&!(kind==='resume'&&['link','links'].includes(value))&&C().routing.resume!==C().routing.links;t.setAttribute('aria-invalid',String(!valid));body.querySelector('[data-route-message]').textContent=valid?'مسیر معتبر است؛ برای عمومی‌شدن دوباره منتشر کن.':'مسیر خالی، تکراری یا سیستمی مجاز نیست؛ فقط حروف کوچک انگلیسی، عدد و خط تیره.';RI.touch('routing');if(valid)refreshAddresses();}
         if (t.id === 'slug') {
           C().slug = t.value.trim().toLowerCase(); RI.touch('slug');
-          const r = RI.slugCheck(C().slug), box = RI.$('#slugmsg', body);
+          refreshAddresses();const r = RI.slugCheck(C().slug), box = RI.$('#slugmsg', body);
           clearTimeout(slugTimer);
           if (r.state === 'invalid' || r.state === 'empty') { box.innerHTML = slugMsg(r); t.setAttribute('aria-invalid', r.state === 'invalid'); }
           else { box.innerHTML = slugMsg(r, true); slugTimer = setTimeout(async () => { const value=C().slug;try{const result=await RI.dashboardRequest('slug?value='+encodeURIComponent(value));if(C().slug!==value||!box.isConnected)return;const rr=result.available?{state:'ok',msg:'این نام آزاد است.'}:{state:'taken',msg:'این نام رزرو شده یا قبلاً گرفته شده است.'};box.innerHTML=slugMsg(rr);t.setAttribute('aria-invalid',!result.available);}catch(e){if(box.isConnected)box.textContent=e.message;} },350); }

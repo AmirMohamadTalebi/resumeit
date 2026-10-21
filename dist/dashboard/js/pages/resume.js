@@ -7,7 +7,7 @@
 
   const yearField = { type: 'text', max: 20 };
   const LISTS = {
-    skills: { title: 'مهارت‌ها', add: 'افزودن مهارت', icon: 'sparkle', hint: 'سه مهارت کافی است تا بخش جان بگیرد؛ بعداً هر چقدر خواستی اضافه کن', empty: ['هنوز مهارتی ننوشته‌ای', 'مهارت‌هایی را که واقعاً به آن‌ها مسلطی بنویس؛ کارفرما اول از همین‌جا نگاه می‌کند'],
+    skills: { title: 'مهارت‌ها', add: 'افزودن مهارت', icon: 'sparkle', hint: 'سه مهارت کافی است تا بخش جان بگیرد؛ تا ۱۰۰ مورد می‌توانی اضافه کنی', empty: ['هنوز مهارتی ننوشته‌ای', 'مهارت‌هایی را که واقعاً به آن‌ها مسلطی بنویس؛ کارفرما اول از همین‌جا نگاه می‌کند'],
       fields: [{ key: 'name', label: 'نام مهارت', required: true, max: 40, placeholder: 'مثلاً JavaScript یا طراحی لوگو' }, { key: 'level', label: 'سطح مهارت', type: 'level', levels: RI.SKILL_LEVELS }],
       title_: (x) => x.name, sub: (x) => RI.SKILL_LEVELS[(x.level || 3) - 1], right: (x) => '<span class="dots" aria-hidden="true">' + [1, 2, 3, 4, 5].map((i) => '<i class="' + (i <= x.level ? 'on' : '') + '"></i>').join('') + '</span>', defaults: { level: 3 } },
     experience: { title: 'تجربه‌های کاری', add: 'افزودن تجربه', icon: 'briefcase', hint: 'کارآموزی، فریلنس و پروژهٔ داوطلبانه هم تجربه حساب می‌شود', empty: ['تجربهٔ کاری اضافه نشده', 'اگر هنوز سابقهٔ رسمی نداری، کارآموزی، همکاری با انجمن یا پروژهٔ مستقل را بنویس'],
@@ -25,8 +25,8 @@
     languages: { title: 'زبان‌ها', add: 'افزودن زبان', icon: 'language', hint: 'زبان‌هایی که می‌توانی با آن‌ها کار کنی', empty: ['زبانی اضافه نشده', 'فارسی و انگلیسی؟ زبان‌های دیگر؟ همین‌جا بنویس'],
       fields: [{ key: 'name', label: 'زبان', required: true, max: 30 }, { key: 'level', label: 'سطح', type: 'level', levels: RI.LANG_LEVELS }],
       title_: (x) => x.name, sub: (x) => RI.LANG_LEVELS[(x.level || 3) - 1], defaults: { level: 3 } },
-    socials: { title: 'شبکه‌های اجتماعی', add: 'افزودن شبکه', icon: 'globe', hint: 'فقط نام کاربری لازم است، نه کل آدرس', empty: ['شبکه‌ای اضافه نشده', 'گیت‌هاب، لینکدین، اینستاگرام و… را اضافه کن'],
-      fields: [{ key: 'platform', label: 'شبکه', type: 'select', options: RI.SOCIALS.map((s) => [s[0], s[1]]), required: true }, { key: 'handle', label: 'نام کاربری', required: true, ltr: true, max: 40, placeholder: 'username' }],
+    socials: { title: 'شبکه‌های اجتماعی', add: 'افزودن شبکه', icon: 'globe', hint: 'نام کاربری بدون فاصله یا آدرس کامل با https:// بنویس', empty: ['شبکه‌ای اضافه نشده', 'گیت‌هاب، لینکدین، اینستاگرام و… را اضافه کن'],
+      fields: [{ key: 'platform', label: 'شبکه', type: 'select', options: RI.SOCIALS.map((s) => [s[0], s[1]]), required: true }, { key: 'handle', label: 'نام کاربری یا آدرس کامل', required: true, ltr: true, max: 200, validate:v=>RI.socialHandleValid(v)?'':'نام کاربری بدون فاصله یا آدرس معتبر بنویس؛ مثل reza.design یا https://instagram.com/reza.design.', placeholder: 'username' }],
       title_: (x) => (RI.SOCIALS.find((s) => s[0] === x.platform) || [0, x.platform])[1], sub: (x) => '@' + x.handle, iconOf: (x) => x.platform, defaults: { platform: 'github' } },
   };
 
@@ -149,10 +149,10 @@
         const rows = items.map((x, i) => '<li class="row" data-id="' + x.id + '"><span class="row__grip" title="کشیدن برای جابه‌جایی" aria-hidden="true">' + RI.icon('grip') + '</span>' +
           (L.thumb && L.thumb(x) ? '<span class="row__thumb" style="' + esc(RI.bg(L.thumb(x))) + '"></span>' : '<span class="row__ico">' + RI.icon(L.iconOf ? L.iconOf(x) : L.icon) + '</span>') +
           '<div class="row__main"><div class="row__title">' + esc(L.title_(x)) + '</div><div class="row__sub">' + esc(L.sub(x) || '') + '</div></div>' + (L.right ? L.right(x) : '') +
-          '<div class="row__actions"><button type="button" class="btn btn--icon btn--ghost btn--sm" data-up="' + x.id + '" aria-label="بالا" ' + (i === 0 ? 'disabled' : '') + '>' + RI.icon('up') + '</button><button type="button" class="btn btn--icon btn--ghost btn--sm" data-down="' + x.id + '" aria-label="پایین" ' + (i === items.length - 1 ? 'disabled' : '') + '>' + RI.icon('down') + '</button>' +
-          '<button type="button" class="btn btn--icon btn--ghost btn--sm" data-edit="' + x.id + '" aria-label="ویرایش">' + RI.icon('edit') + '</button><button type="button" class="btn btn--icon btn--ghost btn--sm" data-del="' + x.id + '" aria-label="حذف">' + RI.icon('trash') + '</button></div></li>').join('');
-        return '<div class="panel"><div class="panel__head panel__head--row"><div><h2>' + L.title + '</h2><p>' + L.hint + ' <span class="field__opt">به انتخاب تو</span></p></div><button type="button" class="btn btn--primary btn--sm" data-add>' + RI.icon('plus') + L.add + '</button></div>' +
-          (items.length ? '<ul class="rows" id="rlist">' + rows + '</ul>' : RI.empty({ icon: L.icon, title: L.empty[0], text: L.empty[1], action: '<button type="button" class="btn btn--primary" data-add>' + RI.icon('plus') + L.add + '</button>' })) + '</div>';
+          '<div class="row__actions"><button type="button" class="btn btn--icon btn--ghost btn--sm" data-up="' + x.id + '" aria-label="بالا ' + esc(L.title_(x)) + '" ' + (i === 0 ? 'disabled' : '') + '>' + RI.icon('up') + '</button><button type="button" class="btn btn--icon btn--ghost btn--sm" data-down="' + x.id + '" aria-label="پایین ' + esc(L.title_(x)) + '" ' + (i === items.length - 1 ? 'disabled' : '') + '>' + RI.icon('down') + '</button>' +
+          '<button type="button" class="btn btn--icon btn--ghost btn--sm" data-edit="' + x.id + '" aria-label="ویرایش ' + esc(L.title_(x)) + '">' + RI.icon('edit') + '</button><button type="button" class="btn btn--icon btn--ghost btn--sm" data-del="' + x.id + '" aria-label="حذف ' + esc(L.title_(x)) + '">' + RI.icon('trash') + '</button></div></li>').join('');
+        return '<div class="panel"><div class="panel__head panel__head--row"><div><h2>' + L.title + '</h2><p>' + L.hint + ' <span class="field__opt">به انتخاب تو</span></p></div><button type="button" class="btn btn--primary btn--sm" data-add ' + (items.length>=RI.MAX_LIST_ITEMS?'disabled aria-describedby="resume-list-limit"':'') + '>' + RI.icon('plus') + L.add + '</button></div>' +
+          (items.length>=RI.MAX_LIST_ITEMS?'<p class="field__hint" id="resume-list-limit">حداکثر '+RI.fa(RI.MAX_LIST_ITEMS)+' مورد؛ ویرایش و حذف همچنان ممکن است.</p>':'') + (items.length ? '<ul class="rows" id="rlist">' + rows + '</ul>' : RI.empty({ icon: L.icon, title: L.empty[0], text: L.empty[1], action: '<button type="button" class="btn btn--primary" data-add>' + RI.icon('plus') + L.add + '</button>' })) + '</div>';
       }
 
       function templatePanel() {
@@ -218,7 +218,7 @@
           return;
         }
         if(step==='profile') {
-          const hints={name:['نام و نام خانوادگی','نامی که می‌خواهی روی رزومه دیده شود.'],location:['شهر','شهر محل سکونت یا فعالیت؛ نشانی دقیق لازم نیست.'],title:['عنوان حرفه‌ای یا تحصیلی','حوزهٔ کاری یا رشتهٔ اصلی خودت را در یک خط بنویس.'],bio:['معرفی کوتاه','دو یا سه جمله دربارهٔ تخصص، تجربه و هدف واقعی خودت.']};
+        const hints={name:['نام و نام خانوادگی','نامی که می‌خواهی روی رزومه دیده شود.'],location:['شهر','شهر محل سکونت یا فعالیت؛ نشانی دقیق لازم نیست.'],title:['عنوان حرفه‌ای یا تحصیلی','حوزهٔ کاری یا رشتهٔ اصلی خودت را در یک خط بنویس.'],bio:['معرفی کوتاه','دو یا سه جمله دربارهٔ تخصص، تجربه و هدف واقعی خودت.']};
           for(const [key,[label,what]]of Object.entries(hints))add('[data-field="'+key+'"] .field__label',label,what,'بخش معرفی در بالای رزومه','');
           ['cover','avatar'].forEach((key,i)=>add('.profile-media>.field:nth-child('+(i+1)+')>.field__label',key==='cover'?'تصویر کاور':'عکس پروفایل',key==='cover'?'تصویر بالای رزومه؛ جای آن به قالب انتخابی بستگی دارد.':'چهره یا تصویر معرفی خودت؛ بارگذاری عکس اختیاری است.','سربرگ رزومه','بدون تصویر بارگذاری‌شده؛ ظاهر جایگزین را قالب تعیین می‌کند'));
         }
@@ -280,10 +280,12 @@
 
       function openForm(id) {
         const section=step,owner=RI.ownerId,slot=RI.workspaceSlot,L = LISTS[section], list = RI.C()[section], cur = id ? list.find((x) => x.id === id) : null;
-        const hints={desc:'شرح کوتاه و واقعی از کار، نتیجه یا سابقهٔ خودت؛ از ادعاهای ساختگی پرهیز کن.',from:'زمان شروع؛ می‌توانی سال یا سال و ماه بنویسی.',to:'زمان پایان؛ اگر هنوز ادامه دارد این مقدار نمایش داده نمی‌شود.',current:'اگر روشن باشد به‌جای تاریخ پایان، ادامه‌داشتن این سابقه نشان داده می‌شود.',url:'نشانی مقصد پروژه؛ بازدیدکننده از این لینک به پروژه می‌رود.',image:'تصویر معرفی پروژه، در بخش نمونه‌کارها و پنجرهٔ توضیح پروژه.',level:'ارزیابی خودت از سطح تسلط؛ این مقدار آزمون یا تأیید مهارت نیست.',handle:'فقط نام کاربری شبکه را بنویس، نه نشانی کامل آن.',platform:'شبکه‌ای که این نام کاربری به آن تعلق دارد.'};
+        if(!cur&&list.length>=RI.MAX_LIST_ITEMS){RI.toast('سقف این فهرست '+RI.fa(RI.MAX_LIST_ITEMS)+' مورد است',{kind:'info'});return;}
+        const hints={desc:'شرح کوتاه و واقعی از کار، نتیجه یا سابقهٔ خودت؛ از ادعاهای ساختگی پرهیز کن.',from:'زمان شروع؛ می‌توانی سال یا سال و ماه بنویسی.',to:'زمان پایان؛ اگر هنوز ادامه دارد این مقدار نمایش داده نمی‌شود.',current:'اگر روشن باشد به‌جای تاریخ پایان، ادامه‌داشتن این سابقه نشان داده می‌شود.',url:'نشانی مقصد پروژه؛ بازدیدکننده از این لینک به پروژه می‌رود.',image:'تصویر معرفی پروژه، در بخش نمونه‌کارها و پنجرهٔ توضیح پروژه.',level:'ارزیابی خودت از سطح تسلط؛ این مقدار آزمون یا تأیید مهارت نیست.',handle:'نام کاربری بدون فاصله یا آدرس کامل با https://؛ نام نقطه‌دار مثل reza.design نام کاربری همین شبکه است.',platform:'شبکه‌ای که این نام کاربری به آن تعلق دارد.'};
         const fields=L.fields.map(f=>({...f,help:{what:hints[f.key]||'مقدار «'+f.label+'» برای همین مورد از بخش '+L.title+'.',where:'بخش '+L.title+' در رزومه',defaultValue:f.type==='level'?f.levels[(L.defaults?.[f.key]||3)-1]:f.type==='select'?f.options.find(o=>o[0]===L.defaults?.[f.key])?.[1]:L.defaults?.[f.key]??(f.type==='checkbox'?false:'')}}));
+        const priorValidate=fields[0].validate;fields[0].validate=(v,all)=>!cur&&list.length>=RI.MAX_LIST_ITEMS?'سقف این فهرست '+RI.fa(RI.MAX_LIST_ITEMS)+' مورد است':priorValidate?.(v,all)||'';
         RI.formModal({ title: (cur ? 'ویرایش ' : '') + L.add.replace('افزودن ', cur ? '' : 'افزودن '), size: step === 'projects' ? 'lg' : 'md', fields, values: cur ? RI.clone(cur) : Object.assign({}, L.defaults || {}), submitLabel: cur ? 'ذخیرهٔ تغییر' : 'افزودن',
-          onSubmit: (v) => {if(!root.isConnected||owner!==RI.ownerId||slot!==RI.workspaceSlot){RI.toast('صفحه تغییر کرده؛ دوباره مورد را باز کن',{kind:'info'});return;} if (cur) Object.assign(cur, v); else list.push(Object.assign({ id: RI.uid() }, v)); RI.touch(section); paint(); RI.toast(cur ? 'تغییر اعمال شد' : 'اضافه شد' + (list.length === 1 ? ' — بخش جان گرفت!' : '')); } });
+          onSubmit: (v) => {if(!root.isConnected||owner!==RI.ownerId||slot!==RI.workspaceSlot){RI.toast('صفحه تغییر کرده؛ دوباره مورد را باز کن',{kind:'info'});return;} if (cur) Object.assign(cur, v); else list.push(Object.assign({ id: RI.uid() }, v)); RI.touch(section); paint();body.querySelector('[data-edit="'+(cur?cur.id:list[list.length-1].id)+'"]')?.focus({preventScroll:true}); RI.toast(cur ? 'تغییر اعمال شد' : 'اضافه شد' + (list.length === 1 ? ' — بخش جان گرفت!' : '')); } });
       }
       async function remove(id) {
         const section=step,L = LISTS[section], list = RI.C()[section], x = list.find((k) => k.id === id);
@@ -291,11 +293,11 @@
         if (!ok||!sameContext()) return;
         const el = RI.$('[data-id="' + id + '"]', body);
         if (el && !RI.reduceMotion()) await el.animate([{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'translateX(24px)' }], { duration: 220, easing: 'ease-in' }).finished.catch(() => {});
-        if(!sameContext())return;const index=list.findIndex(k=>k.id===id);if(index<0)return;list.splice(index, 1); RI.touch(section); paint(); RI.toast('حذف شد', { kind: 'info' });
+        if(!sameContext())return;const index=list.findIndex(k=>k.id===id);if(index<0)return;list.splice(index, 1); RI.touch(section); paint();(body.querySelector('[data-edit="'+(list[index]?.id||list[index-1]?.id)+'"]')||body.querySelector('[data-add]'))?.focus({preventScroll:true}); RI.toast('حذف شد', { kind: 'info' });
       }
       function shift(id, d) {
         const list = RI.C()[step], i = list.findIndex((k) => k.id === id), j = i + d; if (j < 0 || j >= list.length) return;
-        RI.flip(RI.$('#rlist', body), () => { RI.move(list, i, j); RI.touch(step); paint(); });
+        RI.flip(RI.$('#rlist', body), () => { RI.move(list, i, j); RI.touch(step); paint();(body.querySelector('[data-id="'+id+'"] [data-'+(d<0?'up':'down')+']:not(:disabled)')||body.querySelector('[data-edit="'+id+'"]'))?.focus({preventScroll:true}); });
       }
       function bindLayout() {
         const ul = RI.$('#slist', body);if(!ul)return; const secs = RI.C().sections;

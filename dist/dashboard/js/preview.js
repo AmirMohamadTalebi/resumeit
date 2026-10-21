@@ -3,7 +3,7 @@
   'use strict';
   const RI = (window.RI = window.RI || {});
   const esc = RI.esc;
-  const socialUrl=s=>RI.isUrl(s.handle)?RI.normUrl(s.handle):({github:'https://github.com/',linkedin:'https://linkedin.com/in/',telegram:'https://t.me/',instagram:'https://instagram.com/',twitter:'https://x.com/',youtube:'https://youtube.com/@'}[s.platform]||'https://resumeit.ir/')+encodeURIComponent(s.handle.replace(/^@/,''));
+  const socialUrl=RI.socialUrl;
 
   RI.LINK_BGS = [
     { id: 'tpl', name: 'طبق قالب' },
@@ -61,7 +61,7 @@
   function nav(c, active, base) {
     const nm = c.profile.name.trim() || 'نام شما';
     if(c._linksOnly)return '<nav class="pv-nav" aria-label="صفحهٔ لینک"><span class="pv-nav__brand">'+esc(nm)+'</span></nav>';
-    return '<nav class="pv-nav" aria-label="منوی صفحه"><span class="pv-nav__brand">' + esc(nm) + '</span><span class="pv-nav__links"><a href="' + esc(base === undefined ? '#' : base + '/') + '" data-pv-go="resume" class="' + (active === 'resume' ? 'is-on' : '') + '">رزومه</a><a href="' + esc(base === undefined ? '#' : base + '/links') + '" data-pv-go="links" class="' + (active === 'links' ? 'is-on' : '') + '">لینک‌ها</a></span></nav>';
+    return '<nav class="pv-nav" aria-label="منوی صفحه"><span class="pv-nav__brand">' + esc(nm) + '</span><span class="pv-nav__links">'+(c._publicPages?.resume===false?'':'<a href="' + esc(base === undefined ? '#' : base + '/') + '" data-pv-go="resume" class="' + (active === 'resume' ? 'is-on' : '') + '">رزومه</a>')+(c._publicPages?.links===false?'':'<a href="' + esc(base === undefined ? '#' : base + '/links') + '" data-pv-go="links" class="' + (active === 'links' ? 'is-on' : '') + '">لینک‌ها</a>')+'</span></nav>';
   }
 
   const SEC_TITLES = { skills: ['مهارت‌ها', 'sparkle'], experience: ['تجربه‌های کاری', 'briefcase'], education: ['تحصیلات', 'book'], projects: ['پروژه‌ها و نمونه‌کارها', 'code'], certs: ['دوره‌ها، گواهی‌ها و افتخارات', 'award'], languages: ['زبان‌ها', 'language'] };
@@ -127,7 +127,7 @@
         (i.image ? '<span class="lv-btn__img" style="' + esc(RI.bg(i.image)) + '"></span>' : '<span class="lv-btn__ico">' + RI.icon(i.icon || 'link') + '</span>') +
         '<span class="lv-btn__txt"><b>' + esc(i.title) + '</b>' + (i.featured ? '<small class="ltr">' + esc(RI.hostOf(i.url || '')) + '</small>' : '') + '</span>' + (i.featured ? '<span class="lv-btn__star">' + RI.icon('star') + '</span>' : '') + '</a></li>';
     }).join('');
-    const socials = c.socials.length ? '<ul class="lv-soc">' + c.socials.map((s) => '<li title="' + esc(s.platform) + '"><a data-pv-link="1" href="'+esc(socialUrl(s))+'" rel="noopener noreferrer" aria-label="'+esc(s.platform)+'">' + RI.icon(s.platform) + '</a></li>').join('') + '</ul>' : '';
+    const socials = c.socials.length ? '<ul class="lv-soc">' + c.socials.map((s) => '<li title="' + esc(s.platform) + '"><a data-pv-link="1" href="'+esc(socialUrl(s))+'" rel="noopener noreferrer" aria-label="'+esc(RI.SOCIALS.find(x=>x[0]===s.platform)?.[1]||s.platform)+'">' + RI.icon(s.platform) + '</a></li>').join('') + '</ul>' : '';
     const empty = !items.length ? '<li class="lv-empty">هنوز لینکی منتشر نشده است.</li>' : '';
     return '<div class="lv lv--' + (['start','end'].includes(st.align)?st.align:'center') + '" style="' + esc(RI.linksVars(t, theme, st)) + '">' + nav(c, 'links', o.publicBase) +
       '<div class="lv-head"><img class="lv-avatar' + (st.ring ? ' lv-avatar--ring' : '') + '" src="' + esc(RI.avatarOf(p)) + '" alt="تصویر پروفایل '+esc(name)+'">' +

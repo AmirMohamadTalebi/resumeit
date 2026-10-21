@@ -39,4 +39,5 @@ jobs:
       - run: npm run check:public-audit
       - run: npm run check:account-audit
       - run: npm run check:template-editor
+      - run: npm run check:editor-audit
       - run: npm run check:staged-loading

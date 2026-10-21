@@ -32,6 +32,9 @@
     try { const u = new URL(RI.normUrl(s)); return ['http:', 'https:'].includes(u.protocol) && !u.username && !u.password && u.hostname.includes('.'); }
     catch { return false; }
   };
+  RI.MAX_LIST_ITEMS=100;
+  RI.socialHandleValid=value=>typeof value==='string'&&value.length<=2048&&(RI.isUrl(value)||/^[a-z0-9_.@/-]{1,200}$/i.test(value));
+  RI.socialUrl=s=>(/^https?:\/\//i.test(s.handle)||/^(?:www\.)?(?:github\.com|linkedin\.com|t\.me|instagram\.com|x\.com|twitter\.com|youtube\.com)\//i.test(s.handle))&&RI.isUrl(s.handle)?RI.normUrl(s.handle):({github:'https://github.com/',linkedin:'https://linkedin.com/in/',telegram:'https://t.me/',instagram:'https://instagram.com/',twitter:'https://x.com/',youtube:'https://youtube.com/@'}[s.platform]||'https://resumeit.ir/')+encodeURIComponent(s.handle.replace(/^@/,''));
   RI.isEmail = (s) => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(s);
   RI.isMobile = (s) => /^09\d{9}$/.test(String(s).replace(/[\s-]/g, ''));
   RI.normUrl = (s) => (/^https?:\/\//i.test(s) ? s : 'https://' + s);

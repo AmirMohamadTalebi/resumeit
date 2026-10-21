@@ -30,6 +30,7 @@ function dashboardHandler(database,auth,notifications,options){const reset=requi
     if(outgoing){const link=page.content.links.items.find(x=>x.id===outgoing[1]&&x.type==='link'&&x.active);const url=link&&model.webUrl(link.url);if(!url){res.writeHead(404);res.end();return true;}if(req.method==='GET')await database.recordMetric(page.id,'click',link.id,Date.now(),page.slot||1);res.writeHead(302,{Location:url});res.end();return true;}
     if(route.endsWith('/share-image')){const img=RI.shareCard(page.content,kind).image,m=/^data:image\/(png|jpeg|webp);base64,(.+)$/.exec(img||'');if(!m){res.writeHead(404);res.end();return true;}res.writeHead(200,{'Content-Type':'image/'+m[1]});res.end(req.method==='HEAD'?undefined:Buffer.from(m[2],'base64'));return true;}
     const c=model.publicContent(page.content,database.billing?await database.billing(page.id):{}),esc=RI.esc,canonical=pathPages?root.protocol+'//'+domain+base:local?origin+base+(kind==='links'?linksPath:resumePath):root.protocol+'//'+slug+'.'+domain+(kind==='links'?linksPath:resumePath);
+    c._publicPages={resume:!!pages?.resume,links:!!pages?.links};
     if(pathPages)c._linksOnly=true;
     const card=RI.shareCard(c,kind),image=card.image,ogImage=/^https:\/\//.test(image||'')?image:/^data:image\//.test(image||'')?canonical+'/share-image':null;
     const templatePage=new URL(req.url,origin).searchParams.get('page')||'home',imported=kind==='resume'&&RI.IMPORTED_TEMPLATES[c.theme.resume];

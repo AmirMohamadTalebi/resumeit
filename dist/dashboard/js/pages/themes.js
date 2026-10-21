@@ -16,6 +16,7 @@
       const owner=RI.ownerId,slot=RI.workspaceSlot;let alive=true;
       const current=()=>alive&&root.isConnected&&owner===RI.ownerId&&slot===RI.workspaceSlot;
       const initialTab=RI.workspaceSlot===3?'lt':'rt',requestedTab=options.journey?null:new URLSearchParams(location.search).get('tab');
+      let choiceSerial=0;
       let tab = ['lt','font','pal',...(RI.workspaceSlot===3?[]:['rt'])].includes(requestedTab)?requestedTab:initialTab, cat = 'all', acc = 'all', galleryPage = 0,query='',sort='newest',searchTimer;
       const body = RI.$('#tbody', root);
       const compactGallery = matchMedia('(max-width:600px)');
@@ -27,10 +28,12 @@
 
 
       async function choose(kind, id) {
+        const choice=++choiceSerial;
         const list = kind === 'rt' ? RI.RESUME_TEMPLATES : RI.LINK_TEMPLATES, it = list.find((x) => x.id === id), ref = kind + ':' + id;
         if (!RI.canUse(ref, it)) { const ok = await RI.lockedExplain(Object.assign({ kind: kind }, it)); if (!ok) return paint(); }
         if(!current())return;
-        if(kind==='rt')try{if(!RI.templateTransition)await import('/dashboard/js/template-loading.js?v='+encodeURIComponent(document.documentElement.dataset.assetVersion||''));if(!current())return;await RI.templateTransition(id);}catch(error){if(current()&&error.name!=='AbortError')RI.toast(error.message,{kind:'error'});return;}
+        if(kind==='rt')try{if(!RI.templateTransition)await import('/dashboard/js/template-loading.js?v='+encodeURIComponent(document.documentElement.dataset.assetVersion||''));if(!current())return;await RI.templateTransition(id);}catch(error){if(current()&&choice===choiceSerial&&error.name!=='AbortError')RI.toast(error.message,{kind:'error'});return;}
+        if(!current()||choice!==choiceSerial)return;
         applyTheme(kind === 'rt' ? { resume: id } : { links: id }, 'قالب «' + it.name + '» انتخاب شد');
       }
 
@@ -40,8 +43,8 @@
 
       function gallery(kind) {
         const list = (kind === 'rt' ? RI.RESUME_TEMPLATES : RI.LINK_TEMPLATES).filter((t) => RI.matches(query,t.name,t.desc,...t.cats.map(c=>CATS.find(x=>x[0]===c)?.[1]))&&(cat === 'all' || t.cats.indexOf(cat) > -1) && (acc === 'all' || t.access === acc || (acc === 'sub' && t.subscription)));
-        const price=t=>t.price??(t.access==='free'?0:Number.MAX_SAFE_INTEGER);
-        if(sort==='cheap')list.sort((a,b)=>price(a)-price(b));else if(sort==='expensive')list.sort((a,b)=>price(b)-price(a));else if(sort==='name')list.sort((a,b)=>a.name.localeCompare(b.name,'fa'));
+        const price=t=>t.price??(t.access==='free'?0:null);const priced=(a,b,descending)=>price(a)===null?(price(b)===null?0:1):price(b)===null?-1:descending?price(b)-price(a):price(a)-price(b);
+        if(sort==='cheap')list.sort((a,b)=>priced(a,b,false));else if(sort==='expensive')list.sort((a,b)=>priced(a,b,true));else if(sort==='name')list.sort((a,b)=>a.name.localeCompare(b.name,'fa'));
         const curId = kind === 'rt' ? th().resume : th().links;
         const cur = RI.findTemplate(kind === 'rt' ? 'resume' : 'links', curId);
         const pageSize = compactGallery.matches ? 2 : options.journey ? 4 : 6;
@@ -90,7 +93,7 @@
       RI.delegate(body,'click','.tcard',(event,card)=>{if(event.target.closest('[data-use]'))return;previewTemplate(card.dataset.id);});
       RI.delegate(body, 'click', '[data-cat]', (e, b) => { cat = b.dataset.cat; galleryPage = 0; paint(); });
       RI.delegate(body, 'click', '[data-acc]', (e, b) => { acc = b.dataset.acc; galleryPage = 0; paint(); });
-      RI.delegate(body, 'click', '[data-reset]', () => { cat = 'all'; acc = 'all'; galleryPage = 0; paint(); });
+      RI.delegate(body, 'click', '[data-reset]', () => {clearTimeout(searchTimer);query='';cat = 'all'; acc = 'all'; galleryPage = 0; paint();body.querySelector('#template-query')?.focus(); });
       RI.delegate(body, 'click', '[data-gallery-page]', (e, b) => { galleryPage = Number(b.dataset.galleryPage); paint(); RI.$('.gallery-pages button:not([disabled])', body)?.focus(); });
       RI.delegate(body, 'click', '[data-use]', (e, b) => choose(tab, b.dataset.use));
       RI.delegate(body, 'click', '[data-try]', (e, b) => {

@@ -11,7 +11,7 @@ function image(value,key){if(value===null||value==='')return null;if(typeof valu
 }
 function shape(value,sample,key=''){
   if(sample===null)return image(value,key);
-  if(Array.isArray(sample)){if(!Array.isArray(value)||value.length>100)fail('تعداد موارد بیش از حد مجاز است');const t=templates[key]||sample[0];return value.map(x=>shape(x,t));}
+  if(Array.isArray(sample)){if(!Array.isArray(value)||value.length>RI.MAX_LIST_ITEMS)fail('تعداد موارد بیش از حد مجاز است');const t=templates[key]||sample[0];return value.map(x=>shape(x,t));}
   if(typeof sample==='object'){if(!value||typeof value!=='object'||Array.isArray(value))fail('ساختار اطلاعات معتبر نیست');return Object.fromEntries(Object.keys(sample).map(k=>[k,shape(value[k]===undefined?sample[k]:value[k],sample[k],k)]));}
   if(typeof value!==typeof sample||(typeof value==='number'&&!Number.isFinite(value))||(typeof value==='string'&&(value.length>10000||/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/.test(value))))fail('مقدار واردشده معتبر نیست');
   if(key==='id'&&!/^[a-z0-9_-]{1,64}$/i.test(value))fail('شناسه معتبر نیست');if(key==='level'&&(!Number.isInteger(value)||value<1||value>5))fail('سطح باید بین ۱ و ۵ باشد');return value;
@@ -36,7 +36,7 @@ function content(input,billing={},previous){input=require('./media.cjs').expand(
   for(const [id,value]of newImages)if(!existingImages.has(id)&&Buffer.from(value.slice(value.indexOf(',')+1),'base64').length>maxImage)fail('حجم هر تصویر برای '+(subscriber?'اشتراکی':'رایگان')+' حداکثر '+Math.floor(maxImage/1024)+' کیلوبایت است',413);
   for(const kind of ['resume','links']){const brand=c.branding[kind];if(!['resumeit','custom','hidden'].includes(brand.mode)||brand.text.length>100)fail('امضای صفحه معتبر نیست');if(brand.mode!=='resumeit'&&!subscriber&&JSON.stringify(brand)!==JSON.stringify(previous?.branding?.[kind]))fail('امضای اختصاصی به اشتراک فعال نیاز دارد',403);}
   for(const item of c.links.items.filter(x=>['text','image'].includes(x.type)))if(!subscriber&&!previous?.links?.items.some(old=>old.id===item.id&&JSON.stringify(old)===JSON.stringify(item)))fail('بلوک متن و تصویر به اشتراک فعال نیاز دارد',403);
-  if(c.socials.some(x=>!RI.SOCIALS.some(s=>s[0]===x.platform)||(!webUrl(x.handle)&&!/^[a-z0-9_.@/-]{1,200}$/i.test(x.handle))))fail('آدرس شبکهٔ اجتماعی معتبر نیست');
+  if(c.socials.some(x=>!RI.SOCIALS.some(s=>s[0]===x.platform)||!RI.socialHandleValid(x.handle)))fail('آدرس شبکهٔ اجتماعی معتبر نیست');
   checkAccess(c,billing,undefined,previous);
   if(!['sharp','soft','round'].includes(c.theme.radius)||!['center','start','end'].includes(c.links.style.align)||![null,'tpl','ice','sand','dusk','plain'].includes(c.links.style.bgOverride))fail('ظاهر معتبر نیست');
   c.domain={value:'',status:'none'};return c;
