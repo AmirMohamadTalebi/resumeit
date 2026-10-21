@@ -43,7 +43,7 @@
     "check:ui": "node tests/full-ui-suite.cjs",
     "check:contrast": "node tests/nightlight-contrast-check.cjs && node tests/site-interaction-contrast-check.cjs",
     "check:ui-layout": "node tests/full-ui-audit.cjs",
-    "check:payments": "node tests/sep-check.cjs && node tests/zibal-check.cjs && node tests/payments-api-check.cjs && node tests/invoice-api-check.cjs"
+    "check:payments": "node tests/sep-check.cjs && node tests/sep-host-config-check.cjs && node tests/zibal-check.cjs && node tests/payments-api-check.cjs && node tests/invoice-api-check.cjs"
   },
   "dependencies": {
     "mysql2": "3.24.5",

@@ -35,7 +35,12 @@ function createPayments(database, options = {}) {
     const order=result.order;
     if(result.created) {
       try { const token=await provider.token(order,origin+'/api/payments/'+gateway+'/callback?key='+secret+'&id='+order.id,user.phone);await database.paymentToken(order.id,token,now());if(gateway==='zibal')await database.receivePayment(order.id,token,now()); }
-      catch(error) { await database.paymentStartFailed(order.id,now(),/^[A-Z0-9_-]{1,64}$/.test(error.code||'')?error.code:'TOKEN_FAILED');fail('اتصال به درگاه انجام نشد؛ پیش‌فاکتور تازه بساز',503); }
+      catch(error) {
+        const detail=error.code||error.cause?.code||error.message,code=error.name==='TimeoutError'?'GATEWAY_TIMEOUT':(/^(?:SEP_TOKEN_-?\d{1,6}|ZIBAL_-?\d{1,6}|GATEWAY_HTTP_[1-5]\d{2})$/.test(detail||'')||['GATEWAY_INVALID_RESPONSE','GATEWAY_UNAVAILABLE','SEP_TOKEN_REJECTED','ZIBAL_REQUEST_REJECTED','ENOTFOUND','EAI_AGAIN','ECONNRESET','ECONNREFUSED','ETIMEDOUT','UND_ERR_CONNECT_TIMEOUT','UND_ERR_HEADERS_TIMEOUT','UND_ERR_BODY_TIMEOUT','UND_ERR_SOCKET','CERT_HAS_EXPIRED','UNABLE_TO_VERIFY_LEAF_SIGNATURE','DEPTH_ZERO_SELF_SIGNED_CERT'].includes(detail))?detail:'TOKEN_FAILED';
+        console.error(JSON.stringify({event:'payment_token_failed',provider:gateway,code}));
+        await database.paymentStartFailed(order.id,now(),code);
+        fail('اتصال به درگاه انجام نشد؛ پیش‌فاکتور تازه بساز. کد پیگیری: '+code,503,code);
+      }
     } else if(order.status==='creating') {if(now()-Number(order.created_at)>60000)await database.paymentStartFailed(order.id,now());fail('این درخواست هنوز آماده نشده؛ درخواست تازه ایجاد کن',409);}
     else if(order.status==='paid'||order.ref_num&&gateway==='sep')return {id:order.id,url:'/payments/result?id='+order.id};
     else if(order.status!=='pending'||Number(order.expires_at)<=now())fail('این درخواست قابل پرداخت نیست؛ درخواست تازه ایجاد کن',409);

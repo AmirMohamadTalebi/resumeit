@@ -5,7 +5,7 @@ const REVERSE_URL = 'https://sep.shaparak.ir/verifyTxnRandomSessionkey/ipg/Rever
 
 function configuration(env = process.env) {
   const terminal = String(env.SEP_TERMINAL_ID || '').trim();
-  return { enabled: ['true', '1'].includes(env.SEP_ENABLED) && /^[1-9]\d{0,14}$/.test(terminal) && Number.isSafeInteger(Number(terminal)), terminal: Number(terminal) };
+  return { enabled: ['true', '1'].includes(String(env.SEP_ENABLED||'').trim().toLowerCase()) && /^[1-9]\d{0,14}$/.test(terminal) && Number.isSafeInteger(Number(terminal)), terminal: Number(terminal) };
 }
 
 function createSep({ fetch: request = global.fetch } = {}) {
@@ -13,7 +13,7 @@ function createSep({ fetch: request = global.fetch } = {}) {
   return {
     payUrl: PAY_URL,
     async token(order, redirectUrl, phone) {
-      const result = await post(TOKEN_URL, { Action: 'Token', TerminalId: order.terminal_id, Amount: Number(order.amount_toman) * 10, ResNum: order.id, RedirectURL: redirectUrl, CellNumber: phone, TokenExpiryInMin: 20 });
+      const result = await post(TOKEN_URL, { Action: 'Token', TerminalId: order.terminal_id, Amount: Number(order.amount_toman) * 10, ResNum: order.id, RedirectUrl: redirectUrl, CellNumber: phone, TokenExpiryInMin: 20 });
       if (result.status !== 1 || typeof result.token !== 'string' || !/^[A-Za-z0-9+/=_-]{16,512}$/.test(result.token)) {const error=new Error('SEP_TOKEN_REJECTED');if(/^-?\d{1,6}$/.test(String(result.errorCode)))error.code='SEP_TOKEN_'+result.errorCode;throw error;}
       return result.token;
     },
