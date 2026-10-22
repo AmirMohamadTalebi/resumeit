@@ -48,7 +48,7 @@
     const a = RI.accessOf(ref, it);
     if (a === 'free') return '<span class="chip chip--ok">رایگان</span>';
     if (a === 'owned') return '<span class="chip chip--ok">' + RI.icon('check') + 'خریده‌اید</span>';
-    if (a === 'sub-ok') {const plan=RI.state.billing.plan,remaining=Math.max(1,(plan.end-Date.now())/86400000/30),nearest=[3,6,9,12].reduce((best,n)=>Math.abs(n-remaining)<Math.abs(best-remaining)?n:best,3);return '<span class="chip chip--brown">'+RI.icon('crown')+'اشتراک '+(Math.abs(remaining-nearest)>.1?'≈ ':'')+(nearest===12?'یک‌ساله':RI.fa(nearest)+'ماهه')+'</span>';}
+    if (a === 'sub-ok') return '<span class="chip chip--brown">'+RI.icon('crown')+'با اشتراک فعال</span>';
     if(a==='locked-special')return '<span class="chip chip--brown">ویژه · '+RI.it(it.price)+' · '+RI.priceToman(it.price)+' یا اشتراک</span>';
     if (a === 'locked-buy') return '<span class="chip chip--brown">' + RI.icon('lock') + 'خرید یک‌بار · ' + RI.it(it.price) + ' · ' + RI.priceToman(it.price) + '</span>';
     return '<span class="chip chip--brown">' + RI.icon('lock') + 'با اشتراک</span>';
