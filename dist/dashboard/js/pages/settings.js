@@ -15,27 +15,33 @@
         '<section class="panel"><div class="panel__head"><h2>امنیت ورود</h2><p>ورود با رمز عبور یا کد یک‌بارمصرف پیامکی</p></div><div class="syncrow"><div><b>رمز عبور</b><div class="field__hint">تغییر رمز با تأیید پیامکی شمارهٔ حساب انجام می‌شود و نشست‌های قبلی را می‌بندد</div></div><button type="button" class="btn btn--soft btn--sm" data-pass>' + RI.icon('key') + 'تغییر رمز</button></div><hr class="divider">' + conn('google', 'گوگل', 'google') + conn('github', 'گیت‌هاب', 'github') + '</section>' +
         '<section class="panel"><div class="panel__head"><h2>نمایش عمومی اطلاعات تماس</h2><p>همان مقدارهای بخش «تماس» در رزومه؛ این‌جا فقط نمایش آن‌ها را کنترل می‌کنی</p></div>' + c.contacts.map((x) => '<div class="syncrow"><div><b>' + esc(x.label) + '</b><div class="field__hint ltr">' + (x.value ? esc(x.value) : 'وارد نشده') + '</div></div>' + RI.switchHtml({ checked: x.public && !!x.value, disabled: !x.value, label: 'نمایش عمومی ' + x.label }).replace('<input', '<input data-cpub="' + x.id + '"') + '</div>').join('') + '</section></div>' +
         '<div class="setcol">' +
-        '<section class="panel"><div class="panel__head"><h2>اطلاعات و حذف حساب</h2></div><div class="syncrow"><div><b>خروجی گرفتن از اطلاعات</b><div class="field__hint">فایل JSON از محتوای فعلی، تنظیمات و وضعیت انتشار؛ بدون رمز یا نشست</div></div><button type="button" class="btn btn--soft btn--sm" data-export>' + RI.icon('download') + 'خروجی</button></div>' +
+        '<section class="panel"><div class="panel__head"><h2>اطلاعات و حذف حساب</h2></div><div class="syncrow"><div><b>خروجی محتوای جایگاه فعال</b><div class="field__hint">فایل JSON از محتوا، تنظیمات و وضعیت انتشار همین جایگاه؛ بدون رمز یا نشست</div></div><button type="button" class="btn btn--soft btn--sm" data-export>' + RI.icon('download') + 'خروجی</button></div>' +
         '<div class="syncrow"><div><b>خروج از حساب</b><div class="field__hint">پایان نشست در این دستگاه</div></div><button type="button" class="btn btn--soft btn--sm" data-logout>' + RI.icon('logout') + 'خروج</button></div>' +
         (a.isOwner?'<div class="syncrow"><div><b>مالکیت این حساب</b><div class="field__hint">پیش از حذف حساب، یک مالک دیگر باید نقش مالکیت تو را تغییر دهد.</div></div><a class="btn btn--soft btn--sm" href="/admin/users/">'+RI.icon('shield')+'مدیریت نقش‌ها</a></div>':'<div class="danger"><div><b>حذف حساب</b><div class="field__hint">رزومه، لینک‌ها، موجودی و خریدهای حساب حذف می‌شوند؛ این عمل برگشت‌ناپذیر است</div></div><button type="button" class="btn btn--danger-soft btn--sm" data-delete>' + RI.icon('trash') + 'حذف حساب</button></div>')+'</section></div></div>';
     },
     mount(root) {
-      const a = RI.state.account;
+      const a = RI.state.account, owner=RI.ownerId, active=()=>root.isConnected&&owner===RI.ownerId;
       const tabs=document.createElement('div');tabs.innerHTML=RI.tabsHtml([['profile','مشخصات'],['security','ورود و امنیت'],['privacy','حریم خصوصی'],['data','اطلاعات و حساب']],'profile');root.querySelector('.setgrid').before(tabs);
       const sections=[...root.querySelectorAll('.setgrid section')],keys=['profile','security','privacy','data'];
       const select=id=>{sections.forEach((section,i)=>{section.hidden=keys[i]!==id;});tabs.querySelectorAll('button').forEach(button=>button.setAttribute('aria-selected',String(button.dataset.workspaceTab===id)));};
       const initial=new URLSearchParams(location.search).get('tab');select(keys.includes(initial)?initial:'profile');
       RI.delegate(tabs,'click','[data-workspace-tab]',(e,b)=>{select(b.dataset.workspaceTab);RI.setRouteTab(b.dataset.workspaceTab,'profile');});
-      RI.delegate(root, 'click', '[data-name]', async (e,b) => {if(b.disabled)return;b.disabled=true;try{await RI.accountRequest('account/names',{firstName:RI.$('#a_name',root).value.trim(),lastName:RI.$('#a_last',root).value.trim()});await RI.reloadAccount();RI.rerender();RI.toast('مشخصاتت ذخیره شد');}catch(error){RI.toast(error.message,{kind:'error'});}finally{b.disabled=false;}});
+      RI.delegate(root, 'click', '[data-name]', async (e,b) => {
+        if(b.disabled)return;const fields=[RI.$('#a_name',root),RI.$('#a_last',root)],values={firstName:fields[0].value.trim(),lastName:fields[1].value.trim()};
+        let feedback=root.querySelector('[data-name-status]');if(!feedback){feedback=document.createElement('p');feedback.dataset.nameStatus='';b.closest('.btnrow').after(feedback);}feedback.setAttribute('role','status');feedback.textContent='در حال ذخیرهٔ مشخصات…';b.disabled=true;fields.forEach(input=>input.disabled=true);
+        try{await RI.accountRequest('account/names',values);if(!active())return;await RI.reloadAccount();if(active()){RI.rerender();RI.toast('مشخصاتت ذخیره شد');}}
+        catch(error){if(active()){feedback.setAttribute('role','alert');feedback.textContent=error.message;}}
+        finally{b.disabled=false;fields.forEach(input=>input.disabled=false);}
+      });
       RI.delegate(root, 'click', '[data-mobile]', () => RI.phoneDialog());
       RI.delegate(root, 'click', '[data-pass]', async () => { if(await RI.leaveGuard()) location.assign('/forgot-password/'); });
       RI.delegate(root, 'click', '[data-conn]', async (e, b) => {
         const k = b.dataset.conn, nm = k === 'google' ? 'گوگل' : 'گیت‌هاب';
         if(b.disabled)return;b.disabled=true;
         try {
-        if(a[k]) {if(await RI.confirm({title:'قطع اتصال '+nm,text:'با قطع اتصال، دیگه با '+nm+' وارد این حساب نمی‌شی',danger:true,icon:'link',confirmLabel:'قطع اتصال'})){await RI.accountRequest('social/unlink',{provider:k});await RI.reloadAccount();RI.rerender();RI.toast('اتصال '+nm+' قطع شد',{kind:'info'});}}
+        if(a[k]) {if(await RI.confirm({title:'قطع اتصال '+nm,text:'با قطع اتصال، دیگه با '+nm+' وارد این حساب نمی‌شی',danger:true,icon:'link',confirmLabel:'قطع اتصال'})&&active()){await RI.accountRequest('social/unlink',{provider:k});if(!active())return;await RI.reloadAccount();if(active()){RI.rerender();RI.toast('اتصال '+nm+' قطع شد',{kind:'info'});}}}
         else {window.location.href='/api/auth/'+k+'/start?mode=link';}
-        } catch(error){RI.toast(error.message,{kind:'error'});
+        } catch(error){if(active())RI.toast(error.message,{kind:'error'});
         } finally {b.disabled=false;}
       });
       root.addEventListener('change', (e) => {
