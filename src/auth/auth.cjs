@@ -14,7 +14,17 @@ function authHandler(database, options = {}) {
     const value = /(?:^|;\s*)ri_session=([a-f0-9]{64})(?:;|$)/.exec(req.headers.cookie || '')?.[1];
     return value ? digest(value) : '';
   };
-  const account = req => token(req) ? database.session(token(req)) : null;
+  // "Last active" for the device list is refreshed at most every five minutes per session, from memory first.
+  const touched = new Map();
+  const touch = hash => {
+    if (!database.touchSession) return;
+    const now = Date.now(), last = touched.get(hash);
+    if (last && now - last < 300000) return;
+    touched.delete(hash); if (touched.size >= 10000) touched.delete(touched.keys().next().value); touched.set(hash, now);
+    database.touchSession(hash, now).catch(() => {});
+  };
+  const account = async req => { const hash = token(req); if (!hash) return null; const user = await database.session(hash); if (user) touch(hash); return user; };
+  const sessionRows = async (user, current) => (await database.userSessions(user.id)).map(row => ({ id: row.id, current: row.tokenHash === current, device: require('./device.cjs').deviceLabel(row.userAgent), createdAt: row.createdAt, lastSeen: row.lastSeen, expiresAt: row.expiresAt }));
   return { account, restricted:async req=>{const proof=database.noticeProof?await database.noticeProof(status.proofHash(req)):null;return proof?.notice.active?proof:null;}, async handle(req, res, pathname) {
     if (!pathname.startsWith('/api/auth/')) return false;
     res.setHeader('Cache-Control', 'no-store');
@@ -30,10 +40,27 @@ function authHandler(database, options = {}) {
     if(pathname==='/api/auth/publication-check'&&req.method==='GET') {
       try{const user=await account(req);if(!user){reply(401,{error:'اول وارد حسابت شو'});return true;}const missing=[!user.first_name&&'نام',!user.last_name&&'نام خانوادگی',!(user.phone&&user.phone_verified)&&'شماره تأییدشده'].filter(Boolean);reply(200,{canPublish:!missing.length,missing});}catch{reply(503,{error:'نتونستیم مشخصات حسابت رو بررسی کنیم'});}return true;
     }
+    if(pathname==='/api/auth/sessions'&&req.method==='GET') {
+      try{const user=await account(req);if(!user){reply(401,{error:'اول وارد حسابت شو'});return true;}if(!database.userSessions){reply(404,{error:'فهرست دستگاه‌ها در دسترس نیست'});return true;}reply(200,{sessions:await sessionRows(user,token(req))});}catch{reply(503,{error:'فهرست دستگاه‌ها دریافت نشد؛ دوباره امتحان کن'});}return true;
+    }
     if (req.method !== 'POST') { reply(405, { error: 'Method not allowed' }); return true; }
     if (req.headers.origin !== origin || req.headers['content-type']?.split(';')[0] !== 'application/json') { reply(403, { error: 'درخواست معتبر نیست' }); return true; }
     if (pathname === '/api/auth/logout') {
       try { await database.deleteSession(token(req));if(database.deleteNoticeProof)await database.deleteNoticeProof(status.proofHash(req));cookie('', 0);res.appendHeader('Set-Cookie',`ri_restriction=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0${origin.startsWith('https:')?'; Secure':''}`);reply(200, { ok: true }); } catch { reply(503, { error: 'خروج انجام نشد' }); } return true;
+    }
+    if(['/api/auth/sessions/revoke','/api/auth/sessions/revoke-others'].includes(pathname)) {
+      try {
+        const user=await account(req);if(!user){reply(401,{error:'اول وارد حسابت شو'});return true;}
+        if(req.headers['x-resumeit-owner']&&req.headers['x-resumeit-owner']!==user.id){reply(409,{error:'حساب فعال عوض شده است؛ صفحه را دوباره باز کن'});return true;}
+        if(!database.userSessions){reply(404,{error:'فهرست دستگاه‌ها در دسترس نیست'});return true;}
+        const input=await readJson(req),current=token(req);
+        if(pathname.endsWith('/revoke-others')){const closed=await database.revokeOtherSessions(user.id,current);reply(200,{closed,sessions:await sessionRows(user,current)});return true;}
+        if(typeof input.id!=='string'||!/^[a-f0-9]{24}$/.test(input.id)){reply(400,{error:'دستگاه معتبر نیست'});return true;}
+        const target=(await sessionRows(user,current)).find(row=>row.id===input.id);
+        if(!target){reply(404,{error:'این نشست قبلاً بسته شده است'});return true;}
+        if(target.current){reply(400,{error:'برای این دستگاه از دکمهٔ «خروج» استفاده کن'});return true;}
+        await database.revokeUserSession(user.id,input.id);reply(200,{sessions:await sessionRows(user,current)});
+      } catch(error){reply(error.status || (error instanceof SyntaxError ? 400 : 503),{error:'بستن نشست انجام نشد؛ دوباره امتحان کن'});}return true;
     }
     if(['/api/auth/account/names','/api/auth/social/unlink','/api/auth/phone/request','/api/auth/phone/verify'].includes(pathname)) {
       try {
@@ -64,7 +91,7 @@ function authHandler(database, options = {}) {
       const notice=database.accountNotice?await database.accountNotice(user.id):null;if(notice){reply(200,await status.issue(database,req,res,notice,{type:user.phone?'phone':'session',value:user.phone||null},origin));return;}
       await database.deleteSession(token(req));
       const value = randomBytes(32).toString('hex');
-      if(!await database.createSession(digest(value),user.id,Date.now()+7*86400000,user.password_hash,user.phone)) { reply(401,{error:'مشخصات حساب تغییر کرده؛ دوباره وارد شو'}); return; }
+      if(!await database.createSession(digest(value),user.id,Date.now()+7*86400000,user.password_hash,user.phone,req.headers['user-agent'])) { reply(401,{error:'مشخصات حساب تغییر کرده؛ دوباره وارد شو'}); return; }
       cookie(value,7*86400);res.appendHeader('Set-Cookie',`ri_restriction=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0${origin.startsWith('https:')?'; Secure':''}`);reply(200,{ok:true});
     };
     if (['/api/auth/otp/request','/api/auth/otp/verify','/api/auth/register','/api/auth/password/reset'].includes(pathname)) {

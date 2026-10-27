@@ -93,14 +93,28 @@ function dashboardHandler(database,auth,notifications,options){const reset=requi
     const billing=database.billing?await database.billing(user.id):{};
     if(database.commerceSettings)billing.commerce=await database.commerceSettings();
     const saving=pathname.endsWith('/save'),patch=saving&&input.patch!==undefined?model.validatePatch(input.patch):null;
-    const result=await database.mutateDashboard(user.id,input.revision,doc=>{
-      if(saving){doc.content=model.content(patch?{...doc.content,...patch}:input.content,billing,doc.content);doc.preferences=model.preferences(input.preferences);doc.slug=doc.content.slug||null;return;}
-      const k=input.kind;if(!['resume','links'].includes(k))model.fail('نوع صفحه معتبر نیست');
-      if(workspace===3&&k==='resume')model.fail('جایگاه سوم مخصوص صفحهٔ لینک‌هاست');
-      if(pathname.endsWith('/unpublish')){doc.pub[k].status='draft';doc.pub[k].snap=null;delete doc.published[k];return;}
-      if(!user.first_name||!user.last_name||!user.phone_verified||!user.phone)model.fail('نام، نام خانوادگی و شمارهٔ تأییدشده را در تنظیمات کامل کن');
-      model.ready(doc.content,k,billing,!!doc.slug&&doc.slug===doc.content.slug);doc.slug=doc.content.slug;doc.published[k]=structuredClone(doc.content);doc.pub[k]={status:'published',version:doc.pub[k].version+1,at:Date.now(),snap:JSON.stringify(pubData(doc.content,k))};
-    },{draftOnly:saving,workspace,checkAccess:!pathname.endsWith('/unpublish')});
+    // External image addresses are copied onto ResumeIt before anything is stored or published; the transaction
+    // stops with EXTERNAL_IMAGES, the files are downloaded outside it, and the mutation runs once more.
+    const localized=new Map(),media=require('./media.cjs');let result;
+    for(let attempt=0;;attempt++){
+      try{
+        result=await database.mutateDashboard(user.id,input.revision,doc=>{
+          if(saving){doc.content=model.content(patch?{...doc.content,...patch}:input.content,billing,doc.content,{localized});doc.preferences=model.preferences(input.preferences);doc.slug=doc.content.slug||null;return;}
+          const k=input.kind;if(!['resume','links'].includes(k))model.fail('نوع صفحه معتبر نیست');
+          if(workspace===3&&k==='resume')model.fail('جایگاه سوم مخصوص صفحهٔ لینک‌هاست');
+          if(pathname.endsWith('/unpublish')){doc.pub[k].status='draft';doc.pub[k].snap=null;delete doc.published[k];return;}
+          if(!user.first_name||!user.last_name||!user.phone_verified||!user.phone)model.fail('نام، نام خانوادگی و شمارهٔ تأییدشده را در تنظیمات کامل کن');
+          const external=model.externalImages(doc.content).filter(url=>localized.get(url)!==url);
+          if(external.some(url=>!localized.has(url)))throw Object.assign(new Error('تصویرهای اینترنتی هنوز کپی نشده‌اند'),{status:400,code:'EXTERNAL_IMAGES',urls:external,existing:external});
+          doc.content=media.replaceValues(doc.content,localized);
+          model.ready(doc.content,k,billing,!!doc.slug&&doc.slug===doc.content.slug);doc.slug=doc.content.slug;doc.published[k]=structuredClone(doc.content);doc.pub[k]={status:'published',version:doc.pub[k].version+1,at:Date.now(),snap:JSON.stringify(pubData(doc.content,k))};
+        },{draftOnly:saving,workspace,checkAccess:!pathname.endsWith('/unpublish')});
+        break;
+      }catch(error){
+        if(error.code!=='EXTERNAL_IMAGES'||attempt>=2)throw error;
+        await (options?.remoteImages||require('./remote-image.cjs')).localize(error.urls,error.existing,localized);
+      }
+    }
     if(!saving&&database.notify)await database.notify(user.id,'publication',pathname.endsWith('/unpublish')?'صفحه از انتشار برداشته شد':'نسخهٔ تازه منتشر شد',input.kind==='resume'?'رزومه':'صفحهٔ لینک‌ها','/dashboard/publish/','pub:'+user.id+':'+workspace+':'+result.revision).catch(()=>{});
     const compact=input.compact===true?(saving?{revision:result.revision,slug:result.slug,preferences:result.preferences}:{revision:result.revision,slug:result.slug,pub:require('./media.cjs').lightweight({pub:result.pub},workspace).pub}):result;
     reply(200,compact);

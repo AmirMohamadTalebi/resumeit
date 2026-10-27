@@ -17,6 +17,10 @@ if (require.main === module) (async () => {
     if (process.env.BOOTSTRAP_PHONE && process.env.BOOTSTRAP_PASSWORD_HASH) await database.provisionAccount(process.env.BOOTSTRAP_PHONE, process.env.BOOTSTRAP_PASSWORD_HASH);
     const server = createServer(database);
     server.listen(port, host, () => console.log(`ResumeIt: http://localhost:${port} (listening on ${host})`)).on('error', err => { database.close(); console.error(err.message); process.exitCode = 1; });
+    // Copy images that were saved as third-party addresses before this release; safe to repeat on every start.
+    if (process.env.LOCALIZE_EXTERNAL_IMAGES !== 'false') setTimeout(() => database.localizeStoredImages(require('./src/dashboard/remote-image.cjs').download, { log: entry => console.error(JSON.stringify(entry)) })
+      .then(summary => { if (summary.rows || summary.failed) console.log(JSON.stringify({ event: 'external_images_localized', ...summary })); })
+      .catch(error => console.error(JSON.stringify({ event: 'external_images_failed', code: error?.code || error?.name }))), 5000).unref();
     for (const signal of ['SIGINT', 'SIGTERM']) process.once(signal, () => server.close(async () => { await database.close(); process.exit(0); }));
   } catch(error) { await database.close(); throw error; }
 })().catch(error => { console.error('Startup failed; check origin, database and migration settings. ' + JSON.stringify({ name: error?.name, code: error?.code, message: String(error?.message || '').slice(0, 300) })); process.exitCode = 1; });

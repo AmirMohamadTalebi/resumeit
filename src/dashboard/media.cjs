@@ -24,4 +24,12 @@ function expand(input,previous){
     return image;
   });
 }
-module.exports={lightweight,expand,images};
+// Swap exact string values only (never substrings), e.g. a copied external image address for its data URI.
+// Link and contact addresses keep their text even when they point at the same file as an image.
+function replaceValues(input,map,key=''){
+  if(!map.size)return input;
+  if(Array.isArray(input))return input.map(v=>replaceValues(v,map,key));
+  if(input&&typeof input==='object')return Object.fromEntries(Object.entries(input).map(([k,v])=>[k,replaceValues(v,map,k)]));
+  return typeof input==='string'&&!['url','value'].includes(key)&&map.has(input)?map.get(input):input;
+}
+module.exports={lightweight,expand,images,replaceValues};

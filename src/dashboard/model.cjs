@@ -6,9 +6,11 @@ function webUrl(s){if(typeof s!=='string'||!s||s.length>2048||/[\s\x00-\x1f\x7f]
 const templates={contacts:{id:'',type:'',label:'',value:'',public:false},skills:{id:'',name:'',level:3},experience:{id:'',role:'',org:'',from:'',to:'',current:false,desc:''},education:{id:'',degree:'',school:'',from:'',to:'',current:false,desc:''},projects:{id:'',title:'',desc:'',url:'',image:null},certs:{id:'',title:'',issuer:'',year:''},languages:{id:'',name:'',level:3},socials:{id:'',platform:'',handle:''},sections:{key:'',visible:true},items:{id:'',type:'',title:'',url:'',icon:'link',active:true,featured:false,image:null}};
 function image(value,key){if(value===null||value==='')return null;if(typeof value!=='string'||value.length>3*1024*1024)fail('حجم تصویر بیش از حد مجاز است');if(key!=='avatar'&&/^grad:#[a-f0-9]{6},#[a-f0-9]{6}$/i.test(value))return value;
   const m=/^data:image\/(png|jpeg|webp);base64,([A-Za-z0-9+/]+={0,2})$/.exec(value);if(m){const b=Buffer.from(m[2],'base64');const valid=m[1]==='png'?b.subarray(0,8).equals(Buffer.from([137,80,78,71,13,10,26,10])):m[1]==='jpeg'?b[0]===255&&b[1]===216&&b[2]===255:b.toString('ascii',0,4)==='RIFF'&&b.toString('ascii',8,12)==='WEBP';if(valid)return value;}
-  if(/^https:\/\//i.test(value)&&webUrl(value)&&!/[\s'"()\\]/.test(value))return value;
+  if(/^https:\/\//i.test(value)&&webUrl(value)&&!/[\s'"()\\]/.test(value)){collector?.add(value);return value;}
   fail('تصویر باید PNG، JPEG، WebP یا آدرس HTTPS معتبر باشد');
 }
+// Validation is synchronous, so a module-level collector safely gathers the external image addresses it meets.
+let collector=null;
 function shape(value,sample,key=''){
   if(sample===null)return image(value,key);
   if(Array.isArray(sample)){if(!Array.isArray(value)||value.length>RI.MAX_LIST_ITEMS)fail('تعداد موارد بیش از حد مجاز است');const t=templates[key]||sample[0];return value.map(x=>shape(x,t));}
@@ -16,11 +18,31 @@ function shape(value,sample,key=''){
   if(typeof value!==typeof sample||(typeof value==='number'&&!Number.isFinite(value))||(typeof value==='string'&&(value.length>10000||/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/.test(value))))fail('مقدار واردشده معتبر نیست');
   if(key==='id'&&!/^[a-z0-9_-]{1,64}$/i.test(value))fail('شناسه معتبر نیست');if(key==='level'&&(!Number.isInteger(value)||value<1||value>5))fail('سطح باید بین ۱ و ۵ باشد');return value;
 }
-function content(input,billing={},previous){input=require('./media.cjs').expand(input,previous);const c=shape(input,blank());c.resumeTemplates=RI.validateResumeValues(input.resumeTemplates||{});
+// With options.localized (address → data URI), external images must already be copied: any address not yet
+// in the map stops validation with EXTERNAL_IMAGES and the list, so the caller can download and retry.
+function content(input,billing={},previous,options={}){
+  if(!options.localized)return validateContent(input,billing,previous);
+  const found=new Set(),localized=options.localized;collector=found;
+  try{
+    return validateContent(require('./media.cjs').replaceValues(input,localized),billing,previous,()=>{
+      const urls=[...found].filter(url=>localized.get(url)!==url);if(!urls.length)return;
+      const before=previous?JSON.stringify(previous):'';
+      throw Object.assign(new Error('تصویرهای اینترنتی هنوز کپی نشده‌اند'),{status:400,code:'EXTERNAL_IMAGES',urls,existing:urls.filter(url=>before.includes(JSON.stringify(url)))});
+    });
+  }finally{collector=null;}
+}
+// External image addresses inside stored content; legacy content that no longer validates yields none.
+function externalImages(c){
+  const found=new Set(),stop={};collector=found;
+  try{validateContent(c,{},c,()=>{throw stop;});}catch(error){if(error!==stop)return [];}finally{collector=null;}
+  return [...found];
+}
+function validateContent(input,billing={},previous,afterImages){input=require('./media.cjs').expand(input,previous);const c=shape(input,blank());c.resumeTemplates=RI.validateResumeValues(input.resumeTemplates||{});
   for(const [id,entry] of Object.entries(c.resumeTemplates)){
     const spec=RI.resumeSpec(id),check=values=>{for(const [key,value]of Object.entries(values)){const f=spec.fields.concat(spec.settings).find(x=>x.key===key);if(f?.type==='image'&&value&&!/^\/templates\/(vista|satiar)\/[a-f0-9]{16}\.(png|jpg|jpeg|webp|svg|gif)$/.test(value))image(value,'avatar');}};
     check(entry.fields);check(entry.settings);for(const rows of Object.values(entry.collections||{}))for(const row of rows)check(row.fields);
   }
+  afterImages?.();
   if(c.slug&&!slugValid(c.slug)&&c.slug!==previous?.slug)fail('نام صفحه معتبر نیست یا رزرو شده است');
   if(!RI.pagePathValid(c.routing.links)||c.routing.resume&&!RI.pagePathValid(c.routing.resume))fail('مسیر صفحه باید ۱ تا ۲۴ حرف کوچک انگلیسی، عدد یا خط تیره باشد؛ مسیر لینک خالی یا سیستمی مجاز نیست');
   if(c.routing.links===c.routing.resume)fail('مسیر رزومه و لینک‌ها باید متفاوت باشند');
@@ -55,4 +77,4 @@ function publicContent(c,billing={}){
 }
 function ready(c,kind,billing={},existingSlug=false){checkAccess(c,billing,kind);if(!slugValid(c.slug)&&!existingSlug)fail('نام صفحه را انتخاب کن');if(kind==='links'){if(!(c.links.header.sync?c.profile.name:c.links.header.name).trim()||!c.links.items.some(x=>x.type==='link'&&x.active))fail('نام و حداقل یک لینک فعال لازم است');}else {const missing=RI.resumeRequirements(c).find(x=>!x.done);if(missing)fail(missing.label);}}
 function initial(){return {content:blank(),preferences:preferences(),pub:{resume:{status:'draft',version:0,at:null,snap:null},links:{status:'draft',version:0,at:null,snap:null}},revision:0};}
-module.exports={validatePatch,content,preferences,ready,initial,slugValid,webUrl,fail,checkAccess,publicContent};
+module.exports={validatePatch,content,externalImages,preferences,ready,initial,slugValid,webUrl,fail,checkAccess,publicContent};

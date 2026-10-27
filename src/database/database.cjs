@@ -42,6 +42,7 @@ async function openDatabase(options) {
     ...require('./payments.cjs')(context),
     ...require('./admin.cjs')(context),
     ...require('./migration.cjs')(context),
+    ...require('./external-images.cjs')(context),
     close: () => pool.end(),
   };
   try{

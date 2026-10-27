@@ -1,5 +1,7 @@
 const {randomUUID,createHash}=require('node:crypto');
 // attempt_key is VARCHAR(96); hash the phone/address pair so long OAuth pseudo-phones still fit.
+const sessionId=tokenHash=>createHash('sha256').update('session:'+tokenHash).digest('hex').slice(0,24);
+const cleanAgent=value=>String(value||'').replace(/[\x00-\x1f\x7f]/g,'').slice(0,160)||null;
 const pairKey=(phone,ipHash)=>'pair:'+createHash('sha256').update(phone+'|'+ipHash).digest('hex');
 module.exports = ({execute,transaction}) => {
   return {
@@ -13,13 +15,14 @@ module.exports = ({execute,transaction}) => {
       });
     },
     async accountByPhone(phone) { return (await execute('SELECT id,phone,password_hash FROM users WHERE phone=?', [phone]))[0]; },
-    async createSession(tokenHash, userId, expiresAt, expectedHash, expectedPhone) {
+    async createSession(tokenHash, userId, expiresAt, expectedHash, expectedPhone, userAgent = '') {
       await execute('DELETE FROM sessions WHERE expires_at<=?', [Date.now()]);
       return transaction(async connection=>{
         const [[user]]=await connection.execute('SELECT u.password_hash,u.phone,COALESCE(c.suspended,0) suspended FROM users u LEFT JOIN admin_controls c ON c.user_id=u.id WHERE u.id=? FOR UPDATE',[userId]);
         if(user?.suspended)return false;
         if(!user||(expectedHash!==undefined&&user.password_hash!==expectedHash)||(expectedPhone!==undefined&&user.phone!==expectedPhone))return false;
-        await connection.execute('INSERT INTO sessions(token_hash,user_id,expires_at) VALUES(?,?,?)', [tokenHash, userId, expiresAt]);
+        const now=Date.now();
+        await connection.execute('INSERT INTO sessions(token_hash,user_id,expires_at,created_at,last_seen,user_agent) VALUES(?,?,?,?,?,?)', [tokenHash, userId, expiresAt, now, now, cleanAgent(userAgent)]);
         return true;
       });
     },
@@ -29,6 +32,18 @@ module.exports = ({execute,transaction}) => {
       return user;
     },
     async deleteSession(tokenHash) { await execute('DELETE FROM sessions WHERE token_hash=?', [tokenHash]); },
+    // Device list: sessions are exposed by a derived id, never by the stored token hash.
+    async userSessions(userId) {
+      const rows=await execute('SELECT token_hash,created_at,last_seen,user_agent,expires_at FROM sessions WHERE user_id=? AND expires_at>? ORDER BY COALESCE(last_seen,created_at,0) DESC LIMIT 50', [userId, Date.now()]);
+      return rows.map(row=>({id:sessionId(row.token_hash),tokenHash:row.token_hash,createdAt:row.created_at==null?null:Number(row.created_at),lastSeen:row.last_seen==null?null:Number(row.last_seen),userAgent:row.user_agent||'',expiresAt:Number(row.expires_at)}));
+    },
+    async revokeUserSession(userId, id) {
+      const target=(await this.userSessions(userId)).find(row=>row.id===id);
+      if(!target)return false;
+      await execute('DELETE FROM sessions WHERE token_hash=? AND user_id=?', [target.tokenHash, userId]);return true;
+    },
+    async revokeOtherSessions(userId, keepTokenHash) { return (await execute('DELETE FROM sessions WHERE user_id=? AND token_hash<>?', [userId, keepTokenHash])).affectedRows||0; },
+    async touchSession(tokenHash, now=Date.now()) { await execute('UPDATE sessions SET last_seen=? WHERE token_hash=? AND (last_seen IS NULL OR last_seen<?)', [now, tokenHash, now-300000]); },
     async claimLoginAttempts(phone, ipHash) {
       const now = Date.now();
       await execute('DELETE FROM login_attempts WHERE expires_at<=?', [now]);
