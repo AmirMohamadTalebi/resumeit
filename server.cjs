@@ -19,5 +19,5 @@ if (require.main === module) (async () => {
     server.listen(port, host, () => console.log(`ResumeIt: http://localhost:${port} (listening on ${host})`)).on('error', err => { database.close(); console.error(err.message); process.exitCode = 1; });
     for (const signal of ['SIGINT', 'SIGTERM']) process.once(signal, () => server.close(async () => { await database.close(); process.exit(0); }));
   } catch(error) { await database.close(); throw error; }
-})().catch(() => { console.error('Startup failed; check origin, database and migration settings.'); process.exitCode = 1; });
+})().catch(error => { console.error('Startup failed; check origin, database and migration settings. ' + JSON.stringify({ name: error?.name, code: error?.code, message: String(error?.message || '').slice(0, 300) })); process.exitCode = 1; });
 module.exports = { createServer };

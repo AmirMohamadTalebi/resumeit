@@ -9,7 +9,7 @@ module.exports=(database,options)=>{
     if(!user.phone_verified||!user.phone)fail('برای پاک‌سازی ابتدا شمارهٔ حساب را تأیید کن',403);
     const input=await readJson(req,2000);if(!['resume','links'].includes(input.kind)||slot===3&&input.kind==='resume')fail('صفحه معتبر نیست');
     if(path.endsWith('/request')){
-      const result=await otp.request(user.phone,'wipe',hash(req.socket.remoteAddress||'unknown'),user.id);if(!result)fail('یک دقیقه صبر کن و دوباره کد بگیر',429);
+      const result=await otp.request(user.phone,'wipe',hash(require('../http/client-ip.cjs').clientIp(req)),user.id);if(!result)fail('یک دقیقه صبر کن و دوباره کد بگیر',429);
       await database.bindReset(user.id,slot,input.kind,result.challengeId);reply(200,result);return true;
     }
     if(!Number.isSafeInteger(input.revision)||input.revision<0||!/^[a-f0-9-]{36}$/.test(input.challengeId||'')||!/^\d{6}$/.test(input.code||''))fail('کد تأیید و نسخهٔ صفحه معتبر نیست');

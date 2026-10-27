@@ -70,7 +70,9 @@ try { process.loadEnvFile(); } catch (error) { if (error.code !== 'ENOENT') thro
     await database.deleteSession('a'.repeat(64)); assert.equal(await database.session('a'.repeat(64)), undefined);
     const attempts = await Promise.all(Array.from({ length: 8 }, () => database.claimLoginAttempts('09120000001','test-ip')));
     assert.equal(attempts.filter(Boolean).length,5);
-    await database.clearLoginAttempts('09120000001'); assert(await database.claimLoginAttempts('09120000001','test-ip'));
+    // A second address still has its own budget, so one attacker cannot lock the phone owner out.
+    assert(await database.claimLoginAttempts('09120000001','other-ip'));
+    await database.clearLoginAttempts('09120000001','test-ip'); assert(await database.claimLoginAttempts('09120000001','test-ip'));
     const resetId=randomUUID(),resetGrant=digest('reset-grant'),newHash='scrypt$'+randomBytes(16).toString('hex')+'$'+randomBytes(64).toString('hex');
     assert(await database.reserveOtp({id:resetId,phone:'09120000001',purpose:'reset',ownerId:id,hash:digest(resetId+'123456')},'reset-ip',now));
     await database.finishOtpSend(resetId,true);

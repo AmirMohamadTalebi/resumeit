@@ -37,7 +37,7 @@ function oauthHandler(database,{oauthFetch=fetch}={}) {
     try {
       if(action==='start') {
         if(req.headers['sec-fetch-site']==='cross-site'){fail('invalid');return true;}
-        const ip=hash(req.socket.remoteAddress||'unknown');
+        const ip=hash(require('../http/client-ip.cjs').clientIp(req));
         if(!await database.claimLoginAttempts('oauth:'+ip,ip)){fail('limited');return true;}
         const state=randomBytes(32).toString('hex'),verifier=randomBytes(32).toString('base64url');
         const link=new URL(req.url,settings.origin).searchParams.get('mode')==='link';

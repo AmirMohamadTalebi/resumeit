@@ -97,13 +97,8 @@ function adminHandler(database, auth, notifications) {
             paymentConfigured: require('../payments/sep.cjs').configuration().enabled||require('../payments/zibal.cjs').configuration().enabled,
             gateways: [{id:'sep',enabled:require('../payments/sep.cjs').configuration().enabled},{id:'zibal',enabled:require('../payments/zibal.cjs').configuration().enabled}],
             paymentPolicy:database.paymentPolicy?await database.paymentPolicy():null,
-            limits: {
-              otpDaily: 100,
-              phoneDaily: 5,
-              ipQuarterHour: 10,
-              resendSeconds: 60,
-              otpSeconds: 120,
-            },
+            limits: require('../auth/limits.cjs').smsLimits(),
+            trustProxy: require('../http/client-ip.cjs').trustedHops(),
             notificationChannels:notifications?await notifications.adminSettings():null,
             at: Date.now(),
           });
@@ -139,7 +134,9 @@ function adminHandler(database, auth, notifications) {
         const input=await readJson(req,65536);reply(200,path==='/api/admin/commerce'?await database.saveCommerceSettings(user.id,input):path==='/api/admin/retention/run'?await database.runRetention(user.id,input):path==='/api/admin/catalog/product'?await database.saveCatalogProduct(user.id,input):await database.ownerControl(user.id,path.split('/')[4],input));
       } else if(req.method==='POST'&&(path==='/api/admin/audit/purge'||/^\/api\/admin\/users\/[a-f0-9-]{36}\/role$/.test(path))){
         if(req.headers.origin!==origin||req.headers['content-type']?.split(';')[0]!=='application/json'){reply(403,{error:'درخواست معتبر نیست'});return true;}
-        const input=await readJson(req,4096);
+        const {password,...input}=await readJson(req,4096);
+        // Changing who can administer the site needs the acting owner's password, not just a live session.
+        if(path!=='/api/admin/audit/purge')await require('../auth/confirm.cjs').confirmPassword(database,user,password);
         reply(200,path==='/api/admin/audit/purge'?await database.purgeAdminAudit(user.id,input):await database.saveAccountRole(user.id,path.split('/')[4],input));
       } else if(req.method==='POST'&&/^\/api\/admin\/users\/[a-f0-9-]{36}\/support-role$/.test(path)){
         if(req.headers.origin!==origin||req.headers['content-type']?.split(';')[0]!=='application/json'){reply(403,{error:'درخواست معتبر نیست'});return true;}
@@ -161,7 +158,7 @@ function adminHandler(database, auth, notifications) {
           reply(403, { error: "درخواست معتبر نیست" });
           return true;
         }
-        const input = await readJson(req);
+        const { password, ...input } = await readJson(req);
         if (
           typeof input.reason !== "string" ||
           input.reason.trim().length < 5 ||
@@ -184,6 +181,7 @@ function adminHandler(database, auth, notifications) {
         }
         input.reason = input.reason.trim();
         if(['credit','delete-account'].includes(input.action)&&!isOwner(user)){reply(403,{error:'شارژ دستی و حذف دائمی حساب فقط برای مالک سایت مجاز است'});return true;}
+        if(['credit','delete-account'].includes(input.action))await require('../auth/confirm.cjs').confirmPassword(database,user,password);
         reply(
           200,
           await database.adminAction(
@@ -195,6 +193,7 @@ function adminHandler(database, auth, notifications) {
         );
       } else reply(405, { error: "روش درخواست معتبر نیست" });
     } catch (error) {
+      if (!error.status) require("../http/log.cjs").logFailure("admin", req, error);
       reply(error.status || 503, {
         error: error.status
           ? error.message

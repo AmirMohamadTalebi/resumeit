@@ -23,7 +23,8 @@ function createServer(database, options) {
       if (await auth.handle(req, res, pathname)) return;
       if (pathname.startsWith('/api/')) { res.writeHead(404); res.end('Not found'); return; }
       await serveStatic(req, res, pathname, origin, auth.account,auth.restricted);
-    } catch {
+    } catch (error) {
+      require('./log.cjs').logFailure('server', req, error);
       if (!res.headersSent) { res.writeHead(503, { 'Content-Type': 'application/json; charset=utf-8' }); res.end(JSON.stringify({ error: 'درخواست انجام نشد؛ کمی بعد دوباره امتحان کن' })); }
       else res.destroy();
     }

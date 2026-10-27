@@ -1,0 +1,9 @@
+User-agent: *
+Disallow: /dashboard/
+Disallow: /admin/
+Disallow: /staff/
+Disallow: /api/
+Disallow: /payments/
+Disallow: /account-status/
+
+Sitemap: https://resumeit.ir/sitemap.xml

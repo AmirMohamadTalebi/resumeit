@@ -3,6 +3,7 @@ const model=require('./model.cjs'),{render,RI}=require('./render.cjs');
 const {gzipSync}=require('node:zlib');
 const {serveStatic,publicAssets}=require('../http/static.cjs');
 const pubData=(c,k)=>RI.publicationData(k,c);
+const metrics=require('./metrics.cjs');
 function dashboardHandler(database,auth,notifications,options){const reset=require('./reset.cjs')(database,options);return async(req,res,pathname,origin)=>{
   if(publicAssets.has(pathname)||pathname.startsWith('/templates/')||pathname.startsWith('/fonts/')){await serveStatic(req,res,pathname,origin);return true;}
   const root=new URL(origin),host=(req.headers.host||'').toLowerCase(),domain=root.hostname.startsWith('127.')||root.hostname==='localhost'?'resumeit.ir':root.hostname;
@@ -27,7 +28,7 @@ function dashboardHandler(database,auth,notifications,options){const reset=requi
     const outgoing=/^\/out\/([a-z0-9_-]+)$/i.exec(route),linkRoutes=pathPages?['/','/share-image']:['/link','/links',linksPath,'/link/share-image','/links/share-image',linksPath+'/share-image'],kind=linkRoutes.includes(route)||outgoing?'links':'resume';
     if(![...linkRoutes,'/','/share-image',resumePath,resumePath+'/share-image'].includes(route)&&!outgoing){res.writeHead(404);res.end('صفحه پیدا نشد');return true;}
     const page=pages?.[kind];if(!page){res.writeHead(404);res.end('صفحه پیدا نشد');return true;}
-    if(outgoing){const link=page.content.links.items.find(x=>x.id===outgoing[1]&&x.type==='link'&&x.active);const url=link&&model.webUrl(link.url);if(!url){res.writeHead(404);res.end();return true;}if(req.method==='GET')await database.recordMetric(page.id,'click',link.id,Date.now(),page.slot||1);res.writeHead(302,{Location:url});res.end();return true;}
+    if(outgoing){const link=page.content.links.items.find(x=>x.id===outgoing[1]&&x.type==='link'&&x.active);const url=link&&model.webUrl(link.url);if(!url){res.writeHead(404);res.end();return true;}if(metrics.countable(req,'click|'+page.id+'|'+link.id+'|'+host))await database.recordMetric(page.id,'click',link.id,Date.now(),page.slot||1);res.writeHead(302,{Location:url});res.end();return true;}
     if(route.endsWith('/share-image')){const img=RI.shareCard(page.content,kind).image,m=/^data:image\/(png|jpeg|webp);base64,(.+)$/.exec(img||'');if(!m){res.writeHead(404);res.end();return true;}res.writeHead(200,{'Content-Type':'image/'+m[1]});res.end(req.method==='HEAD'?undefined:Buffer.from(m[2],'base64'));return true;}
     const c=model.publicContent(page.content,database.billing?await database.billing(page.id):{}),esc=RI.esc,canonical=pathPages?root.protocol+'//'+domain+base:local?origin+base+(kind==='links'?linksPath:resumePath):root.protocol+'//'+slug+'.'+domain+(kind==='links'?linksPath:resumePath);
     c._publicPages={resume:!!pages?.resume,links:!!pages?.links};
@@ -43,7 +44,7 @@ function dashboardHandler(database,auth,notifications,options){const reset=requi
     if(req.method==='GET'){
       const marker='ri_seen_'+kind,seen=(req.headers.cookie||'').split(';').some(c=>c.trim()===marker+'=1');
       // shortcut: cookie-based visits; clearing cookies or using another browser starts a new visit.
-      if(!seen){await database.recordMetric(page.id,kind,'',Date.now(),page.slot||1);res.setHeader('Set-Cookie',marker+'=1; Path='+(base||'/')+'; HttpOnly; SameSite=Lax; Max-Age=86400'+(origin.startsWith('https:')?'; Secure':''));}
+      if(!seen&&metrics.countable(req,kind+'|'+page.id+'|'+host+pathname)){await database.recordMetric(page.id,kind,'',Date.now(),page.slot||1);res.setHeader('Set-Cookie',marker+'=1; Path='+(base||'/')+'; HttpOnly; SameSite=Lax; Max-Age=86400'+(origin.startsWith('https:')?'; Secure':''));}
     }
     res.writeHead(200,{'Content-Type':'text/html; charset=utf-8'});res.end(req.method==='HEAD'?undefined:output);return true;
   }
@@ -85,7 +86,7 @@ function dashboardHandler(database,auth,notifications,options){const reset=requi
     if(req.method!=='POST')model.fail('روش درخواست معتبر نیست',405);
     if(req.headers.origin!==origin||req.headers['content-type']?.split(';')[0]!=='application/json')model.fail('مبدأ درخواست معتبر نیست',403);
     const input=await readJson(req,8*1024*1024);
-    if(pathname==='/api/dashboard/delete'){if(input.confirm!=='DELETE')model.fail('تأیید حذف لازم است');await database.deleteAccount(user.id);res.setHeader('Set-Cookie','ri_session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0'+(origin.startsWith('https:')?'; Secure':''));reply(200,{ok:true});return true;}
+    if(pathname==='/api/dashboard/delete'){if(input.confirm!=='DELETE')model.fail('تأیید حذف لازم است');await require('../auth/confirm.cjs').confirmPassword(database,user,input.password);await database.deleteAccount(user.id);res.setHeader('Set-Cookie','ri_session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0'+(origin.startsWith('https:')?'; Secure':''));reply(200,{ok:true});return true;}
     if(pathname==='/api/dashboard/wallet/purchase'){await database.purchaseWithWallet(user.id,input.ref,input.requestId,input.expectedPrice);if(database.notify)await database.notify(user.id,'payments','خرید ثبت شد','جزئیات و مبلغ خرید در گردش کیف پول ثبت شده است.','/dashboard/billing/?tab=purchases','purchase:'+input.requestId).catch(()=>{});reply(200,{wallet:await database.wallet(user.id),billing:await database.billing(user.id)});return true;}
     if(!Number.isSafeInteger(input.revision)||input.revision<0)model.fail('نسخهٔ اطلاعات معتبر نیست');
     if(!['/api/dashboard/save','/api/dashboard/publish','/api/dashboard/unpublish'].includes(pathname))model.fail('مسیر پیدا نشد',404);
@@ -103,6 +104,6 @@ function dashboardHandler(database,auth,notifications,options){const reset=requi
     if(!saving&&database.notify)await database.notify(user.id,'publication',pathname.endsWith('/unpublish')?'صفحه از انتشار برداشته شد':'نسخهٔ تازه منتشر شد',input.kind==='resume'?'رزومه':'صفحهٔ لینک‌ها','/dashboard/publish/','pub:'+user.id+':'+workspace+':'+result.revision).catch(()=>{});
     const compact=input.compact===true?(saving?{revision:result.revision,slug:result.slug,preferences:result.preferences}:{revision:result.revision,slug:result.slug,pub:require('./media.cjs').lightweight({pub:result.pub},workspace).pub}):result;
     reply(200,compact);
-  }catch(e){reply(e.status||503,{error:e.status?e.message:'درخواست انجام نشد؛ دوباره تلاش کن',code:['REVISION_CONFLICT','ACCOUNT_CHANGED','ADVISOR_CONFLICT'].includes(e.code)?e.code:undefined});}return true;
+  }catch(e){if(!e.status)require('../http/log.cjs').logFailure('dashboard',req,e);reply(e.status||503,{error:e.status?e.message:'درخواست انجام نشد؛ دوباره تلاش کن',code:['REVISION_CONFLICT','ACCOUNT_CHANGED','ADVISOR_CONFLICT','PASSWORD_REQUIRED'].includes(e.code)?e.code:undefined});}return true;
 };}
 module.exports={dashboardHandler};

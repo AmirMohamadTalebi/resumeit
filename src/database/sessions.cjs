@@ -1,4 +1,6 @@
-const {randomUUID}=require('node:crypto');
+const {randomUUID,createHash}=require('node:crypto');
+// attempt_key is VARCHAR(96); hash the phone/address pair so long OAuth pseudo-phones still fit.
+const pairKey=(phone,ipHash)=>'pair:'+createHash('sha256').update(phone+'|'+ipHash).digest('hex');
 module.exports = ({execute,transaction}) => {
   return {
     async provisionAccount(phone, passwordHash) {
@@ -31,7 +33,8 @@ module.exports = ({execute,transaction}) => {
       const now = Date.now();
       await execute('DELETE FROM login_attempts WHERE expires_at<=?', [now]);
       return transaction(async connection => {
-        for (const [key, limit] of [['ip:' + ipHash, 100], ['phone:' + phone, 5]]) {
+        // One address gets 5 tries per phone; the phone-wide cap is higher so a single attacker cannot lock the owner out.
+        for (const [key, limit] of [['ip:' + ipHash, 100], [pairKey(phone, ipHash), 5], ['phone:' + phone, 30]]) {
           await connection.execute('INSERT INTO login_attempts(attempt_key,count,expires_at) VALUES(?,0,?) ON DUPLICATE KEY UPDATE attempt_key=attempt_key', [key, now + 900000]);
           const [[row]] = await connection.execute('SELECT count FROM login_attempts WHERE attempt_key=? FOR UPDATE', [key]);
           if (row.count >= limit) return false;
@@ -40,6 +43,6 @@ module.exports = ({execute,transaction}) => {
         return true;
       });
     },
-    async clearLoginAttempts(phone) { await execute('DELETE FROM login_attempts WHERE attempt_key=?', ['phone:' + phone]); },
+    async clearLoginAttempts(phone, ipHash) { await execute('DELETE FROM login_attempts WHERE attempt_key IN (?,?)', ['phone:' + phone, ipHash ? pairKey(phone, ipHash) : 'phone:' + phone]); },
   };
 };

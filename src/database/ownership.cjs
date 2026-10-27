@@ -45,9 +45,9 @@ module.exports=({execute,transaction})=>({
     });
   },
 });
-module.exports.bootstrapOwner=async execute=>{
+module.exports.bootstrapOwner=async(execute,phone=require('../admin/access.cjs').ownerPhone())=>{
   // Bootstrap only an unowned installation; restarting must not restore a revoked role.
   const [existing]=await execute('SELECT user_id FROM owner_accounts LIMIT 1');
-  if(!existing)await execute('INSERT IGNORE INTO owner_accounts(user_id) SELECT id FROM users WHERE SHA2(phone,256)=? AND phone_verified=TRUE',[require('../admin/access.cjs').OWNER_PHONE_HASH]);
+  if(!existing&&phone)await execute('INSERT IGNORE INTO owner_accounts(user_id) SELECT id FROM users WHERE phone=? AND phone_verified=TRUE',[phone]);
   await execute('INSERT IGNORE INTO admin_accounts(user_id) SELECT user_id FROM owner_accounts');
 };

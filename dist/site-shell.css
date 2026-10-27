@@ -127,3 +127,6 @@
 }
 
 .site-footer nav>a,.site-footer__bottom>a{display:inline-flex;align-items:center;min-height:44px;padding-block:8px}.public-header nav a[aria-current="page"],.site-footer a[aria-current="page"]{font-weight:700;text-decoration:underline;text-underline-offset:6px}
+
+/* Touch screens: grow the hit area of small header and hero links to 44px without moving the layout. */
+@media (pointer:coarse){.public-header>.brand{padding-block:9px;margin-block:-9px}.sig-actions>.sig-secondary{padding-block:12px;margin-block:-12px}.sig-copy>.sig-scroll{position:relative}.sig-copy>.sig-scroll::after{content:"";position:absolute;inset:-14px 0}}

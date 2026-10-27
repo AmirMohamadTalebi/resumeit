@@ -6,7 +6,8 @@ module.exports = ({execute,transaction}) => {
       await execute('DELETE FROM otp_challenges WHERE expires_at<?', [now - 86400000]);
       return transaction(async connection => {
         const day = Math.floor(now / 86400000), tomorrow = (day + 1) * 86400000;
-        const limits = [['sms:all:'+day,100,tomorrow], ['sms:ip:'+ipHash,10,now+900000], ['sms:phone:'+record.phone,5,tomorrow]];
+        const budget = require('../auth/limits.cjs').smsLimits();
+        const limits = [['sms:all:'+day,budget.otpDaily,tomorrow], ['sms:ip:'+ipHash,budget.ipQuarterHour,now+900000], ['sms:phone:'+record.phone,budget.phoneDaily,tomorrow]];
         // Lock the shared budget first so concurrent replicas cannot overspend or resend together.
         for (const [key,limit,expires] of limits) {
           await connection.execute('INSERT INTO login_attempts(attempt_key,count,expires_at) VALUES(?,0,?) ON DUPLICATE KEY UPDATE attempt_key=attempt_key',[key,expires]);

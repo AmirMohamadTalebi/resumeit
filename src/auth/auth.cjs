@@ -1,12 +1,15 @@
 const {publicOrigin,readJson}=require('../http/security.cjs');
 const {randomBytes,createHash}=require('node:crypto');
 const {hashPassword,verifyPassword}=require('./password.cjs');
+const {clientIp}=require('../http/client-ip.cjs');
 const digest = value => createHash('sha256').update(value).digest('hex');
 function authHandler(database, options = {}) {
   const otp = require('./otp.cjs').createOtpService({ database, ...options });
   const oauth = require('./oauth.cjs').oauthHandler(database,options);
   const status=require('./account-status.cjs'),statusHandler=status.handler(database);
+  // scrypt is CPU-bound: a small shared pool keeps the event loop responsive without making every login wait behind one.
   let pending = 0;
+  const scryptSlots = 4, ipHash = req => digest(clientIp(req));
   const token = req => {
     const value = /(?:^|;\s*)ri_session=([a-f0-9]{64})(?:;|$)/.exec(req.headers.cookie || '')?.[1];
     return value ? digest(value) : '';
@@ -48,7 +51,7 @@ function authHandler(database, options = {}) {
           if(typeof input.phone!=='string'||!/^09\d{9}$/.test(input.phone)){reply(400,{error:'شماره موبایلت رو درست بنویس'});return true;}
           const existing=await database.accountByPhone(input.phone);
           if(existing&&existing.id!==user.id){reply(200,{challengeId:require('node:crypto').randomUUID(),expiresIn:120,retryAfter:60});return true;}
-          const result=await otp.request(input.phone,'phone',digest(req.socket.remoteAddress||'unknown'),user.id);
+          const result=await otp.request(input.phone,'phone',ipHash(req),user.id);
           if(!result)reply(429,{error:'یه دقیقه صبر کن و دوباره امتحان کن'});else reply(200,result);
         } else {
           if(typeof input.challengeId!=='string'||!/^[a-f0-9-]{36}$/.test(input.challengeId)||typeof input.code!=='string'||!/^\d{6}$/.test(input.code)){reply(400,{error:'کد ۶ رقمی رو درست بنویس'});return true;}
@@ -71,7 +74,7 @@ function authHandler(database, options = {}) {
           const reset=pathname==='/api/auth/password/reset',grant=reset?input.resetToken:input.registrationToken;
           if (typeof grant!=='string'||!/^[a-f0-9]{64}$/.test(grant) || typeof input.password!=='string' || input.password.length<8 || input.password.length>128) { reply(400,{error:'رمزت باید بین ۸ تا ۱۲۸ کاراکتر باشه'}); return true; }
           if (!await database.registrationValid(digest(grant),Date.now(),reset?'reset':'register')) { reply(401,{error:'تأیید شماره منقضی شده؛ دوباره کد بگیر'}); return true; }
-          if (pending>=1) { reply(429,{error:'چند لحظه بعد دوباره امتحان کن'}); return true; }
+          if (pending>=scryptSlots) { res.setHeader('Retry-After','3'); reply(429,{error:'سرور کمی شلوغه؛ چند ثانیه بعد دوباره امتحان کن'}); return true; }
           pending++;
           try {
             const hash=await hashPassword(input.password);
@@ -86,17 +89,19 @@ function authHandler(database, options = {}) {
         if (pathname.endsWith('/request')) {
           if (typeof input.phone!=='string'||!/^09\d{9}$/.test(input.phone)) { reply(400,{error:'شمارهٔ موبایل معتبر وارد کن'}); return true; }
           let ownerId=null;
+          // Throttle registration probes too: the "already registered" answer must not become a free phone lookup.
+          if(input.purpose==='register' && !await database.claimLoginAttempts('register:'+input.phone,ipHash(req))) { res.setHeader('Retry-After','900'); reply(429,{error:'تلاش‌های زیادی انجام شده؛ کمی بعد دوباره امتحان کن'}); return true; }
           if(input.purpose==='register' && await database.accountByPhone(input.phone)) {
             reply(409,{error:'این شماره حساب دارد؛ وارد شو یا رمزت را بازیابی کن'}); return true;
           }
           if(input.purpose!=='register') {
-            if(!await database.claimLoginAttempts(input.phone,digest(req.socket.remoteAddress||'unknown'))) { reply(429,{error:'تلاش‌های زیادی انجام شده؛ کمی بعد دوباره امتحان کن'}); return true; }
+            if(!await database.claimLoginAttempts(input.phone,ipHash(req))) { reply(429,{error:'تلاش‌های زیادی انجام شده؛ کمی بعد دوباره امتحان کن'}); return true; }
             const owner=await database.accountByPhone(input.phone);
             const deleted=!owner&&database.identityNotice?await database.identityNotice('phone',input.phone):null;
             if(!owner&&!deleted) { reply(200,{challengeId:require('node:crypto').randomUUID(),expiresIn:120,retryAfter:60}); return true; }
             ownerId=owner?.id||deleted.user_id;
           }
-          const result=await otp.request(input.phone,input.purpose,digest(req.socket.remoteAddress||'unknown'),ownerId);
+          const result=await otp.request(input.phone,input.purpose,ipHash(req),ownerId);
           if (!result) { res.setHeader('Retry-After','60'); reply(429,{error:'محدودیت ارسال کد؛ یک دقیقه صبر کن اگر سهمیهٔ روزانه تمام شده، فردا امتحان کن'}); }
           else reply(200,result);
         } else {
@@ -115,25 +120,25 @@ function authHandler(database, options = {}) {
             else {await database.markPhoneVerified(user.id);await signIn(user);}
           }
         }
-      } catch(error) { reply(error.status || (error instanceof SyntaxError?400:503),{error:'درخواست انجام نشد شماره را بررسی کن و کمی بعد دوباره امتحان کن'}); }
+      } catch(error) { reply(error.status || (error instanceof SyntaxError?400:503),{error:error.message==='SMS submission failed'?'پیامک ارسال نشد؛ چند دقیقه بعد دوباره امتحان کن':'درخواست انجام نشد؛ شماره را بررسی کن و کمی بعد دوباره امتحان کن'}); }
       return true;
     }
     if (pathname !== '/api/auth/login') { reply(404, { error: 'Not found' }); return true; }
     try {
       const { phone, password } = await readJson(req);
       if (typeof phone !== 'string' || !/^09\d{9}$/.test(phone) || typeof password !== 'string' || password.length < 8 || password.length > 128) { reply(400, { error: 'شماره و رمز معتبر وارد کن' }); return true; }
-      if (pending >= 1) {
-        res.setHeader('Retry-After', '900'); reply(429, { error: 'تلاش‌های زیادی انجام شده؛ ۱۵ دقیقه بعد دوباره امتحان کن' }); return true;
+      if (pending >= scryptSlots) {
+        res.setHeader('Retry-After', '3'); reply(429, { error: 'سرور کمی شلوغه؛ چند ثانیه بعد دوباره امتحان کن' }); return true;
       }
       pending++;
       try {
-      if (!await database.claimLoginAttempts(phone, digest(req.socket.remoteAddress || 'unknown'))) {
+      if (!await database.claimLoginAttempts(phone, ipHash(req))) {
         res.setHeader('Retry-After', '900'); reply(429, { error: 'تلاش‌های زیادی انجام شده؛ ۱۵ دقیقه بعد دوباره امتحان کن' }); return true;
       }
       const user = await database.accountByPhone(phone);
       const valid = await verifyPassword(password, user?.password_hash);
       if (!valid) { reply(401, { error: 'شماره یا رمزت درست نیست' }); return true; }
-      await database.clearLoginAttempts(phone);
+      await database.clearLoginAttempts(phone, ipHash(req));
       await signIn(user);
       } finally { pending--; }
     } catch (error) {

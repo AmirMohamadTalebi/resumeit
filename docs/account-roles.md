@@ -23,8 +23,10 @@ Owner membership is stored in `owner_accounts`. Owners also inherit
 demoting a user clears stale memberships in one transaction; sessions re-read the
 current role on every request. Suspended accounts cannot use privileged paths.
 
-The first owner is bootstrapped from the existing verified founder identity only
-when no owner exists. Legacy admins are not automatically promoted. Restarting
+The first owner is bootstrapped from the verified phone in the `OWNER_PHONE`
+host secret only when no owner exists (no phone or hash is stored in source).
+Manual credit, permanent account deletion and role changes also re-check the
+acting owner's current password. Legacy admins are not automatically promoted. Restarting
 the service does not restore revoked founder permissions. Owners cannot change
 their own role or delete their own account through the normal account-deletion
 path: another owner must perform the demotion first. Granting a privileged role

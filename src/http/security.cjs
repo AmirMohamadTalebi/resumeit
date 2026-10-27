@@ -21,7 +21,9 @@ function securityHeaders(res, origin, html = '', allowSameOriginFrame = false) {
   res.setHeader('X-Frame-Options', allowSameOriginFrame ? 'SAMEORIGIN' : 'DENY');
   res.setHeader('Referrer-Policy', 'no-referrer');
   res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
-  if (origin.startsWith('https:')) res.setHeader('Strict-Transport-Security', 'max-age=31536000');
+  res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
+  // Published pages live on subdomains; enable HSTS_INCLUDE_SUBDOMAINS once every subdomain is served over HTTPS.
+  if (origin.startsWith('https:')) res.setHeader('Strict-Transport-Security', 'max-age=31536000' + (process.env.HSTS_INCLUDE_SUBDOMAINS === 'true' ? '; includeSubDomains' : ''));
 }
 
 async function readJson(req, limit = 2048) {

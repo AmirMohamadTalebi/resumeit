@@ -69,7 +69,7 @@ function paymentHandler(database,auth,options) {
       const startRoute=/^\/api\/payments\/(sep|zibal)\/start$/.exec(path);
       if(startRoute&&req.method==='POST') {if(req.headers.origin!==origin||req.headers['content-type']?.split(';')[0]!=='application/json')fail('مبدأ درخواست معتبر نیست',403);reply(200,await service.start(user,await readJson(req),origin,startRoute[1]));return true;}
       fail('مسیر پیدا نشد',404);
-    }catch(e){const status=e.status||(e instanceof SyntaxError?400:503),message=e.status?e.message:e instanceof SyntaxError?'ساختار درخواست معتبر نیست':'پرداخت قابل تأیید نیست؛ موجودی را بررسی کن و دوباره تلاش کن';if(paymentPage)page(status,'درخواست پرداخت انجام نشد','<p role="alert">'+RI.esc(message)+'</p><a href="/dashboard/wallet/">بازگشت به کیف پول</a>');else reply(status,{error:message});}return true;
+    }catch(e){if(!e.status&&!(e instanceof SyntaxError))require('../http/log.cjs').logFailure('payments',req,e);const status=e.status||(e instanceof SyntaxError?400:503),message=e.status?e.message:e instanceof SyntaxError?'ساختار درخواست معتبر نیست':'پرداخت قابل تأیید نیست؛ موجودی را بررسی کن و دوباره تلاش کن';if(paymentPage)page(status,'درخواست پرداخت انجام نشد','<p role="alert">'+RI.esc(message)+'</p><a href="/dashboard/wallet/">بازگشت به کیف پول</a>');else reply(status,{error:message});}return true;
   };
   // Pausing new checkouts must still settle orders created before the pause.
   const timer=database.duePayments?setInterval(()=>{void service.reconcile().catch(()=>{});},service.enabled?15000:60000):null;

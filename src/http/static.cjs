@@ -29,7 +29,7 @@ for(const [url,files] of [
   return source;
 }).join(url.endsWith('.css')?'\n':'\n;\n')));
 const compressedAssets=new Map();
-const fileBodies=new Map(),fileCacheLimit=32*1024*1024;
+const fileBodies=new Map(),fileCacheLimit=32*1024*1024,rewrittenBodies=new Map();
 let fileCacheBytes=0;
 const mime = { '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8', '.js': 'application/javascript', '.mjs': 'application/javascript', '.woff2': 'font/woff2', '.svg': 'image/svg+xml', '.txt': 'text/plain; charset=utf-8', '.xml': 'application/xml; charset=utf-8', '.jpg': 'image/jpeg', '.png': 'image/png', '.webp': 'image/webp', '.ico': 'image/x-icon' };
 Object.assign(mime,{'.jpeg':'image/jpeg','.gif':'image/gif','.woff':'font/woff','.ttf':'font/ttf'});
@@ -112,6 +112,9 @@ async function serveStatic(req, res, pathname, origin, account, restricted) {
         fileBodies.set(realFile,body);fileCacheBytes+=body.length;
       }
     }
+    // The rewrites below depend only on the file and the URL path, so reuse them instead of redoing the regex work per request.
+    const rewriteKey=/^text\/(html|css)/.test(type)?pathname+'\0'+realFile:null,cached=rewriteKey&&rewrittenBodies.get(rewriteKey);
+    if(cached){send(200,cached,type);return;}
     if(workspacePage)body=Buffer.from(body.toString('utf8').replace('data-page="home"','data-page="'+workspacePage[1]+'"').replace('/dashboard/js/pages/home.js','/dashboard/js/pages/'+workspacePage[1]+'.js'));
     if(retentionPage)body=Buffer.from(body.toString('utf8').replace('data-section="health"','data-section="retention"').replace('<title>','<title>پاک‌سازی و بایگانی | '));
     if(type.startsWith('text/html')&&!pathname.startsWith('/templates/')&&!body.includes('/notifications.js'))body=Buffer.from(body.toString('utf8').replace('</head>','<link rel="stylesheet" href="/notifications.css"><script defer src="/notifications.js"></script></head>'));
@@ -119,6 +122,7 @@ async function serveStatic(req, res, pathname, origin, account, restricted) {
     if(type.startsWith('text/html')&&pathname.toLowerCase().startsWith('/admin/'))body=Buffer.from(body.toString('utf8').replace('<script defer src="/admin/admin.js">','<link rel="stylesheet" href="/admin/owner-controls.css"><script defer src="/admin/owner-controls.js"></script><script defer src="/admin/admin.js">'));
     if(type.startsWith('text/html'))body=Buffer.from(body.toString('utf8').replace(/<html\b([^>]*)>/i,`<html$1 data-asset-version="${assetRevision}">`).replace(/\b(src|href)=(["'])(\/[^"'?#]+\.(?:js|css|woff2|png|svg))\2/g,(_,attr,quote,url)=>`${attr}=${quote}${url}?v=${assetRevision}${quote}`));
     if(type.startsWith('text/css'))body=Buffer.from(body.toString('utf8').replace(/url\((["']?)(?!data:|https?:|\/\/)([^)"'?#]+\.(?:woff2|woff|ttf|png|svg|webp|jpg))\1\)/g,(_,quote,url)=>`url(${quote}${url}?v=${assetRevision}${quote})`));
+    if(rewriteKey){if(rewrittenBodies.size>=256)rewrittenBodies.delete(rewrittenBodies.keys().next().value);rewrittenBodies.set(rewriteKey,body);}
     send(200,body,type);
   } catch (error) {
     send(['ENOENT', 'ENOTDIR', 'EISDIR'].includes(error.code) ? 404 : 503, 'Page unavailable');
