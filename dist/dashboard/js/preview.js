@@ -184,12 +184,24 @@
       const html = st.kind === 'resume' ? RI.resumeHtml(c, { theme: theme, page: st.templatePage }) : RI.linksHtml(c, { theme: theme });
       const imported = st.kind === 'resume' && RI.IMPORTED_TEMPLATES && RI.IMPORTED_TEMPLATES[(theme || c.theme).resume];
       if (imported) {
-        const oldScroll=vp.querySelector('iframe')?.contentDocument?.scrollingElement?.scrollTop;
+        // Stylesheets live in the frame's head; while they stay the same an edit only swaps the body, so fonts,
+        // CSS and images are not re-parsed on every keystroke and the preview keeps its scroll without flashing.
+        const sheet = /<link rel="stylesheet"[^>]*>/g, sheets = (html.match(sheet) || []).join(''), body = html.replace(sheet, '');
+        const current = vp.querySelector('iframe'), currentDoc = current?.contentDocument;
+        const bind = (doc, frame) => { frame._binding?.abort(); frame._binding = new AbortController(); window.bindResumeProjects?.(doc); RI.bindImportedPage(doc, () => {}, frame._binding.signal); };
+        if (current && current.dataset.ready === 'true' && current.dataset.sheets === sheets && currentDoc?.body) {
+          const oldScroll = currentDoc.scrollingElement?.scrollTop;
+          currentDoc.body.innerHTML = body; bind(currentDoc, current);
+          revealTemplateSection(false); if (oldScroll != null && currentDoc.scrollingElement) currentDoc.scrollingElement.scrollTop = oldScroll;
+        } else {
+        const oldScroll=currentDoc?.scrollingElement?.scrollTop;
         const frame = document.createElement('iframe'); frame.title = 'پیش‌نمایش قالب رزومه'; frame.setAttribute('sandbox', 'allow-same-origin');
         frame.style.cssText = 'width:100%;height:100%;border:0;display:block;background:#fff';
-        frame.srcdoc = '<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body style="margin:0">' + html + '</body></html>';
-        frame.addEventListener('load', () => { const doc = frame.contentDocument; if (!doc||frame!==vp.querySelector('iframe')) return; window.bindResumeProjects?.(doc); RI.bindImportedPage(doc, () => {});revealTemplateSection(oldScroll==null);if(oldScroll!=null&&doc.scrollingElement)doc.scrollingElement.scrollTop=oldScroll; });
+        frame.dataset.sheets = sheets;
+        frame.srcdoc = '<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">' + sheets + '</head><body style="margin:0">' + body + '</body></html>';
+        frame.addEventListener('load', () => { const doc = frame.contentDocument; if (!doc||frame!==vp.querySelector('iframe')) return; frame.dataset.ready = 'true'; bind(doc, frame);revealTemplateSection(oldScroll==null);if(oldScroll!=null&&doc.scrollingElement)doc.scrollingElement.scrollTop=oldScroll; });
         vp.replaceChildren(frame);
+        }
       } else {vp.innerHTML = html;focusLabel.hidden=true;}
       vp.scrollTop = top;
       const u = RI.urls();

@@ -74,10 +74,10 @@
     const effectiveGroups=spec.groups.filter(group=>groups.has(group.key));
     return {...spec,fields:spec.fields.filter(field=>fields.has(field.key)||field.key.startsWith('compose_')),collections:spec.collections.filter(collection=>collections.has(collection.key)),groups:effectiveGroups,settings:spec.settings.filter(setting=>!setting.group||groups.has(setting.group)||(id==='vista'&&setting.key==='show_home_07793c2')).map(setting=>setting.group&&!effectiveGroups.some(group=>group.key===setting.group)?{...setting,group:undefined}:setting)};
   };
-  RI.bindImportedPage = function (doc, openPage) {
+  RI.bindImportedPage = function (doc, openPage, signal) {
     const root = doc.querySelector('.ri-imported');
     if (!root) return;
-    if(['vista','satiar'].includes(root.dataset.template)&&window.bindVistaPage){window.bindVistaPage(doc,{preview:true,onExternal:()=>RI.toast('این لینک در نسخهٔ منتشرشده باز می‌شود.',{kind:'info'})});return;}
+    if(['vista','satiar'].includes(root.dataset.template)&&window.bindVistaPage){window.bindVistaPage(doc,{preview:true,signal,onExternal:()=>RI.toast('این لینک در نسخهٔ منتشرشده باز می‌شود.',{kind:'info'})});return;}
     const body = root.querySelector('.ri-imported-body');
     if (body) doc.body.className = body.className;
     doc.documentElement.setAttribute('data-theme', root.dataset.templateMode || 'dark');
@@ -97,7 +97,7 @@
         else if (href === '/') openPage('home');
         else RI.toast('این لینک در نسخهٔ منتشرشده باز می‌شود.', { kind: 'info' });
       }
-    });
+    }, { signal });
     const top = doc.getElementById('vistaBackToTop'); if (top) top.addEventListener('click', () => doc.defaultView.scrollTo({top:0,behavior:'auto'}));
     const compose = root.querySelector('.ri-compose'); if (compose) compose.addEventListener('submit', e => {e.preventDefault();RI.toast('ارسال پیام در نسخهٔ منتشرشده از طریق برنامهٔ ایمیل انجام می‌شود.',{kind:'info'});});
     const toggle = doc.querySelector('.mobile-menu-toggle,.mobile-nav-toggle,.menu-button,.menu-toggle');

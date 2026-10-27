@@ -5,10 +5,11 @@ function slugValid(s){return typeof s==='string'&&s.length>=3&&s.length<=24&&/^[
 function webUrl(s){if(typeof s!=='string'||!s||s.length>2048||/[\s\x00-\x1f\x7f]/.test(s))return null;try{if(!/^https?:\/\//i.test(s))s='https://'+s;const u=new URL(s);return ['http:','https:'].includes(u.protocol)&&!u.username&&!u.password&&u.hostname.includes('.')?u.href:null;}catch{return null;}}
 const templates={contacts:{id:'',type:'',label:'',value:'',public:false},skills:{id:'',name:'',level:3},experience:{id:'',role:'',org:'',from:'',to:'',current:false,desc:''},education:{id:'',degree:'',school:'',from:'',to:'',current:false,desc:''},projects:{id:'',title:'',desc:'',url:'',image:null},certs:{id:'',title:'',issuer:'',year:''},languages:{id:'',name:'',level:3},socials:{id:'',platform:'',handle:''},sections:{key:'',visible:true},items:{id:'',type:'',title:'',url:'',icon:'link',active:true,featured:false,image:null}};
 function image(value,key){if(value===null||value==='')return null;if(typeof value!=='string'||value.length>3*1024*1024)fail('حجم تصویر بیش از حد مجاز است');if(key!=='avatar'&&/^grad:#[a-f0-9]{6},#[a-f0-9]{6}$/i.test(value))return value;
-  const m=/^data:image\/(png|jpeg|webp);base64,([A-Za-z0-9+/]+={0,2})$/.exec(value);if(m){const b=Buffer.from(m[2],'base64');const valid=m[1]==='png'?b.subarray(0,8).equals(Buffer.from([137,80,78,71,13,10,26,10])):m[1]==='jpeg'?b[0]===255&&b[1]===216&&b[2]===255:b.toString('ascii',0,4)==='RIFF'&&b.toString('ascii',8,12)==='WEBP';if(valid)return value;}
+  const m=/^data:image\/(png|jpeg|webp);base64,([A-Za-z0-9+/]+={0,2})$/.exec(value);if(m){const b=Buffer.from(m[2].slice(0,32),'base64');/* only the signature bytes are needed; decoding megabytes per autosave is wasted work */const valid=m[1]==='png'?b.subarray(0,8).equals(Buffer.from([137,80,78,71,13,10,26,10])):m[1]==='jpeg'?b[0]===255&&b[1]===216&&b[2]===255:b.toString('ascii',0,4)==='RIFF'&&b.toString('ascii',8,12)==='WEBP';if(valid)return value;}
   if(/^https:\/\//i.test(value)&&webUrl(value)&&!/[\s'"()\\]/.test(value)){collector?.add(value);return value;}
   fail('تصویر باید PNG، JPEG، WebP یا آدرس HTTPS معتبر باشد');
 }
+const base64Bytes=value=>{const b64=value.slice(value.indexOf(',')+1);return Math.floor(b64.length*3/4)-(b64.endsWith('==')?2:b64.endsWith('=')?1:0);};
 // Validation is synchronous, so a module-level collector safely gathers the external image addresses it meets.
 let collector=null;
 function shape(value,sample,key=''){
@@ -55,7 +56,7 @@ function validateContent(input,billing={},previous,afterImages){input=require('.
   if(c.links.items.some(x=>!['link','divider','text','image'].includes(x.type)||(x.type==='link'&&(!x.title.trim()||!webUrl(x.url)))||(x.type==='text'&&!x.title.trim())||(x.type==='image'&&!x.image)||!RI.LINK_ICONS.includes(x.icon)))fail('عنوان، تصویر یا آدرس جزء صفحه را کامل کن');
   const subscriber=billing.plan&&billing.plan.end>Date.now();
   const policy=billing.commerce||require('../owner/settings.cjs').defaults(),maxImage=subscriber?policy.imagePaid:policy.imageFree,existingImages=require('./media.cjs').images(previous),newImages=require('./media.cjs').images(c);
-  for(const [id,value]of newImages)if(!existingImages.has(id)&&Buffer.from(value.slice(value.indexOf(',')+1),'base64').length>maxImage)fail('حجم هر تصویر برای '+(subscriber?'اشتراکی':'رایگان')+' حداکثر '+Math.floor(maxImage/1024)+' کیلوبایت است',413);
+  for(const [id,value]of newImages)if(!existingImages.has(id)&&base64Bytes(value)>maxImage)fail('حجم هر تصویر برای '+(subscriber?'اشتراکی':'رایگان')+' حداکثر '+Math.floor(maxImage/1024)+' کیلوبایت است',413);
   for(const kind of ['resume','links']){const brand=c.branding[kind];if(!['resumeit','custom','hidden'].includes(brand.mode)||brand.text.length>100)fail('امضای صفحه معتبر نیست');if(brand.mode!=='resumeit'&&!subscriber&&JSON.stringify(brand)!==JSON.stringify(previous?.branding?.[kind]))fail('امضای اختصاصی به اشتراک فعال نیاز دارد',403);}
   for(const item of c.links.items.filter(x=>['text','image'].includes(x.type)))if(!subscriber&&!previous?.links?.items.some(old=>old.id===item.id&&JSON.stringify(old)===JSON.stringify(item)))fail('بلوک متن و تصویر به اشتراک فعال نیاز دارد',403);
   if(c.socials.some(x=>!RI.SOCIALS.some(s=>s[0]===x.platform)||!RI.socialHandleValid(x.handle)))fail('آدرس شبکهٔ اجتماعی معتبر نیست');

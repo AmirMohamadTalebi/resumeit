@@ -29,6 +29,8 @@ for(const [url,files] of [
   return source;
 }).join(url.endsWith('.css')?'\n':'\n;\n')));
 const compressedAssets=new Map();
+// dist is fixed for the process lifetime, so its real path is resolved once.
+const realRootPath=fs.realpath(root);
 const fileBodies=new Map(),fileCacheLimit=32*1024*1024,rewrittenBodies=new Map();
 let fileCacheBytes=0;
 const mime = { '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8', '.js': 'application/javascript', '.mjs': 'application/javascript', '.woff2': 'font/woff2', '.svg': 'image/svg+xml', '.txt': 'text/plain; charset=utf-8', '.xml': 'application/xml; charset=utf-8', '.jpg': 'image/jpeg', '.png': 'image/png', '.webp': 'image/webp', '.ico': 'image/x-icon' };
@@ -87,13 +89,15 @@ async function serveStatic(req, res, pathname, origin, account, restricted) {
     const guarded = pathname.toLowerCase() === '/dashboard' || pathname.toLowerCase().startsWith('/dashboard/');
     if (guarded) {
       res.setHeader('Cache-Control', 'no-store');
-      if (account && !await account(req)) { res.writeHead(303, { Location: await signin() }); res.end(); return; }
+      // Versionable files (JS/CSS/fonts/images/data) hold shared code, not user data: a recently verified session is enough.
+      const check=account&&/\.(?:js|css|woff2?|ttf|png|jpe?g|svg|webp|json)$/i.test(pathname)&&account.asset?account.asset:account;
+      if (check && !await check(req)) { res.writeHead(303, { Location: await signin() }); res.end(); return; }
     }
     if(!bundles.has(pathname)&& (await fs.stat(file)).isDirectory()) {
       if (!pathname.endsWith('/')) { res.writeHead(308, { Location: pathname + '/' + (req.url.includes('?') ? '?' + req.url.split('?').slice(1).join('?') : '') }); res.end(); return; }
       file = path.join(file, 'index.html');
     }
-    const realFile = bundles.has(pathname)?file:await fs.realpath(file), realRoot = await fs.realpath(root);
+    const realFile = bundles.has(pathname)?file:await fs.realpath(file), realRoot = await realRootPath;
     if (!realFile.startsWith(realRoot + path.sep)) { send(403, 'Forbidden'); return; }
     const relative = path.relative(realRoot, realFile);
     if(!staffPath&&relative.toLowerCase().startsWith('staff'+path.sep)){const user=account&&await account(req);if(!require('../admin/access.cjs').isSupport(user)){send(403,'Forbidden');return;}}

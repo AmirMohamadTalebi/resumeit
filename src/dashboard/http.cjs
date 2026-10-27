@@ -3,7 +3,7 @@ const model=require('./model.cjs'),{render,RI}=require('./render.cjs');
 const {gzipSync}=require('node:zlib');
 const {serveStatic,publicAssets}=require('../http/static.cjs');
 const pubData=(c,k)=>RI.publicationData(k,c);
-const metrics=require('./metrics.cjs');
+const metrics=require('./metrics.cjs'),mediaCache=require('./media-cache.cjs');
 function dashboardHandler(database,auth,notifications,options){const reset=require('./reset.cjs')(database,options);return async(req,res,pathname,origin)=>{
   if(publicAssets.has(pathname)||pathname.startsWith('/templates/')||pathname.startsWith('/fonts/')){await serveStatic(req,res,pathname,origin);return true;}
   const root=new URL(origin),host=(req.headers.host||'').toLowerCase(),domain=root.hostname.startsWith('127.')||root.hostname==='localhost'?'resumeit.ir':root.hostname;
@@ -23,6 +23,19 @@ function dashboardHandler(database,auth,notifications,options){const reset=requi
     const slug=sub||local?.[1]||pathAddress[1],rawRoute=local?local[2]||'/':pathPages?pathAddress[2]||'/':pathname,route=rawRoute==='/'?'/':rawRoute.replace(/\/$/,''),base=local?'/u/'+slug:pathPages?'/'+slug:'';
     if(!model.slugValid(slug)&&!samplePages&&!(sub&&slug.length<=24&&/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug))){res.writeHead(404);res.end('صفحه پیدا نشد');return true;}
     if(!['GET','HEAD'].includes(req.method)){res.writeHead(405);res.end();return true;}
+    // Published images are served as content-hashed files instead of base64 inside every HTML response.
+    const mediaRoute=/^\/media\/([a-f0-9]{32})\.(?:png|jpg|webp)$/.exec(route),mediaScope='p:'+host+base;
+    if(mediaRoute){
+      let entry=mediaCache.get(mediaScope,mediaRoute[1]);
+      if(!entry){
+        const found=pathPages||(database.publicWorkspace?await database.publicWorkspace(slug):{resume:await database.publicPage(slug,'resume'),links:await database.publicPage(slug,'links')}),owner=found?.resume||found?.links;
+        const billing=owner&&database.billing?await database.billing(owner.id):{};
+        for(const k of ['resume','links'])if(found?.[k])mediaCache.fill(mediaScope,model.publicContent(found[k].content,billing));
+        entry=mediaCache.get(mediaScope,mediaRoute[1]);
+      }
+      if(!entry){res.writeHead(404);res.end();return true;}
+      res.writeHead(200,{'Content-Type':entry.type,'Content-Length':entry.body.length,'Cache-Control':'public, max-age=31536000, immutable','X-Content-Type-Options':'nosniff'});res.end(req.method==='HEAD'?undefined:entry.body);return true;
+    }
     const pages=pathPages||(database.publicWorkspace?await database.publicWorkspace(slug):{resume:await database.publicPage(slug,'resume'),links:await database.publicPage(slug,'links')});
     const linksPath=pathPages?'':'/'+(pages?.links?.content.routing?.links||'link'),resumePath=pages?.resume?.content.routing?.resume?'/'+pages.resume.content.routing.resume:'';
     const outgoing=/^\/out\/([a-z0-9_-]+)$/i.exec(route),linkRoutes=pathPages?['/','/share-image']:['/link','/links',linksPath,'/link/share-image','/links/share-image',linksPath+'/share-image'],kind=linkRoutes.includes(route)||outgoing?'links':'resume';
@@ -38,7 +51,8 @@ function dashboardHandler(database,auth,notifications,options){const reset=requi
     if(imported&&!Object.hasOwn(imported.pages,templatePage)){if((imported.legacyPages||[]).includes(templatePage)){res.writeHead(308,{Location:canonical+'#ri-projects'});res.end();return true;}res.writeHead(404);res.end('صفحه پیدا نشد');return true;}
     const rendered=render(c,kind,page.preferences,base,templatePage).replaceAll('href="'+base+'/links"','href="'+base+linksPath+'"').replaceAll('href="'+base+'/"','href="'+base+(resumePath||'/')+'"').replaceAll('href="'+base+'/?page=','href="'+base+resumePath+'/?page=');
     const html='<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+esc(card.title)+'</title><meta name="description" content="'+esc(card.desc)+'"><meta name="robots" content="'+(page.preferences.indexing?'index,follow':'noindex,nofollow')+'"><link rel="canonical" href="'+esc(canonical+(imported&&templatePage!=='home'?'/?page='+templatePage:''))+'"><meta property="og:title" content="'+esc(card.title)+'"><meta property="og:description" content="'+esc(card.desc)+'"><meta property="og:url" content="'+esc(canonical)+'">'+(ogImage?'<meta property="og:image" content="'+esc(ogImage)+'">':'')+'<link rel="icon" href="/brand/favicon.svg">'+(imported?'':'<link rel="stylesheet" href="/fonts/fonts.css"><link rel="stylesheet" href="/public-assets/tokens.css"><link rel="stylesheet" href="/public-assets/base.css"><link rel="stylesheet" href="/public-assets/preview.css">')+'</head><body'+(imported?' class="'+esc(imported.pages[templatePage].bodyClass)+'"':'')+'><main class="public-page">'+rendered+'</main>'+(imported?'<script src="/templates/template-runtime.js"></script>':'')+'</body></html>';
-    const output=html.replace('<script src="/templates/template-runtime.js">',(imported?'<script src="/templates/vista-runtime.js"></script>':'')+'<script src="/templates/template-runtime.js">').replace('</body>','<script src="/public-assets/projects.js"></script></body>').replace('</head>','<meta property="og:type" content="website"><meta name="twitter:card" content="'+(ogImage?'summary_large_image':'summary')+'"><meta name="twitter:title" content="'+esc(card.title)+'"><meta name="twitter:description" content="'+esc(card.desc)+'">'+(ogImage?'<meta name="twitter:image" content="'+esc(ogImage)+'">':'')+'</head>');
+    const inline=mediaCache.fill(mediaScope,c);
+    const output=html.replace(/data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/]+={0,2}/g,(value,type)=>inline.has(value)?base+'/media/'+inline.get(value)+'.'+(type==='jpeg'?'jpg':type):value).replace('<script src="/templates/template-runtime.js">',(imported?'<script src="/templates/vista-runtime.js"></script>':'')+'<script src="/templates/template-runtime.js">').replace('</body>','<script src="/public-assets/projects.js"></script></body>').replace('</head>','<meta property="og:type" content="website"><meta name="twitter:card" content="'+(ogImage?'summary_large_image':'summary')+'"><meta name="twitter:title" content="'+esc(card.title)+'"><meta name="twitter:description" content="'+esc(card.desc)+'">'+(ogImage?'<meta name="twitter:image" content="'+esc(ogImage)+'">':'')+'</head>');
     securityHeaders(res,origin,output);
     res.setHeader('Cache-Control','private, no-store');
     if(req.method==='GET'){
@@ -63,7 +77,17 @@ function dashboardHandler(database,auth,notifications,options){const reset=requi
     if(await reset(req,pathname,origin,user,workspace,reply))return true;
     if(req.method==='GET'){
       const media=/^\/api\/dashboard\/media\/([a-f0-9]{32})$/.exec(pathname);
-      if(media){const doc=await database.loadDashboard(user.id,workspace),value=require('./media.cjs').images(doc.content).get(media[1]);if(!value)model.fail('تصویر پیدا نشد',404);const m=/^data:image\/(png|jpeg|webp);base64,(.+)$/.exec(value);res.setHeader('Cache-Control','private, max-age=3600');res.setHeader('Vary','Cookie');res.writeHead(200,{'Content-Type':'image/'+m[1]});res.end(Buffer.from(m[2],'base64'));return true;}
+      if(media){
+        // The URL is the image's content hash, so the browser may keep it forever; the server fills its cache
+        // from one document read instead of re-reading the whole document for every image.
+        const scope='u:'+user.id+':'+workspace,etag='"'+media[1]+'"',cacheable=()=>{res.setHeader('Cache-Control','private, max-age=31536000, immutable');res.setHeader('Vary','Cookie');res.setHeader('ETag',etag);};
+        // A matching validator can only describe these exact bytes, so revalidation needs no document read.
+        if((req.headers['if-none-match']||'').split(',').map(v=>v.trim()).includes(etag)){cacheable();res.writeHead(304);res.end();return true;}
+        let entry=mediaCache.get(scope,media[1]);
+        if(!entry){mediaCache.fill(scope,(await database.loadDashboard(user.id,workspace)).content);entry=mediaCache.get(scope,media[1]);}
+        if(!entry)model.fail('تصویر پیدا نشد',404);
+        cacheable();res.writeHead(200,{'Content-Type':entry.type,'Content-Length':entry.body.length});res.end(entry.body);return true;
+      }
       if(pathname==='/api/dashboard/document'){const [doc,billing,commerce,ownerSettings]=await Promise.all([database.loadDashboard(user.id,workspace),database.billing?database.billing(user.id,true):{},database.commerceSettings?database.commerceSettings():require('../owner/settings.cjs').defaults(),database.ownerUserSettings?database.ownerUserSettings(user.id):{}]);reply(200,{...doc,workspace,billing,commerce,ownerSettings,ownerId:user.id});}
       else if(pathname==='/api/dashboard/workspaces'){
         const cursor=Number(new URL(req.url,origin).searchParams.get('cursor')||0);if(!Number.isSafeInteger(cursor)||cursor<0||cursor>10000000)model.fail('صفحهٔ فهرست معتبر نیست');

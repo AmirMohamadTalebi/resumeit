@@ -5,7 +5,9 @@ async function openDatabase(options) {
   const pool = mysql.createPool(options || {
     host: process.env.MYSQL_HOST, port: Number(process.env.MYSQL_PORT || 3306),
     database: process.env.MYSQL_DATABASE, user: process.env.MYSQL_USER, password: process.env.MYSQL_PASSWORD,
-    connectionLimit: 4, queueLimit: 32, connectTimeout: 10000, charset: 'utf8mb4',
+    // Opening the dashboard fires several requests at once; 4 connections queued them. Hosts with a low
+    // max_user_connections can lower it again with MYSQL_CONNECTION_LIMIT.
+    connectionLimit: Math.min(32, Math.max(2, Number(process.env.MYSQL_CONNECTION_LIMIT) || 8)), queueLimit: 64, connectTimeout: 10000, charset: 'utf8mb4',
   });
   const execute = async (sql, params = []) => (await pool.execute(sql, params))[0];
   async function transaction(action) {

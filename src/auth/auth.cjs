@@ -23,7 +23,12 @@ function authHandler(database, options = {}) {
     touched.delete(hash); if (touched.size >= 10000) touched.delete(touched.keys().next().value); touched.set(hash, now);
     database.touchSession(hash, now).catch(() => {});
   };
-  const account = async req => { const hash = token(req); if (!hash) return null; const user = await database.session(hash); if (user) touch(hash); return user; };
+  // Static dashboard files (JS, CSS, fonts) are identical for every user; once a session was verified in the
+  // last minute they skip the database so one page load no longer queues a session query per file.
+  const verified = new Map();
+  const remember = hash => { verified.delete(hash); if (verified.size >= 10000) verified.delete(verified.keys().next().value); verified.set(hash, Date.now() + 60000); };
+  const account = async req => { const hash = token(req); if (!hash) return null; const user = await database.session(hash); if (user) { touch(hash); remember(hash); } else verified.delete(hash); return user; };
+  account.asset = async req => { const hash = token(req); if (hash && verified.get(hash) > Date.now()) return true; return account(req); };
   const sessionRows = async (user, current) => (await database.userSessions(user.id)).map(row => ({ id: row.id, current: row.tokenHash === current, device: require('./device.cjs').deviceLabel(row.userAgent), createdAt: row.createdAt, lastSeen: row.lastSeen, expiresAt: row.expiresAt }));
   return { account, restricted:async req=>{const proof=database.noticeProof?await database.noticeProof(status.proofHash(req)):null;return proof?.notice.active?proof:null;}, async handle(req, res, pathname) {
     if (!pathname.startsWith('/api/auth/')) return false;
