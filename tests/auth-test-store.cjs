@@ -44,6 +44,9 @@ function testStore() {
     async createSession(token, id, expires, expectedHash,expectedPhone) {const user=[...users.values()].find(u=>u.id===id);if(!user||(expectedHash!==undefined&&user.password_hash!==expectedHash)||(expectedPhone!==undefined&&user.phone!==expectedPhone))return false;sessions.set(token, { id, expires });return true;},
     async session(token) { const s = sessions.get(token); if (!s || s.expires <= Date.now()) return; const user=byId(s.id);return {id:user.id,phone:user.phone,phone_verified:user.phone_verified||false,first_name:user.first_name||'',last_name:user.last_name||'',google:[...identities].some(([k,id])=>k.startsWith('google:')&&id===user.id),github:[...identities].some(([k,id])=>k.startsWith('github:')&&id===user.id)}; },
     async deleteSession(token) { sessions.delete(token); },
+    async userSessions(userId) { return [...sessions].filter(([,s])=>s.id===userId&&s.expires>Date.now()).map(([hash,s])=>({id:require('node:crypto').createHash('sha256').update(hash).digest('hex').slice(0,24),tokenHash:hash,createdAt:null,lastSeen:null,userAgent:'',expiresAt:s.expires})); },
+    async revokeUserSession(userId,id) { const target=(await this.userSessions(userId)).find(row=>row.id===id);if(!target)return false;sessions.delete(target.tokenHash);return true; },
+    async revokeOtherSessions(userId,keep) { let closed=0;for(const [hash,s] of sessions)if(s.id===userId&&hash!==keep){sessions.delete(hash);closed++;}return closed; },
     async claimLoginAttempts(phone, ip) { const keys = [[ip,100],[phone,5]]; if (keys.some(([key,limit]) => (attempts.get(key)||0) >= limit)) return false; keys.forEach(([key]) => attempts.set(key,(attempts.get(key)||0)+1)); return true; },
     async clearLoginAttempts(phone) { attempts.delete(phone); },
     async close() {}

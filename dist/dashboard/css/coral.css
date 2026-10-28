@@ -7,3 +7,6 @@ body{background:#faf6f8}.app{grid-template-columns:82px 195px minmax(0,1fr);tran
 .coral-rail nav:before{pointer-events:none}
 .profile-media{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:18px}.profile-media .field{min-width:0}.profile-media .imgfield__preview{width:70px;height:70px}.profile-media .imgfield--wide .imgfield__preview{width:100%;height:70px}.profile-media .imgfield__presets{flex-wrap:wrap}.profile-media .imgfield__presets button{width:22px;height:22px}.profile-media .imgfield__hint{font-size:11px}.profile-media .imgfield{gap:8px}.profile-media .btn{padding-inline:10px;font-size:12px}
 @media(max-width:560px){.profile-media{grid-template-columns:1fr}.profile-media .imgfield--wide .imgfield__preview{width:140px}.profile-media .imgfield__side{flex:1;min-width:160px}}
+
+/* Rail hover must stand apart from the resting surface (3:1). */
+.coral-rail nav>a:not([aria-current]):hover{background:#7a3550;color:#fff}

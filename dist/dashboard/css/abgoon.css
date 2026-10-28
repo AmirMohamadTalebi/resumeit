@@ -56,3 +56,6 @@ body{background:#edf6f9}.app{grid-template-columns:84px 214px minmax(0,1fr);tran
 #homeStats{min-height:144px}#routeLoading{margin:16px 24px}#routeLoading .section-loading{min-height:64px}
 @keyframes section-spin{to{transform:rotate(360deg)}}
 @media(prefers-reduced-motion:reduce){.section-loading__spinner{animation:none}}
+
+/* Rail hover must stand apart from the resting glass (3:1). */
+.coral-rail nav>a:not([aria-current]):hover{background:#2f5d6e;color:#fff}

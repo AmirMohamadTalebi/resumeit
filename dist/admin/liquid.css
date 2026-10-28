@@ -81,7 +81,7 @@ html body .admin-head strong{font-weight:700}
 html body .admin-payment{position:relative;padding:6px 12px 6px 14px;border-radius:999px;font-weight:650;display:inline-flex;align-items:center;gap:8px}
 html body .admin-payment::before{content:"";width:8px;height:8px;border-radius:50%;background:currentColor;animation:lq-pulse 2s ease-out infinite}
 html body .admin-topnav>a{transition:background .3s,color .3s,translate .45s var(--lq-spring)}
-html body .admin-topnav>a:hover{translate:0 -2px;background:rgba(255,255,255,.7)}
+html body .admin-topnav>a:hover,html body .admin-topnav>a[aria-current=page]:hover{translate:0 -2px;background:#2b4251;color:#fff}
 html body .admin-topnav>a[aria-current=page]{background:linear-gradient(135deg,#fff,rgba(242,230,218,.9));color:#6b4629;box-shadow:0 8px 18px -10px rgba(135,90,54,.5)}
 
 /* ── Page intro ── */
@@ -203,3 +203,27 @@ html body .admin-topnav{animation:lq-drop .7s var(--lq-out) .08s both}
   ::view-transition-old(root),::view-transition-new(root){animation:none!important}
   html body .page-intro h1{background:none;color:#1c2d38}
 }
+
+/* ── Visual audit fixes ── */
+html body .btn-primary{background:linear-gradient(160deg,#8e5f39,#7a4f2f 55%,#5e3d24)}
+html body .btn-primary:hover:not(:disabled){background:linear-gradient(160deg,#986741,#825434 55%,#5e3d24)}
+html body .updated{color:#435867}
+html body .admin-profile summary small{font-size:11px;color:#435867}
+html body .admin-view small,html body .modal small,html body .batch-dialog small{font-size:12px}
+html body .record-id{min-height:36px}
+html body .record-id span{font-size:11px}
+html body .table .btn{min-height:38px}
+html body .admin-view input[type=checkbox]:not(.toggle),html body .modal input[type=checkbox]:not(.toggle){width:20px;height:20px;accent-color:#3d5c6f;cursor:pointer}
+/* popovers sit inside the blurred sidebar, where a nested backdrop cannot sample the page: keep them opaque */
+html body .admin-profile-menu{background:linear-gradient(150deg,#ffffff,#f1f6f9);-webkit-backdrop-filter:none;backdrop-filter:none;box-shadow:inset 0 1px 0 #fff,0 24px 50px -18px rgba(28,45,56,.45)}
+html body #admin-close{border-radius:12px;background:#fff;color:#2b4251;box-shadow:0 4px 12px -6px rgba(28,45,56,.4)}
+html body .modal fieldset{border:1px solid rgba(151,181,197,.6);border-radius:18px;padding:14px 16px 16px;background:rgba(255,255,255,.45)}
+html body .modal legend{padding:0 8px;font-weight:650;color:#2b4251}
+html body .admin-topnav{-webkit-mask-image:linear-gradient(to left,#000 calc(100% - 32px),transparent);mask-image:linear-gradient(to left,#000 calc(100% - 32px),transparent)}
+html body::after{opacity:.75}
+html body .chart{gap:clamp(1px,.45vw,6px)}
+@media(max-width:760px){
+  html body .chart-day{gap:1px}
+  html body .chart-day span{border-radius:4px 4px 1px 1px;min-width:2px}
+}
+@media(min-width:761px){html body .admin-side{z-index:5}}
