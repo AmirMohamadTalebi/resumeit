@@ -1,0 +1,205 @@
+/* Liquid glass layer for the admin panel: loads last and only restyles; layout hooks stay in admin.css.
+   Motion uses the individual translate/scale properties so it never fights existing transforms. */
+@property --lq-angle{syntax:"<angle>";inherits:false;initial-value:0deg}
+:root{
+  --lq-glass:rgba(255,255,255,.36);
+  --lq-glass-strong:rgba(255,255,255,.62);
+  --lq-edge:rgba(255,255,255,.78);
+  --lq-blur:blur(26px) saturate(1.8);
+  --lq-shadow:inset 0 1px 0 rgba(255,255,255,.95),inset 0 -1px 0 rgba(255,255,255,.35),inset 0 0 0 1px rgba(255,255,255,.18),0 1px 2px rgba(28,45,56,.05),0 22px 48px -26px rgba(28,45,56,.38);
+  --lq-shadow-hover:inset 0 1px 0 #fff,inset 0 -1px 0 rgba(255,255,255,.45),inset 0 0 0 1px rgba(255,255,255,.3),0 2px 4px rgba(28,45,56,.05),0 32px 64px -28px rgba(28,45,56,.45);
+  --lq-spring:cubic-bezier(.34,1.56,.64,1);
+  --lq-out:cubic-bezier(.16,1,.3,1);
+  --lq-accent:var(--bro-600,#875a36);
+}
+@view-transition{navigation:auto}
+::view-transition-old(root){animation:lq-vt-out .28s var(--lq-out) both}
+::view-transition-new(root){animation:lq-vt-in .42s var(--lq-out) both}
+html body .admin-side{view-transition-name:lq-side}
+html body .admin-head{view-transition-name:lq-head}
+
+/* ── Living background ── */
+html body{background:#e6eff4;min-height:100dvh;position:relative}
+html body::before,html body::after{content:"";position:fixed;z-index:-1;pointer-events:none;border-radius:50%;filter:blur(60px)}
+html body::before{width:60vmax;height:60vmax;top:-20vmax;right:-12vmax;background:radial-gradient(circle at 40% 40%,#8fb9d0 0,#b6d3e2 34%,transparent 68%);animation:lq-drift-a 26s ease-in-out infinite alternate}
+html body::after{width:52vmax;height:52vmax;bottom:-22vmax;left:-10vmax;background:radial-gradient(circle at 60% 50%,#e2b88f 0,#efd3b8 34%,transparent 66%);animation:lq-drift-b 32s ease-in-out infinite alternate}
+html body .admin-shell{background:transparent;position:relative}
+html body .admin-shell::before,html body .admin-shell::after{content:"";position:fixed;z-index:-1;pointer-events:none;border-radius:50%;filter:blur(70px)}
+html body .admin-shell::before{width:40vmax;height:40vmax;top:30%;left:30%;background:radial-gradient(circle,#a7d4d0 0,rgba(167,212,208,.4) 40%,transparent 70%);animation:lq-drift-c 22s ease-in-out infinite alternate}
+html body .admin-shell::after{width:30vmax;height:30vmax;top:-8vmax;left:8%;background:radial-gradient(circle,#c9b8e0 0,rgba(201,184,224,.35) 40%,transparent 70%);opacity:.7;animation:lq-drift-b 28s ease-in-out infinite alternate-reverse}
+html body .admin-main{position:relative;z-index:0}
+
+/* ── Glass material ── */
+html body :is(.admin-side,.admin-head,.admin-topnav,.panel,.kpi,.catalog-item,.owner-workspace,.audit-purge,.catalog-products,.modal,.batch-dialog,.admin-profile-menu){
+  background:linear-gradient(150deg,var(--lq-glass-strong),var(--lq-glass) 55%,rgba(240,247,250,.42));
+  -webkit-backdrop-filter:var(--lq-blur);backdrop-filter:var(--lq-blur);
+  border:1px solid var(--lq-edge);box-shadow:var(--lq-shadow)
+}
+html body :is(.panel,.kpi,.catalog-item,.owner-workspace,.audit-purge,.catalog-products){position:relative;isolation:isolate;border-radius:26px;overflow:hidden}
+/* specular sheen + pointer light (pointer position comes from liquid.js) */
+html body :is(.panel,.kpi,.catalog-item,.admin-head)::after{
+  content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;border-radius:inherit;
+  background:radial-gradient(420px circle at var(--mx,85%) var(--my,-10%),rgba(255,255,255,.75),rgba(255,255,255,0) 60%),
+    linear-gradient(115deg,rgba(255,255,255,.55) 0,rgba(255,255,255,0) 32%);
+  opacity:.75;transition:opacity .5s var(--lq-out)
+}
+html body :is(.panel,.kpi,.catalog-item):hover::after{opacity:1}
+/* rotating rim light: a 1.5px ring cut out of a slowly turning conic gradient */
+html body :is(.panel,.kpi,.catalog-item)::before{
+  content:"";position:absolute;inset:0;z-index:1;pointer-events:none;border-radius:inherit;padding:1.5px;
+  background:conic-gradient(from var(--lq-angle),rgba(255,255,255,.95),rgba(255,255,255,.12) 22%,rgba(189,142,100,.55) 38%,rgba(255,255,255,.12) 52%,rgba(111,147,168,.55) 72%,rgba(255,255,255,.95));
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) content-box exclude,linear-gradient(#000 0 0);
+  animation:lq-spin 9s linear infinite;animation-delay:calc(var(--i,0) * -1.3s)
+}
+html body :is(.panel,.kpi,.catalog-item):hover::before{animation-duration:3s}
+html body :is(.panel,.kpi,.catalog-item){transition:translate .5s var(--lq-spring),box-shadow .5s var(--lq-out),scale .5s var(--lq-spring)}
+html body :is(.panel,.kpi,.catalog-item):hover{translate:0 -4px;box-shadow:var(--lq-shadow-hover)}
+html body .panel{padding:26px}
+html body :is(.catalog-products,.owner-workspace,.audit-purge){padding:24px}
+html body #content>.owner-workspace[role=tabpanel]{padding-top:24px}
+@media(max-width:760px){html body :is(.catalog-products,.owner-workspace,.audit-purge){padding:16px}}
+html body .panel h2{display:flex;align-items:center;justify-content:space-between;gap:12px;font-weight:750;color:#1c2d38}
+
+/* ── Sidebar ── */
+html body .admin-side{border-radius:30px;color:#2b4251}
+html body .admin-nav a{border-radius:16px;transition:background .35s var(--lq-out),color .3s,translate .45s var(--lq-spring),box-shadow .4s}
+html body .admin-nav a:hover{translate:-4px 0}
+html body .admin-nav a svg{transition:scale .45s var(--lq-spring),rotate .45s var(--lq-spring)}
+html body .admin-nav a:hover svg{scale:1.14;rotate:-6deg}
+html body .admin-nav a[aria-current=page]{
+  background:linear-gradient(135deg,rgba(255,255,255,.95),rgba(242,230,218,.85));color:#6b4629;font-weight:700;
+  box-shadow:inset 0 1px 0 #fff,0 10px 24px -12px rgba(135,90,54,.55),0 0 0 1px rgba(255,255,255,.9)
+}
+html body .admin-nav a[aria-current=page]::after{content:"";position:absolute;inset-block:12px;right:0;width:4px;border-radius:4px;background:linear-gradient(#bd8e64,#875a36);animation:lq-grow-y .6s var(--lq-spring) both}
+html body .admin-nav a[aria-current=page]::before{transform:none;background:linear-gradient(110deg,transparent 30%,rgba(255,255,255,.9) 48%,transparent 66%);background-size:250% 100%;animation:lq-sheen 4.5s ease-in-out infinite}
+html body .admin-brand img{transition:scale .6s var(--lq-spring)}
+html body .admin-brand:hover img{scale:1.06}
+
+/* ── Top bars ── */
+html body .admin-head{position:relative;isolation:isolate;overflow:visible}
+html body .admin-head strong{font-weight:700}
+html body .admin-payment{position:relative;padding:6px 12px 6px 14px;border-radius:999px;font-weight:650;display:inline-flex;align-items:center;gap:8px}
+html body .admin-payment::before{content:"";width:8px;height:8px;border-radius:50%;background:currentColor;animation:lq-pulse 2s ease-out infinite}
+html body .admin-topnav>a{transition:background .3s,color .3s,translate .45s var(--lq-spring)}
+html body .admin-topnav>a:hover{translate:0 -2px;background:rgba(255,255,255,.7)}
+html body .admin-topnav>a[aria-current=page]{background:linear-gradient(135deg,#fff,rgba(242,230,218,.9));color:#6b4629;box-shadow:0 8px 18px -10px rgba(135,90,54,.5)}
+
+/* ── Page intro ── */
+html body .page-intro h1{background:linear-gradient(100deg,#1c2d38 0,#2b4251 35%,#6b4629 50%,#2b4251 65%,#1c2d38 100%);background-size:220% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:lq-ink 9s ease-in-out infinite;font-weight:800}
+
+/* ── Buttons & fields ── */
+html body .btn{position:relative;overflow:hidden;isolation:isolate;border-radius:14px;border:1px solid rgba(255,255,255,.85);background:linear-gradient(160deg,rgba(255,255,255,.92),rgba(237,243,246,.7));-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);box-shadow:inset 0 1px 0 #fff,0 6px 16px -10px rgba(28,45,56,.4);transition:translate .4s var(--lq-spring),scale .25s var(--lq-spring),box-shadow .35s,background .35s}
+html body .btn:hover:not(:disabled){translate:0 -2px;box-shadow:inset 0 1px 0 #fff,0 12px 24px -12px rgba(28,45,56,.45)}
+html body .btn:active:not(:disabled){scale:.95}
+html body .btn-primary{color:#fff;border-color:rgba(255,255,255,.35);background:linear-gradient(160deg,#a47248,#875a36 55%,#6b4629);box-shadow:inset 0 1px 0 rgba(255,255,255,.45),0 10px 24px -10px rgba(107,70,41,.7)}
+html body .btn-primary:hover:not(:disabled){background:linear-gradient(160deg,#ad7b50,#8e5f39 55%,#6b4629);box-shadow:inset 0 1px 0 rgba(255,255,255,.5),0 16px 30px -12px rgba(107,70,41,.75)}
+html body .btn::after{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;background:linear-gradient(110deg,transparent 35%,rgba(255,255,255,.55) 50%,transparent 65%);background-size:250% 100%;background-position:120% 0;transition:background-position .8s var(--lq-out)}
+html body .btn:hover::after{background-position:-20% 0}
+html body .lq-ripple{position:absolute;z-index:-1;border-radius:50%;pointer-events:none;background:radial-gradient(circle,rgba(255,255,255,.75),rgba(255,255,255,0) 70%);translate:-50% -50%;animation:lq-ripple .65s var(--lq-out) forwards}
+html body :is(.input,.select,.textarea,.filters input,.filters select,#reason){border-radius:14px;border:1px solid rgba(191,211,221,.9);background:rgba(255,255,255,.72);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);transition:box-shadow .35s var(--lq-out),border-color .3s,background .3s}
+html body :is(.input,.select,.textarea,.filters input,.filters select,#reason):focus{background:#fff;border-color:#97b5c5;box-shadow:0 0 0 4px rgba(151,181,197,.28),0 10px 22px -14px rgba(28,45,56,.4)}
+html body .toggle{background:rgba(191,211,221,.9);box-shadow:inset 0 1px 3px rgba(28,45,56,.18);transition:background .4s var(--lq-out)}
+html body .toggle:before{transition:transform .5s var(--lq-spring),width .25s var(--lq-out);box-shadow:0 3px 8px rgba(28,45,56,.25),inset 0 -1px 0 rgba(0,0,0,.05)}
+html body .toggle:active:before{width:26px}
+html body .toggle:checked{background:linear-gradient(135deg,#52788d,#3d5c6f)}
+
+/* ── KPIs ── */
+html body .overview-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:16px;background:transparent;box-shadow:none;padding:0;border:0;overflow:visible;border-radius:0}
+html body .overview-kpis .kpi,html body .overview-kpis .kpi:last-child,html body .overview-kpis .kpi:nth-child(n){border:1px solid var(--lq-edge);padding:22px 22px 20px}
+html body .kpi strong{font-size:34px;font-weight:800;color:#1c2d38;letter-spacing:0;animation:lq-number .9s var(--lq-out) both;animation-delay:calc(var(--i,0) * 90ms + 150ms)}
+html body .kpi:nth-child(4n) strong{color:#6b4629}
+html body .kpi span{font-weight:600}
+html body .kpi>small{position:relative}
+html body .kpi>small::after{content:"";position:absolute;inset-inline-end:-70px;bottom:-90px;width:150px;height:150px;border-radius:50%;z-index:-1;pointer-events:none;background:radial-gradient(circle,rgba(111,147,168,.4),transparent 70%);animation:lq-float 7s ease-in-out infinite alternate}
+html body .kpi:nth-child(4n)>small::after{background:radial-gradient(circle,rgba(210,174,137,.5),transparent 70%)}
+
+/* ── Charts ── */
+html body .chart{height:200px;gap:6px;border-bottom:1px solid rgba(151,181,197,.45);background:repeating-linear-gradient(to top,transparent 0,transparent 49px,rgba(151,181,197,.22) 49px,rgba(151,181,197,.22) 50px)}
+html body .chart-day{gap:3px;transition:scale .35s var(--lq-spring)}
+html body .chart-day span{border-radius:8px 8px 3px 3px;background:linear-gradient(to top,#3d5c6f,#6f93a8);transform-origin:bottom;animation:lq-bar .9s var(--lq-spring) both;animation-delay:calc(var(--i,0) * 35ms + 200ms);box-shadow:inset 0 1px 0 rgba(255,255,255,.35)}
+html body .chart-day span:last-child{background:linear-gradient(to top,#875a36,#d2ae89)}
+html body .chart-day:hover{scale:1.08 1}
+html body .chart-day:hover span{filter:brightness(1.12) saturate(1.1)}
+html body .chart-legend span:first-child:before{background:#52788d}
+html body .chart-legend span:last-child:before{background:#a47248}
+
+/* ── Tables & lists ── */
+html body .table-scroll{border-radius:20px;background:rgba(255,255,255,.4);border:1px solid rgba(255,255,255,.7)}
+html body .table th{background:rgba(237,243,246,.75);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);font-weight:650;color:#435867}
+html body .table td{border-bottom-color:rgba(151,181,197,.25)}
+html body .table tbody tr{animation:lq-rise .6s var(--lq-out) both;animation-delay:calc(var(--i,0) * 28ms + 120ms);transition:background .3s}
+html body .table tbody tr:hover{background:rgba(255,255,255,.75)}
+html body .table tbody tr:hover td:first-child{box-shadow:inset -3px 0 0 #a47248}
+html body .summary-list div{transition:background .3s,padding .4s var(--lq-spring);border-radius:12px}
+html body .summary-list div:hover{background:rgba(255,255,255,.6);padding-inline:10px}
+html body .summary-list dd{font-weight:700;color:#1c2d38}
+html body .badge{font-weight:650;border-radius:999px;padding:4px 10px;box-shadow:inset 0 1px 0 rgba(255,255,255,.7)}
+html body .badge-success{display:inline-flex;align-items:center;gap:6px}
+html body .badge-success::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor;animation:lq-pulse 2.4s ease-out infinite}
+html body .notice{border-radius:18px;border:1px solid rgba(255,255,255,.7);background:linear-gradient(135deg,rgba(248,236,212,.92),rgba(248,236,212,.7));-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px)}
+html body .record-id{border-radius:12px;transition:translate .35s var(--lq-spring),background .3s}
+html body .record-id:hover{translate:0 -2px;background:#fff}
+html body :is(.tab,.detail-tabs .tab,.owner-workspace .tab){transition:background .35s var(--lq-out),color .3s,translate .4s var(--lq-spring),box-shadow .35s}
+html body :is(.detail-tabs .tab,.owner-workspace .tab)[aria-selected=true]{background:linear-gradient(135deg,#fff,rgba(242,230,218,.9));color:#6b4629;border-color:rgba(255,255,255,.9);box-shadow:0 8px 18px -10px rgba(135,90,54,.5)}
+html body .advanced-filters[open]>div{animation:lq-rise .5s var(--lq-out) both}
+
+/* ── Loading & empty ── */
+html body .loading{position:relative;overflow:hidden;border-radius:26px;background:rgba(255,255,255,.45);border:1px solid rgba(255,255,255,.7)}
+html body .loading::after{content:"";position:absolute;inset:0;background:linear-gradient(100deg,transparent 30%,rgba(255,255,255,.8) 50%,transparent 70%);background-size:220% 100%;animation:lq-sheen 1.4s linear infinite}
+html body .empty{animation:lq-rise .6s var(--lq-out) both}
+
+/* ── Dialogs ── */
+html body :is(.modal,.batch-dialog){border-radius:30px;background:linear-gradient(150deg,rgba(255,255,255,.9),rgba(240,247,250,.78))}
+html body :is(.modal,.batch-dialog)[open]{animation:lq-pop .55s var(--lq-spring) both}
+html body :is(.modal,.batch-dialog)::backdrop{background:rgba(28,45,56,.32);-webkit-backdrop-filter:blur(10px) saturate(1.3);backdrop-filter:blur(10px) saturate(1.3);animation:lq-fade .35s ease both}
+html body .admin-profile-menu{border-radius:22px;animation:lq-pop .45s var(--lq-spring) both}
+
+/* ── Entrances ── */
+html body .admin-view>.page-intro{animation:lq-rise .7s var(--lq-out) both}
+html body #content>*{animation:lq-rise .75s var(--lq-out) both;animation-delay:calc(var(--i,0) * 80ms + 80ms)}
+html body :is(.admin-grid,.catalog-grid)>*{animation:lq-rise .75s var(--lq-out) both;animation-delay:calc(var(--i,0) * 90ms + 160ms)}
+html body .overview-kpis>.kpi{animation:lq-rise .75s var(--lq-spring) both;animation-delay:calc(var(--i,0) * 80ms + 60ms)}
+@media(min-width:761px){
+  html body .admin-side{animation:lq-slide-in .8s var(--lq-out) both}
+  html body .admin-nav li{animation:lq-rise-x .6s var(--lq-out) both;animation-delay:calc(var(--i,0) * 55ms + 200ms)}
+}
+html body .admin-head{animation:lq-drop .7s var(--lq-out) both}
+html body .admin-topnav{animation:lq-drop .7s var(--lq-out) .08s both}
+
+@keyframes lq-spin{to{--lq-angle:360deg}}
+@keyframes lq-drift-a{to{translate:-12vmax 10vmax;scale:1.15}}
+@keyframes lq-drift-b{to{translate:14vmax -9vmax;scale:1.1}}
+@keyframes lq-drift-c{0%{translate:-6vmax 4vmax}100%{translate:8vmax -6vmax}}
+@keyframes lq-float{to{translate:30px -24px;scale:1.25}}
+@keyframes lq-rise{from{opacity:0;translate:0 18px;filter:blur(6px)}to{opacity:1;translate:0 0;filter:none}}
+@keyframes lq-rise-x{from{opacity:0;translate:18px 0}to{opacity:1;translate:0 0}}
+@keyframes lq-drop{from{opacity:0;translate:0 -14px}to{opacity:1;translate:0 0}}
+@keyframes lq-slide-in{from{opacity:0;translate:40px 0;filter:blur(8px)}to{opacity:1;translate:0 0;filter:none}}
+@keyframes lq-number{from{opacity:0;translate:0 12px;filter:blur(8px);scale:.92}to{opacity:1;translate:0 0;filter:none;scale:1}}
+@keyframes lq-bar{from{transform:scaleY(0);opacity:.2}to{transform:scaleY(1);opacity:1}}
+@keyframes lq-grow-y{from{scale:1 0}to{scale:1 1}}
+@keyframes lq-sheen{from{background-position:130% 0}to{background-position:-130% 0}}
+@keyframes lq-ink{0%,100%{background-position:0 0}50%{background-position:100% 0}}
+@keyframes lq-pulse{0%{box-shadow:0 0 0 0 currentColor}70%{box-shadow:0 0 0 7px transparent}100%{box-shadow:0 0 0 0 transparent}}
+@keyframes lq-ripple{from{width:0;height:0;opacity:1}to{width:var(--d,240px);height:var(--d,240px);opacity:0}}
+@keyframes lq-pop{from{opacity:0;scale:.92;translate:0 12px;filter:blur(6px)}to{opacity:1;scale:1;translate:0 0;filter:none}}
+@keyframes lq-fade{from{opacity:0}to{opacity:1}}
+@keyframes lq-vt-out{to{opacity:0;translate:0 -8px;filter:blur(4px)}}
+@keyframes lq-vt-in{from{opacity:0;translate:0 10px;filter:blur(4px)}}
+
+@media(max-width:760px){
+  html body .panel{padding:20px;border-radius:22px}
+  html body .kpi strong{font-size:28px}
+  html body .overview-kpis{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  html body .overview-kpis .kpi,html body .overview-kpis .kpi:nth-child(n){padding:16px}
+  html body .admin-side{background:linear-gradient(150deg,rgba(255,255,255,.94),rgba(237,243,246,.9))}
+}
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
+  html body :is(.admin-side,.admin-head,.admin-topnav,.panel,.kpi,.catalog-item,.owner-workspace,.audit-purge,.catalog-products,.modal,.batch-dialog,.admin-profile-menu){background:rgba(250,252,253,.96)}
+}
+@media(prefers-reduced-motion:reduce){
+  html body *,html body *::before,html body *::after{animation:none!important;transition-duration:.01ms!important}
+  html body::before,html body::after,html body .admin-shell::before{animation:none!important}
+  ::view-transition-old(root),::view-transition-new(root){animation:none!important}
+  html body .page-intro h1{background:none;color:#1c2d38}
+}
