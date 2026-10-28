@@ -16,3 +16,6 @@ ResumeIt-Node-source.zip
 *.pem
 *.key
 *.sqlite*
+
+# Marketing assets stay local
+marketing/
