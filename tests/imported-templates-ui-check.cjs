@@ -27,9 +27,9 @@ const {chromium}=require('playwright'),{createServer}=require('../src/http/serve
    }
    await page.setViewportSize({width:1440,height:1000});
    for(const name of Object.keys(RI.IMPORTED_TEMPLATES[template].pages)){await page.goto(base+'/u/design-test/?page='+name);assert.equal(await page.locator('.ri-imported').getAttribute('data-template-page'),name);}
-   await page.goto(base+'/dashboard/resume/?step=profile');await page.locator('#resume-section-tabs').waitFor();
+   await page.goto(base+'/dashboard/resume/?step=profile');await page.locator('#rs-sec-template [data-tgroup-pick]').first().waitFor();
    const group=RI.IMPORTED_TEMPLATES[template].collections.find(x=>x.group.startsWith('home:')&&!x.group.endsWith(':body')&&!/portfolio|07793c2/.test(x.group)).group;
-   const openGroup=async()=>{await page.locator('#resume-section-tabs [data-template-group="'+group+'"]').click();};await openGroup();
+   const openGroup=async()=>{await page.locator('#rs-sec-template [data-tgroup-pick="'+group+'"]').click();};await openGroup();
    const collection=RI.IMPORTED_TEMPLATES[template].collections.find(x=>x.group===group);
    await page.locator('#template-collection').selectOption(collection.key);
    const field=page.locator('#template-controls input[data-ttype="text"],#template-controls textarea[data-ttype="textarea"]').first();
@@ -41,7 +41,7 @@ const {chromium}=require('playwright'),{createServer}=require('../src/http/serve
    await page.locator('[data-tmove="-1"]').click();assert.equal(await page.locator('#template-row').inputValue(),'0');
    await page.locator('[data-tremove]').click();assert.equal(await page.locator('#template-row option').count(),1);
    assert.equal(await page.locator('.template-categories').isVisible(),false);
-   await page.locator('#resume-section-tabs [data-step=template]').click();
+   await page.locator('#rs-sec-template [data-tgroup-pick="general"]').click();
    await page.locator('[data-tfield="reviewed"]').check();await page.locator('#saveBtn').click();await page.locator('#saveState[data-state="saved"]').waitFor();
    await page.evaluate(()=>scrollTo(0,0));await page.screenshot({path:'artifacts/imported-templates/editor-'+template+'.png',fullPage:false});
    for(const width of [320,390]){await page.setViewportSize({width,height:850});assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'editor overflow');await page.screenshot({path:'artifacts/imported-templates/editor-'+template+'-'+width+'.png'});}

@@ -40,7 +40,9 @@ try{
  const compact=await(await request('save',{revision:5,patch:{theme:{...c.theme,font:'sahel'}},preferences:{indexing:false},compact:true})).json();assert.equal(compact.revision,6);assert(!Object.hasOwn(compact,'content'));assert((await(await request('document')).json()).content.profile.title==='PRIVATE DRAFT');
  assert.equal((await request('save',{revision:6,patch:{theme:{...c.theme,font:'lalezar'}},compact:true})).status,403);
  assert.equal((await request('save',{revision:6,patch:JSON.parse('{"__proto__":{}}'),compact:true})).status,400);
- assert.equal((await request('save',{revision:6,patch:{contacts:[{...c.contacts[0],value:'invalid'}]},compact:true})).status,400);
+ // Resume inputs are accepted as written (no format gate on save); only size limits still apply.
+ assert.equal((await request('save',{revision:6,patch:{contacts:[{...c.contacts[0],value:'x'.repeat(201)}]},compact:true})).status,400);
+ assert.equal((await request('save',{revision:6,patch:{contacts:[{...c.contacts[0],value:'invalid'}],socials:[{id:'s1',platform:'github',handle:'نام با فاصله'}]},compact:true})).status,200);assert.equal((await(await request('document')).json()).content.contacts[0].value,'invalid');
  const stale=await request('save',{revision:5,patch:{theme:c.theme},compact:true});assert.equal(stale.status,409);assert.equal((await stale.json()).code,'REVISION_CONFLICT');
  await db.mutateDashboard(b,0,d=>{d.content.theme.resume='vista';d.content.resumeTemplates.vista={fields:{},settings:{reviewed:true},collections:{}};});assert.equal((await request('save',{revision:1,patch:{profile:{...initial.content.profile,title:'edit expired draft'}}},'b')).status,200);assert.equal((await request('save',{revision:2,patch:{theme:{...(await db.loadDashboard(b)).content.theme,resume:'satiar'}}},'b')).status,403);
  assert.equal((await request('delete',{confirm:'no'})).status,400);assert.equal((await request('delete',{confirm:'DELETE'})).status,200);assert.equal((await fetch(base+'/u/amir/')).status,404);assert.equal((await request('document')).status,401);

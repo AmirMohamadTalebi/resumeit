@@ -23,7 +23,7 @@
   document.querySelectorAll('[data-coral-group]').forEach(a=>{if(a.dataset.coralGroup===group)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current');});
   document.querySelectorAll('#sidebar .nav__group').forEach(el=>{el.hidden=el.dataset.navGroup!==(group==='resume'?'home':group);});
   const active=document.querySelector('.coral-rail [aria-current="page"]'),nav=active?.parentElement;if(active){nav.style.setProperty('--coral-slot-y',(active.getBoundingClientRect().top-nav.getBoundingClientRect().top)+'px');nav.style.setProperty('--coral-slot-h',active.offsetHeight+'px');}
-  const editor=root.querySelector('.editor'),side=editor?.querySelector('.editor__side');if(!editor||!side)return;
+  const editor=root.querySelector('.editor')||root.querySelector('.rs'),side=editor?.querySelector('.editor__side');if(!editor||!side)return;
   const divider=document.createElement('div');divider.className='coral-divider';divider.tabIndex=0;divider.setAttribute('role','separator');divider.setAttribute('aria-label','تنظیم عرض فرم و پیش‌نمایش');divider.setAttribute('aria-orientation','vertical');divider.setAttribute('aria-valuemin','300');divider.setAttribute('aria-valuemax','800');divider.setAttribute('aria-valuenow','360');divider.innerHTML='<span></span>';side.before(divider);
   let dragging=false;
   const set=x=>{if(innerWidth<1101)return;const rect=editor.getBoundingClientRect(),max=Math.max(300,Math.min(800,rect.width-380)),width=Math.max(300,Math.min(max,x-rect.left));editor.style.setProperty('--coral-preview-width',width+'px');divider.setAttribute('aria-valuemax',String(Math.round(max)));divider.setAttribute('aria-valuenow',String(Math.round(width)));};

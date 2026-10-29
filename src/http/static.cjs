@@ -22,7 +22,7 @@ const assetRevision=version+'-'+assetHash.digest('hex').slice(0,16);
 const bundles=new Map();
 for(const [url,files] of [
   ['/dashboard/js/workspace.js',['icons','core','ui','data','imported-templates','resume-templates','state','api','account','projects','support-files','preview','commerce','workspace-tools','reset-ui','notification-channels','app','coral','toolbar','liquid'].map(n=>'dashboard/js/'+n+'.js').concat('templates/vista-runtime.js')],
-  ['/dashboard/css/workspace.css',['tokens','base','shell','components','preview','pages','abgoon','performance','advisor','resume-journey','liquid'].map(n=>'dashboard/css/'+n+'.css')]
+  ['/dashboard/css/workspace.css',['tokens','base','shell','components','preview','pages','abgoon','performance','resume-studio','liquid'].map(n=>'dashboard/css/'+n+'.css')]
 ])bundles.set(url,Buffer.from(files.map(file=>{
   let source=localFiles.readFileSync(path.join(root,file),'utf8');
   if(file.endsWith('.css'))source=source.replace(/url\((["']?)(?!data:|https?:|\/\/)([^)"'?#]+)\1\)/g,(_,quote,url)=>`url(${quote}${path.posix.resolve('/',path.posix.dirname(file),url)}${quote})`);

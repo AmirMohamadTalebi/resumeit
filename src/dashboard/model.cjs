@@ -51,15 +51,17 @@ function validateContent(input,billing={},previous,afterImages){input=require('.
   for(const key of Object.keys(templates)){const list=key==='items'?c.links.items:c[key];if(new Set(list.map(x=>x.id||x.key)).size!==list.length)fail('شناسه‌های تکراری در فهرست');}
   if(c.sections.some(s=>!blank().sections.some(x=>x.key===s.key)))fail('بخش ناشناخته');
   if(c.contacts.some(x=>!['email','phone','website'].includes(x.type)))fail('نوع تماس معتبر نیست');
-  for(const x of c.contacts)if(x.value&&(x.type==='website'?!webUrl(x.value):x.type==='email'?!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(x.value):!/^[+0-9\s()-]{6,24}$/.test(x.value)))fail('راه تماس معتبر نیست');
-  for(const item of [...c.projects,...c.links.items])if(item.type!=='divider'&&item.url&&!webUrl(item.url))fail('آدرس لینک معتبر نیست');
+  // Resume text is accepted as written; renderers only link values that form a safe address.
+  if(c.contacts.some(x=>x.value.length>200))fail('راه تماس خیلی طولانی است');
+  if(c.projects.some(x=>x.url.length>2048))fail('آدرس پروژه خیلی طولانی است');
+  for(const item of c.links.items)if(item.type!=='divider'&&item.url&&!webUrl(item.url))fail('آدرس لینک معتبر نیست');
   if(c.links.items.some(x=>!['link','divider','text','image'].includes(x.type)||(x.type==='link'&&(!x.title.trim()||!webUrl(x.url)))||(x.type==='text'&&!x.title.trim())||(x.type==='image'&&!x.image)||!RI.LINK_ICONS.includes(x.icon)))fail('عنوان، تصویر یا آدرس جزء صفحه را کامل کن');
   const subscriber=billing.plan&&billing.plan.end>Date.now();
   const policy=billing.commerce||require('../owner/settings.cjs').defaults(),maxImage=subscriber?policy.imagePaid:policy.imageFree,existingImages=require('./media.cjs').images(previous),newImages=require('./media.cjs').images(c);
   for(const [id,value]of newImages)if(!existingImages.has(id)&&base64Bytes(value)>maxImage)fail('حجم هر تصویر برای '+(subscriber?'اشتراکی':'رایگان')+' حداکثر '+Math.floor(maxImage/1024)+' کیلوبایت است',413);
   for(const kind of ['resume','links']){const brand=c.branding[kind];if(!['resumeit','custom','hidden'].includes(brand.mode)||brand.text.length>100)fail('امضای صفحه معتبر نیست');if(brand.mode!=='resumeit'&&!subscriber&&JSON.stringify(brand)!==JSON.stringify(previous?.branding?.[kind]))fail('امضای اختصاصی به اشتراک فعال نیاز دارد',403);}
   for(const item of c.links.items.filter(x=>['text','image'].includes(x.type)))if(!subscriber&&!previous?.links?.items.some(old=>old.id===item.id&&JSON.stringify(old)===JSON.stringify(item)))fail('بلوک متن و تصویر به اشتراک فعال نیاز دارد',403);
-  if(c.socials.some(x=>!RI.SOCIALS.some(s=>s[0]===x.platform)||!RI.socialHandleValid(x.handle)))fail('آدرس شبکهٔ اجتماعی معتبر نیست');
+  if(c.socials.some(x=>!RI.SOCIALS.some(s=>s[0]===x.platform)||x.handle.length>2048))fail('شبکهٔ اجتماعی معتبر نیست');
   checkAccess(c,billing,undefined,previous);
   if(!['sharp','soft','round'].includes(c.theme.radius)||!['center','start','end'].includes(c.links.style.align)||![null,'tpl','ice','sand','dusk','plain'].includes(c.links.style.bgOverride))fail('ظاهر معتبر نیست');
   c.domain={value:'',status:'none'};return c;

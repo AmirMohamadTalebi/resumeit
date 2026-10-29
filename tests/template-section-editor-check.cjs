@@ -11,15 +11,15 @@ const {chromium}=require('playwright'),{createServer}=require('../src/http/serve
  const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
  for(const template of ['vista','satiar']){
   const saved=await f.db.loadDashboard(f.owner);await f.db.mutateDashboard(f.owner,saved.revision,d=>{d.content.theme.resume=template;});
-  await page.goto(base+'/dashboard/resume/?step=profile');await page.locator('#resume-section-tabs').waitFor();await page.evaluate(()=>document.fonts.ready);
+  await page.goto(base+'/dashboard/resume/?step=profile');await page.locator('#rs-sec-template [data-tgroup-pick]').first().waitFor();await page.evaluate(()=>document.fonts.ready);
   const help=page.getByRole('button',{name:'راهنمای نام و نام خانوادگی',exact:true});await help.hover();await page.getByRole('tooltip').waitFor();assert.match(await page.getByRole('tooltip').innerText(),/نامی که/);await page.keyboard.press('Escape');assert.equal(await page.getByRole('tooltip').isVisible(),false);
   await help.focus();await page.getByRole('tooltip').waitFor();await help.click();await page.locator('.field-help-details').waitFor();await page.keyboard.press('Escape');
   assert.equal(await page.locator('#template-section').isVisible(),false);assert.equal(await page.locator('.template-categories').isVisible(),false);
   await page.screenshot({path:path.join(out,template+'-profile-desktop.png')});
   const groups=await page.evaluate(()=>RI.templateEditorGroups(RI.C()).map(g=>({key:g.key,label:g.label})));assert(groups.length>3);
-  const group=groups.find(g=>/مهارت/.test(g.label));const step='template-'+group.key.replace(/:/g,'-');await page.locator('#resume-section-tabs [data-step="'+step+'"]').click();
-  assert.notEqual(await page.locator('#resume-section-tabs [aria-selected=true]').evaluate(e=>getComputedStyle(e).backgroundColor),'rgb(54, 95, 115)');
-  assert.equal(await page.locator('#template-section').inputValue(),group.key);assert.equal(await page.locator('#panel').getAttribute('aria-labelledby'),'resume-step-'+step);
+  const group=groups.find(g=>/مهارت/.test(g.label));const step='template-'+group.key.replace(/:/g,'-');await page.locator('#rs-sec-template [data-tgroup-pick="'+group.key+'"]').click();
+  assert.notEqual(await page.locator('#rs-sec-template [data-tgroup-pick][aria-selected=true]').evaluate(e=>getComputedStyle(e).backgroundColor),'rgb(54, 95, 115)');
+  assert.equal(await page.locator('#template-section').inputValue(),group.key);assert.equal(await page.locator('#rs-sec-template [data-tgroup-pick][aria-selected=true]').getAttribute('data-tgroup-pick'),group.key);assert.equal(step,'template-'+group.key.replace(/:/g,'-'));
   await page.screenshot({path:path.join(out,template+'-section-desktop.png')});
   await page.setViewportSize({width:390,height:844});await page.screenshot({path:path.join(out,template+'-section-mobile.png')});assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));await page.setViewportSize({width:1440,height:1000});
   if(template==='satiar'){
@@ -32,11 +32,11 @@ const {chromium}=require('playwright'),{createServer}=require('../src/http/serve
    await percent.fill('77');assert.equal(await stored(),'77%');await page.evaluate(()=>RI.save());await page.waitForFunction(()=>!RI.state.ui.dirty&&!RI.state.ui.saving);
    await page.reload();await page.locator('#template-collection').waitFor();await page.locator('#template-collection').selectOption(target.collection);while(!await percent.count()&&!await page.locator('#template-next').isDisabled())await page.locator('#template-next').click();assert.equal(await percent.inputValue(),'77');
   }
-  await page.locator('#resume-section-tabs [data-step=template]').click();await page.locator('[data-tfield=reviewed]').waitFor();
+  await page.locator('#rs-sec-template [data-tgroup-pick="general"]').click();await page.locator('[data-tfield=reviewed]').waitFor();
   const boxes=await page.locator('.template-toggle input[type=checkbox]').evaluateAll(rows=>rows.map(e=>({w:e.getBoundingClientRect().width,h:e.getBoundingClientRect().height})));assert(boxes.every(b=>b.w<=24&&b.h<=24));
   async function openEffectiveField(type){
    const target=await page.evaluate(type=>{const spec=RI.effectiveTemplateSpec(RI.C().theme.resume),field=spec.fields.find(f=>f.type===type&&!f.bind);if(!field)return null;const uses=(node,key)=>{if(!node||typeof node!=='object')return false;return node.field===key||node.icon===key||Object.values(node).some(v=>Array.isArray(v)?v.some(n=>uses(n,key)):typeof v==='object'&&uses(v,key));};return {key:field.key,group:field.group,collection:spec.collections.find(c=>uses(c.node,field.key))?.key||''};},type);if(!target)return null;
-   await page.locator('#resume-section-tabs [data-template-group="'+target.group+'"]').click();await page.locator('#template-collection').selectOption(target.collection);if(await page.locator('[data-template-advanced]').getAttribute('aria-expanded')==='false')await page.locator('[data-template-advanced]').click();
+   await page.locator('#rs-sec-template [data-tgroup-pick="'+target.group+'"]').click();await page.locator('#template-collection').selectOption(target.collection);if(await page.locator('[data-template-advanced]').getAttribute('aria-expanded')==='false')await page.locator('[data-template-advanced]').click();
    while(!await page.locator('#template-controls [data-tfield="'+target.key+'"]').count()&&!await page.locator('#template-next').isDisabled())await page.locator('#template-next').click();return target;
   }
   const imageTarget=await openEffectiveField('image');const upload=page.locator('#template-controls [data-tupload]').first();if(imageTarget){assert(await upload.count(),'effective image upload is exercised');
@@ -56,13 +56,13 @@ const {chromium}=require('playwright'),{createServer}=require('../src/http/serve
    await select.selectOption('');await address.fill('https://example.test/work');assert.equal(await readAddress(),'https://example.test/work');
    await select.selectOption('#ri-contact');assert.equal(await readAddress(),'#ri-contact');assert.equal(await address.isVisible(),false);await select.selectOption('');assert.equal(await address.inputValue(),'#ri-contact');assert.equal(await address.isVisible(),true);
   }await page.locator('#template-search').fill('');
-  await page.locator('#resume-section-tabs [data-step=template]').click();await page.screenshot({path:path.join(out,template+'-general-desktop.png')});
+  await page.locator('#rs-sec-template [data-tgroup-pick="general"]').click();await page.screenshot({path:path.join(out,template+'-general-desktop.png')});
   await page.locator('[data-template-advanced]').click();assert.equal(await page.locator('[data-template-advanced]').getAttribute('aria-expanded'),'true');
-  await page.locator('#rtabs [data-tab=layout]').click();const move=page.locator('[data-template-shift][data-direction="1"]').first();const key=await move.getAttribute('data-template-shift');await move.click();
+  await page.locator('#rs-nav [data-goto="settings"]').click();const move=page.locator('[data-template-shift][data-direction="1"]').first();const key=await move.getAttribute('data-template-shift');await move.click();
   const reordered=await page.evaluate(()=>RI.templateEditorGroups(RI.C()).map(g=>g.key));assert.notEqual(reordered[0],key);
   await page.waitForFunction(expected=>{const doc=document.querySelector('.device__vp iframe')?.contentDocument;if(!doc)return false;const source=RI.IMPORTED_TEMPLATES[RI.C().theme.resume],portfolio=source.groups.find(g=>/portfolio|نمونه کار|نمونه‌کار/i.test(g.key+' '+g.label))?.key;const actual=[...doc.querySelectorAll('[data-ri-section],#ri-projects')].map(e=>e.id==='ri-projects'?portfolio:e.dataset.riSection).filter(k=>expected.includes(k));return JSON.stringify([...new Set(actual)])===JSON.stringify(expected);},reordered);
 
-  await page.locator('#rtabs [data-tab=content]').click();assert.equal(await page.locator('#resume-section-tabs [aria-selected=true]').count(),1);
+  await page.locator('#rs-nav [data-goto="template"]').click();assert.equal(await page.locator('#rs-sec-template [data-tgroup-pick][aria-selected=true]').count(),1);
  }
  assert.deepEqual(errors,[]);console.log('PASS template editor section navigation, shared visual order, compact controls, hover/focus/click help and responsive UI for Vista/Satiar.');
  }finally{await browser.close();await new Promise(r=>server.close(r));f.store.close();}

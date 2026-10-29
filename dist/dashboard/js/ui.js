@@ -13,12 +13,15 @@
   let helpTip,helpTrigger;
   const hideHelp=()=>{helpTrigger?.removeAttribute('aria-describedby');helpTrigger=null;if(helpTip)helpTip.hidden=true;};
   if(typeof document!=='undefined'){
-    const showHelp=button=>{if(!button)return;hideHelp();helpTip ||= Object.assign(document.createElement('div'),{id:'field-help-tooltip',className:'field-help-tooltip',role:'tooltip'});if(!helpTip.isConnected)document.body.append(helpTip);helpTip.textContent=button.dataset.helpSummary;helpTip.hidden=false;helpTrigger=button;button.setAttribute('aria-describedby',helpTip.id);const r=button.getBoundingClientRect(),w=helpTip.offsetWidth,h=helpTip.offsetHeight;helpTip.style.left=Math.max(8,Math.min(innerWidth-w-8,r.right-w))+'px';helpTip.style.top=(r.bottom+h+16<innerHeight?r.bottom+8:Math.max(8,r.top-h-8))+'px';};
+    const placeHelp=()=>{if(!helpTip||!helpTrigger)return;const r=helpTrigger.getBoundingClientRect(),w=helpTip.offsetWidth,h=helpTip.offsetHeight;helpTip.style.left=Math.max(8,Math.min(innerWidth-w-8,r.right-w))+'px';helpTip.style.top=(r.bottom+h+16<innerHeight?r.bottom+8:Math.max(8,r.top-h-8))+'px';};
+    const showHelp=button=>{if(!button)return;hideHelp();helpTip ||= Object.assign(document.createElement('div'),{id:'field-help-tooltip',className:'field-help-tooltip',role:'tooltip'});if(!helpTip.isConnected)document.body.append(helpTip);helpTip.textContent=button.dataset.helpSummary;helpTip.hidden=false;helpTrigger=button;button.setAttribute('aria-describedby',helpTip.id);placeHelp();};
+    // Scrolling keeps the tip attached to its button; it closes only once the button leaves the view.
+    const followHelp=()=>{if(!helpTrigger)return;const r=helpTrigger.getBoundingClientRect();if(!helpTrigger.isConnected||r.bottom<0||r.top>innerHeight)hideHelp();else placeHelp();};
     document.addEventListener('pointerover',e=>{const button=e.target.closest('[data-field-help]');if(button&&button!==helpTrigger)showHelp(button);});
     document.addEventListener('pointerout',e=>{if(e.target.closest('[data-field-help],.field-help-tooltip')&&!e.relatedTarget?.closest?.('[data-field-help],.field-help-tooltip'))hideHelp();});
     document.addEventListener('focusin',e=>{const button=e.target.closest('[data-field-help]');if(button)showHelp(button);else hideHelp();});
     document.addEventListener('keydown',e=>{if(e.key==='Escape')hideHelp();});
-    document.addEventListener('scroll',hideHelp,true);
+    document.addEventListener('scroll',followHelp,true);
   }
   if(typeof document!=='undefined')RI.delegate(document,'click','[data-field-help]',(event,button)=>{event.preventDefault();event.stopPropagation();hideHelp();const help=JSON.parse(button.dataset.fieldHelp);RI.modal({title:'راهنمای '+help.label,body:'<dl class="field-help-details"><dt>این چیست؟</dt><dd>'+esc(help.what)+'</dd><dt>کجا دیده می‌شود؟</dt><dd>'+esc(help.where)+'</dd><dt>مقدار پیش‌فرض</dt><dd>'+esc(help.initial)+'</dd></dl>',actions:[{label:'بستن',kind:'ghost'}]});});
 

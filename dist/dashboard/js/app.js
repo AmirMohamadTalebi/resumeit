@@ -111,10 +111,7 @@
       const allowed=await navigationGuard;if(!latest())return;
       if(!allowed){if(back)history.replaceState(null,'',previous);return;}
       RI.$('#routeLoading')?.remove();
-      if(!RI.pages[id]||(id==='resume'&&!RI.ResumeJourney)){RI.$('#topTitle').setAttribute('aria-busy','true');RI.$('#view').inert=true;}
-      if(id==='resume') {
-        if(!RI.ResumeJourney)await loadScript('/dashboard/js/resume-journey.js');
-      }
+      if(!RI.pages[id]){RI.$('#topTitle').setAttribute('aria-busy','true');RI.$('#view').inert=true;}
       if(!RI.pages[id]) await loadScript('/dashboard/js/pages/'+id+'.js');
       if(!latest())return;
       if(!RI.pages[id])throw new Error('بارگذاری بخش کامل نشد؛ صفحه را دوباره باز کن');
@@ -251,7 +248,6 @@
     async function openInitialPage(){
       const epoch=navigationEpoch,host=RI.$('#view');host.innerHTML=RI.sectionLoading(document.body.dataset.page==='resume'?'در حال آماده‌سازی ویرایشگر و قالب رزومه…':'در حال آماده‌سازی صفحه…');
       try{
-        if(document.body.dataset.page==='resume'&&!RI.ResumeJourney)await loadScript('/dashboard/js/resume-journey.js');
         if(!host.isConnected||epoch!==navigationEpoch)return;
         await render(document.body.dataset.page);
       }catch(error){if(!host.isConnected||epoch!==navigationEpoch)return;host.innerHTML='<section class="section-loading"><p role="alert">'+RI.esc(error.message)+'</p><button type="button" class="btn btn--soft" data-initial-retry>تلاش دوباره</button></section>';host.querySelector('[data-initial-retry]').addEventListener('click',openInitialPage,{once:true});}

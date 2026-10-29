@@ -78,8 +78,9 @@ const {chromium}=require(process.env.PLAYWRIGHT_PATH || 'playwright');
     await page.locator('#a_last').fill('احمدی');await page.locator('[data-name]').tap();await page.waitForFunction(()=>RI.state.account.lastName==='احمدی');
     await page.reload();await page.locator('#a_last').waitFor();assert.equal(await page.locator('#a_last').inputValue(),'احمدی');
     await page.locator('[data-mobile]').tap();await page.locator('#account-phone').fill('09120000903');await page.locator('.modal__foot .btn--primary').tap();await page.locator('#account-code').waitFor();await page.locator('#account-code').tap();await page.locator('#account-code').fill(codes.get('09120000903'));await page.screenshot({path:'artifacts/social-account/phone-code-mobile.png',fullPage:true});await page.locator('.modal__foot .btn--primary').tap();await page.waitForFunction(()=>RI.state.account.mobile==='09120000903');
-    await page.locator('.modal-overlay').waitFor({state:'detached'});await page.evaluate(()=>RI.go('resume',{step:'profile'}));await page.locator('.journey-details > summary').filter({hasText:'عکس، امضا و مشخصات حساب'}).tap();await page.locator('[data-account-phone]').waitFor();assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));await page.locator('[data-account-phone]').tap();assert.equal(await page.locator('#account-phone').inputValue(),'09120000903');assert.equal(await page.getByRole('dialog').count(),1);
-    await page.locator('.modal__foot .btn--ghost').tap();
+    await page.locator('.modal-overlay').waitFor({state:'detached'});await page.evaluate(()=>RI.go('resume',{step:'profile'}));await page.locator('#rs-sec-profile').waitFor();assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+    // The verified phone is no longer a publication gap, so the studio does not ask for it again.
+    assert.equal(await page.locator('[data-account-phone]').count(),0,'verified phone is not listed as missing');
     assert.deepEqual(errors,[]);
     console.log('PASS: OAuth PKCE/cookie state/single-use/repeat login/link ownership/expiry/provider failures, last-method protection, bound real phone proof/uniqueness/publication prerequisites and mobile persisted settings; providers/SMS mocked');
   } finally {await browser?.close();await new Promise(r=>server.close(r));await db.close();}

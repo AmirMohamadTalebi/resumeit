@@ -78,11 +78,10 @@ const { chromium } = require(process.env.PLAYWRIGHT_PATH || 'playwright');
       }
     }
     await page.locator('#sidebar [data-route="resume"]').click();
-    await page.goto(base + '/dashboard/resume/?step=skills');await page.locator('[data-add]').first().waitFor();
+    await page.goto(base + '/dashboard/resume/?step=skills');await page.locator('#rs-add-skills').waitFor();
     const originalSkills = await page.evaluate(() => RI.C().skills.length);
-    await page.locator('[data-add]').first().click();
-    await page.getByRole('dialog').locator('[data-field="name"] input').fill('QA Skill');
-    await page.getByRole('dialog').getByRole('button', { name: 'افزودن', exact: true }).click();
+    // Skills are added inline: type and press Enter.
+    await page.locator('#rs-add-skills').fill('QA Skill');await page.keyboard.press('Enter');
     await page.waitForFunction(n => RI.C().skills.length === n + 1, originalSkills);
     await page.evaluate(()=>RI.save());
     await page.waitForFunction(() => !RI.state.ui.dirty && !RI.state.ui.saving);
@@ -114,7 +113,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_PATH || 'playwright');
     assert.equal(await page.evaluate(() => localStorage.getItem('resumeit-demo-draft')), null);
     const otherTab = await page.context().newPage();
     await otherTab.goto(base + '/dashboard/resume/?step=skills'); await otherTab.waitForSelector('#page-title');
-    assert.equal(await otherTab.locator('#rlist').getByText('QA Skill',{exact:true}).isVisible(),true);
+    assert.equal(await otherTab.locator('#rs-sec-skills .rs-chip__name').evaluateAll(xs=>xs.some(x=>x.value==='QA Skill')),true);
     assert.equal(await otherTab.evaluate(() => RI.C().skills.some(item => item.name === 'QA Skill')), true);
     await otherTab.close();
     const savedTitle = await page.evaluate(() => RI.C().profile.title);

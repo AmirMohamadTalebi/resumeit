@@ -7,8 +7,9 @@ try{browser=await chromium.launch({channel:process.platform==='win32'?'msedge':u
    let release;const gate=new Promise(r=>release=r);
    await page.route('**/api/dashboard/document*',async r=>{await gate;await r.continue();});
    await page.goto(base+'/dashboard/'+route,{waitUntil:'domcontentloaded'});
-   await page.locator('.ri-page-loading').waitFor({state:'visible'});assert.equal(await page.locator('body').getAttribute('aria-busy'),null);assert(await page.locator('.ri-page-loading').evaluate(e=>e.clientHeight)<=3);assert.equal(await page.locator('.ri-page-loading').evaluate(e=>getComputedStyle(e).pointerEvents),'none');await page.locator('#sidebar .brand').waitFor({state:'visible'});
-   release();await page.locator('.ri-page-loading').waitFor({state:'detached'});assert.equal(await page.locator('body').getAttribute('aria-busy'),null);
+   // Staged loading: the shell is usable at once and the page shows its own non-blocking section loader.
+   await page.locator('#sidebar .brand').waitFor({state:'visible'});await page.locator('#view .section-loading').first().waitFor();assert.equal(await page.locator('body').getAttribute('aria-busy'),null);assert.equal(await page.locator('.ri-page-loading:visible').count(),0,'no full-page loading bar over the shell');
+   release();await page.locator('#page-title').waitFor();await page.locator('.ri-page-loading').waitFor({state:'detached'});assert.equal(await page.locator('body').getAttribute('aria-busy'),null);
    await page.unroute('**/api/dashboard/document*');
  }
  await page.route('**/api/dashboard/document*',r=>r.fulfill({status:503,contentType:'application/json',body:JSON.stringify({error:'آزمون خطای اتصال'})}));
@@ -20,15 +21,15 @@ try{browser=await chromium.launch({channel:process.platform==='win32'?'msedge':u
  await page.goto(base+'/dashboard/stats/');await page.locator('#sbody').waitFor();assert(!(await page.locator('#view').innerText()).includes('ساختگی'));await page.locator('[data-r="90"]').click();assert(!(await page.locator('.chart').getAttribute('innerHTML')||'').includes('NaN'));
  const spec={sections:['skills'],bodySections:['skills'],requiredSections:[],fields:[{key:'headline',label:'عنوان اختصاصی',type:'text',max:80,required:true,public:true}],settings:[{key:'compact',label:'فشرده',type:'checkbox',default:false}]};
  const catalog=require('../src/dashboard/render.cjs').RI.RESUME_TEMPLATES;catalog.find(t=>t.id==='glacier').editor=spec;
- await page.goto(base+'/dashboard/resume/');await page.locator('#rbody').waitFor();
+ await page.goto(base+'/dashboard/resume/');await page.locator('#rs-cards').waitFor();
  await page.evaluate(spec=>{const RI=window.RI;RI.RESUME_TEMPLATES.find(t=>t.id==='glacier').editor=spec;RI.go('resume');},spec);
- assert.equal(await page.locator('[data-step="education"]').count(),0);
- await page.locator('.resume-outline summary').click();await page.locator('.outline-item[data-step="template"]').click();await page.locator('[data-template-key="headline"]').fill('اطلاعات ویژه');await page.locator('[data-template-key="compact"]').check();
+ await page.locator('#rs-sec-skills').waitFor();assert.equal(await page.locator('#rs-sec-education').count(),0,'sections the template does not use are not offered');
+ await page.locator('#rs-nav [data-goto="template"]').click();await page.locator('[data-template-key="headline"]').fill('اطلاعات ویژه');await page.locator('[data-template-key="compact"]').check();
  assert.equal(await page.evaluate(()=>window.RI.C().resumeTemplates.glacier.settings.compact),true);
  assert.equal(await page.evaluate(()=>window.RI.save()),true);
  await page.evaluate(()=>{const RI=window.RI;RI.C().theme.resume='campus';RI.go('resume');});
- assert.equal(await page.locator('[data-step="template"]').count(),0);
- await page.evaluate(()=>{const RI=window.RI;RI.C().theme.resume='glacier';RI.go('resume');});await page.locator('.resume-outline summary').click();await page.locator('.outline-item[data-step="template"]').click();assert.equal(await page.locator('[data-template-key="headline"]').inputValue(),'اطلاعات ویژه');
+ await page.locator('#rs-cards').waitFor();assert.equal(await page.locator('#rs-sec-template').count(),0);
+ await page.evaluate(()=>{const RI=window.RI;RI.C().theme.resume='glacier';RI.go('resume');});await page.locator('#rs-nav [data-goto="template"]').click();assert.equal(await page.locator('[data-template-key="headline"]').inputValue(),'اطلاعات ویژه');
  delete catalog.find(t=>t.id==='glacier').editor;
  await page.goto(base+'/login/');await page.locator('.social').waitFor();assert.equal(await page.locator('.social button').count(),2);assert.equal(await page.locator('.social button:disabled').count(),2);
  assert.deepEqual(errors,[]);console.log('PASS: actual dashboard publish controls, public resume/links without login, working navigation/contact/link URLs, desktop/mobile screenshots, server stats and visible unconfigured OAuth providers.');

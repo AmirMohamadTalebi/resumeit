@@ -1,7 +1,7 @@
 /* Pure, bounded text analysis shared by the worker and Node tests. */
 (function (root) {
   'use strict';
-  const VERSION = '2.1.1';
+  const VERSION = '3.0.0';
   const normalize = value => String(value || '').normalize('NFC').replace(/ي/g, 'ی').replace(/ك/g, 'ک').replace(/[۰-۹٠-٩]/g, c => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(c) >= 0 ? '۰۱۲۳۴۵۶۷۸۹'.indexOf(c) : '٠١٢٣٤٥٦٧٨٩'.indexOf(c))).replace(/[\s\u200c]+/g, ' ').trim().toLowerCase();
   // Non-security identity only; apply additionally checks exact source text and input SHA-256.
   function key(value) { let n = 2166136261; for (const c of String(value)) n = Math.imul(n ^ c.charCodeAt(0), 16777619); return (n >>> 0).toString(36); }
@@ -11,9 +11,41 @@
     ['excel', 'excel|اکسل'], ['figma', 'figma|فیگما'], ['photoshop', 'photoshop|فتوشاپ'], ['git', 'git'], ['css', 'css'], ['html', 'html'],
     ['documentation', 'مستندسازی|مستندات|documentation'], ['teaching', 'تدریس|آموزش دادن|teaching'], ['sales', 'فروش|sales'],
     ['research', 'پژوهش|research'], ['analysis', 'تحلیل داده|data analysis'], ['design', 'طراحی محصول|طراحی رابط|product design'],
-    ['support', 'پشتیبانی|customer support'], ['accounting', 'حسابداری|accounting'], ['operations', 'عملیات|operations']
+    ['support', 'پشتیبانی|customer support'], ['accounting', 'حسابداری|accounting'], ['operations', 'عملیات|operations'],
+    ['java', 'java|جاوا'], ['php', 'php'], ['golang', 'golang'], ['kotlin', 'kotlin|کاتلین'], ['swift', 'swift'], ['flutter', 'flutter|فلاتر'],
+    ['django', 'django|جنگو'], ['laravel', 'laravel|لاراول'], ['vue', 'vue|vue.js'], ['angular', 'angular|انگولار'], ['next', 'next.js|nextjs'], ['tailwind', 'tailwind|tailwindcss'],
+    ['docker', 'docker|داکر'], ['kubernetes', 'kubernetes|k8s'], ['linux', 'linux|لینوکس'], ['aws', 'aws'], ['postgresql', 'postgresql|postgres'], ['mysql', 'mysql'], ['mongodb', 'mongodb'],
+    ['powerbi', 'power bi|powerbi'], ['tableau', 'tableau'], ['illustrator', 'illustrator|ایلاستریتور'], ['aftereffects', 'after effects|افتر افکت'], ['premiere', 'premiere|پریمیر'],
+    ['uiux', 'ui/ux|ux|تجربه کاربری|رابط کاربری'], ['seo', 'seo|سئو'], ['marketing', 'بازاریابی|مارکتینگ|marketing'], ['socialmedia', 'شبکه های اجتماعی|سوشال مدیا|social media'],
+    ['content', 'تولید محتوا|محتوانویسی|کپی رایتینگ|copywriting|content writing'], ['projectmanagement', 'مدیریت پروژه|project management'], ['agile', 'اسکرام|اجایل|scrum|agile'], ['jira', 'jira|جیرا'],
+    ['autocad', 'autocad|اتوکد'], ['solidworks', 'solidworks|سالیدورکس'], ['matlab', 'matlab|متلب'], ['ml', 'یادگیری ماشین|machine learning'], ['office', 'آفیس|word|powerpoint|پاورپوینت']
   ].map(([id, aliases]) => ({ id, aliases: aliases.split('|').map(normalize) }));
-  const goalRoles=[{id:'teaching',aliases:['تدریس','معلم','مدرس','دبیر','آموزگار','teacher','teaching']},{id:'development',aliases:['برنامه نویس','برنامه نویسی','توسعه دهنده','توسعه نرم افزار','developer','programmer','software engineer']}].map(role=>({...role,aliases:role.aliases.map(normalize)}));
+  // Display names for skills found in the user's own text; ids stay stable for evidence and feedback.
+  const SKILL_LABELS={sql:'SQL',python:'Python',javascript:'JavaScript',typescript:'TypeScript',react:'React',node:'Node.js','c++':'C++','c#':'C#','.net':'.NET','ci/cd':'CI/CD',excel:'Excel',figma:'Figma',photoshop:'Photoshop',git:'Git',css:'CSS',html:'HTML',documentation:'مستندسازی',teaching:'تدریس',sales:'فروش',research:'پژوهش',analysis:'تحلیل داده',design:'طراحی محصول',support:'پشتیبانی مشتری',accounting:'حسابداری',operations:'مدیریت عملیات',java:'Java',php:'PHP',golang:'Go',kotlin:'Kotlin',swift:'Swift',flutter:'Flutter',django:'Django',laravel:'Laravel',vue:'Vue.js',angular:'Angular',next:'Next.js',tailwind:'Tailwind CSS',docker:'Docker',kubernetes:'Kubernetes',linux:'Linux',aws:'AWS',postgresql:'PostgreSQL',mysql:'MySQL',mongodb:'MongoDB',powerbi:'Power BI',tableau:'Tableau',illustrator:'Illustrator',aftereffects:'After Effects',premiere:'Premiere',uiux:'طراحی UI/UX',seo:'سئو',marketing:'بازاریابی',socialmedia:'مدیریت شبکه‌های اجتماعی',content:'تولید محتوا',projectmanagement:'مدیریت پروژه',agile:'Scrum / Agile',jira:'Jira',autocad:'AutoCAD',solidworks:'SolidWorks',matlab:'MATLAB',ml:'یادگیری ماشین',office:'Microsoft Office'};
+  for(const skill of lexicon)skill.label=SKILL_LABELS[skill.id]||skill.id;
+  const goalRoles=[
+    {id:'teaching',aliases:['تدریس','معلم','مدرس','دبیر','آموزگار','teacher','teaching'],skills:['تدریس','طراحی درس','مدیریت کلاس','ارزشیابی آموزشی','Microsoft Office']},
+    {id:'development',aliases:['برنامه نویس','برنامه نویسی','توسعه دهنده','توسعه نرم افزار','developer','programmer','software engineer'],skills:['Git','JavaScript','TypeScript','React','Node.js','SQL','Docker']},
+    {id:'design',aliases:['طراح','طراحی گرافیک','طراحی رابط','گرافیست','designer','ui designer','ux designer','product designer'],skills:['Figma','طراحی UI/UX','Illustrator','Photoshop','طراحی سیستم طراحی','نمونه‌سازی']},
+    {id:'data',aliases:['تحلیلگر داده','تحلیل گر داده','تحلیل داده','دانشمند داده','data analyst','data scientist','bi'],skills:['SQL','Python','Excel','Power BI','تحلیل داده','آمار']},
+    {id:'marketing',aliases:['بازاریابی','مارکتینگ','دیجیتال مارکتینگ','سئو','marketing','digital marketing','seo'],skills:['بازاریابی','سئو','تولید محتوا','مدیریت شبکه‌های اجتماعی','Google Analytics','تبلیغات آنلاین']},
+    {id:'sales',aliases:['فروش','کارشناس فروش','نماینده فروش','sales','account manager'],skills:['فروش','مذاکره','مدیریت ارتباط با مشتری','پیگیری مشتری','Excel']},
+    {id:'support',aliases:['پشتیبانی','پشتیبان','خدمات مشتری','customer support','customer service','help desk'],skills:['پشتیبانی مشتری','حل مسئله','ارتباط مؤثر','Jira','مستندسازی']},
+    {id:'accounting',aliases:['حسابدار','حسابداری','مالی','accountant','accounting','finance'],skills:['حسابداری','Excel','نرم‌افزار حسابداری','گزارش مالی','مالیات']},
+    {id:'content',aliases:['تولید محتوا','نویسنده','محتوانویس','کپی رایتر','ویراستار','copywriter','content writer','editor'],skills:['تولید محتوا','ویراستاری','سئو','داستان‌گویی','پژوهش']},
+    {id:'management',aliases:['مدیر پروژه','مدیر محصول','مدیریت پروژه','project manager','product manager','scrum master'],skills:['مدیریت پروژه','Scrum / Agile','Jira','برنامه‌ریزی','ارتباط با ذی‌نفعان']}
+  ].map(role=>({...role,aliases:role.aliases.map(normalize)}));
+  const roleSkills=id=>goalRoles.find(role=>role.id===id)?.skills||[];
+  // Persian typography fixes that never change wording: Arabic letters, half-spaces, punctuation spacing.
+  function typography(raw){
+    if(typeof raw!=='string')return raw;
+    return raw.replace(/ي/g,'ی').replace(/ك/g,'ک')
+      .replace(/(^|[\s(«])(ن?می) +(?=[آ-ی])/g,'$1$2‌')
+      .replace(/([آ-ی]) +(ها|های|هایی|هایم|هایت|هایش|هایمان|هایتان|هایشان)(?=$|[\s،.؛:!؟)»])/g,'$1‌$2')
+      .replace(/([آ-ی]) +([،؛؟!:.])/g,'$1$2')
+      .replace(/([،؛؟])(?=[آ-یA-Za-z0-9])/g,'$1 ')
+      .replace(/([آ-ی]) *, *(?=[آ-ی])/g,'$1، ');
+  }
   const goalRole=goal=>goalRoles.find(role=>mentions(normalize(goal),role))?.id||null;
   function mentions(text, skill) { return skill.aliases.some(alias => { let i = text.indexOf(alias); while (i >= 0) { const word = /[\p{L}\p{N}_]/u; if ((!i || !word.test(text[i - 1])) && (i + alias.length === text.length || !word.test(text[i + alias.length]))) return true; i = text.indexOf(alias, i + 1); } return false; }); }
   function clauses(raw) {
@@ -122,7 +154,19 @@
         if (s.raw.length > 220 && !/[؛;.!?؟\n]/.test(s.raw)) add('TEXT-READABILITY', s, 'این جمله را در محل تغییر موضوع به دو جمله تقسیم کن.', { confidence: 'medium' });
       }
       if (s.field === 'desc' && s.section === 'experience' && /(?:تیم|team)/.test(text) && !/(?:نقش من|مسئول|کمک|همکاری|my role|responsible|contributed)/.test(text)) add('ROLE-OWNERSHIP', s, 'سهم خودت در این همکاری چه بود؟ همان نقش واقعی را در یک جمله اضافه کن.', { confidence: 'medium' });
-      if (s.field === 'desc' && ['experience', 'projects'].includes(s.section) && !semantics(text).artifact && /^(?:کار با|فعالیت در|مسئول امور|worked on)\s+.{1,60}$/.test(text)) add('WORK-OUTPUT', s, 'چه چیزی ساختی، ارائه کردی یا به پایان رساندی؟ یک خروجی واقعی کافی است؛ عدد لازم نیست.', { confidence: 'medium' });
+      const workOutput = s.field === 'desc' && ['experience', 'projects'].includes(s.section) && !semantics(text).artifact && /^(?:کار با|فعالیت در|مسئول امور|worked on)\s+.{1,60}$/.test(text);
+      if (workOutput) add('WORK-OUTPUT', s, 'چه چیزی ساختی، ارائه کردی یا به پایان رساندی؟ یک خروجی واقعی کافی است؛ عدد لازم نیست.', { confidence: 'medium' });
+      if (s.section !== 'template' && ['bio', 'desc', 'title'].includes(s.field)) {
+        const fixed = typography(s.raw);
+        if (fixed !== s.raw && fixed.length <= s.maxLength) add('PERSIAN-TYPOGRAPHY', s, 'نگارش فارسی این متن را مرتب کن: نیم‌فاصله، حروف عربی و فاصلهٔ علائم. کلمه‌ها همان می‌مانند.', { type: 'rewrite', before: s.raw, after: fixed, impact: .45 });
+      }
+      if (s.field === 'desc' && ['experience', 'projects'].includes(s.section)) {
+        if (s.raw.trim().length < 25) add('DESC-DEPTH', s, 'این توضیح خیلی کوتاه است؛ یک جمله دربارهٔ کاری که کردی و نتیجه‌اش اضافه کن.', { confidence: 'medium', impact: .55 });
+        else if (!workOutput && /^(?:مسئول|مسئولیت|وظیفه|وظایف|انجام امور|انجام کارهای|responsible for|duties)/.test(text)) add('ACTION-OPENER', s, 'جمله را با کاری که خودت انجام دادی شروع کن؛ مثل «طراحی کردم»، «راه‌اندازی کردم» یا «پشتیبانی کردم». فهرست وظیفه کمتر از کار انجام‌شده می‌گوید.', { confidence: 'medium', impact: .6 });
+        if (s.section === 'experience' && s.raw.trim().length >= 40 && !/\d/.test(text) && !/افزایش|کاهش|بهبود|رسید|رساندم|صرفه جویی|سریع تر|بیشتر|کمتر|improv|increas|reduc|grew|saved/.test(text)) add('IMPACT-EVIDENCE', s, 'اگر نتیجهٔ قابل‌اندازه‌گیری داری (عدد، درصد یا تعداد کاربر)، بنویسش؛ اگر نه، خروجی کار را روشن کن. چیزی را که واقعاً نبوده اضافه نکن.', { confidence: 'medium', impact: .5 });
+      }
+      if (s.section === 'profile' && s.field === 'bio' && s.raw.trim() && s.raw.trim().length < 40) add('BIO-DEPTH', s, 'معرفی کوتاه است؛ در دو یا سه جمله بگو چه کاری می‌کنی، در چه زمینه‌ای و دنبال چه فرصتی هستی.', { confidence: 'medium', impact: .55 });
+      if (s.section === 'profile' && s.field === 'title' && s.raw.trim().length > 70) add('HEADLINE-LENGTH', s, 'عنوان طولانی است؛ آن را در یک خط کوتاه، حدود ۶۰ حرف، خلاصه کن تا بالای رزومه کامل دیده شود.', { confidence: 'medium', impact: .45 });
       if (s.raw.length >= 60 && s.field === 'desc') {
         const prior = assessed.slice(0, -1).find(x => x.section === s.section && x.field === s.field && normalize(x.raw) === text);
         if (prior) add('TEXT-REDUNDANCY', s, 'این توضیح با یک مورد دیگر یکسان است؛ تفاوت واقعی دو تجربه را مشخص کن.', { confidence: 'medium', dependencies: [prior.raw, s.raw, prior.itemId, s.itemId], comparisonTarget: prior.itemId });
@@ -151,6 +195,11 @@
     }else if(role==='development'){
       if(!/فرانت|بک اند|فول استک|وب|موبایل|داده|سیستم|frontend|backend|full stack|web|mobile|data/.test(normalizedIntro)&&!lexicon.some(skill=>['python','javascript','typescript','react','node','c++','c#','.net'].includes(skill.id)&&mentions(normalizedIntro,skill)))guide('title','GOAL-CLARITY','برای هدف برنامه‌نویسی، بیشتر روی چه شاخه‌ای کار می‌کنی؟ اگر هنوز روشن نیست، زمینهٔ واقعی مثل وب، موبایل یا داده را در عنوانت مشخص کن.');
       if(!semantics(normalize(publicText)).action||!semantics(normalize(publicText)).artifact)guide('bio','GOAL-EXAMPLE','یک پروژهٔ واقعی یا تمرینی انتخاب کن و بگو چه ساختی، از چه ابزاری استفاده کردی و سهم خودت چه بود؛ اگر هنوز ننوشته‌ای، معرفی یا پروژه‌ها جای مناسبی است.');
+    }else if(role){
+      const domains={design:/طراح|رابط|گرافیک|برند|محصول|ui|ux|graphic|brand|product/,data:/داده|تحلیل|گزارش|داشبورد|آمار|data|analy|dashboard|report/,marketing:/بازاریابی|سئو|محتوا|کمپین|تبلیغ|marketing|seo|campaign|content/,sales:/فروش|مشتری|بازار|sales|client|customer/,support:/پشتیبانی|مشتری|خدمات|support|service|customer/,accounting:/حساب|مالی|مالیات|بودجه|account|finance|tax|budget/,content:/محتوا|نویس|ویراست|مقاله|content|writ|edit|article/,management:/پروژه|محصول|تیم|برنامه ریزی|project|product|team|planning/};
+      const examples={design:'یک نمونه‌کار واقعی (لینک یا تصویر) با توضیح مسئله‌ای که حل کردی',data:'یک تحلیل یا داشبورد واقعی و سؤالی که با آن جواب دادی',marketing:'یک کمپین یا محتوای واقعی و کانالی که در آن اجرا شد',sales:'یک تجربهٔ واقعی فروش یا پیگیری مشتری و نقش خودت در آن',support:'یک نمونهٔ واقعی از مشکلی که برای مشتری حل کردی',accounting:'یک کار واقعی مثل بستن دفاتر، گزارش ماهانه یا کار با نرم‌افزار حسابداری',content:'یک نمونه‌متن یا مقالهٔ منتشرشده با لینک',management:'یک پروژهٔ واقعی که هماهنگ کردی و سهم خودت در آن'};
+      if(!domains[role].test(normalizedIntro))guide('title','GOAL-CLARITY','عنوانت هنوز حوزهٔ هدفت را روشن نمی‌کند؛ تخصص یا زمینهٔ واقعی خودت را در یک خط بنویس تا خواننده فوراً بفهمد دنبال چه کاری هستی.');
+      if(!semantics(normalize(publicText)).action)guide('bio','GOAL-EXAMPLE','برای این هدف، '+examples[role]+' اضافه کن؛ در معرفی یا پروژه‌ها. فقط چیزی که واقعاً انجام داده‌ای.');
     }
     for (const skill of lexicon) {
       const rows = evidence[skill.id] || [], positive = rows.filter(x => x.weight > 0), groups = new Map();
@@ -166,12 +215,24 @@
       evidence[skill.id] = { score: rows.length ? score : null, status: conflict ? 'conflict' : practical ? 'practical-supported' : negative ? 'negated' : rows.some(x=>x.status==='related-context')?'related-context':positive.length ? 'positive-mention' : rows[0]?.status || 'absent', sources: [...groups.keys()] };
     }
     for(const s of assessed.filter(s=>s.section==='skills'&&s.field==='name'))if(!lexicon.some(skill=>mentions(normalize(s.raw),skill)))evidence[normalize(s.raw)]={score:null,status:'unknown',sources:[]};
+    // Skills the user already demonstrated in experience/projects text but never listed: offer a one-click add.
+    const listed=assessed.filter(s=>s.section==='skills'&&s.field==='name').map(s=>normalize(s.raw));
+    const skillsTarget={section:'skills',itemId:'skills',field:'name',raw:'',visibility:'public',provenance:'user-authored',maxLength:40};
+    if(input.skillsListed!==false)for(const skill of lexicon){
+      const e=evidence[skill.id];if(!e||e.status!=='practical-supported'||listed.some(name=>mentions(name,skill)))continue;
+      const from=assessed.find(s=>e.sources.includes(s.field==='desc'?s.section+':text:'+key(normalize(s.raw)):s.section+':'+s.itemId)&&['experience','projects'].includes(s.section));
+      if(!from)continue;
+      add('SKILL-FROM-TEXT',skillsTarget,'«'+skill.label+'» را در متن رزومه‌ات به کار برده‌ای ولی در فهرست مهارت‌ها نیست. اضافه‌اش کنی؟',{type:'add-skill',skill:skill.label,memberKey:skill.id,evidence:[{raw:from.raw.slice(0,200),start:0,end:Math.min(200,from.raw.length)}],dependencies:[skill.id,listed,e.sources],impact:.5,confidence:'medium'});
+    }
     for (const contact of input.privateContacts || []) {
       if (contact.length < 5) continue;
       const s = assessed.find(s => normalize(s.raw).includes(normalize(contact)));
       if (s) add('PRIV-EXPOSE', s, 'یک راه تماس که پنهان کرده‌ای در متن عمومی دیده می‌شود؛ مقدار را از این متن بردار.', { type: 'issue', private: true, impact: 1 });
     }
     if (cancelled()) return null;
+    // Privacy first: a field that leaks a hidden contact only gets the privacy finding, never quoted elsewhere.
+    const leaked=new Set(findings.filter(f=>f.ruleId==='PRIV-EXPOSE').map(f=>f.target.section+'|'+f.target.itemId+'|'+f.target.field));
+    for(let i=findings.length-1;i>=0;i--)if(findings[i].ruleId!=='PRIV-EXPOSE'&&leaked.has(findings[i].target.section+'|'+findings[i].target.itemId+'|'+findings[i].target.field))findings.splice(i,1);
     const ordered = findings.sort((a, b) => (b.ruleId === 'PRIV-EXPOSE') - (a.ruleId === 'PRIV-EXPOSE') || b.priority - a.priority || a.id.localeCompare(b.id));
     const topIds = [], sections = new Map(), causes = new Set();
     for (const f of ordered) if (topIds.length < 3 && f.confidence !== 'low' && !causes.has(f.ruleId + ':' + f.target.itemId) && (sections.get(f.target.section) || 0) < 2) { topIds.push(f.id); causes.add(f.ruleId + ':' + f.target.itemId); sections.set(f.target.section, (sections.get(f.target.section) || 0) + 1); }
@@ -180,6 +241,13 @@
   function safeRewrite(before, after, maxLength) {
     return typeof before === 'string' && typeof after === 'string' && after.length <= maxLength && before.replace(/[ \t]{2,}/g, ' ').replace(/[ \t]+\n/g, '\n').trim() === after;
   }
-  const api = { VERSION, normalize, key, semantics, dateRange, priority, lexicon, mentions, goalRole, project, analyze, safeRewrite };
+  // A rule rewrite is applied only when the stored suggestion equals what the same rule produces now.
+  function safeApply(finding, maxLength) {
+    if (!finding || typeof finding.before !== 'string' || typeof finding.after !== 'string' || finding.after.length > maxLength) return false;
+    if (finding.ruleId === 'PERSIAN-TYPOGRAPHY') return typography(finding.before) === finding.after && finding.after !== finding.before;
+    return safeRewrite(finding.before, finding.after, maxLength);
+  }
+  const roles = goalRoles.map(role => role.id);
+  const api = { VERSION, normalize, key, semantics, dateRange, priority, lexicon, mentions, goalRole, roleSkills, roles, typography, project, analyze, safeRewrite, safeApply };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.ResumeAdvisor = api;
 })(typeof self !== 'undefined' ? self : globalThis);

@@ -12,9 +12,9 @@ const {chromium}=require('playwright'),{createServer}=require('../src/http/serve
   const doc=await f.db.loadDashboard(f.owner);await f.db.mutateDashboard(f.owner,doc.revision,d=>{d.content.theme.resume=template;});await page.goto(base+'/dashboard/resume/?step=profile');await page.locator('#rpv iframe').waitFor();
   const expected=await page.evaluate(()=>{const s=RI.effectiveTemplateSpec(RI.C().theme.resume);return ['fields','settings'].flatMap(kind=>s[kind].filter(f=>!f.group||s.groups.some(g=>g.key===f.group)).map(f=>({kind,key:f.key,type:f.type,label:f.label,group:f.group||'appearance',bound:f.bind||null})));});
   const before=await page.evaluate(()=>JSON.stringify(RI.C()));const seen=new Map();
-  const tabs=await page.locator('#resume-section-tabs [data-template-group]').evaluateAll(rows=>rows.map(e=>({step:e.dataset.step,group:e.dataset.templateGroup})));
+  const tabs=await page.locator('#rs-sec-template [data-tgroup-pick]').evaluateAll(rows=>rows.map(e=>({step:e.dataset.tgroupPick,group:e.dataset.tgroupPick})));
   for(const tab of tabs){
-   await page.locator('#resume-section-tabs [data-step="'+tab.step+'"]').click();
+   await page.locator('#rs-sec-template [data-tgroup-pick="'+tab.step+'"]').click();
    const advanced=page.locator('[data-template-advanced]');await advanced.click();
    const choices=await page.locator('#template-collection option').evaluateAll(rows=>rows.map(e=>e.value));
    for(const choice of choices.length?choices:['']){
@@ -27,7 +27,7 @@ const {chromium}=require('playwright'),{createServer}=require('../src/http/serve
     }
    }
   }
-  await page.locator('#rtabs [data-tab=layout]').click();assert(await page.locator('[data-template-shift]').count());seen.set('settings:section_order',{step:'layout',control:'section up/down',advanced:false});
+  await page.locator('#rs-nav [data-goto="settings"]').click();assert(await page.locator('[data-template-shift]').count());seen.set('settings:section_order',{step:'layout',control:'section up/down',advanced:false});
   const missing=expected.filter(x=>!seen.has(x.kind+':'+x.key));assert.deepEqual(missing,[],'unreachable options in '+template);
   assert.equal(await page.evaluate(()=>JSON.stringify(RI.C())),before,'browsing every option must not change content');
   report.push({template,total:expected.length,missing:0,options:expected.map(item=>({...item,destination:seen.get(item.kind+':'+item.key)}))});console.log('PASS reachable option inventory',template,expected.length);
