@@ -144,8 +144,7 @@
     root.addEventListener('change', e => {
       const el = e.target, file = el.files && el.files[0]; if (!el.dataset.tupload || !file) return;
       const uploadKey=el.id.replace(/-file$/, ''),generation=Symbol();uploads.set(uploadKey,generation);const latest=()=>current()&&uploads.get(uploadKey)===generation;
-      if (!['image/png','image/jpeg','image/webp'].includes(file.type) || file.size > RI.imageLimit()) { uploadError(el,'PNG، JPEG یا WebP تا '+RI.fa(Math.floor(RI.imageLimit()/1024))+' کیلوبایت برای این حساب انتخاب کن.'); el.value = ''; return; }
-      const reader = new FileReader(); reader.onload = () => {if(!latest())return; const image=new Image();image.onload=()=>{if(!latest())return;if(image.naturalWidth*image.naturalHeight>16000000){uploadError(el,'ابعاد تصویر بیش از حد بزرگ است.');return;}update(el,String(reader.result));paint();};image.onerror=()=>{if(latest())uploadError(el,'این فایل تصویر معتبر نیست.');};image.src=String(reader.result); }; reader.onerror = () => {if(latest())uploadError(el,'خواندن تصویر انجام نشد.');}; reader.readAsDataURL(file);
+      el.value = '';RI.prepareImage(file,uploadKey).then(value=>{if(!latest())return;update(el,value);paint();},error=>{if(latest())uploadError(el,error.message);});
     });
     itemHost.addEventListener('click', e => {
       const b = e.target.closest('[data-tadd],[data-tremove],[data-tmove]'); if (!b||!current()) return;

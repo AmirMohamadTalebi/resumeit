@@ -22,6 +22,7 @@
   const start = () => {
     stagger();
     new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true });
+    setTimeout(() => document.documentElement.classList.add("lq-settled"), 900);
   };
   document.addEventListener("pointermove", (e) => {
     if (reduce.matches) return;

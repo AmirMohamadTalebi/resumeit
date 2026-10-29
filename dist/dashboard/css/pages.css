@@ -128,7 +128,7 @@
 
 .quick { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
 .quick a { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-radius: var(--r-md); background: rgba(255,255,255,.7); border: 1px solid var(--glass-bd); transition: transform var(--t-fast), box-shadow var(--t-fast); }
-.quick a:hover { transform: translateY(-2px); box-shadow: var(--sh-2); background: #fff; }
+.quick a:hover { box-shadow: var(--sh-2); background: #fff; }
 .quick a > span { width: 38px; height: 38px; border-radius: 12px; background: var(--bro-100); color: var(--bro-600); display: grid; place-items: center; }
 .quick svg { width: 20px; height: 20px; }
 .quick .quick__arrow { margin-inline-start: auto; color: var(--ink-3); width: 18px; height: 18px; }
@@ -161,7 +161,7 @@
 .chiprow { display: flex; gap: 8px; flex-wrap: wrap; }
 .tgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: var(--s-5); }
 .tcard, .fcard { border-radius: var(--r-lg); background: var(--glass-bg-strong); border: 1px solid #fff; box-shadow: var(--sh-1); overflow: hidden; display: flex; flex-direction: column; transition: transform var(--t-med) var(--ease), box-shadow var(--t-med); }
-.tcard:hover, .fcard:hover { transform: translateY(-3px); box-shadow: var(--sh-2); }
+.tcard:hover, .fcard:hover { box-shadow: var(--sh-2); }
 .tcard.is-current, .fcard.is-current { box-shadow: 0 0 0 3px var(--bro-400), var(--sh-2); }
 .tcard__thumb { position: relative; }
 .tcard__lock { position: absolute; top: 10px; inset-inline-start: 10px; width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; background: rgba(255,255,255,.9); color: var(--bro-600); box-shadow: var(--sh-1); }

@@ -178,7 +178,7 @@
 .imgfield__btns { display: flex; gap: 8px; flex-wrap: wrap; }
 .imgfield__presets { display: flex; gap: 6px; }
 .imgfield__presets button { width: 26px; height: 26px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 0 1px var(--ice-300); padding: 0; transition: transform var(--t-fast); }
-.imgfield__presets button:hover { transform: scale(1.15); }
+.imgfield__presets button:hover { box-shadow: 0 0 0 2px var(--bro-500, #347f8f); }
 
 /* ---------- مودال ---------- */
 .modal-overlay {

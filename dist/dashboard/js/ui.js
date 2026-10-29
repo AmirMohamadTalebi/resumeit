@@ -95,8 +95,45 @@
       '<div class="imgfield__presets" role="group" aria-label="تصویر آماده">' +
       RI.presets.map((p, i) => '<button type="button" data-preset="' + p + '" style="' + esc(RI.bg(p)) + '" aria-label="تصویر آمادهٔ ' + RI.fa(i + 1) + '"></button>').join('') +
       '</div><div class="field__error" role="alert" hidden></div>' +
-      '<div class="field__hint">PNG، JPEG یا WebP تا '+RI.fa(Math.floor(RI.imageLimit()/1024))+' کیلوبایت برای هر تصویر.</div></div></div>';
+      '<div class="field__hint">PNG، JPEG یا WebP تا '+RI.fa(Math.floor(RI.imageLimit()/1024))+' کیلوبایت برای هر تصویر؛ عکس‌های بزرگ پیش از ذخیره خودکار کوچک می‌شوند.</div></div></div>';
   };
+  // Phone photos arrive as multi-megabyte files although pages show them at a few hundred pixels; every byte is
+  // stored inside the document and re-read on each load and autosave, so images are scaled and re-encoded first.
+  const imageEdges = { avatar: 640, shimg: 1200 };
+  RI.prepareImage = function (file, name) {
+    return new Promise((resolve, reject) => {
+      const fail = m => reject(new Error(m));
+      if (!/^image\/(png|jpeg|webp)$/.test(file.type)) return fail('فقط تصویر PNG، JPG یا WebP مجاز است');
+      if (file.size > 20 * 1024 * 1024) return fail('این فایل خیلی بزرگ است؛ تصویری زیر ۲۰ مگابایت انتخاب کن');
+      const rd = new FileReader();
+      rd.onerror = () => fail('خواندن تصویر ممکن نشد دوباره تلاش کنید');
+      rd.onload = () => {
+        const original = String(rd.result), image = new Image();
+        image.onerror = () => fail('فایل انتخاب‌شده تصویر معتبر نیست');
+        image.onload = () => {
+          const w = image.naturalWidth, h = image.naturalHeight;
+          if (w * h > 16000000) return fail('ابعاد تصویر بیش از حد بزرگ است');
+          const edge = imageEdges[name] || 1600, scale = Math.min(1, edge / Math.max(w, h));
+          let best = original;
+          try {
+            const canvas = document.createElement('canvas');
+            canvas.width = Math.max(1, Math.round(w * scale)); canvas.height = Math.max(1, Math.round(h * scale));
+            const ctx = canvas.getContext('2d'); ctx.imageSmoothingQuality = 'high'; ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+            const webp = canvas.toDataURL('image/webp', .82), jpeg = file.type === 'image/jpeg' && canvas.toDataURL('image/jpeg', .85);
+            // Browsers without WebP encoding return PNG; keep PNG only for sources that may carry transparency.
+            const candidates = [webp.startsWith('data:image/webp') || file.type !== 'image/jpeg' ? webp : null, jpeg].filter(Boolean);
+            const encoded = candidates.sort((a, b) => a.length - b.length)[0];
+            if (encoded && (scale < 1 || encoded.length < original.length)) best = encoded;
+          } catch {}
+          if (Math.floor((best.length - best.indexOf(',') - 1) * 3 / 4) > RI.imageLimit()) return fail('حتی پس از فشرده‌سازی، تصویر از سقف ' + RI.fa(Math.floor(RI.imageLimit() / 1024)) + ' کیلوبایت حساب تو بزرگ‌تر است؛ تصویر دیگری انتخاب کن');
+          resolve(best);
+        };
+        image.src = original;
+      };
+      rd.readAsDataURL(file);
+    });
+  };
+
   RI.bindImageField = function (root, name, io) {
     const el = RI.$('[data-img="' + name + '"]', root);
     if (!el) return;
@@ -107,13 +144,8 @@
       const f = e.target.files[0];
       if (!f) return;
       err.hidden = true;
-      if (!/^image\/(png|jpeg|webp)$/.test(f.type)) return fail('فقط تصویر PNG، JPG یا WebP مجاز است');
-      if (f.size > RI.imageLimit()) return fail('سقف هر تصویر برای حساب تو '+RI.fa(Math.floor(RI.imageLimit()/1024))+' کیلوبایت است؛ تصویر کوچک‌تری انتخاب کن');
-      const rd = new FileReader();
-      rd.onload = () => { const image = new Image(); image.onload = () => { if (image.naturalWidth * image.naturalHeight > 16000000) return fail('ابعاد تصویر بیش از حد بزرگ است'); io.set(rd.result); show(rd.result); }; image.onerror = () => fail('فایل انتخاب‌شده تصویر معتبر نیست'); image.src = rd.result; };
-      rd.onerror = () => fail('خواندن تصویر ممکن نشد دوباره تلاش کنید');
-      rd.readAsDataURL(f);
       e.target.value = '';
+      RI.prepareImage(f, name).then(v => { io.set(v); show(v); }, error => fail(error.message));
     });
     RI.$$('[data-preset]', el).forEach((b) => b.addEventListener('click', () => { err.hidden = true; io.set(b.dataset.preset); show(b.dataset.preset); }));
     RI.$('[data-img-clear]', el).addEventListener('click', () => { err.hidden = true; io.set(null); show(null); });

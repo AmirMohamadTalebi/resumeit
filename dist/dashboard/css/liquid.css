@@ -15,14 +15,14 @@ html body{
 /* the user's own pages render with their template colors */
 html body :is(.pvhost__stage,.device,.pv,.lv,.tcard__preview,.stage__desk,.stage__phone,.mini){--bro-600:#286d7c;--bro-500:#347f8f;--bro-100:#d7eaf0;--bro-50:#f0f8fa}
 
-/* ── Living background ── */
+/* ── Background: static on purpose; moving blobs behind blurred glass re-rendered every surface on every frame ── */
 html body::before,html body::after{content:"";position:fixed;z-index:-1;pointer-events:none;border-radius:50%;filter:blur(60px)}
-html body::before{width:60vmax;height:60vmax;top:-20vmax;right:-12vmax;background:radial-gradient(circle at 40% 40%,#8fb9d0 0,#b6d3e2 34%,transparent 68%);animation:lq-drift-a 26s ease-in-out infinite alternate}
-html body::after{width:52vmax;height:52vmax;bottom:-22vmax;left:-10vmax;background:radial-gradient(circle at 60% 50%,#e2b88f 0,#efd3b8 34%,transparent 66%);opacity:.75;animation:lq-drift-b 32s ease-in-out infinite alternate}
+html body::before{width:60vmax;height:60vmax;top:-20vmax;right:-12vmax;background:radial-gradient(circle at 40% 40%,#8fb9d0 0,#b6d3e2 34%,transparent 68%)}
+html body::after{width:52vmax;height:52vmax;bottom:-22vmax;left:-10vmax;background:radial-gradient(circle at 60% 50%,#e2b88f 0,#efd3b8 34%,transparent 66%);opacity:.75}
 html body .app{position:relative;isolation:isolate;background:transparent}
 html body .app::before,html body .app::after{content:"";position:fixed;z-index:-1;pointer-events:none;border-radius:50%;filter:blur(70px)}
-html body .app::before{width:40vmax;height:40vmax;top:32%;left:28%;background:radial-gradient(circle,#a7d4d0 0,rgba(167,212,208,.4) 40%,transparent 70%);animation:lq-drift-c 22s ease-in-out infinite alternate}
-html body .app::after{width:30vmax;height:30vmax;top:-8vmax;left:10%;background:radial-gradient(circle,#c9b8e0 0,rgba(201,184,224,.35) 40%,transparent 70%);opacity:.65;animation:lq-drift-b 28s ease-in-out infinite alternate-reverse}
+html body .app::before{width:40vmax;height:40vmax;top:32%;left:28%;background:radial-gradient(circle,#a7d4d0 0,rgba(167,212,208,.4) 40%,transparent 70%)}
+html body .app::after{width:30vmax;height:30vmax;top:-8vmax;left:10%;background:radial-gradient(circle,#c9b8e0 0,rgba(201,184,224,.35) 40%,transparent 70%);opacity:.65}
 html body .main{background:transparent}
 
 /* ── Glass material ── */
@@ -40,16 +40,15 @@ html body :is(.panel,.hero,.activity-card,.pstat,.pubcard,.planhero,.studio-read
   opacity:.7;transition:opacity .5s var(--lq-out)
 }
 html body :is(.panel,.hero,.activity-card,.pstat,.pubcard,.planhero,.studio-ready,.studio-overview,.wallet-balance,.stat,.sharecard,.plan):hover::after{opacity:1}
-/* rotating rim light */
+/* rim light: a fixed angle, since animating it recalculated styles on every frame */
 html body :is(.hero,.activity-card,.pstat,.pubcard,.planhero,.studio-ready,.wallet-balance,.stat,.sharecard,.plan)::before{
   content:"";position:absolute;inset:0;z-index:1;pointer-events:none;border-radius:inherit;padding:1.5px;
   background:conic-gradient(from var(--lq-angle),rgba(255,255,255,.95),rgba(255,255,255,.12) 22%,rgba(189,142,100,.55) 38%,rgba(255,255,255,.12) 52%,rgba(111,147,168,.55) 72%,rgba(255,255,255,.95));
   -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) content-box exclude,linear-gradient(#000 0 0);
-  animation:lq-spin 9s linear infinite;animation-delay:calc(var(--i,0) * -1.3s)
+  --lq-angle:calc(var(--i,0) * 52deg + 20deg)
 }
-html body :is(.hero,.activity-card,.pstat,.pubcard,.planhero,.studio-ready,.wallet-balance,.stat,.sharecard,.plan):hover::before{animation-duration:3s}
 html body :is(.activity-card,.pstat,.pubcard,.stat,.sharecard,.plan,.tcard,.notification-item,.history-row){transition:translate .5s var(--lq-spring),box-shadow .5s var(--lq-out),scale .5s var(--lq-spring),background .4s}
-html body :is(.activity-card,.pstat,.pubcard,.stat,.sharecard,.plan,.notification-item,.history-row):hover{translate:0 -4px;box-shadow:var(--lq-shadow-hover)}
+html body :is(.activity-card,.pstat,.pubcard,.stat,.sharecard,.plan,.notification-item,.history-row):hover{box-shadow:var(--lq-shadow-hover)}
 
 /* ── Icon rail ── */
 html body .coral-rail{border-radius:0 0 0 0;border-width:0 0 0 1px;background:linear-gradient(180deg,rgba(255,255,255,.55),rgba(220,236,243,.4))}
@@ -68,11 +67,11 @@ html body .sidebar__glass{border-radius:0;border-width:0 0 0 1px}
 html body .sidebar .nav__label,html body .sidebar .menu-title{color:var(--lq-ink-3);font-weight:650}
 html body .sidebar .nav__item{border-radius:16px;color:var(--lq-ink-2);transition:background .35s var(--lq-out),color .3s,translate .45s var(--lq-spring),box-shadow .35s}
 html body .sidebar .nav__item svg{transition:scale .45s var(--lq-spring),rotate .45s var(--lq-spring)}
-html body .sidebar .nav__item:not([aria-current]):hover{background:#2b4251;color:#fff;translate:-4px 0;box-shadow:0 10px 22px -12px rgba(28,45,56,.6)}
+html body .sidebar .nav__item:not([aria-current]):hover{background:#2b4251;color:#fff;box-shadow:0 10px 22px -12px rgba(28,45,56,.6)}
 html body .sidebar .nav__item:hover svg{scale:1.14;rotate:-6deg}
 html body .sidebar .nav__item[aria-current=page]{position:relative;overflow:hidden;background:linear-gradient(135deg,rgba(255,255,255,.95),rgba(242,230,218,.88));color:#6b4629;font-weight:700;box-shadow:inset 0 1px 0 #fff,0 10px 24px -12px rgba(135,90,54,.55),0 0 0 1px rgba(255,255,255,.9)}
 html body .sidebar .nav__item[aria-current=page]::after{content:"";position:absolute;inset-block:10px;right:0;width:4px;border-radius:4px;background:linear-gradient(#bd8e64,#875a36);animation:lq-grow-y .6s var(--lq-spring) both}
-html body .sidebar .nav__item[aria-current=page]::before{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(110deg,transparent 30%,rgba(255,255,255,.9) 48%,transparent 66%);background-size:250% 100%;animation:lq-sheen 4.5s ease-in-out infinite}
+html body .sidebar .nav__item[aria-current=page]::before{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(110deg,transparent 30%,rgba(255,255,255,.9) 48%,transparent 66%);background-size:250% 100%;animation:lq-sheen 4.5s ease-in-out 1}
 html body .sidebar .nav__disclosure{border-radius:12px;transition:background .3s,translate .4s var(--lq-spring)}
 html body .sidebar .nav__disclosure:hover{background:rgba(255,255,255,.7)}
 html body .sidebar__foot .btn,html body .sidebar__foot a{border-radius:16px}
@@ -89,7 +88,7 @@ html body .topbar__crumb{color:var(--lq-ink-3)}
 html body .topbar__title{color:var(--lq-ink);font-weight:750}
 html body .topbar .topbar__actions #topPublish{color:#fff;border:1px solid rgba(255,255,255,.35);background:linear-gradient(160deg,#8e5f39,#7a4f2f 55%,#5e3d24);box-shadow:inset 0 1px 0 rgba(255,255,255,.45),0 10px 22px -10px rgba(107,70,41,.7)}
 html body .topbar .topbar__actions #topPublish:hover{background:linear-gradient(160deg,#986741,#825434 55%,#5e3d24)}
-html body .topbar .has-unread:after{animation:lq-pulse 2s ease-out infinite;color:#b0443a}
+html body .topbar .has-unread:after{animation:lq-pulse 2s ease-out 3;color:#b0443a}
 html body .topbar #saveState[data-state=saving] svg{animation:lq-spin-r 1s linear infinite}
 
 /* ── Mobile bottom bar ── */
@@ -99,7 +98,7 @@ html body .bottom-nav [aria-current=page]{color:#6b4629;background:linear-gradie
 html body .bottom-nav a:active,html body .bottom-nav button:active{scale:.92}
 
 /* ── Page head ── */
-html body .page-head h1{background:linear-gradient(100deg,#1c2d38 0,#2b4251 35%,#6b4629 50%,#2b4251 65%,#1c2d38 100%);background-size:220% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:lq-ink 9s ease-in-out infinite;font-weight:800}
+html body .page-head h1{background:linear-gradient(100deg,#1c2d38 0,#2b4251 35%,#6b4629 50%,#2b4251 65%,#1c2d38 100%);background-size:220% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;font-weight:800}
 html body .page-head__text p{color:var(--lq-ink-3)}
 html body .eyebrow{color:#6b4629;font-weight:700}
 
@@ -143,7 +142,7 @@ html body .filter-chip:hover{translate:0 -2px}
 html body .filter-chip:is([aria-pressed=true],.is-on){color:#fff;background:linear-gradient(160deg,#3d5c6f,#2b4251);box-shadow:0 8px 18px -10px rgba(28,45,56,.6)}
 html body .chip{border-radius:999px;box-shadow:inset 0 1px 0 rgba(255,255,255,.7)}
 html body .chip--ok{display:inline-flex;align-items:center;gap:6px}
-html body .chip--ok::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor;animation:lq-pulse 2.4s ease-out infinite}
+html body .chip--ok::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor;animation:lq-pulse 2.4s ease-out 2}
 html body .chip--brown{background:#f2e6da;color:#6b4629}
 html body .schip{transition:background .35s var(--lq-out),translate .4s var(--lq-spring)}
 html body .schip[aria-selected=true]{background:linear-gradient(135deg,#fff,rgba(242,230,218,.92));color:#6b4629}
@@ -166,7 +165,7 @@ html body .ring circle:last-of-type{animation:lq-ring 1.6s var(--lq-out) both .3
 html body .ring__label{animation:lq-number .9s var(--lq-out) both .45s}
 html body .journey__dot{transition:scale .45s var(--lq-spring),box-shadow .45s;animation:lq-pop-sm .6s var(--lq-spring) both;animation-delay:calc(var(--i,0) * 90ms + 200ms)}
 html body .journey__step:hover .journey__dot{scale:1.12}
-html body .journey__step.is-current .journey__dot{box-shadow:0 0 0 6px rgba(210,174,137,.35),0 10px 22px -10px rgba(135,90,54,.6);animation:lq-breathe 2.6s ease-in-out infinite}
+html body .journey__step.is-current .journey__dot{box-shadow:0 0 0 6px rgba(210,174,137,.35),0 10px 22px -10px rgba(135,90,54,.6);animation:lq-breathe 2.6s ease-in-out 3}
 html body .journey__step.is-done .journey__dot{background:linear-gradient(160deg,#3d5c6f,#2b4251);color:#fff}
 html body .allsteps>summary{transition:background .3s}
 html body .allsteps>summary:hover{background:rgba(255,255,255,.5)}
@@ -175,41 +174,41 @@ html body .allsteps[open]>*:not(summary){animation:lq-rise .5s var(--lq-out) bot
 /* ── Studio & editor ── */
 html body .editor__side .sticky{border-radius:28px}
 html body .outline-item{border-radius:14px;transition:background .3s,translate .4s var(--lq-spring),color .3s}
-html body .outline-item:hover{translate:-3px 0;background:rgba(255,255,255,.7)}
+html body .outline-item:hover{background:rgba(255,255,255,.7)}
 html body .outline-item[aria-selected=true]{background:linear-gradient(135deg,#fff,rgba(242,230,218,.9));color:#6b4629;box-shadow:0 8px 18px -10px rgba(135,90,54,.5)}
 html body .row{border-radius:18px;transition:background .3s,box-shadow .35s,translate .4s var(--lq-spring)}
 html body .row:hover{background:rgba(255,255,255,.7);box-shadow:0 10px 22px -16px rgba(28,45,56,.45)}
 html body .row__grip{transition:scale .35s var(--lq-spring)}
 html body .row:hover .row__grip{scale:1.15}
 html body .imgfield__presets button{transition:translate .4s var(--lq-spring),box-shadow .35s,scale .25s var(--lq-spring)}
-html body .imgfield__presets button:hover{translate:0 -3px;box-shadow:0 10px 18px -10px rgba(28,45,56,.5)}
+html body .imgfield__presets button:hover{box-shadow:0 10px 18px -10px rgba(28,45,56,.5)}
 html body .coral-divider span{background:linear-gradient(#bfd3dd,#97b5c5);transition:background .3s,scale .4s var(--lq-spring)}
 html body .coral-divider:hover span{background:linear-gradient(#bd8e64,#875a36);scale:1 1.15}
 
 /* ── Themes gallery ── */
 html body .tcard{border-radius:24px;overflow:hidden}
-html body .tcard:hover{translate:0 -6px;box-shadow:var(--lq-shadow-hover)}
+html body .tcard:hover{box-shadow:var(--lq-shadow-hover)}
 html body .tcard__preview{transition:scale .7s var(--lq-out)}
-html body .tcard:hover .tcard__preview{scale:1.02}
+
 html body .tcard.is-current,html body .tcard__on{box-shadow:0 0 0 2px #bd8e64,var(--lq-shadow)}
 
 /* ── Publish, stats, wallet, billing, notifications, support ── */
 html body .url-chip{border-radius:14px;background:rgba(255,255,255,.7);border:1px solid rgba(255,255,255,.9)}
 html body .pstat__ico{border-radius:14px;box-shadow:inset 0 1px 0 rgba(255,255,255,.7)}
-html body :is(.pstat strong,.stat strong,.activity-card strong,.wallet-balance h2){animation:lq-number .9s var(--lq-out) both;animation-delay:calc(var(--i,0) * 90ms + 150ms)}
-html body .wallet-balance img{animation:lq-float-sm 5s ease-in-out infinite alternate;filter:drop-shadow(0 14px 22px rgba(107,70,41,.35))}
+html body :is(.pstat strong,.stat strong,.activity-card strong,.wallet-balance h2){animation:lq-number .4s var(--lq-out) both}
+html body .wallet-balance img{filter:drop-shadow(0 14px 22px rgba(107,70,41,.35))}
 html body .notification-item.is-unread{box-shadow:inset -3px 0 0 #a47248,var(--lq-shadow)}
 html body .ticket-message.is-staff{background:linear-gradient(150deg,rgba(242,230,218,.85),rgba(255,255,255,.6))}
 html body :is(.table-wrap){border-radius:20px;background:rgba(255,255,255,.45);border:1px solid rgba(255,255,255,.75);overflow:auto}
 html body .table th{background:rgba(237,243,246,.75)}
-html body .table tbody tr{animation:lq-rise .6s var(--lq-out) both;animation-delay:calc(var(--i,0) * 28ms + 120ms);transition:background .3s}
+html body .table tbody tr{animation:lq-rise .3s var(--lq-out) both;animation-delay:calc(min(var(--i,0),8) * 20ms);transition:background .3s}
 html body .table tbody tr:hover{background:rgba(255,255,255,.75)}
 html body .pagination button,html body .pagination a{border-radius:12px}
 
 /* ── Popovers, dialogs, toasts ── */
 html body .menu[role=menu]{border-radius:22px;background:linear-gradient(150deg,#ffffff,#f1f6f9);border:1px solid #fff;box-shadow:inset 0 1px 0 #fff,0 24px 50px -18px rgba(28,45,56,.45);animation:lq-pop .45s var(--lq-spring) both}
 html body .menu[role=menu] button{border-radius:12px;transition:background .25s,translate .35s var(--lq-spring)}
-html body .menu[role=menu] button:hover{background:rgba(237,243,246,.9);translate:-3px 0}
+html body .menu[role=menu] button:hover{background:rgba(237,243,246,.9)}
 html body .modal-overlay{background:rgba(28,45,56,.3);-webkit-backdrop-filter:blur(10px) saturate(1.3);backdrop-filter:blur(10px) saturate(1.3)}
 html body .modal{border-radius:30px;background:linear-gradient(150deg,rgba(255,255,255,.95),rgba(240,247,250,.88));border:1px solid #fff;box-shadow:inset 0 1px 0 #fff,0 40px 80px -30px rgba(28,45,56,.55);animation:lq-pop .55s var(--lq-spring) both}
 html body .modal__foot{border-top-color:rgba(151,181,197,.3)}
@@ -218,8 +217,8 @@ html body .toast--error{background:linear-gradient(150deg,rgba(138,42,34,.95),rg
 html body .skip-link{border-radius:12px}
 
 /* ── Entrances ── */
-html body #view>*{animation:lq-rise .75s var(--lq-out) both;animation-delay:calc(var(--i,0) * 70ms + 60ms)}
-html body :is(.activity-summary,.pstat-grid,.statgrid,.tgrid,.publication-grid,.gallery-pages,.plans,.chklist,.rows,.setgrid)>*{animation:lq-rise .7s var(--lq-out) both;animation-delay:calc(var(--i,0) * 70ms + 140ms)}
+html body #view>*{animation:lq-rise .35s var(--lq-out) both;animation-delay:calc(min(var(--i,0),5) * 40ms)}
+html body :is(.activity-summary,.pstat-grid,.statgrid,.tgrid,.publication-grid,.gallery-pages,.plans,.chklist,.rows,.setgrid)>*{animation:lq-rise .35s var(--lq-out) both;animation-delay:calc(min(var(--i,0),5) * 40ms + 60ms)}
 html body .topbar{animation:lq-drop .7s var(--lq-out) both}
 @media(min-width:900px){
   html body .coral-rail{animation:lq-slide-in .8s var(--lq-out) both}
@@ -233,11 +232,11 @@ html body .topbar{animation:lq-drop .7s var(--lq-out) both}
 @keyframes lq-drift-b{to{translate:14vmax -9vmax;scale:1.1}}
 @keyframes lq-drift-c{0%{translate:-6vmax 4vmax}100%{translate:8vmax -6vmax}}
 @keyframes lq-float-sm{to{translate:0 -8px;rotate:-3deg}}
-@keyframes lq-rise{from{opacity:0;translate:0 18px;filter:blur(6px)}to{opacity:1;translate:0 0;filter:none}}
+@keyframes lq-rise{from{opacity:0;translate:0 6px}to{opacity:1;translate:0 0}}
 @keyframes lq-rise-x{from{opacity:0;translate:18px 0}to{opacity:1;translate:0 0}}
 @keyframes lq-drop{from{opacity:0;translate:0 -14px}to{opacity:1;translate:0 0}}
-@keyframes lq-slide-in{from{opacity:0;translate:40px 0;filter:blur(8px)}to{opacity:1;translate:0 0;filter:none}}
-@keyframes lq-number{from{opacity:0;translate:0 12px;filter:blur(8px);scale:.92}to{opacity:1;translate:0 0;filter:none;scale:1}}
+@keyframes lq-slide-in{from{opacity:0;translate:12px 0}to{opacity:1;translate:0 0}}
+@keyframes lq-number{from{opacity:0}to{opacity:1}}
 @keyframes lq-ring{from{stroke-dashoffset:var(--lq-ring-len,400)}}
 @keyframes lq-grow-y{from{scale:1 0}to{scale:1 1}}
 @keyframes lq-sheen{from{background-position:130% 0}to{background-position:-130% 0}}
@@ -245,7 +244,7 @@ html body .topbar{animation:lq-drop .7s var(--lq-out) both}
 @keyframes lq-pulse{0%{box-shadow:0 0 0 0 currentColor}70%{box-shadow:0 0 0 7px transparent}100%{box-shadow:0 0 0 0 transparent}}
 @keyframes lq-breathe{0%,100%{scale:1}50%{scale:1.08}}
 @keyframes lq-ripple{from{width:0;height:0;opacity:1}to{width:var(--d,240px);height:var(--d,240px);opacity:0}}
-@keyframes lq-pop{from{opacity:0;scale:.92;translate:0 12px;filter:blur(6px)}to{opacity:1;scale:1;translate:0 0;filter:none}}
+@keyframes lq-pop{from{opacity:0;scale:.97}to{opacity:1;scale:1}}
 @keyframes lq-pop-sm{from{scale:.9}to{scale:1}}
 
 @supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
@@ -296,3 +295,8 @@ html body :is(.coral-rail,.sidebar__glass,.topbar,.bottom-nav,.panel,.hero,.acti
 html body .resume-tabs-host .resume-outline nav{flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;padding:8px 4px 10px;scrollbar-width:thin;-webkit-mask-image:linear-gradient(to left,#000 calc(100% - 28px),transparent);mask-image:linear-gradient(to left,#000 calc(100% - 28px),transparent)}
 html body .resume-tabs-host .outline-item{flex:none;white-space:nowrap}
 html body .resume-outline>summary small{font-size:11px}
+
+/* Stacked boxes in plain block containers (ticket chat, billing, studio, resume cards) touched each other; margins collapse there, so this never doubles a gap. */
+html body :is(#view,#view div:not([class]),#rs-cards)>:is(.panel,.hero,.planhero,.workspace-band,.ticket-thread,.studio-ready,.studio-overview,.rs-card,.current,.completion-strip,.allsteps)+:is(.panel,.hero,.planhero,.workspace-band,.ticket-thread,.studio-ready,.studio-overview,.rs-card,.current,.completion-strip,.allsteps){margin-block-start:18px}
+/* Entrance motion plays once per page load; content re-rendered later appears in place instead of rising again. */
+html.lq-settled body :is(#view>*,.activity-summary>*,.pstat-grid>*,.statgrid>*,.tgrid>*,.publication-grid>*,.gallery-pages>*,.plans>*,.chklist>*,.rows>*,.setgrid>*,.table tbody tr,.pstat strong,.stat strong,.activity-card strong,.wallet-balance h2,.ring__label,.journey__dot,.allsteps[open]>*){animation:none}
