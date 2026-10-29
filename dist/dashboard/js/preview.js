@@ -22,15 +22,9 @@
   }
   const onColor = (hex) => {const l=lum(hex);return (l+.05)/.05>=1.05/(l+.05)?'#000000':'#ffffff';};
 
-  function palColors(palId) {
-    const p = RI.PALETTES.find((x) => x.id === palId);
-    return p && p.colors ? p.colors : null;
-  }
-
   /* مقدارهای CSS برای یک قالب رزومه */
   RI.resumeVars = function (t, theme) {
-    const v = Object.assign({}, t.v), pc = palColors(theme.palette);
-    if (pc) { v.accent = pc[0]; v.accent2 = pc[1]; }
+    const v = RI.harmonize(Object.assign({}, t.v), RI.paletteColors(theme, 'palette'));
     const f = RI.FONTS.find((x) => x.id === theme.font) || RI.FONTS[0];
     const r = (RI.RADII[theme.radius] || RI.RADII.soft)[1];
     return '--pv-bg:' + v.bg + ';--pv-surface:' + v.surface + ';--pv-ink:' + v.ink + ';--pv-muted:' + v.muted + ';--pv-accent:' + v.accent + ';--pv-accent2:' + v.accent2 +
@@ -38,10 +32,10 @@
       ';--pv-hw:' + f.hw + ';--pv-ls:' + (f.spacing || '0') + ';--pv-brand-filter:'+(lum(v.ink)>.5?'grayscale(1) brightness(0) invert(1)':'none')+';--pv-hfont:' + (f.heading || (t.serif ? "'Noto Naskh Arabic','Times New Roman',serif" : f.stack));
   };
   RI.linksVars = function (t, theme, style) {
-    const v = Object.assign({}, t.v), pc = palColors(theme.linksPalette);
-    if (pc) { v.accent = pc[0];v.btnBg=pc[0];v.btnInk=onColor(pc[0]);v.btnBd=pc[1]; }
-    const bgo = RI.LINK_BGS.find((b) => b.id === (style && style.bgOverride));
-    if (bgo && bgo.bg) { v.bg = bgo.bg; v.ink = bgo.ink; v.muted = bgo.muted; }
+    // The chosen page background comes first so the palette is made readable against the real background.
+    const base = Object.assign({}, t.v), bgo = RI.LINK_BGS.find((b) => b.id === (style && style.bgOverride));
+    if (bgo && bgo.bg) { base.bg = bgo.bg; base.ink = bgo.ink; base.muted = bgo.muted; }
+    const v = RI.harmonizeLinks(base, RI.paletteColors(theme, 'linksPalette'));
     const f = RI.FONTS.find((x) => x.id === theme.font) || RI.FONTS[0];
     const r = (RI.RADII[theme.radius] || RI.RADII.soft)[1];
     return '--lv-bg:' + v.bg + ';--lv-ink:' + v.ink + ';--lv-muted:' + v.muted + ';--lv-btn:' + v.btnBg + ';--lv-btn-ink:' + v.btnInk + ';--lv-btn-bd:' + v.btnBd + ';--lv-accent:' + v.accent + ';--lv-r:' + r + ';--pv-font:' + f.stack + ';--pv-hw:' + f.hw + ';--pv-brand-filter:'+(lum(v.ink)>.5?'grayscale(1) brightness(0) invert(1)':'none')+';--pv-ls:' + (f.spacing || '0');

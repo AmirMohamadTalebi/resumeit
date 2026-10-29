@@ -66,6 +66,7 @@ function validateContent(input,billing={},previous,afterImages,known=new Set()){
   for(const item of c.links.items.filter(x=>['text','image'].includes(x.type)))if(!subscriber&&!previous?.links?.items.some(old=>old.id===item.id&&JSON.stringify(old)===JSON.stringify(item)))fail('بلوک متن و تصویر به اشتراک فعال نیاز دارد',403);
   if(c.socials.some(x=>!RI.SOCIALS.some(s=>s[0]===x.platform)||x.handle.length>2048))fail('شبکهٔ اجتماعی معتبر نیست');
   checkAccess(c,billing,undefined,previous);
+  if(c.theme.custom&&!/^#[0-9a-f]{6}$/i.test(c.theme.custom))fail('رنگ دلخواه باید کد شش‌رقمی مثل #3d6b8a باشد');
   if(!['sharp','soft','round'].includes(c.theme.radius)||!['center','start','end'].includes(c.links.style.align)||![null,'tpl','ice','sand','dusk','plain'].includes(c.links.style.bgOverride))fail('ظاهر معتبر نیست');
   c.domain={value:'',status:'none'};return c;
 }

@@ -323,3 +323,79 @@
 .template-fields .template-file-input{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0}.template-file-input:focus-visible+.template-upload{outline:3px solid var(--bro-600);outline-offset:3px}.template-upload{margin-block:8px}.template-image-caption{margin-top:14px}
 
 .editor.is-preview-detached{grid-template-columns:minmax(0,1fr)}
+
+/* ---------- استودیوی رنگ ---------- */
+.color-studio .cs-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(260px, 330px); gap: 20px; align-items: start; }
+.cs-picker { display: grid; gap: 18px; min-width: 0; }
+.cs-group h3 { display: flex; align-items: center; gap: 8px; margin: 0 0 10px; font-size: 13.5px; font-weight: 750; color: var(--ink-2); }
+.color-studio .pgrid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.color-studio .pcard { position: relative; display: flex; align-items: center; gap: 12px; min-height: 64px; padding: 10px 12px; border-radius: 16px; background: rgba(255,255,255,.78); border: 2px solid transparent; box-shadow: var(--sh-1); text-align: start; cursor: pointer; transition: border-color .18s, background .18s; }
+.color-studio .pcard:hover { background: #fff; border-color: #dcc2a7; }
+.color-studio .pcard.is-current { background: #fff; border-color: var(--bro-600); box-shadow: 0 0 0 3px rgba(135,90,54,.16); }
+.color-studio .pcard__sw { flex: none; display: flex; }
+.color-studio .pcard__sw i { width: 30px; height: 30px; border-radius: 50%; box-shadow: 0 0 0 2px #fff, 0 2px 6px rgba(28,45,56,.18); }
+.color-studio .pcard__sw i + i { margin-inline-start: -10px; }
+.pcard__name { display: grid; gap: 2px; min-width: 0; }
+.pcard__name b { font-size: 13px; line-height: 1.6; }
+.pcard__name small { font-size: 11.5px; color: var(--ink-3); line-height: 1.7; }
+.pcard__name .chip { justify-self: start; font-size: 10.5px; padding: 1px 7px; }
+.pcard__tick { position: absolute; top: 8px; inset-inline-end: 8px; display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--bro-600); color: #fff; }
+.pcard__tick svg { width: 13px; height: 13px; }
+.pcard--default { width: 100%; }
+.pcard--default .pcard__auto { width: 44px; height: 44px; border-radius: 14px; flex: none; }
+.cs-custom { padding: 14px; border-radius: 18px; background: rgba(255,255,255,.6); border: 2px dashed #dcc2a7; }
+.cs-custom.is-current { border-style: solid; border-color: var(--bro-600); background: #fff; }
+.cs-custom .field__hint { margin: -4px 0 10px; }
+.cs-custom__row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.cs-color input { width: 48px; height: 44px; padding: 3px; border-radius: 12px; border: 1px solid var(--ice-300); background: #fff; cursor: pointer; }
+.cs-hex { flex: 1; min-width: 120px; }
+.cs-hex .input { font-family: var(--font-mono, monospace); text-transform: lowercase; }
+.cs-hex .input[aria-invalid=true] { border-color: var(--err); }
+.cs-proof { position: sticky; top: 90px; padding: 14px; border-radius: 20px; background: rgba(255,255,255,.72); border: 1px solid #fff; box-shadow: var(--sh-1); }
+.cs-proof__title { margin: 0 0 10px; font-size: 13px; font-weight: 750; color: var(--ink-2); }
+.cs-proof__hint { margin: 10px 0 0; font-size: 11.5px; color: var(--ink-3); }
+.cs-proof__frame { display: grid; gap: 10px; }
+.cs-mini { border-radius: 16px; overflow: hidden; min-height: 0; font-size: 13px; border: 1px solid rgba(28,45,56,.08); }
+.cs-mini__hero { height: 58px; background: var(--pv-hero); }
+.cs-mini__body { padding: 0 14px 14px; display: grid; gap: 8px; }
+.cs-mini__avatar { display: grid; place-items: center; width: 52px; height: 52px; margin-top: -26px; border-radius: 50%; background: var(--pv-accent); color: var(--pv-on); font-weight: 800; border: 3px solid var(--pv-bg); }
+.cs-mini .pv-name { font-size: 18px; margin: 0; }
+.cs-mini .pv-title { font-size: 12.5px; margin: -6px 0 0; }
+.cs-mini .pv-sec :is(h2,h3) { font-size: 13.5px; margin-bottom: 6px; }
+.cs-mini .pv-chips { gap: 6px; }
+.cs-mini .pv-chips li { padding: 2px 10px; font-size: 12px; }
+.cs-mini .pv-tl { gap: 6px; }
+.cs-mini .pv-tl p { font-size: 12px; margin: 0; }
+.cs-mini .pv-url { color: var(--pv-accent) !important; font-size: 12px; }
+.cs-mini--links { padding: 12px; }
+.cs-mini--links .lv-btn { min-height: 44px; }
+.cs-meter { display: flex; align-items: center; gap: 8px; margin: 10px 0 0; padding: 8px 12px; border-radius: 12px; font-size: 12.5px; }
+.cs-meter svg { width: 16px; height: 16px; flex: none; }
+.cs-meter small { color: inherit; opacity: .8; }
+.cs-meter.is-best, .cs-meter.is-good { background: var(--ok-bg); color: var(--ok); }
+.cs-meter.is-low { background: var(--warn-bg); color: var(--warn); }
+.cs-note { display: flex; gap: 8px; margin: 8px 0 0; font-size: 12px; line-height: 1.8; color: var(--ink-3); }
+.cs-note svg { width: 15px; height: 15px; flex: none; margin-top: 3px; }
+@media (max-width: 980px) { .color-studio .cs-layout { grid-template-columns: 1fr; } .cs-proof { position: static; order: -1; } }
+@media (max-width: 600px) { .color-studio .pgrid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .color-studio .pcard { min-height: 58px; gap: 8px; padding: 8px 10px; } .color-studio .pcard__sw i { width: 24px; height: 24px; } }
+
+/* رنگ قالب داخل ویرایشگر قالب‌های ویستا و ساتیار */
+.tpl-colors { grid-column: 1 / -1; display: grid; gap: 8px; padding: 14px; border-radius: 18px; background: rgba(255,255,255,.7); border: 1px solid #fff; }
+.tpl-colors__head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.tpl-colors__head b { font-size: 14px; }
+.tpl-colors__head a { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 700; color: var(--bro-700); }
+.tpl-colors__head a svg { width: 16px; height: 16px; }
+.tpl-colors .field__hint { margin: 0; }
+.tpl-colors__grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 8px; }
+.tpl-swatch { display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 6px 10px; border-radius: 14px; border: 2px solid transparent; background: #fff; color: var(--ink); font: inherit; font-size: 12.5px; font-weight: 650; text-align: start; cursor: pointer; box-shadow: var(--sh-1); }
+.tpl-swatch:hover { border-color: #dcc2a7; }
+.tpl-swatch.is-on { border-color: var(--bro-600); box-shadow: 0 0 0 3px rgba(135,90,54,.16); }
+.tpl-swatch svg { width: 16px; height: 16px; flex: none; color: var(--bro-600); }
+.tpl-swatch__dots { display: flex; flex: none; }
+.tpl-swatch__dots i { width: 20px; height: 20px; border-radius: 50%; box-shadow: 0 0 0 2px #fff; }
+.tpl-swatch__dots i + i { margin-inline-start: -7px; }
+.tpl-swatch--default { grid-column: span 2; }
+.tpl-colors__raw { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin: 0; padding: 8px 10px; border-radius: 12px; background: var(--warn-bg); color: var(--warn); font-size: 12.5px; }
+.tpl-colors__raw svg { width: 16px; height: 16px; flex: none; }
+.color-studio .pcard__name .chip { display: inline-flex; align-items: center; gap: 4px; max-width: 100%; border-radius: 9px; white-space: normal; line-height: 1.6; text-align: start; }
+.color-studio .pcard__name .chip svg { width: 12px; height: 12px; flex: none; }

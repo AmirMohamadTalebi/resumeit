@@ -53,7 +53,7 @@ html body :is(.panel,.kpi,.catalog-item)::before{
 }
 html body :is(.panel,.kpi,.catalog-item):hover::before{animation-duration:3s}
 html body :is(.panel,.kpi,.catalog-item){transition:translate .5s var(--lq-spring),box-shadow .5s var(--lq-out),scale .5s var(--lq-spring)}
-html body :is(.panel,.kpi,.catalog-item):hover{translate:0 -4px;box-shadow:var(--lq-shadow-hover)}
+html body :is(.panel,.kpi,.catalog-item):hover{box-shadow:var(--lq-shadow-hover)}
 html body .panel{padding:26px}
 html body :is(.catalog-products,.owner-workspace,.audit-purge){padding:24px}
 html body #content>.owner-workspace[role=tabpanel]{padding-top:24px}
@@ -63,7 +63,6 @@ html body .panel h2{display:flex;align-items:center;justify-content:space-betwee
 /* ── Sidebar ── */
 html body .admin-side{border-radius:30px;color:#2b4251}
 html body .admin-nav a{border-radius:16px;transition:background .35s var(--lq-out),color .3s,translate .45s var(--lq-spring),box-shadow .4s}
-html body .admin-nav a:hover{translate:-4px 0}
 html body .admin-nav a svg{transition:scale .45s var(--lq-spring),rotate .45s var(--lq-spring)}
 html body .admin-nav a:hover svg{scale:1.14;rotate:-6deg}
 html body .admin-nav a[aria-current=page]{
@@ -81,7 +80,7 @@ html body .admin-head strong{font-weight:700}
 html body .admin-payment{position:relative;padding:6px 12px 6px 14px;border-radius:999px;font-weight:650;display:inline-flex;align-items:center;gap:8px}
 html body .admin-payment::before{content:"";width:8px;height:8px;border-radius:50%;background:currentColor;animation:lq-pulse 2s ease-out infinite}
 html body .admin-topnav>a{transition:background .3s,color .3s,translate .45s var(--lq-spring)}
-html body .admin-topnav>a:hover,html body .admin-topnav>a[aria-current=page]:hover{translate:0 -2px;background:#2b4251;color:#fff}
+html body .admin-topnav>a:hover,html body .admin-topnav>a[aria-current=page]:hover{background:#f3e6d8;color:#4d3320}
 html body .admin-topnav>a[aria-current=page]{background:linear-gradient(135deg,#fff,rgba(242,230,218,.9));color:#6b4629;box-shadow:0 8px 18px -10px rgba(135,90,54,.5)}
 
 /* ── Page intro ── */
@@ -89,7 +88,7 @@ html body .page-intro h1{background:linear-gradient(100deg,#1c2d38 0,#2b4251 35%
 
 /* ── Buttons & fields ── */
 html body .btn{position:relative;overflow:hidden;isolation:isolate;border-radius:14px;border:1px solid rgba(255,255,255,.85);background:linear-gradient(160deg,rgba(255,255,255,.92),rgba(237,243,246,.7));-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);box-shadow:inset 0 1px 0 #fff,0 6px 16px -10px rgba(28,45,56,.4);transition:translate .4s var(--lq-spring),scale .25s var(--lq-spring),box-shadow .35s,background .35s}
-html body .btn:hover:not(:disabled){translate:0 -2px;box-shadow:inset 0 1px 0 #fff,0 12px 24px -12px rgba(28,45,56,.45)}
+html body .btn:hover:not(:disabled){box-shadow:inset 0 1px 0 #fff,0 12px 24px -12px rgba(28,45,56,.45)}
 html body .btn:active:not(:disabled){scale:.95}
 html body .btn-primary{color:#fff;border-color:rgba(255,255,255,.35);background:linear-gradient(160deg,#a47248,#875a36 55%,#6b4629);box-shadow:inset 0 1px 0 rgba(255,255,255,.45),0 10px 24px -10px rgba(107,70,41,.7)}
 html body .btn-primary:hover:not(:disabled){background:linear-gradient(160deg,#ad7b50,#8e5f39 55%,#6b4629);box-shadow:inset 0 1px 0 rgba(255,255,255,.5),0 16px 30px -12px rgba(107,70,41,.75)}
@@ -138,7 +137,7 @@ html body .badge-success{display:inline-flex;align-items:center;gap:6px}
 html body .badge-success::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor;animation:lq-pulse 2.4s ease-out infinite}
 html body .notice{border-radius:18px;border:1px solid rgba(255,255,255,.7);background:linear-gradient(135deg,rgba(248,236,212,.92),rgba(248,236,212,.7));-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px)}
 html body .record-id{border-radius:12px;transition:translate .35s var(--lq-spring),background .3s}
-html body .record-id:hover{translate:0 -2px;background:#fff}
+html body .record-id:hover{background:#fff}
 html body :is(.tab,.detail-tabs .tab,.owner-workspace .tab){transition:background .35s var(--lq-out),color .3s,translate .4s var(--lq-spring),box-shadow .35s}
 html body :is(.detail-tabs .tab,.owner-workspace .tab)[aria-selected=true]{background:linear-gradient(135deg,#fff,rgba(242,230,218,.9));color:#6b4629;border-color:rgba(255,255,255,.9);box-shadow:0 8px 18px -10px rgba(135,90,54,.5)}
 html body .advanced-filters[open]>div{animation:lq-rise .5s var(--lq-out) both}

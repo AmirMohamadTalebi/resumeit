@@ -208,12 +208,14 @@
       const satiarSummary=satiar&&n.group==='home:resume'?'<small class="vista-experience-summary">'+esc([value({field:'f290'}),...['f301','f303','f305'].map((key,i)=>values.collections?.['r'+(33+i)]?.length===0?'':value({field:key},values.collections?.['r'+(33+i)]?.[0]?.fields))].filter(Boolean).join(' · '))+'</small>':'';
       return group&&!n.group.endsWith(':body')&&n.group!==t.groups[1]?.key?'<details class="ri-resume-section"'+(vista&&n.group==='home:f35bcdf'?' open':'')+'><summary>'+(vista&&vistaSections[n.group]?vistaSections[n.group][1]:esc(group.label))+satiarSummary+latest+'</summary>'+html+'</details>':html;
     };
-    const palette = RI.PALETTES.find(p => p.id === options.theme.palette);
-    const accents = id === 'vista' ? ['#00b894','#f59e0b'] : ['#a04dff','#0a4b78'];
+    // The palette recolours every shade near the template's own two accents, not just the exact pair, so hovers,
+    // gradients and badges change together and stay readable on the template's background.
+    const paletteColors = RI.paletteColors(options.theme, 'palette');
+    const accents = id === 'vista' ? ['#00b894','#f59e0b'] : ['#a04dff','#0a4b78'], templateBg = RI.RESUME_TEMPLATES.find(t => t.id === id)?.v.bg;
     const vars = spec.settings.filter(f => ['color','image'].includes(f.type)).map(f => {
       let v=RI.templateFieldValid(f, RI.resumeValue(settings, f)) ? RI.resumeValue(settings, f) : f.default;
-      const accent=accents.indexOf(f.default);
-      if(f.type==='color' && !Object.hasOwn(settings,f.key) && accent>=0 && palette && palette.colors) v=palette.colors[accent];
+      // Satiar's second accent is a blue shared with many social brand colours, so only its exact value follows.
+      if(f.type==='color' && !Object.hasOwn(settings,f.key) && paletteColors) v=f.default.toLowerCase()===accents[1]?RI.color.readable(paletteColors[1],[templateBg],3):RI.remapAccent(f.default, id==='vista'?accents:[accents[0]], paletteColors, templateBg);
       return '--ri-' + f.key + ':' + (f.type==='image'?'url("'+v+'")':v);
     }).join(';');
     const font = settings.font && settings.font !== 'theme' ? settings.font : options.theme.font;

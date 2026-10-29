@@ -21,7 +21,7 @@
 .rs-nav__item{flex:none}
 .rs-nav__go{position:relative;display:flex;align-items:center;gap:7px;min-height:40px;padding:0 12px;border:0;border-radius:14px;background:transparent;color:#2b4251;font:inherit;font-size:13px;font-weight:600;white-space:nowrap;cursor:pointer;transition:background .3s,color .3s,translate .4s cubic-bezier(.34,1.56,.64,1)}
 .rs-nav__go svg{width:16px;height:16px;flex:none}
-.rs-nav__go:hover{background:#2b4251;color:#fff;translate:0 -2px}
+.rs-nav__go:hover{background:#f3e6d8;color:#4d3320}
 .rs-nav__go[aria-current="true"]{background:linear-gradient(135deg,#fff,rgba(242,230,218,.92));color:#6b4629;box-shadow:0 8px 18px -10px rgba(135,90,54,.5)}
 .rs-nav__item.is-off .rs-nav__txt{text-decoration:line-through;text-decoration-color:rgba(43,66,81,.45)}
 .rs-nav__dot{width:7px;height:7px;flex:none;border-radius:50%;background:rgba(151,181,197,.7)}
@@ -100,7 +100,7 @@
 .rs-chipbtn{display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:0 14px;border:1px solid rgba(255,255,255,.9);border-radius:999px;background:linear-gradient(160deg,rgba(255,255,255,.95),rgba(237,243,246,.75));color:#2b4251;font:inherit;font-size:13px;cursor:pointer;box-shadow:inset 0 1px 0 #fff,0 6px 14px -10px rgba(28,45,56,.4);transition:translate .4s cubic-bezier(.34,1.56,.64,1),background .3s,box-shadow .3s}
 .rs-chipbtn svg{width:15px;height:15px}
 .rs-chipbtn small{font-size:11px;color:#5a7080}
-.rs-chipbtn:hover{translate:0 -2px;background:#fff;box-shadow:0 10px 20px -12px rgba(28,45,56,.5)}
+.rs-chipbtn:hover{background:#fff;box-shadow:0 10px 20px -12px rgba(28,45,56,.5)}
 .rs-chipbtn:active{scale:.95}
 .rs-chipbtn[aria-pressed="true"],.rs-chipbtn[aria-selected="true"]{background:linear-gradient(160deg,#8e5f39,#6b4629);color:#fff;border-color:rgba(255,255,255,.3)}
 .rs-chipbtn[aria-pressed="true"] small,.rs-chipbtn[aria-selected="true"] small{color:#f2e6da}
@@ -121,7 +121,7 @@
 /* ── skills & languages chips ── */
 .rs-chips{display:flex;flex-wrap:wrap;gap:10px}
 .rs-chip{display:inline-flex;align-items:center;gap:8px;padding:5px 8px 5px 12px;border-radius:999px;background:linear-gradient(160deg,#fff,rgba(237,243,246,.85));border:1px solid rgba(255,255,255,.95);box-shadow:inset 0 1px 0 #fff,0 8px 16px -12px rgba(28,45,56,.45);animation:rs-pop .5s cubic-bezier(.34,1.56,.64,1) both;transition:box-shadow .3s,translate .4s cubic-bezier(.34,1.56,.64,1)}
-.rs-chip:hover{translate:0 -2px;box-shadow:inset 0 1px 0 #fff,0 12px 22px -12px rgba(28,45,56,.5)}
+.rs-chip:hover{box-shadow:inset 0 1px 0 #fff,0 12px 22px -12px rgba(28,45,56,.5)}
 .rs-chip:focus-within{box-shadow:0 0 0 3px rgba(151,181,197,.45)}
 .rs-chip__name{border:0;background:transparent;font:inherit;font-size:13.5px;font-weight:650;color:#1c2d38;min-width:3ch;max-width:24ch;padding:4px 0;outline:none;field-sizing:content}
 .rs-dots{display:inline-flex;gap:0}

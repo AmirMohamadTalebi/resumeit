@@ -1,5 +1,5 @@
 /* Payment pages: invoice (checkout), result and bank hand-off. Self-contained; printing shows only the invoice. */
-:root{--pay-ink:#1c2d38;--pay-muted:#4a6070;--pay-line:#d5e3ea;--pay-soft:#eef5f8;--pay-accent:#6b4629;--pay-accent-2:#2f6f83;--pay-ok:#2f6448;--pay-wait:#8a5a12;--pay-bad:#a33a30;--pay-glass:rgba(255,255,255,.74);--pay-edge:rgba(255,255,255,.92);--pay-shadow:0 22px 50px -28px rgba(28,45,56,.35),0 2px 6px rgba(28,45,56,.05)}
+:root{--pay-ink:#1c2d38;--pay-muted:#4a6070;--pay-line:#d5e3ea;--pay-soft:#eef5f8;--pay-accent:#6b4629;--pay-accent-2:#3d5c6f;--pay-ok:#2f6448;--pay-wait:#8a5a12;--pay-bad:#a33a30;--pay-glass:rgba(255,255,255,.74);--pay-edge:rgba(255,255,255,.92);--pay-shadow:0 22px 50px -28px rgba(28,45,56,.35),0 2px 6px rgba(28,45,56,.05)}
 *{box-sizing:border-box}
 body.pay{margin:0;min-height:100vh;background:#e9f2f6;color:var(--pay-ink);font:14px/1.9 Vazirmatn,Tahoma,sans-serif;letter-spacing:0}
 .pay a{color:var(--pay-accent-2)}
@@ -10,7 +10,7 @@ body.pay{margin:0;min-height:100vh;background:#e9f2f6;color:var(--pay-ink);font:
 .pay-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;width:min(100% - 32px,1120px);margin:18px auto 0;padding:10px 16px;border-radius:20px;background:var(--pay-glass);border:1px solid var(--pay-edge);box-shadow:var(--pay-shadow);-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px)}
 .payment-brand img{display:block;width:132px;height:auto}
 .pay-back{display:inline-flex;align-items:center;gap:6px;min-height:40px;padding:6px 14px;border-radius:12px;text-decoration:none;font-weight:700;color:var(--pay-ink)!important;background:#fff;border:1px solid var(--pay-line)}
-.pay-back:hover{background:#2b4251;border-color:#2b4251;color:#fff!important}
+.pay-back:hover{background:#f3e6d8;color:#4d3320!important;border-color:#dcc2a7}
 .payment-version{width:min(100% - 32px,1120px);margin:22px auto 30px;text-align:center;font-size:12px;color:var(--pay-muted)}
 
 /* Narrow status pages (bank hand-off, errors) */
@@ -24,8 +24,8 @@ body.pay{margin:0;min-height:100vh;background:#e9f2f6;color:var(--pay-ink);font:
 .payment-button:hover:not(:disabled){filter:brightness(1.08);box-shadow:0 14px 28px -14px rgba(107,70,41,.9)}
 .payment-button:disabled{background:#c9d5db;color:#4d5f69!important;box-shadow:none;cursor:not-allowed}
 .pay-ghost{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:44px;padding:8px 16px;border-radius:13px;border:1px solid var(--pay-line);background:#fff;color:var(--pay-ink)!important;font:inherit;font-weight:700;text-decoration:none;cursor:pointer;white-space:nowrap;transition:background .2s,color .2s,border-color .2s}
-.pay-ghost:hover{background:#2b4251;border-color:#2b4251;color:#fff!important}
-.pay :is(button,a,input):focus-visible{outline:3px solid var(--pay-accent-2);outline-offset:3px}
+.pay-ghost:hover{background:#f3e6d8;color:#4d3320!important;border-color:#dcc2a7}
+.pay :is(button,a,input):focus-visible{outline:3px solid #875a36;outline-offset:3px}
 
 /* Invoice page layout */
 .pay-wide{display:block;width:min(100% - 32px,1120px);margin:22px auto 0}
@@ -87,7 +87,7 @@ body.pay{margin:0;min-height:100vh;background:#e9f2f6;color:var(--pay-ink);font:
 .gateway-option input{position:absolute;inset:0;z-index:1;width:100%;height:100%;margin:0;opacity:0;cursor:inherit}
 .gateway-option:hover{border-color:#9fbccb}
 .gateway-option:has(input:checked){border-color:var(--pay-accent);box-shadow:0 0 0 3px rgba(107,70,41,.14)}
-.gateway-option:has(input:focus-visible){outline:3px solid var(--pay-accent-2);outline-offset:2px}
+.gateway-option:has(input:focus-visible){outline:3px solid #875a36;outline-offset:2px}
 .gateway-option--disabled{cursor:not-allowed;opacity:.7;background:#f4f8fa}
 .gateway-mark{display:grid;place-items:center;width:42px;height:42px;flex:none;border-radius:13px;background:var(--pay-soft);color:var(--pay-accent-2)}
 .gateway-text{flex:1;display:grid}.gateway-text b{font-size:14px}.gateway-text small{font-size:12px;color:var(--pay-muted)}
@@ -116,7 +116,7 @@ body.pay{margin:0;min-height:100vh;background:#e9f2f6;color:var(--pay-ink);font:
 .invoice-bank dl div{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 14px;border-radius:13px;background:#fff;border:1px solid var(--pay-line)}
 .invoice-bank dd{display:flex;align-items:center;gap:6px;margin:0;font-weight:800;font-size:13.5px;overflow-wrap:anywhere;text-align:left}
 .pay-copy{display:grid;place-items:center;width:30px;height:30px;border-radius:9px;border:1px solid var(--pay-line);background:var(--pay-soft);color:var(--pay-accent-2);cursor:pointer}
-.pay-copy:hover{background:#2b4251;border-color:#2b4251;color:#fff}
+.pay-copy:hover{background:#f3e6d8;color:#4d3320;border-color:#dcc2a7}
 .pay-copy.is-done{background:#e3f1e8;color:var(--pay-ok)}
 .inv-state{padding:2px 10px;border-radius:999px;font-size:12px}
 .inv-state--success{background:#e3f1e8;color:var(--pay-ok)}.inv-state--pending{background:#fbf0dc;color:var(--pay-wait)}.inv-state--attention{background:#fbe3e0;color:var(--pay-bad)}

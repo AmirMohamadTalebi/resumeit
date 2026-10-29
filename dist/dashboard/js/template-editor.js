@@ -67,7 +67,8 @@
       const label=f=>f.label.replace(/^(alt|title|aria-label|placeholder):/,m=>({'alt:':'توضیح تصویر:','title:':'عنوان راهنما:','aria-label:':'نام دسترس‌پذیر:','placeholder:':'راهنمای ورودی:'})[m]);
       const match=(f,data)=>{
         const kind=['image','icon'].includes(f.type)?'media':['url','link','contact'].includes(f.type)?'links':['color','checkbox','select'].includes(f.type)?'settings':'text';
-        return (!options.legacy||advanced)&&(!options.group||advanced||(!/^(title|aria-label|placeholder):/.test(f.label)&&f.type!=='color'))&&(!guided||category==='all'||!(/^(alt|title|aria-label|placeholder):/.test(f.label)||f.bind))&&(category==='all'||category===kind)&&(!query||(label(f)+' '+RI.resumeValue(data,f)).toLowerCase().includes(query));
+        // Raw template colours are replaced by the palette chooser: one hex often paints text and background at once.
+        return f.type!=='color'&&(!options.legacy||advanced)&&(!options.group||advanced||(!/^(title|aria-label|placeholder):/.test(f.label)&&f.type!=='color'))&&(!guided||category==='all'||!(/^(alt|title|aria-label|placeholder):/.test(f.label)||f.bind))&&(category==='all'||category===kind)&&(!query||(label(f)+' '+RI.resumeValue(data,f)).toLowerCase().includes(query));
       };
       let entries=[];
       if(!def){
@@ -79,7 +80,8 @@
       }
       const captions=new Set(entries.filter(([field])=>field.type==='image'&&!field.bind).map(([field])=>imageCaptions.get(field.key)));entries=entries.filter(([field])=>!captions.has(field.key));
       const pageSize=guided?4:8,pages=Math.max(1,Math.ceil(entries.length/pageSize));if(focusField){const index=entries.findIndex(([f])=>f.key===focusField);if(index>=0)fieldPage=Math.floor(index/pageSize);}fieldPage=Math.min(fieldPage,pages-1);
-      controls.innerHTML=entries.slice(fieldPage*pageSize,fieldPage*pageSize+pageSize).map(([f,v,attrs,suffix])=>control({...f,label:label(f)},v,attrs,suffix)).join('')||'<p class="template-empty">' + (options.legacy?'اطلاعات تماس عمومی از فیلدهای بالای همین تب می‌آید. گزینه‌های قدیمی فقط برای سازگاری نگهداری می‌شوند؛ برای دیدنشان «گزینه‌های بیشتر» را باز کن.':'گزینه‌ای مطابق جست‌وجو پیدا نشد. عبارت جست‌وجو را کوتاه‌تر کن.') + '</p>';
+      const chooser=!def&&(page.value==='appearance'||options.group==='general')?colorChooser(values):'';
+      controls.innerHTML=chooser+(entries.length||!chooser?entries.slice(fieldPage*pageSize,fieldPage*pageSize+pageSize).map(([f,v,attrs,suffix])=>control({...f,label:label(f)},v,attrs,suffix)).join(''):'')||'<p class="template-empty">' + (options.legacy?'اطلاعات تماس عمومی از فیلدهای بالای همین تب می‌آید. گزینه‌های قدیمی فقط برای سازگاری نگهداری می‌شوند؛ برای دیدنشان «گزینه‌های بیشتر» را باز کن.':'گزینه‌ای مطابق جست‌وجو پیدا نشد. عبارت جست‌وجو را کوتاه‌تر کن.') + '</p>';
       itemHost.innerHTML=defs.length?'<div class="template-item-tools"><label for="template-collection">کدام قسمت از این بخش را ویرایش می‌کنی؟</label><select class="input select" id="template-collection"><option value="">عنوان‌ها و تنظیمات بخش</option>'+defs.map((d,i)=>'<option value="'+d.key+'"'+(d.key===collectionKey?' selected':'')+'>موردهای '+esc(d.label.replace(/\s+/g,' ').trim().slice(0,60))+'</option>').join('')+'</select>'+ (def?'<label for="template-row">مورد قابل ویرایش</label><select class="input select" id="template-row">'+rows.map((r,i)=>'<option value="'+i+'"'+(i===rowIndex?' selected':'')+'>مورد '+RI.fa(i+1)+'</option>').join('')+'</select><div class="row__actions"><button type="button" class="btn btn--soft btn--sm" data-tadd="'+def.key+'"'+(rows.length>=30?' disabled':'')+'>افزودن مورد</button>'+(rows.length?'<button type="button" class="btn btn--soft btn--sm" data-tmove="-1" data-tlist="'+def.key+'" data-rowid="'+rows[rowIndex].id+'"'+(!rowIndex?' disabled':'')+'>بالا</button><button type="button" class="btn btn--soft btn--sm" data-tmove="1" data-tlist="'+def.key+'" data-rowid="'+rows[rowIndex].id+'"'+(rowIndex===rows.length-1?' disabled':'')+'>پایین</button><button type="button" class="btn btn--ghost btn--sm" data-tremove="'+def.key+'" data-rowid="'+rows[rowIndex].id+'">حذف این مورد</button>':'')+'</div>':'')+'</div>':'';
       pager.innerHTML='<span>'+RI.fa(entries.length)+' فیلد · صفحهٔ '+RI.fa(fieldPage+1)+' از '+RI.fa(pages)+'</span><div><button type="button" class="btn btn--soft btn--sm" id="template-prev" data-tpage="-1"'+(!fieldPage?' disabled':'')+'>قبلی</button><button type="button" class="btn btn--soft btn--sm" id="template-next" data-tpage="1"'+(fieldPage===pages-1?' disabled':'')+'>بعدی</button></div>';
       itemHost.querySelectorAll('#template-collection option[value]').forEach(option=>{const d=defs.find(d=>d.key===option.value);if(d)option.textContent=itemLabel(d,rowsFor(d)[0]);});
@@ -93,6 +95,21 @@
       if(activeId&&!focusField)root.querySelector('#'+CSS.escape(activeId))?.focus({preventScroll:true});
       if(focusField){controls.querySelector('[data-tfield="'+focusField+'"]')?.focus();focusField='';}
     }
+    // Palette chooser shared with «رنگ‌ها و شکل»: swatches show each palette as it appears on this template.
+    function colorChooser(values){
+      const theme=RI.C().theme,cur=theme.palette,tpl=RI.RESUME_TEMPLATES.find(t=>t.id===id),raw=spec.settings.filter(f=>f.type==='color'&&Object.hasOwn(values.settings,f.key)).length;
+      const swatch=p=>{const v=RI.harmonize(Object.assign({},tpl.v),p.id==='custom'?RI.paletteColors(theme):p.colors);return '<button type="button" class="tpl-swatch'+(cur===p.id?' is-on':'')+'" data-tpal="'+p.id+'" aria-pressed="'+(cur===p.id)+'" title="'+esc(p.name)+'"><span class="tpl-swatch__dots"><i style="background:'+v.accent+'"></i><i style="background:'+v.accent2+'"></i></span><span>'+esc(p.name)+'</span>'+(RI.canUse('pal:'+p.id,p)?'':RI.icon('lock'))+'</button>';};
+      const list=RI.PALETTES.filter(p=>p.colors||p.id==='custom'&&RI.color.isHex(theme.custom));
+      return '<section class="tpl-colors" aria-labelledby="tpl-colors-title"><div class="tpl-colors__head"><b id="tpl-colors-title">رنگ قالب</b><a href="/dashboard/themes/?tab=pal">'+RI.icon('palette')+'رنگ دلخواه و پیش‌نمایش کامل</a></div><p class="field__hint">یک رنگ انتخاب کن؛ همهٔ بخش‌های قالب با هم و خوانا عوض می‌شوند.</p><div class="tpl-colors__grid"><button type="button" class="tpl-swatch tpl-swatch--default'+(cur==='default'?' is-on':'')+'" data-tpal="default" aria-pressed="'+(cur==='default')+'">'+RI.icon('sparkle')+'<span>رنگ‌های طراح قالب</span></button>'+list.map(swatch).join('')+'</div>'+
+        (raw?'<p class="tpl-colors__raw">'+RI.icon('info')+'<span>'+RI.fa(raw)+' رنگ این قالب را قبلاً دستی تغییر داده‌ای و آن‌ها بر پالت مقدم‌اند.</span><button type="button" class="btn btn--soft btn--sm" data-treset-colors>بازگرداندن به رنگ‌های هماهنگ</button></p>':'')+'</section>';
+    }
+    root.addEventListener('click',async e=>{
+      const pick=e.target.closest('[data-tpal]'),reset=e.target.closest('[data-treset-colors]');if(!current()||!(pick||reset))return;
+      if(reset){const settings=state().settings;for(const f of spec.settings)if(f.type==='color')delete settings[f.key];changed();paint();RI.toast('رنگ‌های دستی برداشته شدند؛ قالب از پالت پیروی می‌کند');return;}
+      const p=RI.PALETTES.find(x=>x.id===pick.dataset.tpal);if(!p)return;
+      if(!RI.canUse('pal:'+p.id,p)&&!(await RI.lockedExplain(Object.assign({kind:'pal'},p))))return;
+      if(!current())return;Object.assign(RI.C().theme,{palette:p.id,linksPalette:p.id});RI.touch('theme');paint();RI.toast('ترکیب رنگ «'+p.name+'» اعمال شد');
+    });
     function sections() {
       const groups = spec.groups.filter(g => g.page === page.value&&(!options.group||g.key===(options.group==='general'?'home:body':options.group))&&(!guided||options.group||!g.key.endsWith(':body')));
       section.innerHTML = groups.map(g => '<option value="' + esc(g.key) + '">' + esc(groupLabel(g)) + '</option>').join('');

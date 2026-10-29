@@ -70,16 +70,34 @@
         }).join('') + '</div>';
       }
 
-      function palettes() {
-        const cur = th().palette, r = th().radius;
-        const colors=RI.PALETTES.find(p=>p.id===cur)?.colors||['#286d7c','#e0eef3'];
-        return '<div class="panel"><div class="panel__head"><h2>ترکیب رنگ</h2><p>رنگ تأکید رزومه و صفحهٔ لینک با هم عوض می‌شود تا هویتشان یکی بماند</p></div><div class="pgrid">' + RI.PALETTES.map((p) => {
-          const ref = 'pal:' + p.id, on = cur === p.id, usable = RI.canUse(ref, p);
-          return '<button type="button" class="pcard' + (on ? ' is-current' : '') + '" data-pal="' + p.id + '" aria-pressed="' + on + '"><span class="pcard__sw">' + (p.colors ? '<i style="background:' + p.colors[0] + '"></i><i style="background:' + p.colors[1] + '"></i>' : '<i class="pcard__auto">' + RI.icon('sparkle') + '</i>') + '</span><b>' + p.name + '</b>' + RI.accessBadge(ref, p) + '</button>';
-        }).join('') + '</div><div class="palette-proof" style="--proof-accent:'+colors[0]+';--proof-surface:'+colors[1]+'" aria-label="پیش‌نمایش ترکیب رنگ"><div><small>پیش‌نمایش ترکیب رنگ</small><h3>رها کیانی</h3><p>طراحی برای تجربه‌های ماندگار</p><span>'+RI.icon('link')+'نمونه‌کارهای من</span></div><div class="palette-proof__tiles"><span></span><span></span><span></span></div></div></div>' +
-          '<div class="panel"><div class="panel__head"><h2>گردی گوشه‌ها</h2><p>رزومه و صفحهٔ لینک با یک انتخاب هماهنگ می‌شوند.</p></div><div class="segmented" id="radius">' + Object.keys(RI.RADII).map((k) => '<button type="button" data-radius="' + k + '" aria-pressed="' + (r === k) + '">' + RI.RADII[k][0] + '</button>').join('') + '</div><div class="shape-proof" style="--shape-radius:'+RI.RADII[r][1]+';--shape-color:'+(RI.PALETTES.find(p=>p.id===cur)?.colors?.[0]||'#286d7c')+'"><span>نام و نام خانوادگی</span><span>'+RI.icon('link')+'نمونهٔ لینک</span></div></div>';
+      // Colour studio: palettes grouped by mood, a custom colour, and a live sample drawn with the current templates'
+      // real variables. Swatches show the colour as it will appear on this template, after readability adjustment.
+      function resumeTemplate(){return RI.findTemplate('resume',th().resume)||RI.RESUME_TEMPLATES[0];}
+      function linksTemplate(){return RI.findTemplate('links',th().links)||RI.LINK_TEMPLATES[0];}
+      // What to draw: undefined = the saved choice, a palette id, or [accent, second] for an unsaved custom colour.
+      function themeWith(choice){const t=Object.assign({},th());if(choice===undefined)return t;if(typeof choice==='string'){t.palette=t.linksPalette=choice;return t;}t.palette=t.linksPalette='custom';t.custom=choice[0];return t;}
+      function proof(colors){
+        const theme=themeWith(colors),tpl=resumeTemplate(),lt=linksTemplate(),seeds=RI.paletteColors(theme),v=RI.harmonize(Object.assign({},tpl.v),seeds),ratio=RI.color.contrast(v.accent,v.bg),dark=RI.color.lum(tpl.v.bg)<.2;
+        const grade=ratio>=7?['عالی','is-best']:ratio>=4.5?['خوب','is-good']:['کم','is-low'];
+        return '<div class="cs-proof__frame"><div class="pv cs-mini" style="'+esc(RI.resumeVars(tpl,theme))+'"><div class="cs-mini__hero"></div><div class="cs-mini__body"><span class="cs-mini__avatar">ر</span><h3 class="pv-name">رها کیانی</h3><p class="pv-title">طراح محصول · تهران</p><div class="pv-sec"><h3>مهارت‌ها</h3><ul class="pv-chips"><li>طراحی رابط<span class="pv-dots"><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i></span></li><li>پژوهش کاربر</li></ul></div><div class="pv-sec"><h3>سوابق</h3><ul class="pv-tl"><li><b>طراح ارشد</b><p>استودیو نقش · ۱۴۰۱ تا اکنون</p></li></ul></div><a class="pv-url">resumeit.ir/raha</a></div></div>'+
+          '<div class="lv cs-mini cs-mini--links" style="'+esc(RI.linksVars(lt,theme,RI.C().links.style))+'"><span class="lv-btn"><span class="lv-btn__txt"><b>نمونه‌کارهای من</b></span></span></div></div>'+
+          '<p class="cs-meter '+grade[1]+'">'+RI.icon(ratio>=4.5?'check':'alert')+'<span>خوانایی رنگ روی «'+esc(tpl.name)+'»: <b>'+grade[0]+'</b> <small dir="ltr">'+ratio.toFixed(1)+':1</small></span></p>'+
+          (seeds&&dark?'<p class="cs-note">'+RI.icon('info')+'این قالب تیره است؛ رنگ کمی روشن‌تر نمایش داده می‌شود تا روی زمینه خوانا بماند.</p>':seeds?'<p class="cs-note">'+RI.icon('info')+'رنگ‌ها برای هر قالب خودکار تنظیم می‌شوند؛ با عوض‌کردن قالب، هماهنگی حفظ می‌شود.</p>':'<p class="cs-note">'+RI.icon('info')+'رنگ‌های اصلی طراح قالب استفاده می‌شوند.</p>');
       }
-
+      function swatch(colors){const tpl=resumeTemplate(),v=RI.harmonize(Object.assign({},tpl.v),colors);return '<span class="pcard__sw"><i style="background:'+v.accent+'"></i><i style="background:'+v.accent2+'"></i></span>';}
+      function palettes() {
+        const cur = th().palette, r = th().radius, custom = RI.color.isHex(th().custom) ? th().custom : '#3d6b8a', customRef = 'pal:custom', customItem = RI.PALETTES.find(x => x.id === 'custom');
+        const card = (p) => { const ref = 'pal:' + p.id, on = cur === p.id; return '<button type="button" class="pcard' + (on ? ' is-current' : '') + '" data-pal="' + p.id + '" aria-pressed="' + on + '">' + swatch(p.colors) + '<span class="pcard__name"><b>' + esc(p.name) + '</b>' + RI.accessBadge(ref, p) + '</span>' + (on ? '<span class="pcard__tick" aria-hidden="true">' + RI.icon('check') + '</span>' : '') + '</button>'; };
+        const def = RI.PALETTES[0];
+        return '<div class="panel color-studio"><div class="panel__head"><h2>رنگ صفحه‌ها</h2><p>یک ترکیب انتخاب کن؛ رزومه و صفحهٔ لینک با هم عوض می‌شوند و رنگ برای هر قالب طوری تنظیم می‌شود که متن همیشه خوانا بماند.</p></div><div class="cs-layout"><div class="cs-picker">' +
+          '<button type="button" class="pcard pcard--default' + (cur === 'default' ? ' is-current' : '') + '" data-pal="default" aria-pressed="' + (cur === 'default') + '"><span class="pcard__auto">' + RI.icon('sparkle') + '</span><span class="pcard__name"><b>' + esc(def.name) + '</b><small>همان رنگ‌هایی که طراح برای «' + esc(resumeTemplate().name) + '» انتخاب کرده</small></span>' + (cur === 'default' ? '<span class="pcard__tick" aria-hidden="true">' + RI.icon('check') + '</span>' : '') + '</button>' +
+          RI.PALETTE_GROUPS.map(([g, label]) => '<section class="cs-group" aria-label="' + esc(label) + '"><h3>' + esc(label) + '</h3><div class="pgrid">' + RI.PALETTES.filter(p => p.group === g).map(card).join('') + '</div></section>').join('') +
+          '<section class="cs-group cs-custom' + (cur === 'custom' ? ' is-current' : '') + '" aria-labelledby="cs-custom-title"><h3 id="cs-custom-title">رنگ دلخواه ' + RI.accessBadge(customRef, customItem) + '</h3><p class="field__hint">رنگ برند یا رنگ محبوبت را بده؛ رنگ دوم هماهنگ و تنظیم خوانایی خودکار ساخته می‌شوند.</p><div class="cs-custom__row"><label class="cs-color"><span class="sr-only">انتخاب رنگ</span><input type="color" id="cs-custom" value="' + esc(custom) + '"></label><label class="cs-hex"><span class="sr-only">کد رنگ</span><input class="input" id="cs-custom-hex" dir="ltr" maxlength="7" value="' + esc(custom) + '" spellcheck="false" autocomplete="off"></label><button type="button" class="btn btn--primary btn--sm" data-custom-apply>' + RI.icon('check') + (cur === 'custom' ? 'به‌روزرسانی رنگ' : 'استفاده از این رنگ') + '</button></div></section>' +
+          '</div><aside class="cs-proof" aria-label="پیش‌نمایش رنگ روی قالب فعلی"><p class="cs-proof__title">پیش‌نمایش روی قالب فعلی</p><div id="cs-proof">' + proof() + '</div><p class="cs-proof__hint">نشانگر را روی هر رنگ ببر تا اینجا امتحانش کنی.</p></aside></div></div>' +
+          '<div class="panel"><div class="panel__head"><h2>گردی گوشه‌ها</h2><p>رزومه و صفحهٔ لینک با یک انتخاب هماهنگ می‌شوند.</p></div><div class="segmented" id="radius">' + Object.keys(RI.RADII).map((k) => '<button type="button" data-radius="' + k + '" aria-pressed="' + (r === k) + '">' + RI.RADII[k][0] + '</button>').join('') + '</div><div class="shape-proof" style="--shape-radius:' + RI.RADII[r][1] + ';--shape-color:' + (RI.harmonize(Object.assign({}, resumeTemplate().v), RI.paletteColors(th())).accent) + '"><span>نام و نام خانوادگی</span><span>' + RI.icon('link') + 'نمونهٔ لینک</span></div></div>';
+      }
+      function showProof(colors){const host=RI.$('#cs-proof',body);if(host)host.innerHTML=proof(colors);}
+      function customValue(){const v=(RI.$('#cs-custom-hex',body)?.value||'').trim().toLowerCase(),hex=/^#?[0-9a-f]{6}$/.test(v)?(v[0]==='#'?v:'#'+v):null;return hex;}
       function paint() {
         if(!current())return;
         body.innerHTML = tab === 'rt' ? gallery('rt') : tab === 'lt' ? gallery('lt') : tab === 'font' ? fonts() : palettes();
@@ -106,6 +124,21 @@
         const p = RI.PALETTES.find((x) => x.id === b.dataset.pal);
         if (!RI.canUse('pal:' + p.id, p)) { const ok = await RI.lockedExplain(Object.assign({ kind: 'pal' }, p)); if (!ok) return paint(); }
         applyTheme({ palette: p.id, linksPalette: p.id }, 'ترکیب رنگ «' + p.name + '» اعمال شد');
+      });
+      // Trying a colour only redraws the sample; leaving the card shows the saved choice again.
+      const tryPalette = (e) => { const b = e.target.closest?.('[data-pal]'); if (!b || !body.contains(b)) return; const p = RI.PALETTES.find((x) => x.id === b.dataset.pal); showProof(p.id); };
+      const restoreProof = (e) => { if (e.target.closest?.('[data-pal]') && !e.relatedTarget?.closest?.('[data-pal]')) showProof(undefined); };
+      body.addEventListener('mouseover', tryPalette); body.addEventListener('focusin', tryPalette);
+      body.addEventListener('mouseout', restoreProof); body.addEventListener('focusout', restoreProof);
+      body.addEventListener('input', (e) => {
+        if (e.target.id === 'cs-custom') { const hex = RI.$('#cs-custom-hex', body); if (hex) hex.value = e.target.value; showProof([e.target.value, RI.secondColor(e.target.value)]); }
+        if (e.target.id === 'cs-custom-hex') { const v = customValue(); e.target.setAttribute('aria-invalid', String(!v)); if (v) { RI.$('#cs-custom', body).value = v; showProof([v, RI.secondColor(v)]); } }
+      });
+      RI.delegate(body, 'click', '[data-custom-apply]', async () => {
+        const v = customValue(), item = RI.PALETTES.find((x) => x.id === 'custom');
+        if (!v) { RI.toast('کد رنگ را شش‌رقمی بنویس؛ مثل #3d6b8a', { kind: 'error' }); RI.$('#cs-custom-hex', body)?.focus(); return; }
+        if (!RI.canUse('pal:custom', item)) { const ok = await RI.lockedExplain(Object.assign({ kind: 'pal' }, item)); if (!ok) return paint(); }
+        applyTheme({ palette: 'custom', linksPalette: 'custom', custom: v }, 'رنگ دلخواه اعمال شد');
       });
       RI.delegate(body, 'click', '[data-radius]', (e, b) => applyTheme({ radius: b.dataset.radius }, 'گردی گوشه‌ها تغییر کرد'));
       paint();

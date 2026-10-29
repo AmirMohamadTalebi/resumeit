@@ -10,7 +10,7 @@ const {chromium}=require('playwright'),{createServer}=require('../src/http/serve
  const errors=[];page.on('pageerror',e=>errors.push(e.message));
  for(const template of ['vista','satiar']){
   const doc=await f.db.loadDashboard(f.owner);await f.db.mutateDashboard(f.owner,doc.revision,d=>{d.content.theme.resume=template;});await page.goto(base+'/dashboard/resume/?step=profile');await page.locator('#rpv iframe').waitFor();
-  const expected=await page.evaluate(()=>{const s=RI.effectiveTemplateSpec(RI.C().theme.resume);return ['fields','settings'].flatMap(kind=>s[kind].filter(f=>!f.group||s.groups.some(g=>g.key===f.group)).map(f=>({kind,key:f.key,type:f.type,label:f.label,group:f.group||'appearance',bound:f.bind||null})));});
+  const expected=await page.evaluate(()=>{const s=RI.effectiveTemplateSpec(RI.C().theme.resume);return ['fields','settings'].flatMap(kind=>s[kind].filter(f=>f.type!=='color'&&(!f.group||s.groups.some(g=>g.key===f.group))).map(f=>({kind,key:f.key,type:f.type,label:f.label,group:f.group||'appearance',bound:f.bind||null})));});
   const before=await page.evaluate(()=>JSON.stringify(RI.C()));const seen=new Map();
   const tabs=await page.locator('#rs-sec-template [data-tgroup-pick]').evaluateAll(rows=>rows.map(e=>({step:e.dataset.tgroupPick,group:e.dataset.tgroupPick})));
   for(const tab of tabs){

@@ -1,5 +1,5 @@
 /* Support desk: glass side rail, status tiles and a two-column desk (ticket list beside the conversation). */
-:root{--ink:#1c2d38;--muted:#4a6070;--line:#d5e3ea;--soft:#eef5f8;--accent:#6b4629;--accent-2:#2f6f83;--dark:#2b4251;--ok:#2f6448;--wait:#8a5a12;--bad:#a33a30;--glass:rgba(255,255,255,.72);--edge:rgba(255,255,255,.92);--shadow:0 22px 50px -30px rgba(28,45,56,.4),0 2px 6px rgba(28,45,56,.05)}
+:root{--ink:#1c2d38;--muted:#4a6070;--line:#d5e3ea;--soft:#eef5f8;--accent:#6b4629;--accent-2:#3d5c6f;--dark:#2b4251;--ok:#2f6448;--wait:#8a5a12;--bad:#a33a30;--glass:rgba(255,255,255,.72);--edge:rgba(255,255,255,.92);--shadow:0 22px 50px -30px rgba(28,45,56,.4),0 2px 6px rgba(28,45,56,.05)}
 *{box-sizing:border-box}
 html,body{margin:0}
 body{display:grid;grid-template-columns:260px minmax(0,1fr);min-height:100vh;background:#e9f2f6;color:var(--ink);font:14px/1.85 Vazirmatn,Tahoma,sans-serif;letter-spacing:0}
@@ -10,12 +10,12 @@ body{display:grid;grid-template-columns:260px minmax(0,1fr);min-height:100vh;bac
 .desk-aura i:nth-child(1){width:560px;height:560px;top:-220px;left:10%;background:#cfe3ec}
 .desk-aura i:nth-child(2){width:420px;height:420px;bottom:-200px;right:20%;background:#efdcc8}
 svg{flex:none}
-:is(button,a,input,select,textarea,summary):focus-visible{outline:3px solid var(--accent-2);outline-offset:2px}
+:is(button,a,input,select,textarea,summary):focus-visible{outline:3px solid #875a36;outline-offset:2px}
 
 /* Buttons */
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:42px;padding:7px 15px;border-radius:13px;border:1px solid var(--line);background:#fff;color:var(--ink);font:inherit;font-weight:700;font-size:13.5px;text-decoration:none;cursor:pointer;white-space:nowrap;transition:background .18s,color .18s,border-color .18s}
 .btn svg{width:18px;height:18px}
-.btn:hover:not(:disabled){background:var(--dark);border-color:var(--dark);color:#fff}
+.btn:hover:not(:disabled){background:#f3e6d8;color:#4d3320;border-color:#dcc2a7}
 .btn:disabled{opacity:.55;cursor:not-allowed}
 .btn-primary{background:linear-gradient(150deg,#8a5d38,#6b4629);border-color:transparent;color:#fff}
 .btn-primary:hover:not(:disabled){background:#4f321d;border-color:#4f321d}
@@ -31,8 +31,8 @@ svg{flex:none}
 .menu{list-style:none;margin:0;padding:0;display:grid;gap:4px}
 .menu a{display:flex;align-items:center;gap:10px;min-height:44px;padding:8px 12px;border-radius:14px;color:var(--ink);text-decoration:none;font-weight:700;transition:background .18s,color .18s}
 .menu a svg{width:19px;height:19px;color:var(--accent-2)}
-.menu a:not([aria-current]):hover{background:var(--dark);color:#fff}
-.menu a:not([aria-current]):hover svg{color:#fff}
+.menu a:not([aria-current]):hover{background:#f3e6d8;color:#4d3320}
+.menu a:not([aria-current]):hover svg{color:#875a36}
 .menu a[aria-current]{background:linear-gradient(150deg,#8a5d38,#6b4629);color:#fff;box-shadow:0 12px 24px -14px rgba(107,70,41,.8)}
 .menu a[aria-current] svg{color:#fff}
 .menu-count{margin-inline-start:auto;min-width:24px;padding:0 7px;border-radius:999px;background:#fff;color:var(--accent);font-size:12px;text-align:center;line-height:22px}
@@ -94,8 +94,8 @@ input[type=checkbox]{width:18px;height:18px;accent-color:var(--accent);cursor:po
 .ticket-entry>input{margin:16px 6px 0 0}
 .ticket-row{flex:1;min-width:0;display:grid;gap:6px;padding:10px 12px;border-radius:14px;border:1px solid transparent;background:#fff;color:var(--ink);font:inherit;text-align:right;cursor:pointer;transition:background .18s,color .18s,border-color .18s}
 /* Beats the shared light hover in control-surfaces.css, which would leave white text on a pale row. */
-.staff-main .desk .ticket-row:is(:hover,:focus-visible){background:var(--dark);color:#fff;box-shadow:none}
-.staff-main .desk .ticket-row:is(:hover,:focus-visible) :is(time,.code){color:#d7e6ed}
+.staff-main .desk .ticket-row:is(:hover,:focus-visible){background:#f3e6d8;color:#4d3320;box-shadow:inset 0 0 0 1px #dcc2a7}
+.staff-main .desk .ticket-row:is(:hover,:focus-visible) :is(time,.code){color:#6b4f39}
 .ticket-row[aria-current]{border-color:var(--accent);box-shadow:0 0 0 3px rgba(107,70,41,.12)}
 .ticket-top{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
 .ticket-top strong{font-size:14px;line-height:1.7;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -122,7 +122,7 @@ input[type=checkbox]{width:18px;height:18px;accent-color:var(--accent);cursor:po
 .thread-title small{font-size:12px;color:var(--muted)}
 .code-copy{display:inline-flex;align-items:center;gap:4px;padding:1px 8px;border-radius:999px;border:1px solid var(--line);background:#fff;font:inherit;font-size:11.5px;cursor:pointer}
 .code-copy svg{width:13px;height:13px}
-.code-copy:hover{background:var(--dark);border-color:var(--dark);color:#fff}
+.code-copy:hover{background:#f3e6d8;color:#4d3320;border-color:#dcc2a7}
 .customer{display:flex;align-items:center;gap:10px;margin:12px 18px 0;padding:10px 12px;border-radius:16px;background:#fff;border:1px solid var(--line)}
 .customer>div{flex:1;min-width:0}.customer strong{display:block;font-size:13.5px}.customer small{font-size:11.5px;color:var(--muted)}
 .avatar{display:grid;place-items:center;width:38px;height:38px;border-radius:13px;background:linear-gradient(150deg,#cfe3ec,#a9c8d6);color:#1f4c5c;font-weight:800}
@@ -142,7 +142,7 @@ input[type=checkbox]{width:18px;height:18px;accent-color:var(--accent);cursor:po
 .composer{margin-top:auto;padding:12px 18px 18px;border-top:1px solid var(--line);background:rgba(255,255,255,.55);border-radius:0 0 22px 22px}
 .canned{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
 .chip{padding:3px 12px;border-radius:999px;border:1px solid var(--line);background:#fff;color:var(--ink);font:inherit;font-size:12px;font-weight:700;cursor:pointer;transition:background .18s,color .18s}
-.chip:hover{background:var(--dark);border-color:var(--dark);color:#fff}
+.chip:hover{background:#f3e6d8;color:#4d3320;border-color:#dcc2a7}
 .reply{display:grid;gap:8px}
 #reply-body{width:100%;min-height:110px;resize:vertical;padding:12px 14px;border-radius:16px;border:1px solid #c9dbe4;background:#fff;color:var(--ink);font:inherit;line-height:1.9}
 #reply-body:focus{border-color:var(--accent-2);outline:0;box-shadow:0 0 0 3px rgba(47,111,131,.18)}

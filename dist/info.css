@@ -1,5 +1,5 @@
 /* Info pages (about, contact, terms, privacy): calm glass panels over a slow aura, readable long-form text. */
-.lg{--lg-ink:#1d2c36;--lg-muted:#3f5463;--lg-line:rgba(120,150,168,.28);--lg-accent:#6b4629;--lg-accent-2:#2f6f83;--lg-glass:rgba(255,255,255,.66);--lg-glass-edge:rgba(255,255,255,.9);--lg-shadow:0 18px 50px -24px rgba(29,44,54,.28),0 2px 6px rgba(29,44,54,.05);
+.lg{--lg-ink:#1d2c36;--lg-muted:#3f5463;--lg-line:rgba(120,150,168,.28);--lg-accent:#6b4629;--lg-accent-2:#3d5c6f;--lg-glass:rgba(255,255,255,.66);--lg-glass-edge:rgba(255,255,255,.9);--lg-shadow:0 18px 50px -24px rgba(29,44,54,.28),0 2px 6px rgba(29,44,54,.05);
   position:relative;isolation:isolate;max-width:1160px;margin:auto;padding:20px 24px 72px;color:var(--lg-ink)}
 .lg-aura{position:absolute;inset:0 0 auto;height:620px;z-index:-1;overflow:hidden;pointer-events:none;-webkit-mask:radial-gradient(ellipse 60% 70% at 50% 25%,#000 35%,transparent 100%);mask:radial-gradient(ellipse 60% 70% at 50% 25%,#000 35%,transparent 100%)}
 .lg-aura i{position:absolute;border-radius:50%;filter:blur(60px);opacity:.55}
@@ -64,8 +64,8 @@
 .lg-cta{display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap;margin-top:28px;padding:22px 26px;border-radius:24px;background:linear-gradient(120deg,rgba(207,227,236,.75),rgba(239,220,200,.7))}
 .lg-cta b{font-size:17px}
 .lg-cta p{margin:4px 0 0;font-size:13.5px;color:var(--lg-muted)}
-.lg-btn{display:inline-flex;align-items:center;gap:8px;min-height:46px;padding:10px 22px;border-radius:999px;background:linear-gradient(145deg,#24566a,#1d3a46);color:#fff!important;font-size:14px;font-weight:600;text-decoration:none;box-shadow:0 10px 24px -12px rgba(29,58,70,.7);transition:transform .2s,box-shadow .2s}
-.lg-btn:hover{box-shadow:0 14px 28px -12px rgba(29,58,70,.8)}
+.lg-btn{display:inline-flex;align-items:center;gap:8px;min-height:46px;padding:10px 22px;border-radius:999px;background:linear-gradient(150deg,#8a5d38,#6b4629);color:#fff!important;font-size:14px;font-weight:600;text-decoration:none;box-shadow:0 10px 24px -12px rgba(107,70,41,.6);transition:transform .2s,box-shadow .2s}
+.lg-btn:hover{background:#4f321d;box-shadow:0 14px 28px -12px rgba(77,51,32,.8)}
 .lg-btn--sm{min-height:40px;padding:8px 18px;font-size:13px}
 .lg-btn svg{width:18px;height:18px}
 

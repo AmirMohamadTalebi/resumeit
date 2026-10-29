@@ -64,7 +64,7 @@
   RI.workspaceLimit=()=>Object.hasOwn(RI.ownerSettings||{},'subdomainLimit')?RI.ownerSettings.subdomainLimit:(RI.hasSub()?2:1)+(RI.ownerSettings?.extraSubdomain?1:0);
   RI.canWorkspace=slot=>Number.isSafeInteger(slot)&&slot>=1&&slot<=2147483647&&(slot===3?RI.hasSub():RI.workspaceLimit()===null||(slot<3?slot:slot-1)<=RI.workspaceLimit());
   RI.shareCard=(c,kind='resume')=>{const header=kind==='links'&&!c.links.header.sync?c.links.header:c.profile;return {title:c.share.title.trim()||header.name||'صفحهٔ شخصی',desc:c.share.desc.trim()||header.bio||'',image:c.share.image||c.profile.cover||c.profile.avatar||null};};
-  RI.publicationData=(k,c)=>k==='resume'?{routing:c.routing,slug:c.slug,profile:c.profile,contacts:c.contacts,skills:c.skills,experience:c.experience,education:c.education,projects:c.projects,certs:c.certs,languages:c.languages,socials:c.socials,sections:c.sections,resumeTemplates:c.resumeTemplates,theme:{resume:c.theme.resume,font:c.theme.font,palette:c.theme.palette,radius:c.theme.radius},share:c.share,branding:c.branding?.resume}:{routing:c.routing,slug:c.slug,links:c.links,name:c.profile.name,bio:c.profile.bio,avatar:c.profile.avatar,theme:{links:c.theme.links,font:c.theme.font,linksPalette:c.theme.linksPalette,radius:c.theme.radius,resume:c.links.style.matchResume?c.theme.resume:undefined},share:c.share,branding:c.branding?.links};
+  RI.publicationData=(k,c)=>k==='resume'?{routing:c.routing,slug:c.slug,profile:c.profile,contacts:c.contacts,skills:c.skills,experience:c.experience,education:c.education,projects:c.projects,certs:c.certs,languages:c.languages,socials:c.socials,sections:c.sections,resumeTemplates:c.resumeTemplates,theme:{resume:c.theme.resume,font:c.theme.font,palette:c.theme.palette,custom:c.theme.custom,radius:c.theme.radius},share:c.share,branding:c.branding?.resume}:{routing:c.routing,slug:c.slug,links:c.links,name:c.profile.name,bio:c.profile.bio,avatar:c.profile.avatar,theme:{links:c.theme.links,font:c.theme.font,linksPalette:c.theme.linksPalette,custom:c.theme.custom,radius:c.theme.radius,resume:c.links.style.matchResume?c.theme.resume:undefined},share:c.share,branding:c.branding?.links};
   RI.it = amount => RI.fa(amount / RI.IT_RATE) + ' It';
   RI.allowed = (ref, item, billing = {}, now = Date.now()) => item.access === 'free' ||
     (item.access === 'buy' && (billing.purchases || []).some(p => p.ref === ref)) ||
@@ -78,14 +78,97 @@
     { id: 'system', name: 'سیستمی', access: 'free', stack: "Tahoma, 'Segoe UI', system-ui, sans-serif", hw: 700, note: 'بدون دانلود فونت؛ مناسب سرعت و سادگی' },
   ];
 
+  // [accent, second accent]. They are seeds, not final colors: RI.harmonize adapts them to each template's background.
+  RI.PALETTE_GROUPS = [['calm', 'آرام و رسمی'], ['warm', 'گرم'], ['bold', 'پررنگ و زنده']];
   RI.PALETTES = [
     { id: 'default', name: 'پیش‌فرض قالب', access: 'free', colors: null },
-    { id: 'ice', name: 'آبی یخی', access: 'free', colors: ['#52788d', '#a47248'] },
-    { id: 'cocoa', name: 'قهوه‌ای گرم', access: 'free', colors: ['#875a36', '#52788d'] },
-    { id: 'sage', name: 'سبز مات', access: 'sub', colors: ['#5e8b7e', '#b08457'] },
-    { id: 'navy', name: 'سرمه‌ای', access: 'sub', colors: ['#34508a', '#c79a6b'] },
-    { id: 'sand', name: 'شنی', access: 'buy', price: 46000, colors: ['#b08457', '#5b7482'] },
+    { id: 'ice', group: 'calm', name: 'آبی یخی', access: 'free', colors: ['#52788d', '#a47248'] },
+    { id: 'slate', group: 'calm', name: 'سنگی', access: 'free', colors: ['#56687a', '#b07d52'] },
+    { id: 'stone', group: 'calm', name: 'خاکستری گرم', access: 'free', colors: ['#7a6e62', '#4f7a8a'] },
+    { id: 'sage', group: 'calm', name: 'سبز مات', access: 'sub', colors: ['#5e8b7e', '#b08457'] },
+    { id: 'mist', group: 'calm', name: 'آبی مه', access: 'sub', colors: ['#5f84aa', '#c39a72'] },
+    { id: 'olive', group: 'calm', name: 'زیتونی', access: 'sub', colors: ['#6e7b4c', '#a8704c'] },
+    { id: 'cocoa', group: 'warm', name: 'قهوه‌ای گرم', access: 'free', colors: ['#875a36', '#52788d'] },
+    { id: 'terracotta', group: 'warm', name: 'آجری', access: 'free', colors: ['#b3573a', '#3f6e7a'] },
+    { id: 'sand', group: 'warm', name: 'شنی', access: 'buy', price: 46000, colors: ['#b08457', '#5b7482'] },
+    { id: 'amber', group: 'warm', name: 'کهربایی', access: 'sub', colors: ['#b8862b', '#3d5c6f'] },
+    { id: 'rose', group: 'warm', name: 'گلبهی', access: 'sub', colors: ['#b05470', '#557a8c'] },
+    { id: 'copper', group: 'warm', name: 'مسی', access: 'sub', colors: ['#a8613a', '#2f6475'] },
+    { id: 'emerald', group: 'bold', name: 'زمردی', access: 'free', colors: ['#1f8a63', '#c9853f'] },
+    { id: 'ocean', group: 'bold', name: 'اقیانوسی', access: 'free', colors: ['#1d6fb8', '#e0a04f'] },
+    { id: 'navy', group: 'bold', name: 'سرمه‌ای', access: 'sub', colors: ['#34508a', '#c79a6b'] },
+    { id: 'teal', group: 'bold', name: 'فیروزه‌ای', access: 'sub', colors: ['#157a86', '#d08a54'] },
+    { id: 'indigo', group: 'bold', name: 'نیلی', access: 'sub', colors: ['#4b4fb5', '#d9a25a'] },
+    { id: 'plum', group: 'bold', name: 'آلویی', access: 'sub', colors: ['#7b3f8c', '#cf9a62'] },
+    { id: 'crimson', group: 'bold', name: 'زرشکی', access: 'sub', colors: ['#a8263c', '#2f6b8a'] },
+    { id: 'custom', group: 'custom', name: 'رنگ دلخواه', access: 'sub', colors: null },
   ];
+
+  /* ---------- هماهنگی رنگ ----------
+     A palette gives two seed colors; every template derives its own readable set from them, so one color choice
+     changes the whole page consistently and never puts dark text on a dark background or the reverse. */
+  const hexRgb = (h) => { const n = parseInt(String(h).slice(1), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; };
+  const rgbHex = (r) => '#' + r.map((v) => Math.round(Math.max(0, Math.min(255, v))).toString(16).padStart(2, '0')).join('');
+  const isHex = (h) => typeof h === 'string' && /^#[0-9a-f]{6}$/i.test(h);
+  function lum(h) { return hexRgb(h).map((v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }).reduce((s, v, i) => s + v * [0.2126, 0.7152, 0.0722][i], 0); }
+  function contrast(a, b) { const x = lum(a), y = lum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); }
+  function mix(a, b, t) { const x = hexRgb(a), y = hexRgb(b); return rgbHex(x.map((v, i) => v + (y[i] - v) * t)); }
+  function toHsl(h) { const [r, g, b] = hexRgb(h).map((v) => v / 255), max = Math.max(r, g, b), min = Math.min(r, g, b), l = (max + min) / 2, d = max - min; if (!d) return [0, 0, l]; const s = d / (1 - Math.abs(2 * l - 1)); const hue = max === r ? ((g - b) / d) % 6 : max === g ? (b - r) / d + 2 : (r - g) / d + 4; return [(hue * 60 + 360) % 360, s, l]; }
+  function fromHsl(h, s, l) { const c = (1 - Math.abs(2 * l - 1)) * s, x = c * (1 - Math.abs(((h / 60) % 2) - 1)), m = l - c / 2, [r, g, b] = h < 60 ? [c, x, 0] : h < 120 ? [x, c, 0] : h < 180 ? [0, c, x] : h < 240 ? [0, x, c] : h < 300 ? [x, 0, c] : [c, 0, x]; return rgbHex([r, g, b].map((v) => (v + m) * 255)); }
+  // Moves only lightness (dark on light backgrounds, light on dark ones) until every background reaches the ratio.
+  function readable(color, backgrounds, ratio) {
+    if (!isHex(color)) return color;
+    const ok = (c) => backgrounds.every((b) => !isHex(b) || contrast(c, b) >= ratio);
+    if (ok(color)) return color;
+    const [h, s, l] = toHsl(color), dark = backgrounds.filter(isHex).reduce((n, b) => n + lum(b), 0) / Math.max(1, backgrounds.filter(isHex).length) < 0.25;
+    for (let i = 1; i <= 40; i++) { const c = fromHsl(h, dark ? Math.min(s, 0.75) : s, dark ? l + (1 - l) * i / 40 : l * (1 - i / 40)); if (ok(c)) return c; }
+    return dark ? '#ffffff' : '#000000';
+  }
+  const onColor = (c) => contrast(c, '#ffffff') >= contrast(c, '#111111') ? '#ffffff' : '#111111';
+  RI.color = { lum, contrast, mix, readable, onColor, isHex, toHsl, fromHsl };
+  // A pleasant second color for a custom accent: a calm complementary tone.
+  RI.secondColor = (c) => { const [h, s] = toHsl(c); return fromHsl((h + 150) % 360, Math.min(0.42, s * 0.6 + 0.12), 0.48); };
+  RI.paletteColors = (theme, key = 'palette') => {
+    const id = theme && theme[key];
+    if (id === 'custom') return isHex(theme.custom) ? [theme.custom.toLowerCase(), RI.secondColor(theme.custom)] : null;
+    const p = RI.PALETTES.find((x) => x.id === id);
+    return p && p.colors ? p.colors : null;
+  };
+  // Template variables (bg, surface, ink, muted, accent, accent2, hero, line) re-derived from two seed colors.
+  RI.harmonize = (v, colors) => {
+    if (!colors) return v;
+    const dark = lum(v.bg) < 0.2, base = dark ? v.surface : v.bg;
+    const accent = readable(colors[0], [v.bg, v.surface], 4.5), accent2 = readable(colors[1], [v.bg], 3);
+    return Object.assign({}, v, {
+      accent, accent2,
+      muted: readable(mix(v.muted, accent, 0.14), [v.bg, v.surface], 4.5),
+      line: mix(v.line, colors[0], dark ? 0.24 : 0.18),
+      hero: 'linear-gradient(135deg,' + mix(base, colors[0], dark ? 0.36 : 0.24) + ',' + mix(v.bg, colors[1], dark ? 0.08 : 0.06) + ')',
+    });
+  };
+  // A gradient background is judged by the average of its colour stops.
+  const solid = (bg) => { if (isHex(bg)) return bg; const stops = String(bg || '').match(/#[0-9a-f]{6}/gi) || []; return stops.length ? stops.reduce((acc, c, i) => mix(acc, c, 1 / (i + 1))) : '#ffffff'; };
+  RI.color.solid = solid;
+  // Link pages: filled buttons in the accent with readable text, borders and highlights from the same color.
+  RI.harmonizeLinks = (v, colors) => {
+    if (!colors) return v;
+    const page = solid(v.bg);
+    let btn = colors[0]; if (Math.max(contrast(btn, '#ffffff'), contrast(btn, '#111111')) < 4.5) btn = readable(btn, ['#ffffff'], 4.5);
+    return Object.assign({}, v, { btnBg: btn, btnInk: onColor(btn), btnBd: mix(btn, page, 0.35), accent: readable(colors[0], [page], 3) });
+  };
+  // Imported templates carry many raw colors; those close in hue to the template's own accents follow the palette
+  // (same lightness, so hover and gradient steps keep their order) and keep at least their original contrast.
+  RI.remapAccent = (raw, sources, colors, bg) => {
+    if (!colors || !isHex(raw)) return raw;
+    // Backgrounds (very dark), tints (very light), greys and brand colours further away in hue keep their value.
+    const [h, s, l] = toHsl(raw); if (s < 0.35 || l < 0.2 || l > 0.85) return raw;
+    const dist = (a, b) => Math.min(Math.abs(a - b), 360 - Math.abs(a - b));
+    let best = -1, gap = 14;
+    sources.forEach((src, i) => { const d = dist(h, toHsl(src)[0]); if (d < gap) { gap = d; best = i; } });
+    if (best < 0) return raw;
+    const [th, ts] = toHsl(colors[best]), next = fromHsl(th, Math.max(0.2, Math.min(1, ts * (s / Math.max(0.2, toHsl(sources[best])[1])))), l);
+    return isHex(bg) ? readable(next, [bg], Math.min(4.5, contrast(raw, bg))) : next;
+  };
 
   /* ---------- پلن‌ها (خرید با It، شارژ آنلاین غیرفعال) ---------- */
   RI.PLANS = {
@@ -130,7 +213,7 @@
         items: [],
         style: { align: 'center', ring: true, bgOverride: null, matchResume: false },
       },
-      theme: { resume: 'glacier', links: 'frost', font: 'vazir', palette: 'default', linksPalette: 'default', radius: 'soft' },
+      theme: { resume: 'glacier', links: 'frost', font: 'vazir', palette: 'default', linksPalette: 'default', custom: '', radius: 'soft' },
       share: { title: '', desc: '', image: null },
       branding: { resume: { mode: 'resumeit', text: '' }, links: { mode: 'resumeit', text: '' } },
       domain: { value: '', status: 'none' },
