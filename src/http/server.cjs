@@ -35,6 +35,8 @@ function createServer(database, options) {
   server.on('listening',notifications.start);
   server.on('close',notifications.stop);
   if(database.expireAccountNotices){let expiry;server.on('listening',()=>{expiry=setInterval(()=>database.expireAccountNotices().catch(()=>{}),30000);expiry.unref();});server.on('close',()=>clearInterval(expiry));}
+  // Dashboard images no page has used for a day are removed.
+  if(database.sweepDashboardMedia){let sweep;server.on('listening',()=>{sweep=setInterval(()=>database.sweepDashboardMedia().catch(()=>{}),3600000);sweep.unref();});server.on('close',()=>clearInterval(sweep));}
   return server;
 }
 module.exports = { createServer };

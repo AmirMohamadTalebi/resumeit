@@ -34,6 +34,9 @@ module.exports=({execute,transaction})=>({
             // Text replacement cannot tell fields apart; leave an address that is also used as a link target.
             for(const url of [...map.keys()])if(all.includes('"url":'+JSON.stringify(url))||all.includes('"url": '+JSON.stringify(url)))map.delete(url);
             if(!map.size)return;
+            // The copied bytes go to dashboard_media; the documents get the image's address in place of the URL.
+            const media=require('../dashboard/media.cjs');
+            for(const [url,data] of map){const hash=media.digest(data),{type,body}=media.decode(data);await con.execute('INSERT IGNORE INTO dashboard_media(user_id,hash,mime,size,data,created_at) VALUES(?,?,?,?,?,?)',[keys[0],hash,type,body.length,body,Date.now()]);await con.execute('UPDATE dashboard_media SET orphaned_at=NULL WHERE user_id=? AND hash=?',[keys[0],hash]);map.set(url,media.refOf(hash));}
             await con.execute(`UPDATE ${table} SET draft=?,published=?,pub=? WHERE ${where}`,[swap(text(locked.draft),map),locked.published==null?null:swap(text(locked.published),map),swap(text(locked.pub),map),...keys]);
           });
           summary.rows++;summary.images+=map.size;

@@ -3,7 +3,8 @@ const model=require('./model.cjs'),{render,RI}=require('./render.cjs');
 const {gzipSync}=require('node:zlib');
 const {serveStatic,publicAssets}=require('../http/static.cjs');
 const pubData=(c,k)=>RI.publicationData(k,c);
-const metrics=require('./metrics.cjs'),mediaCache=require('./media-cache.cjs');
+const metrics=require('./metrics.cjs'),mediaCache=require('./media-cache.cjs'),stored=require('./media.cjs');
+const extension=type=>type==='image/jpeg'?'jpg':type.slice(6);
 function dashboardHandler(database,auth,notifications,options){const reset=require('./reset.cjs')(database,options);return async(req,res,pathname,origin)=>{
   if(publicAssets.has(pathname)||pathname.startsWith('/templates/')||pathname.startsWith('/fonts/')){await serveStatic(req,res,pathname,origin);return true;}
   const root=new URL(origin),host=(req.headers.host||'').toLowerCase(),domain=root.hostname.startsWith('127.')||root.hostname==='localhost'?'resumeit.ir':root.hostname;
@@ -27,11 +28,16 @@ function dashboardHandler(database,auth,notifications,options){const reset=requi
     const mediaRoute=/^\/media\/([a-f0-9]{32})\.(?:png|jpg|webp)$/.exec(route),mediaScope='p:'+host+base;
     if(mediaRoute){
       let entry=mediaCache.get(mediaScope,mediaRoute[1]);
+      const allowedOwner=!entry&&database.dashboardMedia&&mediaCache.allowedOwner(mediaScope,mediaRoute[1]);
+      if(allowedOwner){const row=await database.dashboardMedia(allowedOwner,mediaRoute[1]);if(row)entry=mediaCache.set(mediaScope,mediaRoute[1],row);}
       if(!entry){
         const found=pathPages||(database.publicWorkspace?await database.publicWorkspace(slug):{resume:await database.publicPage(slug,'resume'),links:await database.publicPage(slug,'links')}),owner=found?.resume||found?.links;
         const billing=owner&&database.billing?await database.billing(owner.id):{};
-        for(const k of ['resume','links'])if(found?.[k])mediaCache.fill(mediaScope,model.publicContent(found[k].content,billing));
+        const contents=['resume','links'].filter(k=>found?.[k]).map(k=>model.publicContent(found[k].content,billing));
+        for(const c of contents)mediaCache.fill(mediaScope,c);
         entry=mediaCache.get(mediaScope,mediaRoute[1]);
+        // Only images the published pages use are public; their bytes come from the account's image table.
+        if(!entry&&owner&&database.dashboardMedia&&contents.some(c=>stored.hashes(c).has(mediaRoute[1]))){const row=await database.dashboardMedia(owner.id,mediaRoute[1]);if(row)entry=mediaCache.set(mediaScope,mediaRoute[1],row);}
       }
       if(!entry){res.writeHead(404);res.end();return true;}
       res.writeHead(200,{'Content-Type':entry.type,'Content-Length':entry.body.length,'Cache-Control':'public, max-age=31536000, immutable','X-Content-Type-Options':'nosniff'});res.end(req.method==='HEAD'?undefined:entry.body);return true;
@@ -42,17 +48,19 @@ function dashboardHandler(database,auth,notifications,options){const reset=requi
     if(![...linkRoutes,'/','/share-image',resumePath,resumePath+'/share-image'].includes(route)&&!outgoing){res.writeHead(404);res.end('صفحه پیدا نشد');return true;}
     const page=pages?.[kind];if(!page){res.writeHead(404);res.end('صفحه پیدا نشد');return true;}
     if(outgoing){const link=page.content.links.items.find(x=>x.id===outgoing[1]&&x.type==='link'&&x.active);const url=link&&model.webUrl(link.url);if(!url){res.writeHead(404);res.end();return true;}if(metrics.countable(req,'click|'+page.id+'|'+link.id+'|'+host))await database.recordMetric(page.id,'click',link.id,Date.now(),page.slot||1);res.writeHead(302,{Location:url});res.end();return true;}
-    if(route.endsWith('/share-image')){const img=RI.shareCard(page.content,kind).image,m=/^data:image\/(png|jpeg|webp);base64,(.+)$/.exec(img||'');if(!m){res.writeHead(404);res.end();return true;}res.writeHead(200,{'Content-Type':'image/'+m[1]});res.end(req.method==='HEAD'?undefined:Buffer.from(m[2],'base64'));return true;}
+    if(route.endsWith('/share-image')){const img=RI.shareCard(page.content,kind).image,ref=stored.refHash(img),row=ref&&database.dashboardMedia?await database.dashboardMedia(page.id,ref):null;if(row){res.writeHead(200,{'Content-Type':row.type,'Content-Length':row.body.length});res.end(req.method==='HEAD'?undefined:row.body);return true;}const m=/^data:image\/(png|jpeg|webp);base64,(.+)$/.exec(img||'');if(!m){res.writeHead(404);res.end();return true;}res.writeHead(200,{'Content-Type':'image/'+m[1]});res.end(req.method==='HEAD'?undefined:Buffer.from(m[2],'base64'));return true;}
     const c=model.publicContent(page.content,database.billing?await database.billing(page.id):{}),esc=RI.esc,canonical=pathPages?root.protocol+'//'+domain+base:local?origin+base+(kind==='links'?linksPath:resumePath):root.protocol+'//'+slug+'.'+domain+(kind==='links'?linksPath:resumePath);
     c._publicPages={resume:!!pages?.resume,links:!!pages?.links};
     if(pathPages)c._linksOnly=true;
-    const card=RI.shareCard(c,kind),image=card.image,ogImage=/^https:\/\//.test(image||'')?image:/^data:image\//.test(image||'')?canonical+'/share-image':null;
+    const card=RI.shareCard(c,kind),image=card.image,ogImage=/^https:\/\//.test(image||'')?image:/^data:image\//.test(image||'')||stored.refHash(image)?canonical+'/share-image':null;
     const templatePage=new URL(req.url,origin).searchParams.get('page')||'home',imported=kind==='resume'&&RI.IMPORTED_TEMPLATES[c.theme.resume];
     if(imported&&!Object.hasOwn(imported.pages,templatePage)){if((imported.legacyPages||[]).includes(templatePage)){res.writeHead(308,{Location:canonical+'#ri-projects'});res.end();return true;}res.writeHead(404);res.end('صفحه پیدا نشد');return true;}
     const rendered=render(c,kind,page.preferences,base,templatePage).replaceAll('href="'+base+'/links"','href="'+base+linksPath+'"').replaceAll('href="'+base+'/"','href="'+base+(resumePath||'/')+'"').replaceAll('href="'+base+'/?page=','href="'+base+resumePath+'/?page=');
     const html='<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+esc(card.title)+'</title><meta name="description" content="'+esc(card.desc)+'"><meta name="robots" content="'+(page.preferences.indexing?'index,follow':'noindex,nofollow')+'"><link rel="canonical" href="'+esc(canonical+(imported&&templatePage!=='home'?'/?page='+templatePage:''))+'"><meta property="og:title" content="'+esc(card.title)+'"><meta property="og:description" content="'+esc(card.desc)+'"><meta property="og:url" content="'+esc(canonical)+'">'+(ogImage?'<meta property="og:image" content="'+esc(ogImage)+'">':'')+'<link rel="icon" href="/brand/favicon.svg">'+(imported?'':'<link rel="stylesheet" href="/fonts/fonts.css"><link rel="stylesheet" href="/public-assets/tokens.css"><link rel="stylesheet" href="/public-assets/base.css"><link rel="stylesheet" href="/public-assets/preview.css">')+'</head><body'+(imported?' class="'+esc(imported.pages[templatePage].bodyClass)+'"':'')+'><main class="public-page">'+rendered+'</main>'+(imported?'<script src="/templates/template-runtime.js"></script>':'')+'</body></html>';
-    const inline=mediaCache.fill(mediaScope,c);
-    const output=html.replace(/data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/]+={0,2}/g,(value,type)=>inline.has(value)?base+'/media/'+inline.get(value)+'.'+(type==='jpeg'?'jpg':type):value).replace('<script src="/templates/template-runtime.js">',(imported?'<script src="/templates/vista-runtime.js"></script>':'')+'<script src="/templates/template-runtime.js">').replace('</body>','<script src="/public-assets/projects.js"></script></body>').replace('</head>','<meta property="og:type" content="website"><meta name="twitter:card" content="'+(ogImage?'summary_large_image':'summary')+'"><meta name="twitter:title" content="'+esc(card.title)+'"><meta name="twitter:description" content="'+esc(card.desc)+'">'+(ogImage?'<meta name="twitter:image" content="'+esc(ogImage)+'">':'')+'</head>');
+    const inline=mediaCache.fill(mediaScope,c),inlined=new Set(inline.values()),refs=[...stored.hashes(c)].filter(h=>!inlined.has(h)),types=await mediaCache.types(page.id,refs,database.dashboardMediaTypes?ids=>database.dashboardMediaTypes(page.id,ids):async()=>new Map());
+    mediaCache.allow(mediaScope,page.id,[...types.keys()]);
+    // Stored image addresses (the renderer makes them absolute) become public, content-hashed files.
+    const output=html.replace(/(?:https:\/\/resumeit\.ir)?\/api\/dashboard\/media\/([a-f0-9]{32})/g,(value,hash)=>types.has(hash)?base+'/media/'+hash+'.'+extension(types.get(hash)):value).replace(/data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/]+={0,2}/g,(value,type)=>inline.has(value)?base+'/media/'+inline.get(value)+'.'+(type==='jpeg'?'jpg':type):value).replace('<script src="/templates/template-runtime.js">',(imported?'<script src="/templates/vista-runtime.js"></script>':'')+'<script src="/templates/template-runtime.js">').replace('</body>','<script src="/public-assets/projects.js"></script></body>').replace('</head>','<meta property="og:type" content="website"><meta name="twitter:card" content="'+(ogImage?'summary_large_image':'summary')+'"><meta name="twitter:title" content="'+esc(card.title)+'"><meta name="twitter:description" content="'+esc(card.desc)+'">'+(ogImage?'<meta name="twitter:image" content="'+esc(ogImage)+'">':'')+'</head>');
     securityHeaders(res,origin,output);
     res.setHeader('Cache-Control','private, no-store');
     if(req.method==='GET'){
@@ -84,6 +92,8 @@ function dashboardHandler(database,auth,notifications,options){const reset=requi
         // A matching validator can only describe these exact bytes, so revalidation needs no document read.
         if((req.headers['if-none-match']||'').split(',').map(v=>v.trim()).includes(etag)){cacheable();res.writeHead(304);res.end();return true;}
         let entry=mediaCache.get(scope,media[1]);
+        if(!entry&&database.dashboardMedia){const row=await database.dashboardMedia(user.id,media[1]);if(row)entry=mediaCache.set(scope,media[1],row);}
+        // Rows not yet moved by the startup migration still hold their images inline.
         if(!entry){mediaCache.fill(scope,(await database.loadDashboard(user.id,workspace)).content);entry=mediaCache.get(scope,media[1]);}
         if(!entry)model.fail('تصویر پیدا نشد',404);
         cacheable();res.writeHead(200,{'Content-Type':entry.type,'Content-Length':entry.body.length});res.end(entry.body);return true;
@@ -120,10 +130,12 @@ function dashboardHandler(database,auth,notifications,options){const reset=requi
     // External image addresses are copied onto ResumeIt before anything is stored or published; the transaction
     // stops with EXTERNAL_IMAGES, the files are downloaded outside it, and the mutation runs once more.
     const localized=new Map(),media=require('./media.cjs');let result;
+    // Images the editor sends back (as addresses or still inline) that this account already stores.
+    const sent=media.hashes(patch??input.content),known=sent.size&&database.dashboardMediaKnown?await database.dashboardMediaKnown(user.id,[...sent]):new Set();
     for(let attempt=0;;attempt++){
       try{
         result=await database.mutateDashboard(user.id,input.revision,doc=>{
-          if(saving){doc.content=model.content(patch?{...doc.content,...patch}:input.content,billing,doc.content,{localized});doc.preferences=model.preferences(input.preferences);doc.slug=doc.content.slug||null;return;}
+          if(saving){doc.content=model.content(patch?{...doc.content,...patch}:input.content,billing,doc.content,{localized,known});doc.preferences=model.preferences(input.preferences);doc.slug=doc.content.slug||null;return;}
           const k=input.kind;if(!['resume','links'].includes(k))model.fail('نوع صفحه معتبر نیست');
           if(workspace===3&&k==='resume')model.fail('جایگاه سوم مخصوص صفحهٔ لینک‌هاست');
           if(pathname.endsWith('/unpublish')){doc.pub[k].status='draft';doc.pub[k].snap=null;delete doc.published[k];return;}

@@ -21,5 +21,24 @@ function get(scope,hash){
 }
 // Adds every image found in a document; returns data URI → hash so callers can swap inline images for URLs.
 function fill(scope,content){const found=new Map();for(const [hash,value] of require('./media.cjs').images(content)){if(put(scope,value,hash))found.set(value,hash);}return found;}
-function clear(){entries.clear();bytes=0;}
-module.exports={put,get,fill,hashOf,clear};
+// Stores bytes read from dashboard_media under the same bounds as inline images.
+function set(scope,hash,{type,body}){
+  const key=scope+'|'+hash,entry={type,body,at:Date.now()};drop(key);
+  if(body.length<=limit/4){while(entries.size&&bytes+body.length>limit)drop(entries.keys().next().value);entries.set(key,entry);bytes+=body.length;}
+  return entry;
+}
+// A hash always names the same bytes, so its type never changes; public pages look each one up once.
+const typeCache=new Map();
+async function types(owner,hashes,lookup){
+  const result=new Map(),missing=[];
+  for(const hash of hashes){const type=typeCache.get(owner+'|'+hash);if(type)result.set(hash,type);else missing.push(hash);}
+  if(missing.length)for(const [hash,type] of await lookup(missing)){result.set(hash,type);if(typeCache.size>=20000)typeCache.delete(typeCache.keys().next().value);typeCache.set(owner+'|'+hash,type);}
+  return result;
+}
+// Which stored images a rendered public page may serve, and whose they are; lets the file request skip
+// re-reading the page. Expires like the bytes so an unpublished image stops being reachable.
+const allowed=new Map();
+function allow(scope,owner,hashes){for(const hash of hashes){const key=scope+'|'+hash;allowed.delete(key);if(allowed.size>=20000)allowed.delete(allowed.keys().next().value);allowed.set(key,{owner,at:Date.now()});}}
+function allowedOwner(scope,hash){const key=scope+'|'+hash,entry=allowed.get(key);if(!entry)return null;if(Date.now()-entry.at>age){allowed.delete(key);return null;}return entry.owner;}
+function clear(){entries.clear();bytes=0;typeCache.clear();allowed.clear();}
+module.exports={put,get,set,fill,types,allow,allowedOwner,hashOf,clear};

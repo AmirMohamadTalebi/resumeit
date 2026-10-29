@@ -4,7 +4,7 @@ const png='data:image/png;base64,'+Buffer.concat([Buffer.from([137,80,78,71,13,1
 // Minimal SQLite adapter with the same execute/transaction shape as the MySQL pool wrapper.
 function sqlite(schema){
   const sql=new DatabaseSync(':memory:');sql.exec(schema);
-  const execute=async(query,args=[])=>{const stmt=sql.prepare(query.replace(/ FOR UPDATE/g,''));const values=args.map(v=>typeof v==='boolean'?Number(v):v);if(/^\s*SELECT/i.test(query))return stmt.all(...values);return {affectedRows:stmt.run(...values).changes};};
+  const execute=async(query,args=[])=>{const stmt=sql.prepare(query.replace(/ FOR UPDATE/g,'').replace(/INSERT IGNORE/g,'INSERT OR IGNORE'));const values=args.map(v=>typeof v==='boolean'?Number(v):v);if(/^\s*SELECT/i.test(query))return stmt.all(...values);return {affectedRows:stmt.run(...values).changes};};
   const transaction=async action=>{sql.exec('BEGIN');try{const result=await action({execute:async(q,a)=>[await execute(q,a)]});sql.exec('COMMIT');return result;}catch(e){sql.exec('ROLLBACK');throw e;}};
   return {sql,execute,transaction};
 }
@@ -28,14 +28,16 @@ function sqlite(schema){
   assert.equal(saved.profile.avatar,png);assert.equal(saved.links.items[0].url,'https://cdn.example/a.png');
   assert.equal(model.content(c,{},model.initial().content).profile.avatar,'https://cdn.example/a.png','callers without the option keep the old behaviour');
 
-  // Stored content is localized in place, including the escaped copy inside publication snapshots.
-  const store=sqlite('CREATE TABLE dashboard_documents(user_id TEXT PRIMARY KEY,draft TEXT,published TEXT,pub TEXT,revision INTEGER);CREATE TABLE dashboard_workspaces(user_id TEXT,slot INTEGER,draft TEXT,published TEXT,pub TEXT,revision INTEGER);');
+  // Stored content is localized in place, including the escaped copy inside publication snapshots; the bytes go to dashboard_media.
+  const store=sqlite('CREATE TABLE dashboard_documents(user_id TEXT PRIMARY KEY,draft TEXT,published TEXT,pub TEXT,revision INTEGER);CREATE TABLE dashboard_workspaces(user_id TEXT,slot INTEGER,draft TEXT,published TEXT,pub TEXT,revision INTEGER);CREATE TABLE dashboard_media(user_id TEXT,hash TEXT,mime TEXT,size INTEGER,data BLOB,created_at INTEGER,orphaned_at INTEGER,PRIMARY KEY(user_id,hash));');
   const stored=model.initial().content;stored.profile.avatar='https://cdn.example/old.png';
   await store.execute('INSERT INTO dashboard_documents VALUES(?,?,?,?,?)',['u1',JSON.stringify(stored),JSON.stringify({resume:stored}),JSON.stringify({resume:{status:'published',snap:JSON.stringify({avatar:stored.profile.avatar})}}),7]);
   const images=require('../src/database/external-images.cjs')(store);
   assert.deepEqual(await images.localizeStoredImages(async()=>png),{rows:1,images:1,failed:0});
   const [row]=await store.execute('SELECT * FROM dashboard_documents');
-  assert.equal(JSON.parse(row.draft).profile.avatar,png);assert.equal(JSON.parse(row.published).resume.profile.avatar,png);assert.equal(JSON.parse(JSON.parse(row.pub).resume.snap).avatar,png);assert.equal(row.revision,7,'open editors keep their revision');
+  const address='/api/dashboard/media/'+require('../src/dashboard/media.cjs').digest(png),[file]=await store.execute('SELECT mime,data FROM dashboard_media WHERE user_id=?',['u1']);
+  assert.equal(JSON.parse(row.draft).profile.avatar,address);assert.equal(JSON.parse(row.published).resume.profile.avatar,address);assert.equal(JSON.parse(JSON.parse(row.pub).resume.snap).avatar,address);
+  assert.equal(file.mime,'image/png');assert.equal(Buffer.from(file.data).toString('base64'),png.split(',')[1]);assert.equal(row.revision,7,'open editors keep their revision');
   assert.deepEqual(await images.localizeStoredImages(async()=>{throw Error('no second download');}),{rows:0,images:0,failed:0});
 
   // Sessions: device list, single revoke, sign out everywhere else, throttled last-seen.

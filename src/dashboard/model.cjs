@@ -5,6 +5,8 @@ function slugValid(s){return typeof s==='string'&&s.length>=3&&s.length<=24&&/^[
 function webUrl(s){if(typeof s!=='string'||!s||s.length>2048||/[\s\x00-\x1f\x7f]/.test(s))return null;try{if(!/^https?:\/\//i.test(s))s='https://'+s;const u=new URL(s);return ['http:','https:'].includes(u.protocol)&&!u.username&&!u.password&&u.hostname.includes('.')?u.href:null;}catch{return null;}}
 const templates={contacts:{id:'',type:'',label:'',value:'',public:false},skills:{id:'',name:'',level:3},experience:{id:'',role:'',org:'',from:'',to:'',current:false,desc:''},education:{id:'',degree:'',school:'',from:'',to:'',current:false,desc:''},projects:{id:'',title:'',desc:'',url:'',image:null},certs:{id:'',title:'',issuer:'',year:''},languages:{id:'',name:'',level:3},socials:{id:'',platform:'',handle:''},sections:{key:'',visible:true},items:{id:'',type:'',title:'',url:'',icon:'link',active:true,featured:false,image:null}};
 function image(value,key){if(value===null||value==='')return null;if(typeof value!=='string'||value.length>3*1024*1024)fail('حجم تصویر بیش از حد مجاز است');if(key!=='avatar'&&/^grad:#[a-f0-9]{6},#[a-f0-9]{6}$/i.test(value))return value;
+  // A stored image address; expand() has already checked that this account holds the image.
+  if(/^\/api\/dashboard\/media\/[a-f0-9]{32}$/.test(value))return value;
   const m=/^data:image\/(png|jpeg|webp);base64,([A-Za-z0-9+/]+={0,2})$/.exec(value);if(m){const b=Buffer.from(m[2].slice(0,32),'base64');/* only the signature bytes are needed; decoding megabytes per autosave is wasted work */const valid=m[1]==='png'?b.subarray(0,8).equals(Buffer.from([137,80,78,71,13,10,26,10])):m[1]==='jpeg'?b[0]===255&&b[1]===216&&b[2]===255:b.toString('ascii',0,4)==='RIFF'&&b.toString('ascii',8,12)==='WEBP';if(valid)return value;}
   if(/^https:\/\//i.test(value)&&webUrl(value)&&!/[\s'"()\\]/.test(value)){collector?.add(value);return value;}
   fail('تصویر باید PNG، JPEG، WebP یا آدرس HTTPS معتبر باشد');
@@ -22,14 +24,14 @@ function shape(value,sample,key=''){
 // With options.localized (address → data URI), external images must already be copied: any address not yet
 // in the map stops validation with EXTERNAL_IMAGES and the list, so the caller can download and retry.
 function content(input,billing={},previous,options={}){
-  if(!options.localized)return validateContent(input,billing,previous);
+  if(!options.localized)return validateContent(input,billing,previous,undefined,options.known);
   const found=new Set(),localized=options.localized;collector=found;
   try{
     return validateContent(require('./media.cjs').replaceValues(input,localized),billing,previous,()=>{
       const urls=[...found].filter(url=>localized.get(url)!==url);if(!urls.length)return;
       const before=previous?JSON.stringify(previous):'';
       throw Object.assign(new Error('تصویرهای اینترنتی هنوز کپی نشده‌اند'),{status:400,code:'EXTERNAL_IMAGES',urls,existing:urls.filter(url=>before.includes(JSON.stringify(url)))});
-    });
+    },options.known);
   }finally{collector=null;}
 }
 // External image addresses inside stored content; legacy content that no longer validates yields none.
@@ -38,7 +40,8 @@ function externalImages(c){
   try{validateContent(c,{},c,()=>{throw stop;});}catch(error){if(error!==stop)return [];}finally{collector=null;}
   return [...found];
 }
-function validateContent(input,billing={},previous,afterImages){input=require('./media.cjs').expand(input,previous);const c=shape(input,blank());c.resumeTemplates=RI.validateResumeValues(input.resumeTemplates||{});
+// known: image hashes this account already stores; they are neither new uploads nor subject to the size cap.
+function validateContent(input,billing={},previous,afterImages,known=new Set()){input=require('./media.cjs').expand(input,previous,known);const c=shape(input,blank());c.resumeTemplates=RI.validateResumeValues(input.resumeTemplates||{});
   for(const [id,entry] of Object.entries(c.resumeTemplates)){
     const spec=RI.resumeSpec(id),check=values=>{for(const [key,value]of Object.entries(values)){const f=spec.fields.concat(spec.settings).find(x=>x.key===key);if(f?.type==='image'&&value&&!/^\/templates\/(vista|satiar)\/[a-f0-9]{16}\.(png|jpg|jpeg|webp|svg|gif)$/.test(value))image(value,'avatar');}};
     check(entry.fields);check(entry.settings);for(const rows of Object.values(entry.collections||{}))for(const row of rows)check(row.fields);
@@ -58,7 +61,7 @@ function validateContent(input,billing={},previous,afterImages){input=require('.
   if(c.links.items.some(x=>!['link','divider','text','image'].includes(x.type)||(x.type==='link'&&(!x.title.trim()||!webUrl(x.url)))||(x.type==='text'&&!x.title.trim())||(x.type==='image'&&!x.image)||!RI.LINK_ICONS.includes(x.icon)))fail('عنوان، تصویر یا آدرس جزء صفحه را کامل کن');
   const subscriber=billing.plan&&billing.plan.end>Date.now();
   const policy=billing.commerce||require('../owner/settings.cjs').defaults(),maxImage=subscriber?policy.imagePaid:policy.imageFree,existingImages=require('./media.cjs').images(previous),newImages=require('./media.cjs').images(c);
-  for(const [id,value]of newImages)if(!existingImages.has(id)&&base64Bytes(value)>maxImage)fail('حجم هر تصویر برای '+(subscriber?'اشتراکی':'رایگان')+' حداکثر '+Math.floor(maxImage/1024)+' کیلوبایت است',413);
+  for(const [id,value]of newImages)if(!existingImages.has(id)&&!known.has(id)&&base64Bytes(value)>maxImage)fail('حجم هر تصویر برای '+(subscriber?'اشتراکی':'رایگان')+' حداکثر '+Math.floor(maxImage/1024)+' کیلوبایت است',413);
   for(const kind of ['resume','links']){const brand=c.branding[kind];if(!['resumeit','custom','hidden'].includes(brand.mode)||brand.text.length>100)fail('امضای صفحه معتبر نیست');if(brand.mode!=='resumeit'&&!subscriber&&JSON.stringify(brand)!==JSON.stringify(previous?.branding?.[kind]))fail('امضای اختصاصی به اشتراک فعال نیاز دارد',403);}
   for(const item of c.links.items.filter(x=>['text','image'].includes(x.type)))if(!subscriber&&!previous?.links?.items.some(old=>old.id===item.id&&JSON.stringify(old)===JSON.stringify(item)))fail('بلوک متن و تصویر به اشتراک فعال نیاز دارد',403);
   if(c.socials.some(x=>!RI.SOCIALS.some(s=>s[0]===x.platform)||x.handle.length>2048))fail('شبکهٔ اجتماعی معتبر نیست');
