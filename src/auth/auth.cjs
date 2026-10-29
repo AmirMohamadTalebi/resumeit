@@ -84,13 +84,13 @@ function authHandler(database, options = {}) {
           const existing=await database.accountByPhone(input.phone);
           if(existing&&existing.id!==user.id){reply(200,{challengeId:require('node:crypto').randomUUID(),expiresIn:120,retryAfter:60});return true;}
           const result=await otp.request(input.phone,'phone',ipHash(req),user.id);
-          if(!result)reply(429,{error:'یه دقیقه صبر کن و دوباره امتحان کن'});else reply(200,result);
+          if(!result||result.blocked){res.setHeader('Retry-After',String(result?.retryAfter||60));reply(429,{error:require('./otp.cjs').limitMessage(result||{blocked:'resend',retryAfter:60})});}else reply(200,result);
         } else {
           if(typeof input.challengeId!=='string'||!/^[a-f0-9-]{36}$/.test(input.challengeId)||typeof input.code!=='string'||!/^\d{6}$/.test(input.code)){reply(400,{error:'کد ۶ رقمی رو درست بنویس'});return true;}
           const result=await database.verifyPhoneOtp(input.challengeId,digest(input.challengeId+input.code),user.id,Date.now(),token(req));
           if(!result)reply(401,{error:'کد درست نیست یا اعتبارش تموم شده'});else if(result.existing)reply(409,{error:'این شماره روی یه حساب دیگه ثبت شده'});else reply(200,{ok:true});
         }
-      } catch(error){reply(error.status || (error instanceof SyntaxError ? 400 : 503),{error:'درخواست انجام نشد، دوباره امتحان کن'});}return true;
+      } catch(error){reply(error.status || (error instanceof SyntaxError ? 400 : error.code==='SMS_FAILED' ? 502 : 503),{error:error.code==='SMS_FAILED'?require('./otp.cjs').smsFailedMessage:'درخواست انجام نشد، دوباره امتحان کن'});}return true;
     }
     const signIn = async user => {
       const notice=database.accountNotice?await database.accountNotice(user.id):null;if(notice){reply(200,await status.issue(database,req,res,notice,{type:user.phone?'phone':'session',value:user.phone||null},origin));return;}
@@ -134,7 +134,7 @@ function authHandler(database, options = {}) {
             ownerId=owner?.id||deleted.user_id;
           }
           const result=await otp.request(input.phone,input.purpose,ipHash(req),ownerId);
-          if (!result) { res.setHeader('Retry-After','60'); reply(429,{error:'محدودیت ارسال کد؛ یک دقیقه صبر کن اگر سهمیهٔ روزانه تمام شده، فردا امتحان کن'}); }
+          if (!result||result.blocked) { res.setHeader('Retry-After',String(result?.retryAfter||60)); reply(429,{error:require('./otp.cjs').limitMessage(result||{blocked:'resend',retryAfter:60})}); }
           else reply(200,result);
         } else {
           if (typeof input.challengeId!=='string'||!/^[a-f0-9-]{36}$/.test(input.challengeId)||typeof input.code!=='string'||!/^\d{6}$/.test(input.code)) { reply(400,{error:'کد شش‌رقمی معتبر وارد کن'}); return true; }
@@ -152,7 +152,7 @@ function authHandler(database, options = {}) {
             else {await database.markPhoneVerified(user.id);await signIn(user);}
           }
         }
-      } catch(error) { reply(error.status || (error instanceof SyntaxError?400:503),{error:error.message==='SMS submission failed'?'پیامک ارسال نشد؛ چند دقیقه بعد دوباره امتحان کن':'درخواست انجام نشد؛ شماره را بررسی کن و کمی بعد دوباره امتحان کن'}); }
+      } catch(error) { reply(error.status || (error instanceof SyntaxError?400:503),{error:error.code==='SMS_FAILED'?require('./otp.cjs').smsFailedMessage:'درخواست انجام نشد؛ شماره را بررسی کن و کمی بعد دوباره امتحان کن'}); }
       return true;
     }
     if (pathname !== '/api/auth/login') { reply(404, { error: 'Not found' }); return true; }

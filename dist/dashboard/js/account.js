@@ -33,7 +33,7 @@
       }
       try{challenge=await RI.accountRequest('phone/request',{phone});}catch(e){stop();throw e;}
       if(dialog.closed)return;
-      dialog.setBody('<p>کد ۶ رقمی رو برای <b class="ltr-inline">'+RI.esc(phone)+'</b> درخواست کردیم، تا دو دقیقه اعتبار داره</p><label class="field__label" for="account-code">کد تأیید</label><input class="input ltr" id="account-code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" enterkeyhint="done"><div id="phone-error" role="alert"></div>');
+      dialog.setBody('<p>کد ۶ رقمی رو برای <b class="ltr-inline">'+RI.esc(phone)+'</b> درخواست کردیم، تا دو دقیقه اعتبار داره</p><label class="field__label" for="account-code">کد تأیید</label><input class="input ltr" id="account-code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" enterkeyhint="done"><div id="phone-error" role="alert"></div><details class="sms-help"><summary>کد نرسید؟</summary><p>اگر این شماره روی حساب دیگری ثبت شده باشد، برای حفظ حریم خصوصی کدی فرستاده نمی‌شود؛ در این صورت با همان شماره وارد شو یا شمارهٔ دیگری بده. در غیر این صورت یک دقیقه بعد دوباره کد بگیر و پیامک‌های خدماتی مسدود نباشند.</p></details>');
       if(captured)RI.$('#account-code',dialog.body).value=digits(captured);
       dialog.setActions([{label:'بستن',kind:'ghost'},action('تأیید شماره',async()=>{
         const code=digits(RI.$('#account-code',dialog.body).value);if(!/^\d{6}$/.test(code))throw new Error('کد ۶ رقمی رو کامل وارد کن');

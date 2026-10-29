@@ -9,13 +9,15 @@ module.exports = ({execute,transaction}) => {
         const budget = require('../auth/limits.cjs').smsLimits();
         const limits = [['sms:all:'+day,budget.otpDaily,tomorrow], ['sms:ip:'+ipHash,budget.ipQuarterHour,now+900000], ['sms:phone:'+record.phone,budget.phoneDaily,tomorrow]];
         // Lock the shared budget first so concurrent replicas cannot overspend or resend together.
-        for (const [key,limit,expires] of limits) {
+        const reasons=['site','ip','phone'];
+        for (const [i,[key,limit,expires]] of limits.entries()) {
           await connection.execute('INSERT INTO login_attempts(attempt_key,count,expires_at) VALUES(?,0,?) ON DUPLICATE KEY UPDATE attempt_key=attempt_key',[key,expires]);
           const [[row]] = await connection.execute('SELECT count FROM login_attempts WHERE attempt_key=? FOR UPDATE',[key]);
-          if (row.count >= limit) return false;
+          // Callers tell the person which limit applies; "wait a minute" for a daily cap looked like a broken sender.
+          if (row.count >= limit) return {reason:reasons[i],retryAfter:Math.max(60,Math.ceil((expires-now)/1000))};
         }
         const [[old]] = await connection.execute('SELECT sent_at FROM otp_challenges WHERE phone=? FOR UPDATE',[record.phone]);
-        if (old && old.sent_at + 60000 > now) return false;
+        if (old && old.sent_at + 60000 > now) return {reason:'resend',retryAfter:Math.ceil((old.sent_at+60000-now)/1000)};
         for (const [key] of limits) await connection.execute('UPDATE login_attempts SET count=count+1 WHERE attempt_key=?',[key]);
         await connection.execute(`INSERT INTO otp_challenges(phone,challenge_id,purpose,code_hash,status,sent_at,expires_at,owner_id) VALUES(?,?,?,?,'pending',?,?,?) ON DUPLICATE KEY UPDATE challenge_id=VALUES(challenge_id),purpose=VALUES(purpose),code_hash=VALUES(code_hash),status='pending',attempts=0,sent_at=VALUES(sent_at),expires_at=VALUES(expires_at),registration_token=NULL,owner_id=VALUES(owner_id)`,[record.phone,record.id,record.purpose,record.hash,now,now+120000,record.ownerId||null]);
         await connection.execute("INSERT INTO otp_events(id,phone,purpose,status,created_at) VALUES(?,?,?,'pending',?)",[record.id,record.phone,record.purpose,now]);

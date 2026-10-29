@@ -60,7 +60,7 @@ function luminance(hex) {
       }
       assert.match(await page.locator('.allsteps tbody tr').last().textContent(), /امروز/);
       await page.goto(base + '/dashboard/wallet/');
-      await page.locator('.wallet-balance').waitFor();
+      await page.locator('.wl-balance h2').waitFor();
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
       if (width === 640) assert(await page.locator('.bottom-nav').evaluate(e => e.offsetHeight <= 50), 'landscape navigation stays compact');
     }
