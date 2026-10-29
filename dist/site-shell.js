@@ -37,7 +37,8 @@
 })();
 
 (() => {
- if(!/^\/(privacy|terms)\/?$/.test(location.pathname))return;
+ // Phones get compact legal accordions; wider screens read the whole text beside the table of contents.
+ if(!/^\/(privacy|terms)\/?$/.test(location.pathname)||!matchMedia('(max-width:860px)').matches)return;
  const sections=[...document.querySelectorAll('.info-content>section')];
  for(const section of sections){const heading=section.querySelector('h2');if(!heading)continue;const details=document.createElement('details'),summary=document.createElement('summary');details.className='info-accordion';details.id=section.id;summary.append(heading);details.append(summary,...section.childNodes);section.replaceWith(details);}
  function reveal(){const id=location.hash.slice(1),target=sections.length&&document.getElementById(id);if(target?.matches('.info-accordion'))target.open=true;}
