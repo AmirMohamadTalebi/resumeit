@@ -2,26 +2,27 @@
 <html lang="fa" dir="rtl">
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow">
-  <title>پنل پشتیبانی | رزومیت</title><link rel="icon" href="/brand/favicon.svg">
-  <link rel="stylesheet" href="/dashboard/css/tokens.css"><link rel="stylesheet" href="/staff/staff.css">
+  <title>پنل پشتیبانی | ResumeIt</title><link rel="icon" href="/brand/favicon.svg">
+  <link rel="stylesheet" href="/fonts/fonts.css"><link rel="stylesheet" href="/staff/staff.css">
   <script defer src="/dashboard/js/icons.js"></script><script defer src="/dashboard/js/support-files.js"></script><script defer src="/staff/staff.js"></script>
 </head>
 <body>
   <a class="skip" href="#content">رفتن به گفت‌وگوها</a>
+  <div class="desk-aura" aria-hidden="true"><i></i><i></i></div>
   <aside class="staff-side">
-    <a class="brand" href="/staff/"><img src="/brand/resumeit-logo-v1.png" alt="رزومیت" width="160" height="42"></a>
-    <span class="eyebrow">میز پشتیبانی</span>
-    <nav aria-label="پنل پشتیبانی"><ul class="menu"><li><a href="/staff/" aria-current="page" data-icon="help">تیکت‌ها</a></li><li><a href="/dashboard/" data-icon="home">پنل شخصی</a></li></ul></nav>
-    <footer><div class="staff-profile"><img src="/brand/resumeit-mark-v1.png" alt="" width="42" height="42"><div><strong id="staff-name">پشتیبان</strong><small>نقش ساپورت</small></div></div><button class="btn btn-ghost" id="logout" data-icon="logout">خروج از حساب</button></footer>
+    <a class="brand" href="/staff/"><img src="/brand/resumeit-logo-v1.png" alt="ResumeIt" width="140" height="47"><span>میز پشتیبانی</span></a>
+    <nav aria-label="پنل پشتیبانی"><ul class="menu"><li><a href="/staff/" aria-current="page" data-icon="mail">صندوق تیکت‌ها<span class="menu-count" id="menu-open" hidden></span></a></li><li><a href="/dashboard/" data-icon="home">پنل شخصی</a></li><li data-admin-only hidden><a href="/admin/" data-icon="shield">پنل مدیریت</a></li></ul></nav>
+    <section class="side-note" aria-labelledby="side-note-title"><h2 id="side-note-title">یادآوری پاسخ‌گویی</h2><ul><li>رمز، کد پیامکی یا اطلاعات کارت را هرگز نخواه.</li><li>برای پرداخت، شمارهٔ فاکتور و کد رهگیری را بپرس.</li><li>بعد از حل مشکل، تیکت را ببند.</li></ul></section>
+    <footer><div class="staff-profile"><img src="/brand/resumeit-mark-v1.png" alt="" width="40" height="40"><div><strong id="staff-name">پشتیبان</strong><small>نقش ساپورت</small></div></div><button class="btn btn-ghost" id="logout" type="button" data-icon="logout">خروج</button></footer>
   </aside>
   <div class="staff-main">
-    <header><span>پشتیبانی / گفت‌وگوها</span><a class="btn btn-ghost" href="/dashboard/" data-icon="user">حساب من</a></header>
+    <header class="desk-bar"><div><span class="desk-crumb">پشتیبانی / صندوق تیکت‌ها</span><span class="role-badge">دسترسی محدود · ساپورت</span></div><div class="desk-bar__actions"><button class="btn" id="staff-refresh" type="button" data-icon="refresh">به‌روزرسانی</button><a class="btn btn-ghost" href="/dashboard/" data-icon="user">حساب من</a></div></header>
     <main id="content" tabindex="-1">
-      <div class="intro"><div><span class="eyebrow">همراه کاربر</span><h1>صندوق پشتیبانی</h1></div><span class="role-badge">دسترسی محدود · ساپورت</span></div>
-      <section id="summary" class="stats" aria-label="آمار تیکت‌ها"></section>
-      <form id="filters"><label>جست‌وجوی گفت‌وگو<input class="input" type="search" name="q" maxlength="100" placeholder="موضوع یا شناسهٔ تیکت"></label><label>وضعیت<select class="select" name="status"><option value="">همهٔ تیکت‌ها</option><option value="open">در انتظار پاسخ</option><option value="answered">پاسخ داده شده</option><option value="closed">بسته شده</option></select></label><button class="btn" data-icon="search">جست‌وجو</button></form>
-      <div id="workspace" aria-busy="true"><p role="status">در حال دریافت گفت‌وگوها…</p></div>
-      <p id="feedback" role="status"></p>
+      <div class="intro"><div><span class="eyebrow">همراه کاربر</span><h1>صندوق پشتیبانی</h1><p>گفت‌وگوهای کاربران؛ تازه‌ترین پیام بالای فهرست است.</p></div></div>
+      <section id="summary" class="stats" aria-label="وضعیت تیکت‌ها"></section>
+      <form id="filters" role="search"><label class="search"><span class="sr">جست‌وجوی گفت‌وگو</span><input type="search" name="q" maxlength="100" placeholder="موضوع، شناسهٔ تیکت، نام یا شمارهٔ کاربر" autocomplete="off"></label><label class="status-select"><span class="sr">وضعیت</span><select name="status"><option value="">همهٔ وضعیت‌ها</option><option value="open">در انتظار پاسخ</option><option value="answered">پاسخ داده شده</option><option value="closed">بسته شده</option></select></label><button class="btn btn-primary" data-icon="search">جست‌وجو</button></form>
+      <div id="workspace" class="desk" aria-busy="true"><p role="status" class="desk-state">در حال دریافت گفت‌وگوها…</p></div>
+      <p id="feedback" role="status" class="feedback"></p>
     </main>
   </div>
 </body>

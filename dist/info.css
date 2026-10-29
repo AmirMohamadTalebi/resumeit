@@ -2,7 +2,7 @@
 .lg{--lg-ink:#1d2c36;--lg-muted:#3f5463;--lg-line:rgba(120,150,168,.28);--lg-accent:#6b4629;--lg-accent-2:#2f6f83;--lg-glass:rgba(255,255,255,.66);--lg-glass-edge:rgba(255,255,255,.9);--lg-shadow:0 18px 50px -24px rgba(29,44,54,.28),0 2px 6px rgba(29,44,54,.05);
   position:relative;isolation:isolate;max-width:1160px;margin:auto;padding:20px 24px 72px;color:var(--lg-ink)}
 .lg-aura{position:absolute;inset:0 0 auto;height:620px;z-index:-1;overflow:hidden;pointer-events:none;-webkit-mask:radial-gradient(ellipse 60% 70% at 50% 25%,#000 35%,transparent 100%);mask:radial-gradient(ellipse 60% 70% at 50% 25%,#000 35%,transparent 100%)}
-.lg-aura i{position:absolute;border-radius:50%;filter:blur(60px);opacity:.55;animation:lg-drift 22s ease-in-out infinite alternate}
+.lg-aura i{position:absolute;border-radius:50%;filter:blur(60px);opacity:.55}
 .lg-aura i:nth-child(1){width:420px;height:420px;background:#cfe3ec;top:-120px;right:-60px}
 .lg-aura i:nth-child(2){width:340px;height:340px;background:#efdcc8;top:40px;left:8%;animation-duration:28s;animation-delay:-6s}
 .lg-aura i:nth-child(3){width:260px;height:260px;background:#d9e8d6;top:220px;right:38%;animation-duration:32s;animation-delay:-12s}
@@ -24,7 +24,7 @@
 .lg-glance ul,.lg .lg-steps,.lg .lg-principles,.lg .lg-channels{list-style:none;margin:0;padding:0;display:grid;gap:14px}
 .lg-glance ul{grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
 .lg-glance li,.lg-principles li,.lg-steps li{border-radius:20px;padding:18px;transition:transform .25s,box-shadow .25s}
-.lg-glance li:hover,.lg-principles li:hover,.lg-steps li:hover,.lg-channel:hover{transform:translateY(-3px);box-shadow:0 24px 50px -24px rgba(29,44,54,.34)}
+.lg-glance li:hover,.lg-principles li:hover,.lg-steps li:hover,.lg-channel:hover{box-shadow:0 24px 50px -24px rgba(29,44,54,.34)}
 .lg-glance b,.lg-principles b,.lg-steps b{display:block;font-size:15px;margin:12px 0 4px}
 .lg-glance p,.lg-principles p,.lg-steps p{font-size:13px;line-height:1.95;color:var(--lg-muted);margin:0}
 
@@ -65,7 +65,7 @@
 .lg-cta b{font-size:17px}
 .lg-cta p{margin:4px 0 0;font-size:13.5px;color:var(--lg-muted)}
 .lg-btn{display:inline-flex;align-items:center;gap:8px;min-height:46px;padding:10px 22px;border-radius:999px;background:linear-gradient(145deg,#24566a,#1d3a46);color:#fff!important;font-size:14px;font-weight:600;text-decoration:none;box-shadow:0 10px 24px -12px rgba(29,58,70,.7);transition:transform .2s,box-shadow .2s}
-.lg-btn:hover{transform:translateY(-2px);box-shadow:0 14px 28px -12px rgba(29,58,70,.8)}
+.lg-btn:hover{box-shadow:0 14px 28px -12px rgba(29,58,70,.8)}
 .lg-btn--sm{min-height:40px;padding:8px 18px;font-size:13px}
 .lg-btn svg{width:18px;height:18px}
 

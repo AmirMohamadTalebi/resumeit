@@ -35,7 +35,7 @@ const {chromium}=require('playwright');
    await page.goto(base+'/demo/?theme=journal#contact');assert.equal(await page.locator('#contact a').count(),0);assert.match(await page.locator('#contact').innerText(),/ارسال نمی‌شود/);
    for(const id of ['glacier','terminal','journal']){await page.goto(base+'/resume'+id+'/');assert.equal(await page.locator('.sample-navigation a').count(),2);assert.equal(await page.locator('.sample-navigation a').last().getAttribute('href'),'/register/');}
   }
-  await page.goto(base+'/changes/');await page.locator('.release-title').first().waitFor();await page.locator('.release-title').first().press('Enter');assert.match(await page.locator('.release-summary').first().innerText(),/انتخاب قالب/);assert((await page.locator('article').count())===5,'Release pagination retained');
+  await page.goto(base+'/changes/');await page.locator('.release-title').first().waitFor();await page.locator('.release-title').nth(1).press('Enter');assert.equal(await page.locator('.release-summary').first().innerText(),require('../src/releases.json')[0].summary,'latest release opens first');assert((await page.locator('article').count())===8,'Releases load in batches');await page.locator('[data-more]').click();assert((await page.locator('article').count())===16,'older releases load on request');
   for(const mode of ['network','http','malformed','invalid','stopped']){
    await page.route('**/api/catalog',route=>mode==='network'?route.abort():route.fulfill({status:mode==='http'?503:200,contentType:'application/json',body:mode==='malformed'?'{':JSON.stringify(mode==='stopped'?{...catalog,plans:catalog.plans.map(p=>({...p,paused:true})),templateFrom:null,fontFrom:null}:{...catalog,rate:0})}));
    await page.goto(base+'/');
