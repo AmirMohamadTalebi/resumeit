@@ -178,22 +178,43 @@
     RI.resetEdits(); RI.emit('change'); RI.emit('save');
   };
 
+  // Leaving with unsaved edits. Autosave pages try a quiet save first; only when that is not possible does a
+  // dialog ask. Saving happens inside the dialog (it stays open and explains a failure instead of closing), and
+  // discarding needs a second, explicit confirmation. Resolves true to leave, false to stay.
   RI.leaveGuard = async function () {
     if (!RI.state.ui.dirty && !RI.state.ui.saving) return true;
-    if(!RI.manualSave()&&await RI.save()) return true;
-    const c=await RI.choice({
-      title:RI.manualSave()?'تغییرات رزومه ذخیره نشده‌اند':'تغییرات هنوز ذخیره نشده‌اند',
-      text:'قبل از رفتن، تغییرات را ذخیره کنیم؟ خروج بدون ذخیره ویرایش‌های اخیرت را از بین می‌برد.',
-      options:[
-        {label:'تلاش دوباره و ادامه',kind:'primary',icon:'save',value:'save'},
-        {label:'دور انداختن تغییرات',kind:'danger',value:'discard'},
-        {label:'ماندن در صفحه',kind:'ghost',value:'stay'}
-      ]
-    });
-    if(c==='save') return await RI.save();
-    if(c==='discard'){ RI.revert(); return true; }
-    return false;
+    if (!RI.manualSave() && await RI.save()) return true;
+    return RI.leaveDialog();
   };
+  RI.leaveDialog = () => new Promise(resolve => {
+    const ui = RI.state.ui, ago = s => s < 60 ? 'همین الان' : s < 3600 ? RI.fa(Math.floor(s / 60)) + ' دقیقه پیش' : RI.fa(Math.floor(s / 3600)) + ' ساعت پیش';
+    const since = ago(Math.max(0, Math.round((Date.now() - (ui.savedAt || Date.now())) / 1000))), failed = !!ui.saveError;
+    const d = document.createElement('dialog'); d.className = 'lg'; d.setAttribute('aria-labelledby', 'lg-title'); d.setAttribute('aria-describedby', 'lg-text');
+    d.innerHTML = '<div class="lg__card"><div class="lg__art" aria-hidden="true"><svg viewBox="0 0 96 96"><rect class="lg__paper" x="22" y="12" width="52" height="68" rx="9"/><path class="lg__line l1" d="M33 32h30"/><path class="lg__line l2" d="M33 44h24"/><path class="lg__line l3" d="M33 56h18"/><g class="lg__pen"><path d="M58 70 76 52l7 7-18 18-9 2z"/><path d="M73 55l7 7"/></g><circle class="lg__dot" cx="74" cy="18" r="7"/><path class="lg__check" d="M28 52l12 12 26-28"/></svg></div>' +
+      '<h2 id="lg-title">ویرایش‌هایت هنوز ذخیره نشده‌اند</h2><p id="lg-text">' + (failed ? 'آخرین تلاش ذخیره انجام نشد. ' : '') + 'آخرین ذخیرهٔ موفق: <b>' + since + '</b>. اگر بدون ذخیره بروی، تغییرات بعد از آن پاک می‌شوند.</p>' +
+      '<p class="lg__error" role="alert" hidden></p><div class="lg__bar" aria-hidden="true"><i></i></div>' +
+      '<div class="lg__actions"><button type="button" class="btn btn--primary" data-lg="save">' + RI.icon('save') + '<span>ذخیره و ادامه</span></button><button type="button" class="btn btn--soft" data-lg="stay">ماندن و ادامهٔ ویرایش</button></div>' +
+      '<div class="lg__discard"><button type="button" class="lg__link" data-lg="discard">بدون ذخیره برو</button><div class="lg__confirm" hidden><span>مطمئنی؟ ویرایش‌های ذخیره‌نشده پاک می‌شوند.</span><button type="button" class="btn btn--danger btn--sm" data-lg="discard-yes">بله، پاکشان کن</button><button type="button" class="lg__link" data-lg="discard-no">نه</button></div></div></div>';
+    document.body.append(d);
+    let done = false, saving = false;
+    const finish = (value, wait = 0) => { if (done) return; done = true; d.classList.add('is-closing'); setTimeout(() => { d.close(); d.remove(); resolve(value); }, RI.reduceMotion?.() ? 0 : wait || 220); };
+    d.addEventListener('cancel', e => { e.preventDefault(); if (!saving) finish(false); });
+    d.addEventListener('click', async e => {
+      const b = e.target.closest('[data-lg]'); if (!b || saving) { if (e.target === d && !saving) finish(false); return; }
+      const action = b.dataset.lg;
+      if (action === 'stay' || action === 'discard-no') { if (action === 'stay') finish(false); else { d.querySelector('.lg__confirm').hidden = true; d.querySelector('[data-lg=discard]').hidden = false; } return; }
+      if (action === 'discard') { b.hidden = true; const box = d.querySelector('.lg__confirm'); box.hidden = false; box.querySelector('.btn').focus(); return; }
+      if (action === 'discard-yes') { RI.revert(); finish(true); return; }
+      if (action === 'save') {
+        saving = true; d.classList.add('is-saving'); d.querySelector('.lg__error').hidden = true; b.disabled = true; b.querySelector('span').textContent = 'در حال ذخیره…';
+        const ok = await RI.save(); saving = false; d.classList.remove('is-saving');
+        if (ok) { d.classList.add('is-saved'); b.querySelector('span').textContent = 'ذخیره شد'; finish(true, 650); return; }
+        const err = d.querySelector('.lg__error'); err.hidden = false; err.textContent = (RI.state.ui.saveMessage || 'ذخیره انجام نشد') + ' — اتصال را بررسی کن و دوباره بزن، یا بمان و بعداً ذخیره کن.';
+        b.disabled = false; b.querySelector('span').textContent = 'دوباره ذخیره کن'; d.classList.remove('is-shake'); void d.offsetWidth; d.classList.add('is-shake');
+      }
+    });
+    d.showModal(); d.querySelector('[data-lg=save]').focus();
+  });
 
   /* ---------- دسترسی و خرید ---------- */
   RI.hasSub = () => { const p = RI.state.billing.plan; return !!(p && p.end > Date.now()); };

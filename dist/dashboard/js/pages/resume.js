@@ -47,9 +47,8 @@
       return RI.pageHead({ title: 'رزومهٔ من', desc: 'قالب: <b>' + esc(RI.findTemplate('resume', c.theme.resume).name) + '</b> · همه‌چیز خودکار ذخیره می‌شود',
         actions: '<button type="button" class="btn btn--soft btn--sm show-sm" data-live>' + RI.icon('eye') + 'پیش‌نمایش</button><a class="btn btn--soft btn--sm" href="/dashboard/themes/" data-go="themes">' + RI.icon('palette') + 'ظاهر و قالب</a><button type="button" class="btn btn--ghost btn--sm hide-sm" data-detach-preview aria-pressed="false">' + RI.icon('external') + 'پیش‌نمایش در پنجرهٔ جدا</button><button type="button" class="btn btn--ghost btn--sm" data-reset-page="resume">' + RI.icon('trash') + 'شروع از صفر</button>' }) +
         '<div class="rs" id="resume-studio"><nav class="rs-nav" aria-label="بخش‌های رزومه"><div id="rs-nav"></div></nav>' +
-        '<div class="rs-canvas"><div id="rs-ready"></div><details class="rs-assist-m" id="rs-assist-mobile"><summary>' + RI.icon('sparkle') + '<span>دستیار رزومه</span><span class="rs-badge" data-assist-count hidden></span>' + RI.icon('chevD') + '</summary></details><div id="rs-cards" class="rs-tabs"></div><nav class="rs-pager" id="rs-pager" aria-label="بخش قبلی و بعدی"></nav></div>' +
-        '<aside class="rs-side editor__side" aria-label="پیش‌نمایش و دستیار"><div class="sticky"><div class="segmented rs-side__tabs" role="tablist" aria-label="نمای کنار"><button type="button" role="tab" id="rs-tab-preview" data-side="preview" aria-selected="true" aria-controls="rs-side-preview">' + RI.icon('eye') + 'پیش‌نمایش</button><button type="button" role="tab" id="rs-tab-assist" data-side="assist" aria-selected="false" aria-controls="rs-side-assist">' + RI.icon('sparkle') + 'دستیار<span class="rs-badge" data-assist-count hidden></span></button></div>' +
-        '<div id="rs-side-preview" role="tabpanel" aria-labelledby="rs-tab-preview"><div id="rpv"></div></div><div id="rs-side-assist" role="tabpanel" aria-labelledby="rs-tab-assist" hidden><div id="resume-advisor"></div></div></div></aside></div>';
+        '<div class="rs-canvas"><div id="rs-ready"></div><div id="rs-cards" class="rs-tabs"></div><nav class="rs-pager" id="rs-pager" aria-label="بخش قبلی و بعدی"></nav></div>' +
+        '<aside class="rs-side editor__side" aria-label="پیش‌نمایش"><div class="sticky"><div id="rs-side-preview"><div id="rpv"></div></div></div></aside></div>';
     },
     mount(root, ctx) {
       const owner = RI.ownerId, slot = RI.workspaceSlot, alive = () => root.isConnected && RI.ownerId === owner && RI.workspaceSlot === slot;
@@ -435,7 +434,7 @@
       RI.delegate(root, 'click', '[data-live]', (e, b) => { if (b.closest('summary')) e.preventDefault(); RI.openPreview('resume'); });
       RI.delegate(root, 'click', '[data-account-phone]', () => RI.phoneDialog());
       RI.delegate(root, 'click', '[data-names]', () => names());
-      RI.delegate(root, 'click', '[data-side]', (e, b) => setSide(b.dataset.side));
+
       RI.delegate(root, 'click', '[data-publish]', async (e, button) => {
         if (button.closest('summary')) e.preventDefault();
         if (publishing) return; publishing = true; button.disabled = true; button.setAttribute('aria-busy', 'true');
@@ -456,28 +455,18 @@
             button.disabled = true; try { await RI.accountRequest('account/names', values); if (me !== RI.ownerId) return; await RI.reloadAccount(); modal.close(); RI.toast('نام حساب ذخیره شد'); paintReady(); } catch (err) { error.textContent = err.message; } finally { button.disabled = false; } } }] });
       }
 
-      /* ---------- side panel: preview / assistant ---------- */
-      const assistHost = RI.$('#resume-advisor', root);
-      function setSide(tab) {
-        sideTab = tab;
-        root.querySelectorAll('[data-side]').forEach(b => b.setAttribute('aria-selected', String(b.dataset.side === tab)));
-        RI.$('#rs-side-preview', root).hidden = tab !== 'preview'; RI.$('#rs-side-assist', root).hidden = tab !== 'assist';
-        if (tab === 'preview') pv.refresh();
-      }
-      function placeAssistant() {
-        const target = studio.dataset.wide === 'true' ? RI.$('#rs-side-assist', root) : RI.$('#rs-assist-mobile', root);
-        if (assistHost.parentElement !== target) target.append(assistHost);
-      }
+      /* ---------- text review: lives in the assistant companion (assistant-pet.js), not beside the preview ---------- */
+      const assistHost = document.createElement('div'); assistHost.id = 'resume-advisor'; assistHost.className = 'rs-review';
+      RI.petReview?.(assistHost);
       // Layout follows the space the studio really has, not the window width.
-      const studio = RI.$('#resume-studio', root), sizer = new ResizeObserver(() => { const wide = String(studio.clientWidth >= 760); if (studio.dataset.wide !== wide) { studio.dataset.wide = wide; placeAssistant(); } });
-      studio.dataset.wide = String(studio.clientWidth >= 760); sizer.observe(studio); placeAssistant();
+      const studio = RI.$('#resume-studio', root), sizer = new ResizeObserver(() => { const wide = String(studio.clientWidth >= 760); if (studio.dataset.wide !== wide) studio.dataset.wide = wide; });
+      studio.dataset.wide = String(studio.clientWidth >= 760); sizer.observe(studio);
       function startAdvisor() {
         if (advisorCleanup || !alive()) return;
-        if (!RI.advisorScripts) RI.advisorScripts = (async () => { for (const name of ['advisor-core', 'advisor-brain', 'advisor-ui']) await new Promise((resolve, reject) => { const s = document.createElement('script'); s.src = '/dashboard/js/' + name + '.js?v=' + encodeURIComponent(document.documentElement.dataset.assetVersion || ''); s.onload = resolve; s.onerror = reject; document.head.append(s); }); })().catch(error => { RI.advisorScripts = null; throw error; });
+        if (!RI.advisorScripts) RI.advisorScripts = (async () => { for (const name of ['advisor-core', 'advisor-ui']) await new Promise((resolve, reject) => { const s = document.createElement('script'); s.src = '/dashboard/js/' + name + '.js?v=' + encodeURIComponent(document.documentElement.dataset.assetVersion || ''); s.onload = resolve; s.onerror = reject; document.head.append(s); }); })().catch(error => { RI.advisorScripts = null; throw error; });
         RI.advisorScripts.then(() => {
           if (!alive()) return;
-          advisorCleanup = RI.mountAdvisor(assistHost, {
-            focus: target => {
+          const focus = target => {
               if (target.section === 'template') {
                 // Open the template group that owns this field before asking the editor to focus it.
                 const group = imported && RI.effectiveTemplateSpec(templateId).fields.find(x => x.key === target.field)?.group;
@@ -486,9 +475,12 @@
               }
               if (target.section === 'profile') return goto('profile', '[data-p="' + target.field + '"]');
               if (target.section === 'skills') return goto('skills', '#rs-add-skills');
-              if (ITEMS[target.section]) { open.add(target.itemId); paintCard(target.section); return goto(target.section, '#i-' + target.itemId + '-' + target.field); }
+              if (ITEMS[target.section]) { if (target.itemId) { open.add(target.itemId); paintCard(target.section); return goto(target.section, '#i-' + target.itemId + '-' + target.field); } return goto(target.section); }
               goto(target.section);
-            },
+            };
+          RI.resumeFocus = focus;
+          advisorCleanup = RI.mountAdvisor(assistHost, {
+            focus,
             counts: map => { advisorCounts = map; paintNav(); const total = Object.values(map).reduce((a, b) => a + b, 0); root.querySelectorAll('[data-assist-count]').forEach(badge => { badge.hidden = !total; badge.textContent = RI.fa(total); }); },
             goal: () => ideas(),
           });
@@ -513,7 +505,7 @@
       if (templateReady) { requestAnimationFrame(() => requestAnimationFrame(startPreview)); startAdvisor(); } else { loadTemplateParts(); assistHost.innerHTML = RI.sectionLoading('دستیار پس از دریافت قالب آماده می‌شود…'); }
       if (initial && initial !== 'profile') requestAnimationFrame(() => goto(initial));
 
-      return () => { document.removeEventListener("pointerdown", closeMenu); navResize.disconnect(); delete RI.resumeTab; if (RI.resumePublicationReview) delete RI.resumePublicationReview; delete RI.resumeStudioAddSkill; observer?.disconnect(); clearTimeout(undoTimer); clearTimeout(readyTimer); advisorCleanup?.(); cancelAnimationFrame(raf); off(); offSave(); detachCleanup(); pv.destroy(); sizer.disconnect(); };
+      return () => { document.removeEventListener("pointerdown", closeMenu); navResize.disconnect(); RI.petReview?.(null); delete RI.resumeFocus; assistHost.remove(); delete RI.resumeTab; if (RI.resumePublicationReview) delete RI.resumePublicationReview; delete RI.resumeStudioAddSkill; observer?.disconnect(); clearTimeout(undoTimer); clearTimeout(readyTimer); advisorCleanup?.(); cancelAnimationFrame(raf); off(); offSave(); detachCleanup(); pv.destroy(); sizer.disconnect(); };
     },
   });
 })();

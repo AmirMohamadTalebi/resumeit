@@ -94,6 +94,7 @@ function dashboardHandler(database,auth,notifications,options){const reset=requi
     }
     if(notifications&&await notifications.handle(req,pathname,origin,user,reply))return true;
     if(await require('./support.cjs')(database,req,pathname,origin,user,reply,res))return true;
+    if(await require('./assistant.cjs')(database,req,pathname,origin,user,reply))return true;
     if(await require('./advisor.cjs').handle(database,req,pathname,origin,user,workspace,reply))return true;
     if(await reset(req,pathname,origin,user,workspace,reply))return true;
     if(req.method==='GET'){

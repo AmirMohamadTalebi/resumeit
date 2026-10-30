@@ -65,11 +65,11 @@ function luminance(hex) {
       if (width === 640) assert(await page.locator('.bottom-nav').evaluate(e => e.offsetHeight <= 50), 'landscape navigation stays compact');
     }
     await page.setViewportSize({ width: 390, height: 844 });
-    // The resume studio's tablist (preview / assistant) lives in the side column, shown from tablet width up.
-    for (const [route, list, width] of [['links', '#ltabs', 390], ['themes', '#ttabs', 390], ['publish', '#ptabs', 390], ['resume', '.rs-side__tabs', 1280]]) {
+    // Keyboard End/Home on tablists, including the account settings section list.
+    for (const [route, list, width] of [['links', '#ltabs', 390], ['themes', '#ttabs', 390], ['publish', '#ptabs', 390], ['settings', '.nv-vtabs', 390]]) {
       await page.setViewportSize({ width, height: 844 });
       await page.goto(base + '/dashboard/' + route + '/');
-      if (route === 'resume') await page.locator('.rs-side__tabs [role=tab]').first().waitFor();
+      if (route === 'settings') await page.locator('.nv-vtabs').waitFor();
       await page.locator(list + ' [role=tab]').first().focus();
       await page.keyboard.press('End');
       assert.equal(await page.locator(list + ' [role=tab]').last().getAttribute('aria-selected'), 'true', route + ' End');

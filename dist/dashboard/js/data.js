@@ -59,7 +59,7 @@
 
   RI.IT_RATE = 2000;
   RI.priceToman=units=>RI.toman(Math.round(units*(RI.commerce?.rate||2000)/2000));
-  RI.applyCommerce=policy=>{RI.commerce=policy||{rate:2000,prices:{},paused:[],imageFree:409600,imagePaid:2097152};for(const [kind,list]of Object.entries({rt:RI.RESUME_TEMPLATES,lt:RI.LINK_TEMPLATES,font:RI.FONTS,pal:RI.PALETTES,subscription:Object.values(RI.PLANS)}))for(const item of list){if(item.defaultPrice===undefined){item.defaultPrice=item.price;item.defaultName=item.name;item.defaultDesc=item.desc||item.description||'';}const ref=kind+':'+item.id,metadata=RI.commerce.products?.[ref];item.price=RI.commerce.prices[ref]??item.defaultPrice;item.name=metadata?.name??item.defaultName;item.desc=metadata?.desc??item.defaultDesc;item.paused=RI.commerce.paused.includes(ref);}};
+  RI.applyCommerce=policy=>{RI.commerce=policy||{rate:2000,prices:{},paused:[],imageFree:409600,imagePaid:2097152};for(const [kind,list]of Object.entries({rt:RI.RESUME_TEMPLATES,lt:RI.LINK_TEMPLATES,font:RI.FONTS,pal:RI.PALETTES,subscription:Object.values(RI.PLANS),assistant:Object.values(RI.ASSISTANT_PLANS)}))for(const item of list){if(item.defaultPrice===undefined){item.defaultPrice=item.price;item.defaultName=item.name;item.defaultDesc=item.desc||item.description||'';}const ref=kind+':'+item.id,metadata=RI.commerce.products?.[ref];item.price=RI.commerce.prices[ref]??item.defaultPrice;item.name=metadata?.name??item.defaultName;item.desc=metadata?.desc??item.defaultDesc;item.paused=RI.commerce.paused.includes(ref);}};
   RI.imageLimit=()=>{const p=RI.commerce||{imageFree:409600,imagePaid:2097152};return RI.hasSub?.()?p.imagePaid:p.imageFree;};
   RI.workspaceLimit=()=>Object.hasOwn(RI.ownerSettings||{},'subdomainLimit')?RI.ownerSettings.subdomainLimit:(RI.hasSub()?2:1)+(RI.ownerSettings?.extraSubdomain?1:0);
   RI.canWorkspace=slot=>Number.isSafeInteger(slot)&&slot>=1&&slot<=2147483647&&(slot===3?RI.hasSub():RI.workspaceLimit()===null||(slot<3?slot:slot-1)<=RI.workspaceLimit());
@@ -171,6 +171,13 @@
   };
 
   /* ---------- پلن‌ها (خرید با It، شارژ آنلاین غیرفعال) ---------- */
+  // Assistant access on its own; every active subscription already includes it. 10 It a month, less for longer.
+  RI.ASSISTANT_PLANS = {
+    m1: { id: 'm1', name: 'دستیار هوشمند', period: 'یک‌ماهه', months: 1, price: 20000 },
+    m3: { id: 'm3', name: 'دستیار هوشمند', period: 'سه‌ماهه', months: 3, price: 54000 },
+    m6: { id: 'm6', name: 'دستیار هوشمند', period: 'شش‌ماهه', months: 6, price: 96000 },
+  };
+  RI.ASSISTANT_FREE_DAILY = 5;
   RI.PLANS = {
     q: { id: 'q', name: 'رخش', period: 'سه‌ماهه', months: 3, price: 288000 },
     h: { id: 'h', name: 'سیمرغ', period: 'شش‌ماهه', months: 6, price: 510000 },

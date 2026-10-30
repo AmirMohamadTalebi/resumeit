@@ -24,4 +24,14 @@ assert(B.reply('چه مهارت هایی اضافه کنم',dev).actions.some(a=
 assert(B.reply('امتیاز',dev).text.includes(String(s1.total).replace(/\d/g,d=>'۰۱۲۳۴۵۶۷۸۹'[d])));
 const unknown=B.reply('بلبلبل',dev);assert.equal(unknown.intent,'unknown');assert(unknown.follow.length>=3);
 assert(B.opening(dev).text.includes('نیلوفر'));
+// Spelling: one-letter slips in the words people read first, never names or punctuation.
+const slip={...empty,profile:{...empty.profile,name:'امیرمحمد طالبی',title:'دانشجوری کامپیوتر',bio:'ساکن مراغه، علاقمند به طراحی.'}};
+assert.deepEqual(B.spelling(slip).map(t=>t.wrong+'>'+t.right),['دانشجوری>دانشجوی','علاقمند>علاقه‌مند']);
+assert.equal(B.fixText('دانشجوری کامپیوتر، عاشق کد'),'دانشجوی کامپیوتر، عاشق کد');
+assert(B.score(slip).dims.find(d=>d.id==='clarity').reasons[0].includes('دانشجوری'));
+assert(!B.bioDraft({...slip,skills:[{name:'Figma'}]}).includes('دانشجوری'),'drafts never repeat a typo');
+assert(B.reply('غلط املایی دارم؟',slip).actions.some(a=>a.kind==='fix'&&a.wrong==='دانشجوری'&&a.value==='دانشجوی'));
+// Statements about oneself, slang and transliterated job names.
+for(const [q,role] of [['من فول استک دولوپر هستم','توسعه‌دهندهٔ فول‌استک'],['میخوام طراح رابط کاربری بشم','طراح رابط و تجربهٔ کاربری'],['من یه دیزاینر هستم','طراح رابط و تجربهٔ کاربری'],['من حسابدار هستم','حسابدار']]){const r=B.reply(q,slip);assert.equal(r.intent,'statement',q);assert(r.actions.some(a=>a.kind==='goal'&&a.value===role),q);}
+assert.equal(B.understand('میخوام امتیاز رزومه رو بدونم'),null,'questions are not statements');
 console.log('PASS assistant brain: typo-tolerant Persian intents, five-dimension score with reasons, role detection, ordered skill gaps, fact-only drafts and personalised replies with actions.');

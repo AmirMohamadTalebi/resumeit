@@ -2,7 +2,7 @@ const {RI}=require('../dashboard/render.cjs');
 const {fail}=require('../dashboard/model.cjs');
 const BASE_UNITS=2000;
 const defaults=()=>({rate:2000,prices:{},paused:[],products:{},imageFree:409600,imagePaid:2097152});
-function product(ref){if(typeof ref!=='string'||!/^(rt|lt|font|pal|subscription):[a-z0-9-]+$/.test(ref))return;const [kind,id]=ref.split(':');return kind==='subscription'?RI.PLANS[id]:({rt:RI.RESUME_TEMPLATES,lt:RI.LINK_TEMPLATES,font:RI.FONTS,pal:RI.PALETTES}[kind]||[]).find(x=>x.id===id);}
+function product(ref){if(typeof ref!=='string'||!/^(rt|lt|font|pal|subscription|assistant):[a-z0-9-]+$/.test(ref))return;const [kind,id]=ref.split(':');return kind==='subscription'?RI.PLANS[id]:kind==='assistant'?RI.ASSISTANT_PLANS[id]:({rt:RI.RESUME_TEMPLATES,lt:RI.LINK_TEMPLATES,font:RI.FONTS,pal:RI.PALETTES}[kind]||[]).find(x=>x.id===id);}
 function validate(input){
  if(!input||typeof input!=='object'||Array.isArray(input))fail('تنظیمات فروش معتبر نیست');
  const result=defaults();for(const key of ['rate','imageFree','imagePaid']){if(!Number.isSafeInteger(input[key])||input[key]<=0)fail('نرخ و محدودیت تصویر باید عدد صحیح مثبت باشند');result[key]=input[key];}

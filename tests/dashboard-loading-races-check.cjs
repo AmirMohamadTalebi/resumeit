@@ -32,7 +32,7 @@ const {chromium}=require('playwright'),{createServer}=require('../src/http/serve
 
   const guardContext=await context(),guardPage=await guardContext.newPage();guardPage.on('pageerror',error=>errors.push(error.message));
   await guardPage.goto(base+'/dashboard/resume/?step=profile');await guardPage.locator('#p_name').fill('تغییر ذخیره‌نشدهٔ آزمایش');await guardPage.waitForFunction(()=>RI.state.ui.dirty);
-  await guardPage.evaluate(()=>RI.go('themes'));const stay=guardPage.getByRole('button',{name:'ماندن در صفحه',exact:true});await stay.waitFor();
+  await guardPage.evaluate(()=>RI.go('themes'));const stay=guardPage.getByRole('button',{name:'ماندن و ادامهٔ ویرایش',exact:true});await stay.waitFor();
   await guardPage.evaluate(()=>RI.go('stats'));assert.equal(await stay.count(),1,'concurrent destinations share one leave confirmation');await stay.click();
   await guardPage.waitForFunction(()=>!document.querySelector('dialog[open]'));assert.equal(await guardPage.evaluate(()=>document.body.dataset.page),'resume');assert.equal(await guardPage.locator('#p_name').inputValue(),'تغییر ذخیره‌نشدهٔ آزمایش');assert.equal(await guardPage.evaluate(()=>RI.state.ui.dirty),true);assert.equal(await guardPage.locator('#routeLoading').count(),0);assert.equal(await guardPage.locator('#view').evaluate(node=>node.inert),false);await guardContext.close();
 

@@ -25,20 +25,49 @@
   }
   const near = (w, k) => w === k || (k.length >= 4 && w.length >= 3 && (w.startsWith(k) || k.startsWith(w) && w.length >= k.length - 1 || distance(w, k, k.length >= 6 ? 2 : 1) <= (k.length >= 6 ? 2 : 1)));
 
+  /* ---------- Spelling: resume vocabulary and the usual one-letter slips ---------- */
+  // A word is flagged only when it is not a known word (or a known word plus a common suffix) and is exactly one
+  // letter away from a known word of five letters or more, so names and rare words are left alone.
+  const VOCAB = new Set(('دانشجو دانشجوی دانشجویی دانشجویان دانش آموز دانش‌آموز فارغ التحصیل کارشناسی کارشناس ارشد دکتری دکترا کاردانی دیپلم مهندسی مهندس کامپیوتر نرم افزار سخت افزار برنامه نویس برنامه‌نویس برنامه نویسی توسعه دهنده توسعه‌دهنده طراح طراحی گرافیک گرافیست رابط کاربری کاربر تجربه تحقیق تحلیل تحلیلگر داده مدیر مدیریت پروژه محصول بازاریابی فروش پشتیبانی مشتری مشتریان حسابداری حسابدار مالی منابع انسانی مدرس معلم تدریس آموزش دانشگاه دانشکده مدرسه دبیرستان هنرستان رشته گرایش علاقه علاقه‌مند علاقمند مسلط آشنا تسلط مهارت تخصص متخصص سابقه همکاری گروهی مستقل خلاق خلاقیت دقیق منظم مسئولیت مسئولیت‌پذیر یادگیری سریع ارتباط ارتباطات مذاکره رهبری برنامه‌ریزی سازماندهی مسئله تفکر وبسایت اپلیکیشن موبایل اندروید فرانت بک‌اند فرانت‌اند فول‌استک پایتون جاوااسکریپت فریلنسر فریلنس استارتاپ شرکت سازمان کارآموز کارآموزی کارمند همکار مشاور مشاوره پژوهش پژوهشگر مقاله کنفرانس گواهینامه مدرک دوره زبان انگلیسی آلمانی فرانسوی عربی ترکی فارسی مادری متوسط پیشرفته مقدماتی عکاسی عکاس ویدیو تدوین محتوا تولید نویسنده نویسندگی ترجمه مترجم ویراستار ویراستاری شبکه امنیت هوش مصنوعی ماشین بهبود افزایش کاهش توسعه پیاده سازی پیاده‌سازی راه اندازی راه‌اندازی ساختم کردم انجام تجارب دستاورد نتیجه کیفیت سرعت عملکرد بهینه سازی بهینه‌سازی تست آزمون مستندسازی اسکرام چابک تیم تیمی رهبر سرپرست سرپرستی کارشناسی‌ارشد مهندسی‌کامپیوتر نرم‌افزار سخت‌افزار برنامه‌نویسی توسعه‌دهندهٔ علاقه‌مندم هستم').split(' '));
+  const SLIPS = { 'دانشجوری': 'دانشجوی', 'دانشجوئی': 'دانشجویی', 'مهندسى': 'مهندسی', 'مسئولیت پزیر': 'مسئولیت‌پذیر', 'برنامه نویسى': 'برنامه‌نویسی', 'علاقمند': 'علاقه‌مند' };
+  // Persian letters only: punctuation such as «،» and «؟» sits in the same Unicode block and must not join a word.
+  const LETTERS = /^[ء-غف-يپچژکگیۀ]+$/;
+  const SUFFIX = /(?:های|ها|هایی|ان|ات|یی|ی|م|ت|ش|مان|تان|شان|ای|ام|اید|ند)$/;
+  const known = w => VOCAB.has(w) || [...VOCAB].some(v => w.startsWith(v) && SUFFIX.test(w.slice(v.length)) && w.length - v.length <= 3);
+  function suggest(word) {
+    const w = norm(word); if (SLIPS[w]) return SLIPS[w];
+    if (w.length < 5 || !LETTERS.test(w) || known(w)) return null;
+    let best = null; for (const v of VOCAB) if (v.length >= 5 && !v.includes(' ') && distance(w, v, 1) === 1) { if (best) return null; best = v; }
+    return best;
+  }
+  // Possible typos in the parts of the resume people read first: title, bio, roles and descriptions.
+  function spelling(c) {
+    const p = c.profile || {}, out = [], seen = new Set();
+    const scan = (value, where) => { for (const raw of String(value || '').split(/[\s،,.؛:!؟?()«»"]+/)) { const right = suggest(raw); if (right && !seen.has(raw)) { seen.add(raw); out.push({ where, wrong: raw, right }); } } };
+    scan(p.title, 'عنوان'); scan(p.bio, 'معرفی');
+    for (const e of list(c.experience)) { scan(e.role, 'تجربه'); scan(e.desc, 'تجربه'); }
+    for (const e of list(c.education)) scan(e.degree, 'تحصیلات');
+    for (const x of list(c.projects)) scan(x.desc, 'پروژه‌ها');
+    return out.slice(0, 8);
+  }
+  const fixText = value => String(value || '').replace(/[ء-غف-يپچژکگیۀ‌]+/g, w => suggest(w) || w);
+
   /* ---------- Roles ---------- */
   const ROLES = {
+    fullstack: { label: 'توسعه‌دهندهٔ فول‌استک', keys: ['فول استک', 'فول‌استک', 'فولاستک', 'fullstack', 'full stack', 'full-stack', 'mern', 'mean'], skills: ['JavaScript', 'TypeScript', 'React', 'Node.js', 'SQL', 'طراحی API', 'Docker', 'Git', 'تست‌نویسی'] },
+    developer: { label: 'توسعه‌دهندهٔ نرم‌افزار', keys: ['دولوپر', 'دیولوپر', 'دِوِلوپر', 'developer', 'programmer', 'برنامه نویس', 'برنامه‌نویس', 'کدنویس', 'توسعه دهنده', 'مهندس نرم افزار', 'software engineer', 'نرم افزار', 'کامپیوتر'], skills: ['Git', 'الگوریتم و ساختار داده', 'SQL', 'تست‌نویسی', 'طراحی API', 'لینوکس', 'Docker'] },
     frontend: { label: 'توسعه‌دهندهٔ فرانت‌اند', keys: ['فرانت', 'frontend', 'front-end', 'react', 'vue', 'angular', 'javascript', 'typescript', 'css', 'html', 'next.js', 'رابط وب'], skills: ['JavaScript', 'TypeScript', 'React', 'HTML و CSS', 'Git', 'Tailwind CSS', 'تست‌نویسی', 'دسترس‌پذیری وب', 'بهینه‌سازی سرعت'] },
     backend: { label: 'توسعه‌دهندهٔ بک‌اند', keys: ['بک', 'backend', 'back-end', 'node', 'django', 'laravel', 'php', 'golang', 'java', 'sql', 'api', 'سرور', 'دیتابیس'], skills: ['Node.js', 'SQL', 'طراحی API', 'Docker', 'Git', 'Redis', 'تست‌نویسی', 'لینوکس', 'امنیت وب'] },
     mobile: { label: 'توسعه‌دهندهٔ موبایل', keys: ['موبایل', 'اندروید', 'android', 'ios', 'flutter', 'فلاتر', 'kotlin', 'swift', 'react native'], skills: ['Flutter', 'Kotlin', 'Swift', 'Git', 'طراحی API', 'انتشار در مارکت‌ها', 'Firebase'] },
-    design: { label: 'طراح رابط و تجربهٔ کاربری', keys: ['طراح', 'ui', 'ux', 'figma', 'فیگما', 'رابط کاربری', 'تجربه کاربری', 'گرافیک', 'illustrator', 'photoshop'], skills: ['Figma', 'طراحی رابط کاربری', 'تحقیق کاربر', 'پروتوتایپ', 'سیستم طراحی', 'Photoshop', 'Illustrator', 'تست کاربردپذیری'] },
-    data: { label: 'تحلیل‌گر داده', keys: ['داده', 'data', 'تحلیل', 'python', 'پایتون', 'power bi', 'tableau', 'excel', 'اکسل', 'آمار', 'sql', 'machine learning', 'یادگیری ماشین'], skills: ['Python', 'SQL', 'Excel', 'Power BI', 'آمار', 'Pandas', 'مصورسازی داده', 'یادگیری ماشین'] },
-    marketing: { label: 'کارشناس بازاریابی دیجیتال', keys: ['بازاریابی', 'مارکتینگ', 'marketing', 'سئو', 'seo', 'تبلیغات', 'کمپین', 'شبکه های اجتماعی', 'سوشال', 'برند'], skills: ['سئو', 'بازاریابی محتوا', 'Google Analytics', 'مدیریت کمپین', 'شبکه‌های اجتماعی', 'ایمیل مارکتینگ', 'کپی‌رایتینگ'] },
-    content: { label: 'تولیدکنندهٔ محتوا', keys: ['محتوا', 'نویسنده', 'نویسندگی', 'کپی رایت', 'ویراستار', 'ترجمه', 'مترجم', 'content', 'ادمین'], skills: ['کپی‌رایتینگ', 'ویراستاری', 'سئو', 'تولید محتوای ویدیویی', 'ترجمه', 'مدیریت شبکه‌های اجتماعی'] },
+    design: { label: 'طراح رابط و تجربهٔ کاربری', keys: ['طراح', 'دیزاینر', 'designer', 'گرافیست', 'ui', 'ux', 'figma', 'فیگما', 'رابط کاربری', 'تجربه کاربری', 'گرافیک', 'illustrator', 'photoshop'], skills: ['Figma', 'طراحی رابط کاربری', 'تحقیق کاربر', 'پروتوتایپ', 'سیستم طراحی', 'Photoshop', 'Illustrator', 'تست کاربردپذیری'] },
+    data: { label: 'تحلیل‌گر داده', keys: ['داده', 'دیتا', 'data', 'آنالیست', 'analyst', 'تحلیل', 'python', 'پایتون', 'power bi', 'tableau', 'excel', 'اکسل', 'آمار', 'sql', 'machine learning', 'یادگیری ماشین'], skills: ['Python', 'SQL', 'Excel', 'Power BI', 'آمار', 'Pandas', 'مصورسازی داده', 'یادگیری ماشین'] },
+    marketing: { label: 'کارشناس بازاریابی دیجیتال', keys: ['بازاریابی', 'مارکتینگ', 'مارکتر', 'marketer', 'marketing', 'سئو', 'seo', 'تبلیغات', 'کمپین', 'شبکه های اجتماعی', 'سوشال', 'برند'], skills: ['سئو', 'بازاریابی محتوا', 'Google Analytics', 'مدیریت کمپین', 'شبکه‌های اجتماعی', 'ایمیل مارکتینگ', 'کپی‌رایتینگ'] },
+    content: { label: 'تولیدکنندهٔ محتوا', keys: ['محتوا', 'نویسنده', 'نویسندگی', 'کپی رایت', 'کپی رایتر', 'بلاگر', 'یوتیوبر', 'تدوینگر', 'ادیتور', 'ویراستار', 'ترجمه', 'مترجم', 'content', 'ادمین'], skills: ['کپی‌رایتینگ', 'ویراستاری', 'سئو', 'تولید محتوای ویدیویی', 'ترجمه', 'مدیریت شبکه‌های اجتماعی'] },
     sales: { label: 'کارشناس فروش', keys: ['فروش', 'sales', 'بازرگانی', 'crm', 'مذاکره', 'مشتری', 'ویزیتور'], skills: ['مذاکره', 'CRM', 'فروش تلفنی', 'مدیریت مشتری', 'پیگیری سرنخ', 'ارائه محصول'] },
     support: { label: 'کارشناس پشتیبانی مشتری', keys: ['پشتیبانی', 'support', 'پاسخگویی', 'خدمات مشتری', 'تیکت', 'call center'], skills: ['ارتباط با مشتری', 'حل مسئله', 'تیکتینگ', 'CRM', 'صبر و همدلی', 'مستندسازی'] },
     accounting: { label: 'حسابدار', keys: ['حسابدار', 'حسابداری', 'accounting', 'مالی', 'مالیات', 'سپیدار', 'همکاران سیستم', 'حسابرسی', 'بیمه'], skills: ['حسابداری مالی', 'Excel', 'نرم‌افزار سپیدار', 'قوانین مالیاتی', 'تهیهٔ صورت‌های مالی', 'بیمه و حقوق'] },
     teaching: { label: 'مدرس', keys: ['مدرس', 'معلم', 'تدریس', 'آموزش', 'teacher', 'teaching', 'کلاس'], skills: ['طراحی درس', 'ارزشیابی', 'مدیریت کلاس', 'آموزش آنلاین', 'روان‌شناسی یادگیری'] },
-    management: { label: 'مدیر پروژه', keys: ['مدیر', 'مدیریت', 'manager', 'project', 'پروژه', 'اسکرام', 'scrum', 'agile', 'جیرا', 'jira', 'محصول', 'product'], skills: ['مدیریت پروژه', 'اسکرام', 'Jira', 'برنامه‌ریزی', 'مدیریت ریسک', 'رهبری تیم', 'ارتباط با ذی‌نفعان'] },
+    management: { label: 'مدیر پروژه', keys: ['مدیر', 'مدیریت', 'manager', 'پروداکت', 'پروجکت منیجر', 'مدیر محصول', 'project', 'پروژه', 'اسکرام', 'scrum', 'agile', 'جیرا', 'jira', 'محصول', 'product'], skills: ['مدیریت پروژه', 'اسکرام', 'Jira', 'برنامه‌ریزی', 'مدیریت ریسک', 'رهبری تیم', 'ارتباط با ذی‌نفعان'] },
   };
   function detectRole(c, goal) {
     const p = c.profile || {}, scores = {};
@@ -88,6 +117,7 @@
     const t = text(p.title).length; if (t >= 8 && t <= 60) b += 30; else br.push(t ? 'عنوان را بین ۸ تا ۶۰ حرف نگه دار' : '');
     if (bio.length >= 120 && bio.length <= 500) b += 40; else if (bio.length >= 40) { b += 22; br.push(bio.length < 120 ? 'معرفی را کمی کامل‌تر کن (حدود ۲ تا ۳ جمله)' : 'معرفی طولانی است؛ کوتاه‌ترش کن'); } else br.push(bio ? 'معرفی خیلی کوتاه است' : 'معرفی بنویس تا خواننده در چند ثانیه بفهمد چه کاره‌ای');
     const long = [bio, ...exp.map(e => e.desc)].filter(x => text(x).length > 260 && !/[.؟!?؛\n]/.test(x)).length; if (!long) b += 30; else br.push('بعضی توضیح‌ها یک جملهٔ خیلی بلندند');
+    const typos = spelling(c); if (typos.length) { b -= Math.min(30, typos.length * 12); br.unshift('غلط املایی احتمالی: «' + typos[0].wrong + '» ← «' + typos[0].right + '»' + (typos.length > 1 ? ' و ' + fa(typos.length - 1) + ' مورد دیگر' : '')); }
     add('clarity', 'وضوح', b, 100, br);
     const described = exp.filter(e => text(e.desc).length >= 25), withImpact = described.filter(e => /\d/.test(norm(e.desc)) || IMPACT.test(norm(e.desc)) && !OPENERS.some(([re]) => re.test(norm(e.desc))));
     let d = 0; const dr = [];
@@ -112,14 +142,15 @@
   /* ---------- Drafts from the user's own facts ---------- */
   function bioDraft(c, goal) {
     const p = c.profile || {}, role = detectRole(c, goal), y = years(c), exp = list(c.experience), latest = exp.find(e => e.current) || exp[0];
-    const title = text(p.title) || role?.label; if (!title) return null;
+    const title = fixText(text(p.title)) || role?.label; if (!title) return null;
     const top = list(c.skills).slice().sort((a, b) => (Number(b.level) || 0) - (Number(a.level) || 0)).map(s => text(s.name)).filter(Boolean).slice(0, 3);
     const parts = [];
-    parts.push(title + (y >= 1 ? ' با ' + fa(y) + ' سال تجربه' : '') + (top.length ? ' در ' + top.join('، ').replace(/، ([^،]+)$/, ' و $1') : '') + '.');
+    const joined = top.join('، ').replace(/، ([^،]+)$/, ' و $1');
+    parts.push(title + (y >= 1 ? ' با ' + fa(y) + ' سال تجربه' + (top.length ? ' در ' + joined : '') : top.length ? '، علاقه‌مند به ' + joined : '') + '.');
     if (latest && text(latest.org)) parts.push((latest.current ? 'الان در ' : 'آخرین بار در ') + text(latest.org) + (text(latest.role) ? ' به‌عنوان ' + text(latest.role) : '') + (latest.current ? ' کار می‌کنم.' : ' کار کردم.'));
     const proj = list(c.projects).find(x => text(x.title || x.name)); if (proj) parts.push('از کارهایم می‌توانم به «' + text(proj.title || proj.name) + '» اشاره کنم.');
     if (goal) parts.push('دنبال فرصتی به‌عنوان ' + text(goal) + ' هستم.');
-    return parts.join(' ');
+    return fixText(parts.join(' '));
   }
   const VERBS = ['طراحی کردم', 'پیاده‌سازی کردم', 'راه‌اندازی کردم', 'بهبود دادم', 'مدیریت کردم', 'ساختم', 'تحلیل کردم', 'آموزش دادم'];
   function bulletHelp(desc) {
@@ -153,7 +184,17 @@
     ['length', ['طولانی', 'کوتاه', 'چند صفحه', 'طول رزومه', 'length']],
     ['privacy', ['شماره', 'حریم', 'خصوصی', 'امنیت', 'privacy', 'نشانی خانه']],
     ['language', ['زبان', 'انگلیسی', 'english', 'ielts', 'تافل']],
+    ['spelling', ['غلط', 'املا', 'املایی', 'تایپی', 'اشتباه', 'نگارش', 'typo']],
   ];
+  // Statements about oneself: «من فول‌استک دولوپر هستم»، «می‌خوام طراح رابط کاربری بشم».
+  function understand(question) {
+    const q = norm(question).replace(/[.!؟?،,]+$/g, '').trim();
+    let m = /(?:^|\s)(?:من|بنده)\s+(?:یک |یه )?(.{2,60}?)\s*(?:هستم|هستش|هست|ام|میباشم|می باشم)$/.exec(q);
+    if (m && !/^(خوب|خسته|اینجا|آماده|مطمئن)/.test(m[1])) return { kind: 'identity', phrase: m[1].trim() };
+    m = /(?:می ?خوام|می ?خواهم|دوست دارم|هدفم|دنبال|قصد دارم)\s+(?:اینه که |این است که |اینکه )?(?:به عنوان |بعنوان )?(?:یک |یه )?(?:کار |شغل )?(.{2,60}?)\s*(?:بشم|بشوم|شوم|بشه|باشم|کار کنم|استخدام بشم|هستم|است)?$/.exec(q);
+    if (m && !/^(بدونم|ببینم|بپرسم|امتیاز|معرفی|مهارت|رزومه|قالب|منتشر|بنویس)/.test(m[1])) return { kind: 'goal', phrase: m[1].trim() };
+    return null;
+  }
   function intent(question) {
     const q = norm(question), ws = words(question); let best = null;
     for (const [id, keys] of INTENTS) {
@@ -165,29 +206,42 @@
   }
   const go = (label, section, field) => ({ kind: 'go', label, section, field });
   function reply(question, c, ctx = {}) {
-    const id = intent(question), sc = score(c, ctx), role = sc.role, p = c.profile || {}, weak = sc.dims.slice().sort((a, b) => a.value - b.value);
+    const said = understand(question), id = said ? 'statement' : intent(question), sc = score(c, ctx), role = sc.role, p = c.profile || {}, weak = sc.dims.slice().sort((a, b) => a.value - b.value), typos = spelling(c);
     const follow = ['امتیاز رزومه‌ام چند است؟', 'قدم بعدی چیه؟', 'یک معرفی برایم پیشنهاد بده', 'چه مهارت‌هایی اضافه کنم؟'];
     const out = (textValue, actions = [], next = follow) => ({ intent: id || 'unknown', text: textValue, actions, follow: next.filter(f => norm(f) !== norm(question)).slice(0, 3) });
+    const fixes = () => typos.slice(0, 4).map(t => ({ kind: 'fix', label: '«' + t.wrong + '» ← «' + t.right + '»', wrong: t.wrong, value: t.right }));
     switch (id) {
+      case 'statement': {
+        const r = detectRole({ profile: { title: said.phrase } }, said.phrase), name = r ? r.label : fixText(said.phrase), title = text(p.title);
+        const sameTitle = r && norm(fixText(title)).includes(norm(r.label).split(' ').slice(-1)[0]);
+        const miss = r ? missingSkills(c, r.id).slice(0, 4) : [];
+        const lines = [(said.kind === 'identity' ? 'پس «' + name + '» هستی' : 'هدفت «' + name + '» است') + (r ? '.' : '؛ این حوزه را در فهرستم ندارم ولی پیشنهادهایم را با آن هماهنگ می‌کنم.')];
+        if (title && !sameTitle) lines.push('عنوانت الان «' + title + '» است' + (typos.some(t => title.includes(t.wrong)) ? ' و غلط املایی دارد' : '') + '؛ اگر می‌خواهی با همین شغل دیده شوی، عنوان را به آن نزدیک کن.');
+        else if (!title) lines.push('هنوز عنوان نداری؛ می‌توانم «' + name + '» را بگذارم.');
+        if (miss.length) lines.push('برای این نقش، این مهارت‌ها در فهرستت نیستند؛ فقط آن‌هایی را بزن که بلدی:');
+        return out(lines.join(' '), [{ kind: 'goal', label: 'هدف: ' + name, value: name }, ...(!sameTitle ? [{ kind: 'title', label: 'عنوان را «' + name + '» کن', value: name }] : []), ...miss.map(m => ({ kind: 'skill', label: (m.seen ? '★ ' : '') + m.name, value: m.name }))], ['یک معرفی برایم پیشنهاد بده', 'قدم بعدی چیه؟', 'امتیاز رزومه‌ام چند است؟']);
+      }
+      case 'spelling': return out(typos.length ? 'این‌ها احتمالاً غلط تایپی‌اند؛ روی هر کدام بزنی همه‌جای رزومه درست می‌شود:\n' + typos.slice(0, 4).map(t => '• ' + t.where + ': «' + t.wrong + '» ← «' + t.right + '»').join('\n') : 'در عنوان، معرفی و توضیح‌هایت غلط املایی واضحی ندیدم.', fixes());
       case 'greet': return out('سلام' + (text(p.name) ? ' ' + text(p.name).split(' ')[0] : '') + '! رزومه‌ات را خوانده‌ام. الان ' + fa(sc.total) + ' از ۱۰۰ است (' + sc.label + '). می‌خواهی از کجا شروع کنیم؟');
       case 'thanks': return out('خواهش می‌کنم! هر وقت متن را عوض کنی، دوباره بررسی می‌کنم.');
       case 'help': return out('رزومه‌ات را می‌خوانم و: ۱) امتیازش را در پنج بعد می‌گویم، ۲) قدم بعدی را پیشنهاد می‌دهم، ۳) از اطلاعات خودت پیش‌نویس معرفی می‌سازم، ۴) مهارت‌های مناسب نقشت را پیشنهاد می‌دهم، ۵) توضیح تجربه‌ها را قوی‌تر می‌کنم. چیزی از خودم اضافه نمی‌کنم؛ هر تغییر با تأیید تو اعمال می‌شود.');
       case 'score': return out('امتیاز رزومه‌ات ' + fa(sc.total) + ' از ۱۰۰ است (' + sc.label + '). ' + sc.dims.map(d => d.label + ' ' + fa(d.value)).join('، ') + '. ضعیف‌ترین بخش «' + weak[0].label + '» است' + (weak[0].reasons[0] ? ': ' + weak[0].reasons[0] + '.' : '.'), [{ kind: 'tab', label: 'جزئیات امتیاز', tab: 'score' }], ['چطور «' + weak[0].label + '» را بهتر کنم؟', 'قدم بعدی چیه؟']);
       case 'next': {
         const r = weak.flatMap(d => d.reasons.map(x => ({ d, x }))).slice(0, 3);
-        return out(r.length ? 'سه کار که بیشترین اثر را دارند:\n' + r.map((v, i) => fa(i + 1) + '. ' + v.x + ' (' + v.d.label + ')').join('\n') : 'رزومه‌ات کامل است! حالا آمادگی انتشار را بررسی کن و صفحه را منتشر کن.', r.length ? [] : [{ kind: 'route', label: 'آمادگی انتشار', route: 'studio' }]);
+        return out(r.length ? 'سه کار که بیشترین اثر را دارند:\n' + r.map((v, i) => fa(i + 1) + '. ' + v.x + ' (' + v.d.label + ')').join('\n') : 'رزومه‌ات کامل است! حالا آمادگی انتشار را بررسی کن و صفحه را منتشر کن.', r.length ? fixes() : [{ kind: 'route', label: 'آمادگی انتشار', route: 'studio' }]);
       }
       case 'bio': {
         const draft = bioDraft(c, ctx.goal);
         if (!draft) return out('برای نوشتن پیش‌نویس، اول عنوان شغلی‌ات را بنویس؛ بقیه را از تجربه و مهارت‌هایت برمی‌دارم.', [go('نوشتن عنوان', 'profile', 'title')]);
-        return out((text(p.bio) ? 'معرفی فعلی‌ات ' + fa(text(p.bio).length) + ' حرف است. ' : '') + 'این پیش‌نویس فقط از اطلاعات خودت ساخته شده؛ هر جا لازم است ویرایشش کن:\n«' + draft + '»', [{ kind: 'bio', label: text(p.bio) ? 'جایگزین معرفی فعلی' : 'گذاشتن در معرفی', value: draft }, go('ویرایش معرفی', 'profile', 'bio')]);
+        const slip = typos.find(t => t.where === 'عنوان' || t.where === 'معرفی');
+        return out((slip ? 'اول اینکه «' + slip.wrong + '» احتمالاً «' + slip.right + '» است؛ در پیش‌نویس درستش کردم. ' : '') + (text(p.bio) ? 'معرفی فعلی‌ات ' + fa(text(p.bio).length) + ' حرف است. ' : '') + 'این پیش‌نویس فقط از اطلاعات خودت ساخته شده؛ هر جا لازم است ویرایشش کن:\n«' + draft + '»', [{ kind: 'bio', label: text(p.bio) ? 'جایگزین معرفی فعلی' : 'گذاشتن در معرفی', value: draft }, ...(slip ? fixes().slice(0, 2) : []), go('ویرایش معرفی', 'profile', 'bio')]);
       }
       case 'title': {
         const t = text(p.title);
         return out(t ? 'عنوانت «' + t + '» است (' + fa(t.length) + ' حرف). ' + (t.length > 60 ? 'طولانی است؛ یک خط کوتاه بهتر دیده می‌شود.' : t.length < 8 ? 'خیلی کلی است؛ حوزه‌ات را دقیق بگو.' : 'طولش خوب است.') + (role && !norm(t).includes(norm(role.label).split(' ')[0]) ? ' از متنت به نظر می‌رسد «' + role.label + '» هستی.' : '') : 'هنوز عنوان نداری. ' + (role ? 'از متنت پیداست «' + role.label + '» هستی؛ می‌خواهی همین را بگذاری؟' : 'یک عنوان کوتاه مثل «طراح رابط کاربری» بنویس.'), role && !t ? [{ kind: 'title', label: 'گذاشتن «' + role.label + '»', value: role.label }] : [go('ویرایش عنوان', 'profile', 'title')]);
       }
       case 'skills': {
-        if (!role) return out('نقشت را از متن پیدا نکردم. در کادر «هدف شغلی» بنویس دنبال چه کاری هستی تا مهارت‌های مناسب را پیشنهاد بدهم.', [{ kind: 'tab', label: 'تعیین هدف', tab: 'review' }]);
+        if (!role) return out('نقشت را از متن پیدا نکردم. بگو چه کاری می‌کنی؛ مثلاً «من طراح رابط کاربری هستم» یا «می‌خوام برنامه‌نویس بک‌اند بشم».', [], ['من برنامه‌نویس فرانت‌اند هستم', 'من طراح رابط کاربری هستم', 'من حسابدار هستم']);
         const miss = missingSkills(c, role.id);
         return out(miss.length ? 'برای «' + role.label + '» این مهارت‌ها رایج‌اند و در فهرستت نیستند' + (miss.some(m => m.seen) ? ' (آن‌هایی که ستاره دارند در متنت آمده‌اند)' : '') + '. فقط آن‌هایی را بزن که واقعاً بلدی:' : 'مهارت‌هایت برای «' + role.label + '» کامل به نظر می‌رسد. برای هر کدام سطح بگذار تا خواننده بهتر بفهمد.', miss.map(m => ({ kind: 'skill', label: (m.seen ? '★ ' : '') + m.name, value: m.name })));
       }
@@ -207,15 +261,17 @@
       case 'language': return out(list(c.languages).length ? 'برای هر زبان سطح واقعی‌ات را بگذار؛ اگر مدرک داری (مثل IELTS) نمره‌اش را بنویس.' : 'اگر زبان دیگری بلدی، با سطح واقعی‌اش اضافه کن؛ برای خیلی از کارفرماها مهم است.', [go('زبان‌ها', 'languages')]);
       default: {
         const guess = INTENTS.find(([iid]) => iid !== 'greet' && iid !== 'thanks' && words(question).some(w => INTENTS.find(x => x[0] === iid)[1].some(k => w.length >= 3 && norm(k).includes(w))));
-        return out('مطمئن نیستم منظورت را درست فهمیده باشم' + (guess ? '؛ دربارهٔ «' + guess[1][0] + '» می‌پرسی؟' : '.') + ' می‌توانی یکی از این‌ها را بپرسی:', [], ['امتیاز رزومه‌ام چند است؟', 'قدم بعدی چیه؟', 'یک معرفی برایم پیشنهاد بده', 'چه مهارت‌هایی اضافه کنم؟']);
+        const r = detectRole({ profile: { title: question } }, question);
+        if (r) return reply('من ' + r.label + ' هستم', c, ctx);
+        return out('مطمئن نیستم منظورت را درست فهمیده باشم' + (guess ? '؛ دربارهٔ «' + guess[1][0] + '» می‌پرسی؟' : '.') + ' می‌توانی یکی از این‌ها را بپرسی، یا بگو چه کاری می‌کنی:', [], ['امتیاز رزومه‌ام چند است؟', 'قدم بعدی چیه؟', 'یک معرفی برایم پیشنهاد بده', 'غلط املایی دارم؟']);
       }
     }
   }
   function opening(c, ctx = {}) {
-    const sc = score(c, ctx), p = c.profile || {}, weak = sc.dims.slice().sort((a, b) => a.value - b.value)[0];
-    return { intent: 'opening', text: (text(p.name) ? 'سلام ' + text(p.name).split(' ')[0] + '! ' : 'سلام! ') + 'رزومه‌ات ' + fa(sc.total) + ' از ۱۰۰ است (' + sc.label + ')' + (sc.role ? ' و به نظرم «' + sc.role.label + '» هستی' : '') + '. ' + (weak.value < 70 && weak.reasons[0] ? 'بیشترین اثر را «' + weak.label + '» دارد: ' + weak.reasons[0] + '.' : 'وضعیتش خوب است؛ بپرس تا دقیق‌تر کمک کنم.'), actions: [], follow: ['قدم بعدی چیه؟', 'یک معرفی برایم پیشنهاد بده', 'چه مهارت‌هایی اضافه کنم؟'] };
+    const sc = score(c, ctx), p = c.profile || {}, weak = sc.dims.slice().sort((a, b) => a.value - b.value)[0], typos = spelling(c);
+    return { intent: 'opening', text: (text(p.name) ? 'سلام ' + text(p.name).split(' ')[0] + '! ' : 'سلام! ') + 'رزومه‌ات ' + fa(sc.total) + ' از ۱۰۰ است (' + sc.label + ')' + (sc.role ? ' و به نظرم «' + sc.role.label + '» هستی' : '') + '. ' + (typos.length ? 'یک چیز کوچک: «' + typos[0].wrong + '» در ' + typos[0].where + ' احتمالاً «' + typos[0].right + '» است.' : weak.value < 70 && weak.reasons[0] ? 'بیشترین اثر را «' + weak.label + '» دارد: ' + weak.reasons[0] + '.' : 'وضعیتش خوب است؛ بپرس تا دقیق‌تر کمک کنم.'), actions: typos.slice(0, 2).map(t => ({ kind: 'fix', label: '«' + t.wrong + '» ← «' + t.right + '»', wrong: t.wrong, value: t.right })), follow: ['قدم بعدی چیه؟', 'یک معرفی برایم پیشنهاد بده', sc.role ? 'چه مهارت‌هایی اضافه کنم؟' : 'من برنامه‌نویس هستم'] };
   }
 
-  const api = { version: '1.0.0', ROLES, normalize: norm, detectRole, missingSkills, years, score, bioDraft, bulletHelp, intent, reply, opening };
+  const api = { version: '2.0.0', ROLES, normalize: norm, detectRole, missingSkills, years, score, bioDraft, bulletHelp, intent, understand, spelling, fixText, reply, opening };
   if (typeof module === 'object' && module.exports) module.exports = api; else root.ResumeBrain = api;
 })(typeof self !== 'undefined' ? self : this);
