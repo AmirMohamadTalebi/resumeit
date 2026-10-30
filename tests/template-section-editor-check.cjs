@@ -11,13 +11,13 @@ const {chromium}=require('playwright'),{createServer}=require('../src/http/serve
  const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
  for(const template of ['vista','satiar']){
   const saved=await f.db.loadDashboard(f.owner);await f.db.mutateDashboard(f.owner,saved.revision,d=>{d.content.theme.resume=template;});
-  await page.goto(base+'/dashboard/resume/?step=profile');await page.locator('#rs-sec-template [data-tgroup-pick]').first().waitFor();await page.evaluate(()=>document.fonts.ready);
-  const help=page.getByRole('button',{name:'راهنمای نام و نام خانوادگی',exact:true});await help.hover();await page.getByRole('tooltip').waitFor();assert.match(await page.getByRole('tooltip').innerText(),/نامی که/);await page.keyboard.press('Escape');assert.equal(await page.getByRole('tooltip').isVisible(),false);
+  await page.goto(base+'/dashboard/resume/?step=profile');await page.locator('#rs-sec-template').waitFor({state:'attached'});await page.evaluate(k=>RI.resumeTab(k),'template');await page.locator('#rs-sec-template [data-tgroup-pick]').first().waitFor();await page.evaluate(()=>document.fonts.ready);
+  await page.evaluate(()=>RI.resumeTab('profile'));const help=page.getByRole('button',{name:'راهنمای نام و نام خانوادگی',exact:true});await help.hover();await page.getByRole('tooltip').waitFor();assert.match(await page.getByRole('tooltip').innerText(),/نامی که/);await page.keyboard.press('Escape');assert.equal(await page.getByRole('tooltip').isVisible(),false);
   await help.focus();await page.getByRole('tooltip').waitFor();await help.click();await page.locator('.field-help-details').waitFor();await page.keyboard.press('Escape');
   assert.equal(await page.locator('#template-section').isVisible(),false);assert.equal(await page.locator('.template-categories').isVisible(),false);
   await page.screenshot({path:path.join(out,template+'-profile-desktop.png')});
   const groups=await page.evaluate(()=>RI.templateEditorGroups(RI.C()).map(g=>({key:g.key,label:g.label})));assert(groups.length>3);
-  const group=groups.find(g=>/مهارت/.test(g.label));const step='template-'+group.key.replace(/:/g,'-');await page.locator('#rs-sec-template [data-tgroup-pick="'+group.key+'"]').click();
+  const group=groups.find(g=>/مهارت/.test(g.label));const step='template-'+group.key.replace(/:/g,'-');await page.evaluate(()=>RI.resumeTab('template'));await page.locator('#rs-sec-template [data-tgroup-pick="'+group.key+'"]').click();
   assert.notEqual(await page.locator('#rs-sec-template [data-tgroup-pick][aria-selected=true]').evaluate(e=>getComputedStyle(e).backgroundColor),'rgb(54, 95, 115)');
   assert.equal(await page.locator('#template-section').inputValue(),group.key);assert.equal(await page.locator('#rs-sec-template [data-tgroup-pick][aria-selected=true]').getAttribute('data-tgroup-pick'),group.key);assert.equal(step,'template-'+group.key.replace(/:/g,'-'));
   await page.screenshot({path:path.join(out,template+'-section-desktop.png')});

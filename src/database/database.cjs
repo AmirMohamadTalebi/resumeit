@@ -22,6 +22,7 @@ async function openDatabase(options) {
   await require('./advisor.cjs').initialize(execute);
   await require('./reset.cjs').initialize(execute);
   await require('./media.cjs').initialize(execute);
+  await require('./messages.cjs').initialize(execute);
   await execute('CREATE TABLE IF NOT EXISTS support_attachments(id CHAR(36) PRIMARY KEY,message_id CHAR(36) NOT NULL,name VARCHAR(120) NOT NULL,mime VARCHAR(64) NOT NULL,data MEDIUMBLOB NOT NULL,size INT NOT NULL,INDEX(message_id),FOREIGN KEY(message_id) REFERENCES support_messages(id) ON DELETE CASCADE) ENGINE=InnoDB');
   const context={execute,transaction};
   const database = {
@@ -47,6 +48,7 @@ async function openDatabase(options) {
     ...require('./migration.cjs')(context),
     ...require('./external-images.cjs')(context),
     ...require('./media.cjs')(context),
+    ...require('./messages.cjs')(context),
     close: () => pool.end(),
   };
   try{

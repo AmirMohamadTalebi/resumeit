@@ -33,6 +33,8 @@ module.exports=(db,owners,options={})=>{
     sql.exec('CREATE TABLE dashboard_metrics(user_id TEXT,day INTEGER,event TEXT,link_id TEXT,total INTEGER,PRIMARY KEY(user_id,day,event,link_id));CREATE TABLE dashboard_workspace_metrics(user_id TEXT,slot INTEGER,day INTEGER,event TEXT,link_id TEXT,total INTEGER,PRIMARY KEY(user_id,slot,day,event,link_id));');
     sql.exec('CREATE TABLE dashboard_media(user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,hash TEXT NOT NULL,mime TEXT NOT NULL,size INTEGER NOT NULL,data BLOB NOT NULL,created_at INTEGER NOT NULL,orphaned_at INTEGER,PRIMARY KEY(user_id,hash))');
     Object.assign(db,require('../src/database/media.cjs')({execute,transaction}));
+    sql.exec('CREATE TABLE resume_messages(id TEXT PRIMARY KEY,user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,slot INTEGER NOT NULL DEFAULT 1,name TEXT NOT NULL,contact TEXT NOT NULL,contact_type TEXT NOT NULL,resume_url TEXT,body TEXT NOT NULL,status TEXT NOT NULL DEFAULT \'new\',ip_hash TEXT NOT NULL,created_at INTEGER NOT NULL)');
+    Object.assign(db,require('../src/database/messages.cjs')({execute,transaction}));
     const methods=require('../src/database/dashboard.cjs')({execute,transaction});for(const key of ['loadDashboard','mutateDashboard','slugAvailable','publicWorkspace','publicPage','recordMetric','dashboardStats','workspaceList','workspaceSummary'])db[key]=methods[key];
  }
  sql.exec('ALTER TABLE payment_orders ADD COLUMN credit_units INTEGER;ALTER TABLE payment_orders ADD COLUMN it_rate INTEGER DEFAULT 2000;');

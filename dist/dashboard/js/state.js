@@ -63,7 +63,8 @@
   /* ---------- تغییر و ذخیره ---------- */
   let saveTimer, savingPromise, saveAgain=false, observed, lastScope, lastEdit=0;
   const history=[];
-  RI.manualSave=()=>document.body.dataset.page==='resume';
+  // The resume page saves on request on wide screens; phones have no save button, so it saves on its own there.
+  RI.manualSave=()=>document.body.dataset.page==='resume'&&!(typeof matchMedia==='function'&&matchMedia('(max-width:960px)').matches);
   const editSnapshot=()=>JSON.stringify({content:RI.C(),indexing:RI.state.account.indexing});
   function cancelCountdown(){clearTimeout(saveTimer);RI.state.ui.saveDue=0;}
   RI.resetEdits=function(){cancelCountdown();history.length=0;observed=editSnapshot();lastScope=null;};

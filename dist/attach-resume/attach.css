@@ -1,0 +1,14 @@
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;display:grid;place-items:center;background:linear-gradient(160deg,#eef5f8,#f8f1ea);color:#1c2d38;font:14px/1.9 Vazirmatn,Tahoma,sans-serif;padding:16px}
+.attach{width:min(100%,420px);display:grid;gap:12px;padding:24px;border-radius:24px;background:rgba(255,255,255,.88);border:1px solid #fff;box-shadow:0 24px 50px -28px rgba(28,45,56,.45)}
+.attach__logo{width:120px;height:auto}
+.attach h1{margin:0;font-size:18px;line-height:1.6}
+.attach p{margin:0;color:#4a6070}
+.attach__card{display:grid;gap:2px;padding:12px 14px;border-radius:14px;background:#f3e6d8;color:#4d3320}
+.attach__card bdi{font-size:13px;overflow-wrap:anywhere}
+.attach__btn{display:inline-flex;justify-content:center;align-items:center;min-height:46px;padding:8px 18px;border-radius:14px;border:0;background:linear-gradient(150deg,#8a5d38,#6b4629);color:#fff;font:inherit;font-weight:800;text-decoration:none;cursor:pointer}
+.attach__btn:hover{background:#4f321d}
+.attach__btn--soft{background:#fff;color:#4d3320;border:1px solid #dcc2a7}
+.attach__btn--soft:hover{background:#f3e6d8}
+.attach__btn:focus-visible{outline:3px solid #875a36;outline-offset:3px}
+.attach__state{padding:8px 0}

@@ -175,32 +175,17 @@
       max = Math.max(1, ...vals.flatMap((x) => x[1]));
     if (!vals.length)
       return '<p class="empty">هنوز آماری برای این بازه ثبت نشده است.</p>';
-    return (
-      '<div class="chart" role="img" aria-label="' +
-      (otp ? "پذیرش و خطای ارسال OTP" : "بازدید و کلیک صفحات") +
-      '">' +
-      vals
-        .map(
-          ([day, [a, b]]) =>
-            '<div class="chart-day" title="' +
-            esc(new Date(day * 86400000).toLocaleDateString("fa-IR")) +
-            "؛ " +
-            fa(a) +
-            " / " +
-            fa(b) +
-            '"><span style="height:' +
-            Math.max(1, (a / max) * 100) +
-            '%"></span><span style="height:' +
-            Math.max(1, (b / max) * 100) +
-            '%"></span></div>',
-        )
-        .join("") +
-      '</div><div class="chart-legend"><span>' +
-      (otp ? "پذیرش سرویس" : "بازدید") +
-      "</span><span>" +
-      (otp ? "خطای ارسال" : "کلیک") +
-      "</span></div>"
-    );
+    // Same chart as the dashboard: one chosen kind (column, line, area, pie) for every chart on the site.
+    const labels = vals.map(([day]) => new Date(day * 86400000).toLocaleDateString("fa-IR", { month: "short", day: "numeric" }));
+    return window.RICharts.placeholder({
+      title: otp ? "پذیرش و خطای ارسال OTP" : "بازدید و کلیک صفحات",
+      labelTitle: "تاریخ",
+      labels,
+      series: [
+        { name: otp ? "پذیرش سرویس" : "بازدید", values: vals.map(([, [a]]) => a), color: "#52788d" },
+        { name: otp ? "خطای ارسال" : "کلیک", values: vals.map(([, [, b]]) => b), color: otp ? "#b0443a" : "#a47248" },
+      ],
+    });
   }
   function overview(d) {
     const views = d.traffic

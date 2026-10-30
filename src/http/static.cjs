@@ -1,3 +1,4 @@
+const {analyticsTag}=require('./analytics.cjs');
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const {gzipSync}=require('node:zlib');
@@ -9,6 +10,9 @@ const publicAssets=new Map([['/public-assets/tokens.css','dashboard/css/tokens.c
 const assetHash=createHash('sha256'),localFiles=require('node:fs');
 publicAssets.set('/public-assets/icons.js','dashboard/js/icons.js');
 publicAssets.set('/public-assets/projects.js','dashboard/js/projects.js');
+publicAssets.set('/public-assets/inbox.js','dashboard/js/inbox-form.js');
+publicAssets.set('/public-assets/charts.js','dashboard/js/charts.js');
+publicAssets.set('/public-assets/charts.css','dashboard/css/charts.css');
 function fingerprint(directory){
   for(const item of localFiles.readdirSync(directory,{withFileTypes:true}).sort((a,b)=>a.name.localeCompare(b.name,'en'))){
     const file=path.join(directory,item.name);
@@ -21,8 +25,8 @@ const assetRevision=version+'-'+assetHash.digest('hex').slice(0,16);
 // Bundle only shared workspace files; editable source modules remain independent.
 const bundles=new Map();
 for(const [url,files] of [
-  ['/dashboard/js/workspace.js',['icons','core','ui','data','imported-templates','resume-templates','state','api','account','projects','support-files','preview','commerce','workspace-tools','reset-ui','notification-channels','app','coral','toolbar','liquid'].map(n=>'dashboard/js/'+n+'.js').concat('templates/vista-runtime.js')],
-  ['/dashboard/css/workspace.css',['tokens','base','shell','components','preview','pages','abgoon','performance','resume-studio','liquid'].map(n=>'dashboard/css/'+n+'.css')]
+  ['/dashboard/js/workspace.js',['icons','core','ui','data','imported-templates','resume-templates','state','api','account','projects','support-files','preview','commerce','workspace-tools','reset-ui','notification-channels','charts','app','coral','toolbar','liquid'].map(n=>'dashboard/js/'+n+'.js').concat('templates/vista-runtime.js')],
+  ['/dashboard/css/workspace.css',['tokens','base','shell','components','preview','pages','charts','abgoon','performance','resume-studio','liquid'].map(n=>'dashboard/css/'+n+'.css')]
 ])bundles.set(url,Buffer.from(files.map(file=>{
   let source=localFiles.readFileSync(path.join(root,file),'utf8');
   if(file.endsWith('.css'))source=source.replace(/url\((["']?)(?!data:|https?:|\/\/)([^)"'?#]+)\1\)/g,(_,quote,url)=>`url(${quote}${path.posix.resolve('/',path.posix.dirname(file),url)}${quote})`);
@@ -77,7 +81,7 @@ async function serveStatic(req, res, pathname, origin, account, restricted) {
   let file = path.resolve(root, publicAssets.get(pathname) || '.' + pathname);
   const sample=/^\/(resume|link)([a-z0-9-]+)\/$/.exec(pathname),samplePage=new URL(req.url,origin).searchParams.get('page');
   if(sample&&samplePage&&/^[a-z0-9]+$/.test(samplePage)&&samplePage!=='home')file=path.join(file,samplePage+'.html');
-  const workspacePage=/^\/dashboard\/(support|notifications|studio)\/$/.exec(pathname);
+  const workspacePage=/^\/dashboard\/(support|notifications|studio|messages)\/$/.exec(pathname);
   if(workspacePage)file=path.join(root,'dashboard/index.html');
   const retentionPage=pathname==='/admin/retention/';if(retentionPage)file=path.join(root,'admin/health/index.html');
   try {
@@ -122,8 +126,8 @@ async function serveStatic(req, res, pathname, origin, account, restricted) {
     if(workspacePage)body=Buffer.from(body.toString('utf8').replace('data-page="home"','data-page="'+workspacePage[1]+'"').replace('/dashboard/js/pages/home.js','/dashboard/js/pages/'+workspacePage[1]+'.js'));
     if(retentionPage)body=Buffer.from(body.toString('utf8').replace('data-section="health"','data-section="retention"').replace('<title>','<title>پاک‌سازی و بایگانی | '));
     if(type.startsWith('text/html')&&!pathname.startsWith('/templates/')&&!body.includes('/notifications.js'))body=Buffer.from(body.toString('utf8').replace('</head>','<link rel="stylesheet" href="/notifications.css"><script defer src="/notifications.js"></script></head>'));
-    if(type.startsWith('text/html')&&!pathname.startsWith('/templates/'))body=Buffer.from(body.toString('utf8').replace('</head>','<link rel="stylesheet" href="/control-surfaces.css"></head>'));
-    if(type.startsWith('text/html')&&pathname.toLowerCase().startsWith('/admin/'))body=Buffer.from(body.toString('utf8').replace('<script defer src="/admin/admin.js">','<link rel="stylesheet" href="/admin/owner-controls.css"><script defer src="/admin/owner-controls.js"></script><script defer src="/admin/admin.js">'));
+    if(type.startsWith('text/html')&&!pathname.startsWith('/templates/'))body=Buffer.from(body.toString('utf8').replace('</head>','<link rel="stylesheet" href="/control-surfaces.css">'+analyticsTag(pathname)+'</head>'));
+    if(type.startsWith('text/html')&&pathname.toLowerCase().startsWith('/admin/'))body=Buffer.from(body.toString('utf8').replace('<script defer src="/admin/admin.js">','<link rel="stylesheet" href="/admin/owner-controls.css"><link rel="stylesheet" href="/public-assets/charts.css"><script defer src="/public-assets/charts.js"></script><script defer src="/admin/owner-controls.js"></script><script defer src="/admin/admin.js">'));
     if(type.startsWith('text/html'))body=Buffer.from(body.toString('utf8').replace(/<html\b([^>]*)>/i,`<html$1 data-asset-version="${assetRevision}">`).replace(/\b(src|href)=(["'])(\/[^"'?#]+\.(?:js|css|woff2|png|svg))\2/g,(_,attr,quote,url)=>`${attr}=${quote}${url}?v=${assetRevision}${quote}`));
     if(type.startsWith('text/css'))body=Buffer.from(body.toString('utf8').replace(/url\((["']?)(?!data:|https?:|\/\/)([^)"'?#]+\.(?:woff2|woff|ttf|png|svg|webp|jpg))\1\)/g,(_,quote,url)=>`url(${quote}${url}?v=${assetRevision}${quote})`));
     if(rewriteKey){if(rewrittenBodies.size>=256)rewrittenBodies.delete(rewrittenBodies.keys().next().value);rewrittenBodies.set(rewriteKey,body);}

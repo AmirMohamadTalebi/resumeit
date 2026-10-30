@@ -52,12 +52,9 @@
     const ser = RI.metricSeries(7);
     const sum = (a) => a.reduce((x, y) => x + y, 0);
     const views=RI.workspaceSlot===3?ser.linkViews:ser.views;
-    const max = Math.max.apply(null, views) || 1;
-    const pts = views.map((v, i) => [(i / (views.length - 1)) * 200, 46 - (v / max) * 40]);
-    const d = pts.map((p, i) => (i ? 'L' : 'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join(' ');
     return '<section class="strip" aria-label="خلاصهٔ آمار صفحه‌ها"><div class="strip__label"><span class="chip chip--sample">آمار صفحه‌های شما</span><p>بازدیدها و کلیک‌های ثبت‌شده در هفت روز اخیر</p></div>' +
       '<dl class="strip__nums">' + (RI.workspaceSlot===3?'':'<div><dt>بازدید رزومه</dt><dd class="num">' + RI.fa(sum(ser.views)) + '</dd></div>') + '<div><dt>بازدید لینک‌ها</dt><dd class="num">' + RI.fa(sum(ser.linkViews)) + '</dd></div><div><dt>کلیک روی لینک‌ها</dt><dd class="num">' + RI.fa(sum(ser.clicks)) + '</dd></div></dl>' +
-      '<svg class="strip__spark" viewBox="0 0 200 50" preserveAspectRatio="none" role="img" aria-label="روند بازدید ۷ روز"><path d="' + d + ' L200 50 L0 50Z" fill="rgba(164,114,72,.16)"/><path d="' + d + '" fill="none" stroke="var(--bro-500)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></svg>' +
+      '<div class="strip__chart">' + RI.charts.placeholder({ title: 'روند بازدید ۷ روز', labelTitle: 'روز', height: 150, table: false, labels: views.map((v, i) => i === views.length - 1 ? 'امروز' : RI.fa(views.length - i - 1) + ' روز پیش'), series: [{ name: RI.workspaceSlot === 3 ? 'بازدید لینک‌ها' : 'بازدید رزومه', values: views, color: '#52788d' }, { name: 'کلیک لینک‌ها', values: ser.clicks, color: '#a47248' }] }) + '</div>' +
       '<a class="btn btn--ghost btn--sm" href="/dashboard/stats/" data-go="stats">' + RI.icon('chart') + 'همهٔ آمار</a></section>';
   }
 
@@ -100,13 +97,10 @@
         '<div class="hero__cta">' + (next ? '<a class="btn btn--primary btn--lg" href="' + RI.routeUrl(next.route) + '" data-go="' + next.route + '"' + (next.step ? ' data-step="' + next.step + '"' : '') + (next.tab ? ' data-tab="' + next.tab + '"' : '') + (next.anchor ? ' data-anchor="' + next.anchor + '"' : '') + '>' + RI.icon('zap') + (empty ? (RI.workspaceSlot===3?'تکمیل: '+esc(next.label):'شروع ساخت پروفایل') : 'ادامه: ' + esc(next.label)) + '</a>' : '<button type="button" class="btn btn--primary btn--lg" data-publish="' + kind + '">' + RI.icon('rocket') + 'انتشار صفحه</button>') +
         '<button type="button" class="btn btn--soft btn--lg" data-preview="' + kind + '">' + RI.icon('eye') + 'پیش‌نمایش</button></div>' +
         '<div class="hero__progress">' + RI.ring(comp.pct, 96, 9) + '<div><b>مسیر ساخت هویت</b><small>درصد تکمیل محتوا؛ شرایط انتشار در بخش آمادگی بررسی می‌شود</small></div></div></div>' + (RI.workspaceSlot===3?'':'<div data-home-stage>'+RI.sectionLoading('در حال آماده‌سازی نمای صفحه‌ها…')+'</div>') + '</section>' +
-        '<section class="block"><div class="block__head"><h2>مسیر تو</h2><p>قدم‌های تکمیل صفحه و بررسی آمادگی انتشار</p></div>' + (RI.workspaceSlot===3?'':journey(comp)) +
-        '<details class="allsteps"><summary>' + RI.icon('check') + 'فهرست قدم‌ها (' + RI.fa(comp.items.filter((i) => i.done).length) + ' از ' + RI.fa(comp.items.length) + ')' + RI.icon('chevD') + '</summary>' + checklist(comp) + '</details></section>' +
-        '<section class="block"><div class="block__head"><h2>وضعیت صفحه‌ها</h2><p>' + (RI.workspaceSlot===3?'صفحهٔ لینک‌های جایگاه فعال':'دو صفحهٔ مستقل در جایگاه فعال') + '</p></div><div class="pstat-grid">' + RI.pageKinds().map(pageStatus).join('') + '</div></section>' +
-        '<section class="block"><div class="block__head"><h2>دسترسی سریع</h2></div><ul class="quick">' +
-        [['resume', 'ویرایش رزومه', 'resume'], ['links', 'مدیریت لینک‌ها', 'link'], ['themes', 'ظاهر و قالب', 'palette'], ['publish', 'آدرس و انتشار', 'globe']].filter(q=>RI.workspaceSlot!==3||q[0]!=='resume').map((q) => '<li><a href="' + RI.routeUrl(q[0]) + '" data-go="' + q[0] + '"><span>' + RI.icon(q[2]) + '</span><b>' + q[1] + '</b>' + RI.icon('chevL', 'quick__arrow') + '</a></li>').join('') + '</ul></section>' +
-        '<section class="block" id="homeStats">' + sampleStrip() + '</section>' +
-        '<section class="block">' + guide(empty || comp.pct < 40) + '</section>';
+        // Sections as tabs keep the home page near one screen; stats stay on the first tab.
+        RI.sectionTabs('home', [['overview', 'مسیر و آمار', 'flag', '<section class="block"><div class="block__head"><h2>مسیر تو</h2><p>قدم‌های تکمیل صفحه و بررسی آمادگی انتشار</p></div>' + (RI.workspaceSlot===3?'':journey(comp)) +
+        '<details class="allsteps"><summary>' + RI.icon('check') + 'فهرست قدم‌ها (' + RI.fa(comp.items.filter((i) => i.done).length) + ' از ' + RI.fa(comp.items.length) + ')' + RI.icon('chevD') + '</summary>' + checklist(comp) + '</details></section>' + '<section class="block" id="homeStats">' + sampleStrip() + '</section>'], ['pages', 'صفحه‌ها', 'resume', '<section class="block"><div class="block__head"><h2>وضعیت صفحه‌ها</h2><p>' + (RI.workspaceSlot===3?'صفحهٔ لینک‌های جایگاه فعال':'دو صفحهٔ مستقل در جایگاه فعال') + '</p></div><div class="pstat-grid">' + RI.pageKinds().map(pageStatus).join('') + '</div></section>' + '<section class="block"><div class="block__head"><h2>دسترسی سریع</h2></div><ul class="quick">' +
+        [['resume', 'ویرایش رزومه', 'resume'], ['links', 'مدیریت لینک‌ها', 'link'], ['themes', 'ظاهر و قالب', 'palette'], ['publish', 'آدرس و انتشار', 'globe']].filter(q=>RI.workspaceSlot!==3||q[0]!=='resume').map((q) => '<li><a href="' + RI.routeUrl(q[0]) + '" data-go="' + q[0] + '"><span>' + RI.icon(q[2]) + '</span><b>' + q[1] + '</b>' + RI.icon('chevL', 'quick__arrow') + '</a></li>').join('') + '</ul></section>'], ['guide', 'راهنمای شروع', 'book', '<section class="block">' + guide(empty || comp.pct < 40) + '</section>']]);
     },
     mount(root) {
       let stageFrame=requestAnimationFrame(()=>{stageFrame=requestAnimationFrame(()=>{const host=root.querySelector('[data-home-stage]');if(!root.isConnected||!host)return;host.innerHTML=stage();fitMini(root);});});

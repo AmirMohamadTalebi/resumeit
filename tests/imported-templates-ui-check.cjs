@@ -27,9 +27,9 @@ const {chromium}=require('playwright'),{createServer}=require('../src/http/serve
    }
    await page.setViewportSize({width:1440,height:1000});
    for(const name of Object.keys(RI.IMPORTED_TEMPLATES[template].pages)){await page.goto(base+'/u/design-test/?page='+name);assert.equal(await page.locator('.ri-imported').getAttribute('data-template-page'),name);}
-   await page.goto(base+'/dashboard/resume/?step=profile');await page.locator('#rs-sec-template [data-tgroup-pick]').first().waitFor();
+   await page.goto(base+'/dashboard/resume/?step=profile');await page.locator('#rs-sec-template').waitFor({state:'attached'});await page.evaluate(k=>RI.resumeTab(k),'template');await page.locator('#rs-sec-template [data-tgroup-pick]').first().waitFor();
    const group=RI.IMPORTED_TEMPLATES[template].collections.find(x=>x.group.startsWith('home:')&&!x.group.endsWith(':body')&&!/portfolio|07793c2/.test(x.group)).group;
-   const openGroup=async()=>{await page.locator('#rs-sec-template [data-tgroup-pick="'+group+'"]').click();};await openGroup();
+   const openGroup=async()=>{await page.locator('#rs-sec-template').waitFor({state:'attached'});await page.evaluate(()=>RI.resumeTab('template'));await page.locator('#rs-sec-template [data-tgroup-pick="'+group+'"]').click();};await openGroup();
    const collection=RI.IMPORTED_TEMPLATES[template].collections.find(x=>x.group===group);
    await page.locator('#template-collection').selectOption(collection.key);
    const field=page.locator('#template-controls input[data-ttype="text"],#template-controls textarea[data-ttype="textarea"]').first();

@@ -47,10 +47,8 @@ html:has(body.vista-menu-open),body.vista-menu-open{overflow:hidden!important}
 .ri-imported[data-template=vista] .vista-offscreen *{animation-play-state:paused!important}
 .ri-imported[data-template=vista] .elementor-element-f015240{--min-height:0!important}
 .ri-imported[data-template=vista] .vista-hi-badge .lbl{font-size:13px;color:var(--vista-muted)}
-.ri-imported[data-template=vista] .ri-resume-section{max-width:1060px;margin:12px auto;border-color:var(--vista-line);border-radius:20px;background:var(--vista-bg)}
-.ri-imported[data-template=vista] .ri-resume-section>summary{color:var(--vista-ink);padding:14px 20px;font-size:16px}
-.ri-imported[data-template=vista] .ri-resume-section[open]>summary{border-color:var(--vista-line)}
-.ri-imported[data-template=vista] .ri-resume-section [data-ri-section]{padding:12px 20px 20px!important}
+.ri-imported[data-template=vista] .ri-resume-section{max-width:1060px;margin:44px auto 0;color:var(--vista-ink);--ri-section-accent:var(--vista-accent)}
+.ri-imported[data-template=vista] .ri-resume-section [data-ri-section]{padding:8px 0 0!important}
 .ri-imported[data-template=vista] .ri-resume-section [data-ri-section]>.e-con-inner{padding:0!important;gap:12px!important}
 .ri-imported[data-template=vista] .ri-resume-section .elementor-widget-vista-section-title{display:none}
 .ri-imported[data-template=vista] .tech-stack{gap:10px!important}
@@ -85,9 +83,6 @@ html:has(body.vista-menu-open),body.vista-menu-open{overflow:hidden!important}
 .ri-imported[data-template=vista] .ri-compose textarea{min-height:100px;resize:vertical}
 .ri-imported[data-template=vista] .ri-compose input[type=email]{direction:ltr;text-align:left}
 .ri-imported[data-template=vista] .ri-compose .btn{justify-self:start}
-.ri-imported[data-template=vista] .vista-compose-details{grid-column:2;grid-row:1 / span 12;border:1px solid var(--vista-line);border-radius:18px;overflow:hidden;min-width:0}
-.ri-imported[data-template=vista] .vista-compose-details>summary{padding:14px 18px;cursor:pointer;font-size:15px;min-height:48px;box-sizing:border-box}
-.ri-imported[data-template=vista] .vista-compose-details[open]>.ri-compose{padding:0 18px 18px;box-sizing:border-box}
 .ri-imported[data-template=vista] .vista-footer{max-width:1060px;margin:0 auto;padding:16px 0 24px;display:flex;align-items:center;justify-content:space-between;gap:16px;border-top:1px solid var(--vista-line);color:var(--vista-muted)}
 .vista-footer>a{color:var(--vista-ink);font-size:14px;text-decoration:none}
 .ri-imported[data-template=vista] .pv-foot{display:flex;align-items:center;justify-content:center;gap:8px;font-size:12px;padding:0;margin:0;color:var(--vista-muted);background:none}
@@ -102,3 +97,7 @@ body:has(.ri-imported[data-template=vista])>.sample-label{position:static;displa
 @media(max-width:767px){.ri-imported[data-template=vista] .techstack-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:8px!important}.ri-imported[data-template=vista] .tech-card{gap:6px!important}.ri-imported[data-template=vista] .vista-hi-img-col{width:160px!important}.ri-imported[data-template=vista] .ri-template-contact{gap:6px}.ri-imported[data-template=vista] .ri-compose{gap:6px}.ri-imported[data-template=vista] .ri-user-projects{padding:12px}.ri-imported[data-template=vista] .pv-proj__body{padding:16px}.ri-imported[data-template=vista] .bio{margin:0!important}}
 @media(max-width:767px){.ri-imported[data-template=vista] .pv-proj__body>span{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}.ri-imported[data-template=vista] .pv-proj__body{padding:12px;gap:6px}}
 @media(max-width:360px){.ri-imported[data-template=vista] .vista-hi-img-col{width:120px!important}.ri-imported[data-template=vista] .elementor-element-f015240{padding:16px 12px!important}.ri-imported[data-template=vista] .tech-card{padding:8px 4px!important}.ri-imported[data-template=vista] .pv-proj__body{font-size:14px}.ri-imported[data-template=vista] .ri-template-contact{padding:12px 4px}}
+
+.ri-imported[data-template=vista] .ri-inbox{grid-column:2;grid-row:1 / span 12;margin:0;max-width:none;--ri-inbox-line:var(--vista-line);--ri-inbox-bg:var(--vista-surface);--ri-inbox-field:var(--vista-bg);--ri-inbox-ink:var(--vista-ink);--ri-section-accent:var(--vista-accent);--ri-inbox-on:var(--vista-bg);color:var(--vista-ink)}
+.ri-imported[data-template=vista] .ri-inbox__lead{color:var(--vista-muted);opacity:1}
+@media(max-width:900px){.ri-imported[data-template=vista] .ri-inbox{grid-column:auto;grid-row:auto}}

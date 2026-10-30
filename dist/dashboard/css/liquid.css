@@ -298,3 +298,6 @@ html body .resume-outline>summary small{font-size:11px}
 html body :is(#view,#view div:not([class]),#rs-cards)>:is(.panel,.hero,.planhero,.workspace-band,.ticket-thread,.studio-ready,.studio-overview,.rs-card,.current,.completion-strip,.allsteps)+:is(.panel,.hero,.planhero,.workspace-band,.ticket-thread,.studio-ready,.studio-overview,.rs-card,.current,.completion-strip,.allsteps){margin-block-start:18px}
 /* Entrance motion plays once per page load; content re-rendered later appears in place instead of rising again. */
 html.lq-settled body :is(#view>*,.activity-summary>*,.pstat-grid>*,.statgrid>*,.tgrid>*,.publication-grid>*,.gallery-pages>*,.plans>*,.chklist>*,.rows>*,.setgrid>*,.table tbody tr,.pstat strong,.stat strong,.activity-card strong,.wallet-balance h2,.ring__label,.journey__dot,.allsteps[open]>*){animation:none}
+
+/* Phones: no publish, save or undo buttons in the top bar; status and undo appear after the first save. */
+@media(max-width:960px){html body .topbar :is(#topPublish,#saveBtn){display:none!important}html body .topbar #saveState{display:none}html body.ri-save-active .topbar #saveState{display:inline-flex}html body .topbar #undoBtn{display:none}html body.ri-can-undo .topbar #undoBtn{display:inline-flex}}

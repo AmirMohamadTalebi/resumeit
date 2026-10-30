@@ -19,7 +19,7 @@
  RI.polishView=(root,id)=>{
   RI.mountWorkspaceSwitcher?.(root,id);
   root.querySelectorAll('.field__req').forEach(el=>{el.textContent='پایهٔ انتشار';});root.querySelectorAll('.field__opt').forEach(el=>{if(el.textContent==='اختیاری')el.textContent='به انتخاب تو';});
-  const group=['publish','stats'].includes(id)?'publish':['wallet','billing','settings'].includes(id)?'wallet':['home','support','notifications'].includes(id)?id:'resume';
+  const group=['publish','stats','messages'].includes(id)?'publish':['wallet','billing','settings'].includes(id)?'wallet':['home','support','notifications'].includes(id)?id:'resume';
   document.querySelectorAll('[data-coral-group]').forEach(a=>{if(a.dataset.coralGroup===group)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current');});
   document.querySelectorAll('#sidebar .nav__group').forEach(el=>{el.hidden=el.dataset.navGroup!==(group==='resume'?'home':group);});
   const active=document.querySelector('.coral-rail [aria-current="page"]'),nav=active?.parentElement;if(active){nav.style.setProperty('--coral-slot-y',(active.getBoundingClientRect().top-nav.getBoundingClientRect().top)+'px');nav.style.setProperty('--coral-slot-h',active.offsetHeight+'px');}

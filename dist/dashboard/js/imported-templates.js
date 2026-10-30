@@ -99,7 +99,7 @@
       }
     }, { signal });
     const top = doc.getElementById('vistaBackToTop'); if (top) top.addEventListener('click', () => doc.defaultView.scrollTo({top:0,behavior:'auto'}));
-    const compose = root.querySelector('.ri-compose'); if (compose) compose.addEventListener('submit', e => {e.preventDefault();RI.toast('ارسال پیام در نسخهٔ منتشرشده از طریق برنامهٔ ایمیل انجام می‌شود.',{kind:'info'});});
+    const compose = root.querySelector('[data-inbox-form]'); if (compose) compose.addEventListener('submit', e => {e.preventDefault();RI.toast('در نسخهٔ منتشرشده، پیام مستقیم به بخش «پیام‌های رزومه» داشبورد می‌رسد.',{kind:'info'});});
     const toggle = doc.querySelector('.mobile-menu-toggle,.mobile-nav-toggle,.menu-button,.menu-toggle');
     if (toggle) {
       const panel=doc.querySelector('.mobile-nav-panel,.nav-menu'),close=()=>{if(panel)panel.classList.remove('ri-menu-open');toggle.setAttribute('aria-expanded','false');};
@@ -204,9 +204,8 @@
       if(/^h[1-6]$/.test(tag)&&!inner.trim())return '';
       const html='<' + tag + attrs + (n.group?' data-ri-section="'+esc(n.group)+'"':'') + '>' + (voids.has(tag) ? '' : inner + '</' + tag + '>');
       const group=n.group&&spec.groups.find(g=>g.key===n.group);
-      let latest='';if(vista&&n.group==='home:2b3e890'){for(const [collection,key]of [['r11','f116'],['r12','f132'],['r13','f147']]){const rows=values.collections?.[collection];if(rows?.length===0)continue;const title=value({field:key},rows?.[0]?.fields);if(title){latest='<small class="vista-experience-summary">'+esc(title)+'</small>';break;}}}
-      const satiarSummary=satiar&&n.group==='home:resume'?'<small class="vista-experience-summary">'+esc([value({field:'f290'}),...['f301','f303','f305'].map((key,i)=>values.collections?.['r'+(33+i)]?.length===0?'':value({field:key},values.collections?.['r'+(33+i)]?.[0]?.fields))].filter(Boolean).join(' · '))+'</small>':'';
-      return group&&!n.group.endsWith(':body')&&n.group!==t.groups[1]?.key?'<details class="ri-resume-section"'+(vista&&n.group==='home:f35bcdf'?' open':'')+'><summary>'+(vista&&vistaSections[n.group]?vistaSections[n.group][1]:esc(group.label))+satiarSummary+latest+'</summary>'+html+'</details>':html;
+      const headingId='ri-h-'+String(n.group||'').replace(/[^a-z0-9]+/gi,'-');
+      return group&&!n.group.endsWith(':body')&&n.group!==t.groups[1]?.key?'<section class="ri-resume-section" aria-labelledby="'+headingId+'"><header class="ri-section-head"><h2 id="'+headingId+'">'+(vista&&vistaSections[n.group]?vistaSections[n.group][1]:esc(group.label))+'</h2></header>'+html+'</section>':html;
     };
     // The palette recolours every shade near the template's own two accents, not just the exact pair, so hovers,
     // gradients and badges change together and stay readable on the template's background.
@@ -225,14 +224,14 @@
     const contactsVisible = c.sections.some(s => s.key === 'contacts' && s.visible);
     const contacts = contactsVisible ? c.contacts.filter(x => x.public && x.value.trim()) : [];
     const socials = c.sections.some(s => s.key === 'socials' && s.visible) ? c.socials : [];
-    const mail=contacts.find(x=>x.type==='email'),label=key=>value({field:'compose_'+key});
-    const compose=mail&&settings.compose!==false?'<form class="ri-compose" data-email="'+esc(mail.value)+'"><h3>'+esc(label('title'))+'</h3><p>پیام با برنامهٔ ایمیل دستگاه شما ارسال می‌شود.</p>'+[['name','text'],['email','email']].map(([key,type])=>'<label for="ri-compose-'+key+'">'+esc(label(key))+'</label><input class="input" id="ri-compose-'+key+'" name="'+key+'" type="'+type+'" required maxlength="120">').join('')+'<label for="ri-compose-message">'+esc(label('message'))+'</label><textarea class="textarea" id="ri-compose-message" name="message" required maxlength="3000"></textarea><button class="btn" type="submit">'+esc(label('submit'))+'</button></form>':'';
-    const contact = '<section id="ri-contact" class="ri-template-contact"><h2>' + esc(c.profile.name) + '</h2><p>' + esc(c.profile.title) + '</p>' + contacts.map(x => '<a data-pv-link="1" href="' + esc(x.type === 'email' ? 'mailto:' + x.value : x.type === 'phone' ? 'tel:' + x.value.replace(/[^+0-9]/g, '') : RI.normUrl(x.value)) + '">' + esc(x.label) + ': ' + esc(x.value) + '</a>').join('') + socials.map(s => '<a data-pv-link="1" href="' + esc(RI.socialUrl(s)) + '">' + esc(RI.SOCIALS.find(x=>x[0]===s.platform)?.[1]||s.platform) + '</a>').join('') + (vista&&compose?'<details class="vista-compose-details"><summary>نوشتن پیام از طریق ایمیل</summary>'+compose+'</details>':compose) + '</section>';
+    
+    const compose=settings.compose!==false?RI.inboxForm(c,{publicBase:options.publicBase,idSuffix:'tpl'}):'';
+    const contact = '<section id="ri-contact" class="ri-template-contact"><h2>' + esc(c.profile.name) + '</h2><p>' + esc(c.profile.title) + '</p>' + contacts.map(x => '<a data-pv-link="1" href="' + esc(x.type === 'email' ? 'mailto:' + x.value : x.type === 'phone' ? 'tel:' + x.value.replace(/[^+0-9]/g, '') : RI.normUrl(x.value)) + '">' + esc(x.label) + ': ' + esc(x.value) + '</a>').join('') + socials.map(s => '<a data-pv-link="1" href="' + esc(RI.socialUrl(s)) + '">' + esc(RI.SOCIALS.find(x=>x[0]===s.platform)?.[1]||s.platform) + '</a>').join('') + compose + '</section>';
     const projects=hasProjects?'<section class="ri-user-projects" id="ri-projects"><h2>پروژه‌ها و نمونه‌کارها</h2>'+RI.projectCards(c,{compact:true})+'</section>':'';
     const vistaFooter='<footer class="vista-footer"><a href="#ri-resume-top">'+esc(c.profile.name||'رزومه')+'</a>'+RI.brandFoot(c,'resume')+'</footer>';
     const css=satiar&&font!=='original'?['/templates/satiar/core.css']:page.css.map(url=>vista&&font!=='original'&&url.endsWith('/bf851831979d2f46.css')?'/templates/vista/core.css':url).filter(url=>!vista||!url.endsWith('/f719a64cb90df301.css'));
     return '<div class="ri-imported" data-template="' + id + '" data-template-mode="' + (vista&&(!Object.hasOwn(settings,'mode')||settings.mode==='system')?'system':settings.mode==='light'?'light':'dark') + '" data-template-page="' + pageId + '" style="' + esc(vars) + '">' +
       '<link rel="stylesheet" href="/fonts/fonts.css">' + css.map(url => '<link rel="stylesheet" href="' + url + '">').join('') + '<link rel="stylesheet" href="/templates/template-support.css"><link rel="stylesheet" href="/templates/'+id+'-support.css">' +
-      '<style>:root{' + vars + '}' + page.inline.replace(/<\/style/gi, '') + fontCss +(font!=='original'?'html:has(.ri-imported[data-template='+id+']),body:has(.ri-imported[data-template='+id+']),.ri-imported[data-template='+id+'] :is(div,b,strong,small,summary){font-family:'+selectedFont.stack+'!important}':'')+ '.ri-imported .pf-card,.ri-imported .blog-card,.ri-imported .tech-card,.ri-imported .soc-card{border-radius:' + radius + '}</style><span id="ri-resume-top"></span>'+renderNode(page.node) + (satiar&&compose?contact.replace(compose,'<details class="vista-compose-details"><summary>نوشتن پیام از طریق ایمیل</summary>'+compose+'</details>'):contact) + vistaFooter + '</div>';
+      '<style>:root{' + vars + '}' + page.inline.replace(/<\/style/gi, '') + fontCss +(font!=='original'?'html:has(.ri-imported[data-template='+id+']),body:has(.ri-imported[data-template='+id+']),.ri-imported[data-template='+id+'] :is(div,b,strong,small,summary){font-family:'+selectedFont.stack+'!important}':'')+ '.ri-imported .pf-card,.ri-imported .blog-card,.ri-imported .tech-card,.ri-imported .soc-card{border-radius:' + radius + '}</style><span id="ri-resume-top"></span>'+renderNode(page.node) + contact + vistaFooter + '</div>';
   };
 })();

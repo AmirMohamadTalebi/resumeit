@@ -13,7 +13,7 @@ const {chromium}=require('playwright'),{testStore}=require('./auth-test-store.cj
  await page.goto(base+'/dashboard/');await page.locator('#page-title').waitFor();
  assert.equal(await page.locator('.stage').getAttribute('inert'),'');
  await page.evaluate(()=>{RI.C().links.items.push({id:'test-link',type:'link',active:true,title:'لینک آزمایش',url:'https://example.test',icon:'link'});RI.rerender();});
- const hiddenLink=page.locator('.stage a').first();assert(await hiddenLink.count());await hiddenLink.evaluate(e=>e.focus());assert.equal(await hiddenLink.evaluate(e=>e===document.activeElement),false);
+ const hiddenLink=page.locator('.stage a').first();await hiddenLink.waitFor({state:'attached'});await hiddenLink.evaluate(e=>e.focus());assert.equal(await hiddenLink.evaluate(e=>e===document.activeElement),false);
  assert.equal(await page.getByText('آمادهٔ انتشار',{exact:true}).count(),0);
  await page.screenshot({path:path.join(out,'14-home-after-desktop.png')});
  await page.setViewportSize({width:390,height:844});

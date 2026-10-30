@@ -34,10 +34,8 @@ html:has(body.vista-menu-open),body.vista-menu-open{overflow:hidden!important}
 .ri-imported[data-template=satiar] :is(.elementor-element-dfa0f46,.elementor-element-4da8416){margin-top:20px!important;gap:16px!important}
 .ri-imported[data-template=satiar] .wp-active-we-icon-box :is(p,h3){color:var(--s-muted)!important}
 .ri-imported[data-template=satiar] .elementor-element-9e8f249 a{min-height:44px;display:inline-flex;align-items:center;border:1px solid var(--s-line);border-radius:14px;padding:10px 16px;background:var(--s-surface)!important;color:var(--s-ink)!important}
-.ri-imported[data-template=satiar] .ri-resume-section{margin:16px auto;border-color:var(--s-line);background:var(--s-bg);max-width:1060px}
-.ri-imported[data-template=satiar] .ri-resume-section>summary{color:var(--s-ink);display:list-item;list-style-position:inside}
+.ri-imported[data-template=satiar] .ri-resume-section{margin:44px auto 0;max-width:1060px;color:var(--s-ink);--ri-section-accent:var(--s-accent)}
 .ri-imported[data-template=satiar] .vista-experience-summary{display:block;font-size:13px;color:var(--s-muted);font-weight:400;margin-top:6px}
-.ri-imported[data-template=satiar] .ri-resume-section[open]>summary{border-color:var(--s-line)}
 .ri-imported[data-template=satiar] :is(.elementor-element-ee58226,.elementor-element-fa4a638,.elementor-element-9d6de71){padding:16px 24px!important;background:var(--s-bg)!important}
 .ri-imported[data-template=satiar] :is(.elementor-element-6a5c16f,.elementor-element-c1d912b){width:100%!important}
 .ri-imported[data-template=satiar] .elementor-element-9d6de71>.e-con-inner{gap:32px!important}
@@ -65,8 +63,6 @@ html:has(body.vista-menu-open),body.vista-menu-open{overflow:hidden!important}
 .ri-imported[data-template=satiar] .ri-template-contact{max-width:1060px;margin:20px auto 0;padding:28px 24px;background:var(--s-surface);color:var(--s-ink);border-radius:24px;box-sizing:border-box;font:15px/1.9 Vazirmatn}
 .ri-imported[data-template=satiar] .ri-template-contact>p{width:100%;color:var(--s-muted)}
 .ri-imported[data-template=satiar] .ri-template-contact>a{display:inline-flex;align-items:center;min-height:44px;overflow-wrap:anywhere}
-.ri-imported[data-template=satiar] .vista-compose-details{width:100%;border-top:1px solid var(--s-line);padding-top:12px}
-.ri-imported[data-template=satiar] .vista-compose-details>summary{cursor:pointer;min-height:44px}
 .ri-imported[data-template=satiar] .ri-compose{margin:12px 0;max-width:640px}
 .ri-imported[data-template=satiar] .ri-compose :is(input,textarea,button){background:var(--s-bg);color:var(--s-ink);border-color:var(--s-line);border-radius:12px}
 .ri-imported[data-template=satiar] .vista-footer{max-width:1060px;margin:0 auto;padding:24px;display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap;color:var(--s-muted)}
@@ -77,3 +73,6 @@ html:has(body.vista-menu-open),body.vista-menu-open{overflow:hidden!important}
 @keyframes satiar-menu-in{from{opacity:.3;transform:translateX(16px)}to{opacity:1;transform:none}}
 @media(max-width:767px){.ri-imported[data-template=satiar] .elementor-element-854f31d{order:0!important}.ri-imported[data-template=satiar] .elementor-element-7bf1b2a{order:1!important}.ri-imported[data-template=satiar] .elementor-element-dfa0f46{margin-top:12px!important}.ri-imported[data-template=satiar] .elementor-element-9e8f249 :is(.buttons-wrapper,.double-button-wrapper){display:flex;flex-wrap:wrap;gap:10px}.ri-imported[data-template=satiar] .elementor-element-9d6de71 .elementor-widget-heading .elementor-heading-title{font-size:18px!important}}
 @media(max-width:767px){.ri-imported[data-template=satiar] .vista-desktop-nav,.ri-imported[data-template=satiar] .vista-contact-button{display:none}.ri-imported[data-template=satiar] .vista-menu-toggle{display:inline-flex}.ri-imported[data-template=satiar] .vista-header{padding:12px}.ri-imported[data-template=satiar] .elementor-element-a8490f5>.e-con-inner{grid-template-columns:1fr;gap:16px}.ri-imported[data-template=satiar] .elementor-element-7bf1b2a{max-height:190px}.ri-imported[data-template=satiar] .elementor-element-7bf1b2a img{max-height:190px!important}.ri-imported[data-template=satiar] h1{font-size:27px!important}.ri-imported[data-template=satiar] .elementor-element-8b5e928 h2{font-size:18px!important}.ri-imported[data-template=satiar] .ri-resume-section{margin:12px}.ri-imported[data-template=satiar] .ri-resume-section>summary{flex-wrap:wrap;gap:4px}.ri-imported[data-template=satiar] .ri-template-contact{margin-inline:12px}.ri-imported[data-template=satiar] .elementor-element-9d6de71>.e-con-inner{flex-direction:column!important}.ri-imported[data-template=satiar] :is(.elementor-element-58231ab,.elementor-element-f722f26){width:100%!important}}
+
+.ri-imported[data-template=satiar] .ri-inbox{--ri-inbox-line:var(--s-line);--ri-inbox-bg:var(--s-surface);--ri-inbox-field:var(--s-bg);--ri-inbox-ink:var(--s-ink);--ri-section-accent:var(--s-accent);--ri-inbox-on:var(--s-bg);color:var(--s-ink);margin-inline:0}
+.ri-imported[data-template=satiar] .ri-inbox__lead{color:var(--s-muted);opacity:1}

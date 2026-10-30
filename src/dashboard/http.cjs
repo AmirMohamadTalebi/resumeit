@@ -23,6 +23,12 @@ function dashboardHandler(database,auth,notifications,options){const reset=requi
   if(sub!==null||local||pathPages){
     const slug=sub||local?.[1]||pathAddress[1],rawRoute=local?local[2]||'/':pathPages?pathAddress[2]||'/':pathname,route=rawRoute==='/'?'/':rawRoute.replace(/\/$/,''),base=local?'/u/'+slug:pathPages?'/'+slug:'';
     if(!model.slugValid(slug)&&!samplePages&&!(sub&&slug.length<=24&&/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug))){res.writeHead(404);res.end('صفحه پیدا نشد');return true;}
+    // Visitor message from the page's «ارتباط با من» form, accepted only from the page's own origin.
+    if(route==='/message'&&req.method==='POST'){
+      const found=pathPages||(database.publicWorkspace?await database.publicWorkspace(slug):{resume:await database.publicPage(slug,'resume')}),page=found?.resume;
+      if(!page){res.writeHead(404,{'Content-Type':'application/json; charset=utf-8'});res.end(JSON.stringify({error:'این رزومه منتشر نشده است'}));return true;}
+      await require('./inbox.cjs').publicMessage(database,req,res,page,root.protocol+'//'+host);return true;
+    }
     if(!['GET','HEAD'].includes(req.method)){res.writeHead(405);res.end();return true;}
     // Published images are served as content-hashed files instead of base64 inside every HTML response.
     const mediaRoute=/^\/media\/([a-f0-9]{32})\.(?:png|jpg|webp)$/.exec(route),mediaScope='p:'+host+base;
@@ -60,7 +66,7 @@ function dashboardHandler(database,auth,notifications,options){const reset=requi
     const inline=mediaCache.fill(mediaScope,c),inlined=new Set(inline.values()),refs=[...stored.hashes(c)].filter(h=>!inlined.has(h)),types=await mediaCache.types(page.id,refs,database.dashboardMediaTypes?ids=>database.dashboardMediaTypes(page.id,ids):async()=>new Map());
     mediaCache.allow(mediaScope,page.id,[...types.keys()]);
     // Stored image addresses (the renderer makes them absolute) become public, content-hashed files.
-    const output=html.replace(/(?:https:\/\/resumeit\.ir)?\/api\/dashboard\/media\/([a-f0-9]{32})/g,(value,hash)=>types.has(hash)?base+'/media/'+hash+'.'+extension(types.get(hash)):value).replace(/data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/]+={0,2}/g,(value,type)=>inline.has(value)?base+'/media/'+inline.get(value)+'.'+(type==='jpeg'?'jpg':type):value).replace('<script src="/templates/template-runtime.js">',(imported?'<script src="/templates/vista-runtime.js"></script>':'')+'<script src="/templates/template-runtime.js">').replace('</body>','<script src="/public-assets/projects.js"></script></body>').replace('</head>','<meta property="og:type" content="website"><meta name="twitter:card" content="'+(ogImage?'summary_large_image':'summary')+'"><meta name="twitter:title" content="'+esc(card.title)+'"><meta name="twitter:description" content="'+esc(card.desc)+'">'+(ogImage?'<meta name="twitter:image" content="'+esc(ogImage)+'">':'')+'</head>');
+    const output=html.replace(/(?:https:\/\/resumeit\.ir)?\/api\/dashboard\/media\/([a-f0-9]{32})/g,(value,hash)=>types.has(hash)?base+'/media/'+hash+'.'+extension(types.get(hash)):value).replace(/data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/]+={0,2}/g,(value,type)=>inline.has(value)?base+'/media/'+inline.get(value)+'.'+(type==='jpeg'?'jpg':type):value).replace('<script src="/templates/template-runtime.js">',(imported?'<script src="/templates/vista-runtime.js"></script>':'')+'<script src="/templates/template-runtime.js">').replace('</body>','<script src="/public-assets/projects.js"></script><script src="/public-assets/inbox.js"></script></body>').split('__RI_MAIN__').join(root.origin).replace('</head>','<meta property="og:type" content="website"><meta name="twitter:card" content="'+(ogImage?'summary_large_image':'summary')+'"><meta name="twitter:title" content="'+esc(card.title)+'"><meta name="twitter:description" content="'+esc(card.desc)+'">'+(ogImage?'<meta name="twitter:image" content="'+esc(ogImage)+'">':'')+'</head>');
     securityHeaders(res,origin,output);
     res.setHeader('Cache-Control','private, no-store');
     if(req.method==='GET'){
@@ -79,6 +85,13 @@ function dashboardHandler(database,auth,notifications,options){const reset=requi
     activeWorkspace=workspace;
     if(scoped&&workspace>1&&req.method==='POST'&&pathname!=='/api/dashboard/unpublish'){const billing=await database.billing(user.id),owner=database.ownerUserSettings?await database.ownerUserSettings(user.id):{};if(!require('../owner/settings.cjs').workspaceAllowed(workspace,billing,owner))model.fail('این جایگاه به اشتراک فعال یا سهمیهٔ اضافهٔ مالک نیاز دارد',403);}
     if(req.headers['x-resumeit-owner']&&req.headers['x-resumeit-owner']!==user.id)model.fail('حساب فعال عوض شده است؛ این صفحه را دوباره باز کن',409,'ACCOUNT_CHANGED');
+    if(await require('./inbox.cjs').ownerRoute(database,req,pathname,origin,user,workspace,reply))return true;
+    // The signed-in person's published resume address, for the «الصاق رزومهٔ من» window on the main site.
+    if(pathname==='/api/dashboard/my-resume'&&req.method==='GET'){
+      const doc=await database.loadDashboard(user.id,1),live=doc.pub?.resume?.status==='published'&&model.slugValid(doc.slug||'');
+      const devHost=/^(127\.|localhost$)/.test(root.hostname),resumePath=doc.content?.routing?.resume?doc.content.routing.resume+'/':'';
+      reply(200,live?{url:(devHost?root.origin+'/u/'+doc.slug+'/':root.protocol+'//'+doc.slug+'.'+domain+'/')+resumePath,name:doc.content.profile?.name||''}:{url:'',name:''});return true;
+    }
     if(notifications&&await notifications.handle(req,pathname,origin,user,reply))return true;
     if(await require('./support.cjs')(database,req,pathname,origin,user,reply,res))return true;
     if(await require('./advisor.cjs').handle(database,req,pathname,origin,user,workspace,reply))return true;

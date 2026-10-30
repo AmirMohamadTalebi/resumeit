@@ -5,7 +5,7 @@
 
   const NAV = [
     { group: 'استودیو', items: [['home', 'خانهٔ داشبورد', 'home'], ['resume', 'رزومه', 'resume'], ['links', 'صفحهٔ لینک‌ها', 'link'], ['themes', 'ظاهر و قالب', 'palette'], ['studio', 'آمادگی انتشار', 'check']] },
-    { group: 'انتشار', items: [['publish', 'آدرس و انتشار', 'globe'], ['stats', 'آمار', 'chart']] },
+    { group: 'انتشار', items: [['publish', 'آدرس و انتشار', 'globe'], ['stats', 'آمار', 'chart'], ['messages', 'پیام‌های رزومه', 'mail']] },
     { group: 'حساب', items: [['wallet', 'کیف پول It', 'card'], ['billing', 'اشتراک و خریدها', 'crown'], ['settings', 'تنظیمات حساب', 'settings']] },
     { group: 'پشتیبانی', items: [['support', 'تیکت‌ها', 'help'], ['support', 'تیکت جدید', 'plus', {tab:'new'}], ['contact', 'ارتباط با ما', 'mail', {href:'/contact/'}], ['telegram', 'پشتیبانی تلگرام', 'telegram', {href:'https://t.me/amirtalebi_x',external:true}], ['channel', 'کانال تلگرام', 'telegram', {href:'https://t.me/resumeit_ir',external:true}]] },
     { group: 'اعلان‌ها', items: [['notifications', 'همهٔ اعلان‌ها', 'bell'], ['notifications', 'خوانده‌نشده‌ها', 'eye', {tab:'unread'}], ['notifications', 'تنظیمات اعلان‌ها', 'settings', {tab:'preferences'}], ['changes', 'تغییرات رزومیت', 'refresh', {href:'/changes/'}]] },
@@ -42,6 +42,8 @@
   }
 
   /* ---------- نوار بالا و وضعیت ذخیره ---------- */
+  // Phones show the save state and undo only once something has actually been saved in this visit.
+  let savedOnce=false,wasSaving=false;
   function paintSave() {
     const ui = RI.state.ui, el = RI.$('#saveState');let btn=RI.$('#saveBtn');
     const tag=RI.manualSave()?'BUTTON':'SPAN';
@@ -68,6 +70,8 @@
     const error=RI.$('#saveError');error.hidden=!ui.saveError;
     if(ui.saveError){error.innerHTML='<span>'+RI.esc(ui.saveMessage||'ذخیره انجام نشد؛ تغییراتت در این صفحه باقی است.')+'</span><button type="button" class="btn btn--soft btn--sm" data-save-retry>'+ (RI.conflict?'بررسی تداخل':'تلاش دوباره')+'</button>';}
     RI.$('#undoBtn').disabled = !RI.canUndo();
+    if(ui.saving)wasSaving=true;else if(wasSaving){wasSaving=false;if(!ui.saveError)savedOnce=true;}
+    document.body.classList.toggle('ri-save-active',savedOnce||ui.saving||!!ui.saveError);document.body.classList.toggle('ri-can-undo',savedOnce&&RI.canUndo());
     el.setAttribute('role', 'status');
   }
   RI.doSave = async function () {

@@ -18,12 +18,12 @@ try{browser=await chromium.launch({channel:process.platform==='win32'?'msedge':u
  fs.mkdirSync('artifacts/public-dashboard',{recursive:true});
  for(const width of [1440,390]){await page.setViewportSize({width,height:900});for(const route of ['','links']){await page.goto(base+'/u/amir/'+route);await page.evaluate(()=>document.fonts.ready);assert.equal(await page.locator('h1').innerText(),'امیر طالبی');assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));assert.equal(await page.locator('.pv-nav a').last().getAttribute('href'),'/u/amir/link');if(route==='links')assert.equal(await page.locator('.lv-btn').getAttribute('href'),'/u/amir/out/github');else assert.equal(await page.locator('.pv-contacts a').getAttribute('href'),'mailto:hello@example.com');await page.screenshot({path:'artifacts/public-dashboard/'+(route||'resume')+'-'+width+'.png',fullPage:true});}}
  const clean=await browser.newPage();await clean.goto(base+'/u/amir/links');assert.equal(await clean.locator('h1').innerText(),'امیر طالبی');await clean.close();
- await page.goto(base+'/dashboard/stats/');await page.locator('#sbody').waitFor();assert(!(await page.locator('#view').innerText()).includes('ساختگی'));await page.locator('[data-r="90"]').click();assert(!(await page.locator('.chart').getAttribute('innerHTML')||'').includes('NaN'));
+ await page.goto(base+'/dashboard/stats/');await page.locator('#sbody').waitFor();assert(!(await page.locator('#view').innerText()).includes('ساختگی'));await page.locator('[data-r="90"]').click();assert(!(await page.locator('.ch').first().innerHTML()||'').includes('NaN'));
  const spec={sections:['skills'],bodySections:['skills'],requiredSections:[],fields:[{key:'headline',label:'عنوان اختصاصی',type:'text',max:80,required:true,public:true}],settings:[{key:'compact',label:'فشرده',type:'checkbox',default:false}]};
  const catalog=require('../src/dashboard/render.cjs').RI.RESUME_TEMPLATES;catalog.find(t=>t.id==='glacier').editor=spec;
  await page.goto(base+'/dashboard/resume/');await page.locator('#rs-cards').waitFor();
  await page.evaluate(spec=>{const RI=window.RI;RI.RESUME_TEMPLATES.find(t=>t.id==='glacier').editor=spec;RI.go('resume');},spec);
- await page.locator('#rs-sec-skills').waitFor();assert.equal(await page.locator('#rs-sec-education').count(),0,'sections the template does not use are not offered');
+ await page.locator('#rs-sec-skills').waitFor({state:'attached'});await page.evaluate(k=>RI.resumeTab(k),'skills');assert.equal(await page.locator('#rs-sec-education').count(),0,'sections the template does not use are not offered');
  await page.locator('#rs-nav [data-goto="template"]').click();await page.locator('[data-template-key="headline"]').fill('اطلاعات ویژه');await page.locator('[data-template-key="compact"]').check();
  assert.equal(await page.evaluate(()=>window.RI.C().resumeTemplates.glacier.settings.compact),true);
  assert.equal(await page.evaluate(()=>window.RI.save()),true);

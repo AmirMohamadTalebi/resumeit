@@ -204,3 +204,25 @@
 .lv .lv-btn{color:var(--lv-btn-ink)}
 .lv a:focus-visible{outline-color:var(--lv-ink)}
 .pv a:focus-visible{outline-color:var(--pv-ink)}
+
+/* «ارتباط با من» در قالب‌های داخلی */
+.pv .ri-inbox{display:grid;gap:10px;padding:20px 22px;border-radius:calc(var(--pv-r) + 6px);background:var(--pv-surface);border:1px solid var(--pv-line);color:var(--pv-ink)}
+.pv .ri-inbox h2{font-size:17px;display:flex;align-items:center;gap:10px}
+.pv .ri-inbox h2::before{content:'';width:18px;height:4px;border-radius:4px;background:var(--pv-accent)}
+.pv .ri-inbox__lead{color:var(--pv-muted);font-size:14px}
+.pv .ri-inbox__form{display:grid;gap:12px}
+.pv .ri-inbox__row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.pv .ri-inbox__field{display:grid;gap:4px;font-size:13px;font-weight:600}
+.pv .ri-inbox__field small{font-weight:400;color:var(--pv-muted);font-size:11.5px}
+.pv .ri-inbox :is(input,textarea){font:inherit;font-size:14px;width:100%;box-sizing:border-box;padding:10px 12px;border-radius:var(--pv-r);border:1px solid var(--pv-line);background:var(--pv-bg);color:var(--pv-ink);min-height:44px}
+.pv .ri-inbox textarea{min-height:104px;resize:vertical}
+.pv .ri-inbox :is(input,textarea):focus{outline:2px solid var(--pv-accent);outline-offset:1px}
+.pv .ri-inbox__resume{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:end}
+.pv :is(.ri-inbox__attach,.ri-inbox__send){display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:44px;padding:8px 16px;border-radius:var(--pv-r);font:inherit;font-size:13px;font-weight:700;cursor:pointer}
+.pv .ri-inbox__attach{border:1px solid var(--pv-line);background:transparent;color:var(--pv-ink)}
+.pv .ri-inbox__send{border:0;background:var(--pv-accent);color:var(--pv-on);min-width:150px}
+.pv .ri-inbox__send:disabled{opacity:.6}
+.pv .ri-inbox__foot{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.pv .ri-inbox__status{font-size:13px;color:var(--pv-muted)}.pv .ri-inbox__status[data-kind=error]{color:#d1453b}
+.pv .ri-inbox__trap{position:absolute!important;width:1px;height:1px;opacity:0;pointer-events:none;inset-inline-start:-9999px}
+@container pv (max-width:600px){.pv .ri-inbox__row,.pv .ri-inbox__resume{grid-template-columns:1fr}.pv .ri-inbox__send{width:100%}}

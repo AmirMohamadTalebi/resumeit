@@ -47,7 +47,7 @@
       return RI.pageHead({ title: 'رزومهٔ من', desc: 'قالب: <b>' + esc(RI.findTemplate('resume', c.theme.resume).name) + '</b> · همه‌چیز خودکار ذخیره می‌شود',
         actions: '<button type="button" class="btn btn--soft btn--sm show-sm" data-live>' + RI.icon('eye') + 'پیش‌نمایش</button><a class="btn btn--soft btn--sm" href="/dashboard/themes/" data-go="themes">' + RI.icon('palette') + 'ظاهر و قالب</a><button type="button" class="btn btn--ghost btn--sm hide-sm" data-detach-preview aria-pressed="false">' + RI.icon('external') + 'پیش‌نمایش در پنجرهٔ جدا</button><button type="button" class="btn btn--ghost btn--sm" data-reset-page="resume">' + RI.icon('trash') + 'شروع از صفر</button>' }) +
         '<div class="rs" id="resume-studio"><nav class="rs-nav" aria-label="بخش‌های رزومه"><div id="rs-nav"></div></nav>' +
-        '<div class="rs-canvas"><div id="rs-ready"></div><details class="rs-assist-m" id="rs-assist-mobile"><summary>' + RI.icon('sparkle') + '<span>دستیار رزومه</span><span class="rs-badge" data-assist-count hidden></span>' + RI.icon('chevD') + '</summary></details><div id="rs-cards"></div></div>' +
+        '<div class="rs-canvas"><div id="rs-ready"></div><details class="rs-assist-m" id="rs-assist-mobile"><summary>' + RI.icon('sparkle') + '<span>دستیار رزومه</span><span class="rs-badge" data-assist-count hidden></span>' + RI.icon('chevD') + '</summary></details><div id="rs-cards" class="rs-tabs"></div><nav class="rs-pager" id="rs-pager" aria-label="بخش قبلی و بعدی"></nav></div>' +
         '<aside class="rs-side editor__side" aria-label="پیش‌نمایش و دستیار"><div class="sticky"><div class="segmented rs-side__tabs" role="tablist" aria-label="نمای کنار"><button type="button" role="tab" id="rs-tab-preview" data-side="preview" aria-selected="true" aria-controls="rs-side-preview">' + RI.icon('eye') + 'پیش‌نمایش</button><button type="button" role="tab" id="rs-tab-assist" data-side="assist" aria-selected="false" aria-controls="rs-side-assist">' + RI.icon('sparkle') + 'دستیار<span class="rs-badge" data-assist-count hidden></span></button></div>' +
         '<div id="rs-side-preview" role="tabpanel" aria-labelledby="rs-tab-preview"><div id="rpv"></div></div><div id="rs-side-assist" role="tabpanel" aria-labelledby="rs-tab-assist" hidden><div id="resume-advisor"></div></div></div></aside></div>';
     },
@@ -241,7 +241,7 @@
       function paintCard(key) {
         const el = RI.$('#rs-sec-' + key, cardsHost); if (!el) return paintAll();
         const focus = document.activeElement && el.contains(document.activeElement) ? document.activeElement.id : '';
-        el.outerHTML = render(key); bindCard(key); paintNav(); paintReady();
+        el.outerHTML = render(key); bindCard(key); paintNav(); paintReady(); showTab();
         if (focus) document.getElementById(focus)?.focus({ preventScroll: true });
       }
       // Late template data must not replace what the user is typing: keep the profile card and any focused card.
@@ -259,12 +259,21 @@
           if (!keep.has(key)) bindCard(key);
           prev = el;
         }
-        paintNav(); paintReady(); spy();
+        paintNav(); paintReady(); spy(); showTab();
       }
       function paintAll() {
         spec = RI.resumeSpec(templateId);
         cardsHost.innerHTML = order().map(render).join('');
-        order().forEach(bindCard); paintNav(); paintReady(); spy();
+        order().forEach(bindCard); paintNav(); paintReady(); spy(); showTab();
+      }
+      // The studio shows one section at a time; the section bar is its tab list and the pager walks the order.
+      let activeTab = 'profile';
+      function showTab() {
+        const keys = order(); if (!keys.includes(activeTab)) activeTab = 'profile';
+        cardsHost.querySelectorAll(':scope>.rs-card').forEach(el => { const on = el.dataset.section === activeTab; el.classList.toggle('is-active', on); el.toggleAttribute('hidden', !on); });
+        navHost.querySelectorAll('[data-goto]').forEach(b => b.setAttribute('aria-current', String(b.dataset.goto === activeTab)));
+        const at = keys.indexOf(activeTab), prev = keys[at - 1], next = keys[at + 1], pager = RI.$('#rs-pager', root), name = k => esc((META[k] || [k])[0]);
+        if (pager) pager.innerHTML = (prev ? '<button type="button" class="rs-pager__btn" data-goto="' + prev + '">' + RI.icon('chevR') + '<span><small>بخش قبلی</small>' + name(prev) + '</span></button>' : '<span></span>') + '<span class="rs-pager__count">' + RI.fa(at + 1) + ' از ' + RI.fa(keys.length) + '</span>' + (next ? '<button type="button" class="rs-pager__btn rs-pager__btn--next" data-goto="' + next + '"><span><small>بخش بعدی</small>' + name(next) + '</span>' + RI.icon('chevL') + '</button>' : '<span></span>');
       }
       const bioCount = () => { const e = RI.$('#bioCount', root); if (e) e.textContent = RI.fa(RI.C().profile.bio.length) + '/۳۰۰'; };
 
@@ -317,16 +326,20 @@
       }
       function goto(key, focusField) {
         const el = RI.$('#rs-sec-' + key, cardsHost); if (!el) return;
-        el.scrollIntoView({ block: 'start', behavior: RI.reduceMotion() ? 'auto' : 'smooth' });
+        activeTab = key; showTab();
+        // Bring the tab into view only when its top is off screen; switching tabs never scrolls a long way.
+        const top = el.getBoundingClientRect().top; if (top < 70 || top > innerHeight * .6) el.scrollIntoView({ block: 'start', behavior: 'auto' });
         const target = focusField ? el.querySelector(focusField) : el.querySelector('h2');
         target?.focus({ preventScroll: true }); RI.setRouteStep(key);
         // The section the user picked is the current one until they scroll elsewhere.
         navHost.querySelectorAll('[data-goto]').forEach(b => b.setAttribute('aria-current', String(b.dataset.goto === key))); spyHold = Date.now() + 900;
         if (!RI.reduceMotion()) el.animate([{ boxShadow: '0 0 0 0 rgba(189,142,100,.0)' }, { boxShadow: '0 0 0 6px rgba(189,142,100,.35)' }, { boxShadow: '0 0 0 0 rgba(189,142,100,0)' }], { duration: 900, easing: 'ease-out' });
       }
+      // Other parts of the dashboard (and tests) can open a section tab by key.
+      RI.resumeTab = key => { if (alive()) goto(key); };
       let observer, spyHold = 0;
       function spy() {
-        observer?.disconnect(); if (!('IntersectionObserver' in window)) return;
+        observer?.disconnect(); return;
         observer = new IntersectionObserver(entries => { if (Date.now() < spyHold) return; const top = entries.filter(e => e.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0]; if (!top) return; navHost.querySelectorAll('[data-goto]').forEach(b => b.setAttribute('aria-current', String(b.dataset.goto === top.target.dataset.section))); }, { rootMargin: '-20% 0px -60% 0px' });
         cardsHost.querySelectorAll('.rs-card').forEach(el => observer.observe(el));
       }
@@ -482,7 +495,7 @@
       if (templateReady) { requestAnimationFrame(() => requestAnimationFrame(startPreview)); startAdvisor(); } else { loadTemplateParts(); assistHost.innerHTML = RI.sectionLoading('دستیار پس از دریافت قالب آماده می‌شود…'); }
       if (initial && initial !== 'profile') requestAnimationFrame(() => goto(initial));
 
-      return () => { if (RI.resumePublicationReview) delete RI.resumePublicationReview; delete RI.resumeStudioAddSkill; observer?.disconnect(); clearTimeout(undoTimer); clearTimeout(readyTimer); advisorCleanup?.(); cancelAnimationFrame(raf); off(); offSave(); detachCleanup(); pv.destroy(); sizer.disconnect(); };
+      return () => { delete RI.resumeTab; if (RI.resumePublicationReview) delete RI.resumePublicationReview; delete RI.resumeStudioAddSkill; observer?.disconnect(); clearTimeout(undoTimer); clearTimeout(readyTimer); advisorCleanup?.(); cancelAnimationFrame(raf); off(); offSave(); detachCleanup(); pv.destroy(); sizer.disconnect(); };
     },
   });
 })();

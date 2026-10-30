@@ -1,3 +1,4 @@
+const { ANALYTICS_ORIGIN } = require('./analytics.cjs');
 const { createHash } = require('node:crypto');
 
 function publicOrigin(req) {
@@ -13,10 +14,11 @@ function publicOrigin(req) {
 }
 
 function securityHeaders(res, origin, html = '', allowSameOriginFrame = false) {
+  const analytics = html.includes(ANALYTICS_ORIGIN + '/analytics/tracker.js');
   const hashes = [...html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script\s*>/gi)]
     .filter(([, attributes, body]) => !/\bsrc\s*=/i.test(attributes) && body.trim())
     .map(([, , body]) => "'sha256-" + createHash('sha256').update(body).digest('base64') + "'");
-  res.setHeader('Content-Security-Policy', ["default-src 'self'", "script-src 'self' " + hashes.join(' '), "style-src 'self' 'unsafe-inline'", "img-src 'self' data: https:", "font-src 'self'", "connect-src 'self'", "object-src 'none'", "base-uri 'none'", allowSameOriginFrame ? "frame-ancestors 'self'" : "frame-ancestors 'none'", "form-action 'self'"].join('; '));
+  res.setHeader('Content-Security-Policy', ["default-src 'self'", "script-src 'self' " + (analytics ? ANALYTICS_ORIGIN + ' ' : '') + hashes.join(' '), "style-src 'self' 'unsafe-inline'", "img-src 'self' data: https:", "font-src 'self'", "connect-src 'self'" + (analytics ? ' ' + ANALYTICS_ORIGIN : ''), "object-src 'none'", "base-uri 'none'", allowSameOriginFrame ? "frame-ancestors 'self'" : "frame-ancestors 'none'", "form-action 'self'"].join('; '));
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-Frame-Options', allowSameOriginFrame ? 'SAMEORIGIN' : 'DENY');
   res.setHeader('Referrer-Policy', 'no-referrer');

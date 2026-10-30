@@ -18,7 +18,7 @@ for(const id of ['vista','satiar']){
  if(field){assert(html.includes('&lt;script&gt;alert(1)'));assert(html.includes('SECOND_ROW'));c.resumeTemplates[id].collections[def.key]=[];assert(!render(model.content(c,billing),'resume',{},'/u/template-test','home').includes('SECOND_ROW'));}
  if(percent)assert(html.includes('width:55%'));
  for(const [page,definition] of Object.entries(t.pages)){
-  const output=render(safe,'resume',{},'/u/template-test',page);assert(!/<script\b|<iframe\b|<form\b|\son\w+\s*=/i.test(output),id+' '+page);assert(output.includes('data-template-page="'+page+'"'));
+  const output=render(safe,'resume',{},'/u/template-test',page);assert(!/<script\b|<iframe\b|<form\b(?! class="ri-inbox__form" data-inbox-form )|\son\w+\s*=/i.test(output),id+' '+page);assert(output.includes('data-template-page="'+page+'"'));
   for(const url of definition.css)assert(fs.existsSync(path.join(__dirname,'../dist',url)));
  }
  const link=t.fields.find(x=>x.type==='url');if(link){c.resumeTemplates[id].fields[link.key]='javascript:alert(1)';assert.throws(()=>model.content(c,billing));delete c.resumeTemplates[id].fields[link.key];}

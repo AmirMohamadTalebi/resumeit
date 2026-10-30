@@ -25,7 +25,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
   await page.screenshot({path:path.join(out,'studio-desktop.png'),fullPage:true});
 
   // A public email that is not a real address is stored and never blocks publishing.
-  const email=page.locator('.rs-contact [data-c]').first();await email.fill('bad-email');await email.blur();await page.locator('[data-cpub]').first().check();
+  await page.locator('#rs-sec-contacts').waitFor({state:'attached'});await page.evaluate(k=>RI.resumeTab(k),'contacts');const email=page.locator('.rs-contact [data-c]').first();await email.fill('bad-email');await email.blur();await page.locator('[data-cpub]').first().check();
   assert.equal(await page.evaluate(()=>RI.C().contacts[0].value),'bad-email');assert.equal(await page.evaluate(()=>RI.save()),true);
   assert.doesNotMatch(await page.locator('.rs-ready').textContent(),/معتبر نیست/);
 

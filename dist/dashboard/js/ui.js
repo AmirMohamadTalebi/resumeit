@@ -52,6 +52,35 @@
     '<h1 tabindex="-1" id="page-title">' + esc(o.title) + '</h1>' + (o.desc ? '<p>' + o.desc + '</p>' : '') +
     '</div>' + (o.actions ? '<div class="page-head__actions">' + o.actions + '</div>' : '') + '</header>';
 
+  // Page sections as tabs, so long pages fit in about one screen. Panels stay in the DOM (ids keep working);
+  // the chosen tab is remembered per page for this visit. tabs: [[key, label, icon, html], ...]
+  const sectionTabKey = (id) => 'ri-tabs:' + id;
+  // initial: a tab the address asks for; it wins over the remembered one.
+  RI.sectionTabs = (id, tabs, initial) => {
+    let current = tabs[0][0];
+    if (initial === undefined) try { const saved = sessionStorage.getItem(sectionTabKey(id)); if (tabs.some((t) => t[0] === saved)) current = saved; } catch {}
+    if (initial !== undefined && tabs.some((t) => t[0] === initial)) current = initial;
+    return '<div class="ptabs" data-ptabs="' + esc(id) + '"><div class="ptabs__bar" role="tablist" aria-label="بخش‌های این صفحه">' + tabs.map(([key, label, icon]) => '<button type="button" role="tab" id="ptab-' + esc(id + '-' + key) + '" aria-controls="ppanel-' + esc(id + '-' + key) + '" aria-selected="' + (key === current) + '" tabindex="' + (key === current ? 0 : -1) + '" data-ptab="' + esc(key) + '">' + RI.icon(icon) + '<span>' + esc(label) + '</span></button>').join('') + '</div>' +
+      tabs.map(([key, , , html]) => '<div class="ptabs__panel" role="tabpanel" id="ppanel-' + esc(id + '-' + key) + '" aria-labelledby="ptab-' + esc(id + '-' + key) + '" data-ppanel="' + esc(key) + '"' + (key === current ? '' : ' hidden') + '>' + html + '</div>').join('') + '</div>';
+  };
+  if (typeof document !== 'undefined') {
+    const select = (group, button, focus) => {
+      group.querySelectorAll(':scope>.ptabs__bar>[data-ptab]').forEach((b) => { const on = b === button; b.setAttribute('aria-selected', String(on)); b.tabIndex = on ? 0 : -1; });
+      group.querySelectorAll(':scope>.ptabs__panel').forEach((panel) => { panel.hidden = panel.dataset.ppanel !== button.dataset.ptab; });
+      try { sessionStorage.setItem(sectionTabKey(group.dataset.ptabs), button.dataset.ptab); } catch {}
+      if (focus) button.focus();
+      const top = group.getBoundingClientRect().top; if (top < 60) group.scrollIntoView({ block: 'start' });
+      window.dispatchEvent(new Event('resize'));
+    };
+    RI.delegate(document, 'click', '[data-ptab]', (e, b) => select(b.closest('[data-ptabs]'), b));
+    document.addEventListener('keydown', (e) => {
+      const b = e.target.closest?.('[data-ptab]'); if (!b || !['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) return;
+      const all = [...b.parentElement.querySelectorAll('[data-ptab]')], i = all.indexOf(b);
+      const next = e.key === 'Home' ? all[0] : e.key === 'End' ? all.at(-1) : all[(i + (e.key === 'ArrowLeft' ? 1 : -1) + all.length) % all.length];
+      e.preventDefault(); select(b.closest('[data-ptabs]'), next, true);
+    });
+  }
+
   RI.empty = (o) =>
     '<div class="empty"><div class="empty__art">' + RI.icon(o.icon || 'sparkle') + '</div><h3>' + esc(o.title) + '</h3>' +
     (o.text ? '<p>' + o.text + '</p>' : '') + (o.action || '') + '</div>';

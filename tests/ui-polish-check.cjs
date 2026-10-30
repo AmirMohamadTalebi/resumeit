@@ -45,9 +45,9 @@ function luminance(hex) {
       assert(await page.evaluate(() => document.querySelector('[data-name]').getBoundingClientRect().top >= document.querySelector('#a_last').getBoundingClientRect().bottom));
       if (width === 1366) assert(await page.evaluate(() => document.querySelector('.nav__item[data-route=settings]').getBoundingClientRect().bottom <= document.querySelector('.nav').getBoundingClientRect().bottom), 'all navigation entries fit at 768px height');
       await page.goto(base + '/dashboard/stats/');
-      await page.locator('.chart').waitFor();
+      await page.locator('.ch-svg').first().waitFor();
       await page.evaluate(() => document.fonts.ready);
-      assert.equal(await page.locator('.legend li').count(), 2);
+      assert((await page.locator('.ch-legend').first().locator('li').count()) >= 2);
       const cards = await page.locator('.stat').evaluateAll(nodes => nodes.map(e => ({ top: e.offsetTop, height: e.offsetHeight })));
       if (width <= 760) {
         assert(cards.every(c => c.top === cards[0].top), 'statistics stay in one compact row');
@@ -55,10 +55,10 @@ function luminance(hex) {
       }
       for (const range of [7, 30, 90]) {
         await page.locator('[data-r="' + range + '"]').click();
-        const clipped = await page.locator('.chart text').evaluateAll(nodes => nodes.map(e => e.getBBox()).some(r => r.x < 0 || r.x + r.width > 640));
+        const clipped = await page.locator('.ch-svg text').evaluateAll(nodes => nodes.map(e => e.getBBox()).some(r => r.x < 0 || r.x + r.width > 640));
         assert(!clipped, 'chart labels fit for ' + range + ' days');
       }
-      assert.match(await page.locator('.allsteps tbody tr').last().textContent(), /امروز/);
+      assert.match(await page.locator('.ch-table').first().locator('tbody tr').last().textContent(), /امروز/);
       await page.goto(base + '/dashboard/wallet/');
       await page.locator('.wl-balance h2').waitFor();
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);

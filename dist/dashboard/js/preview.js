@@ -75,6 +75,25 @@
     return '<section class="pv-sec pv-sec--' + key + '"><h2>' + esc(SEC_TITLES[key][0]) + '</h2>' + inner + '</section>';
   }
 
+  // «ارتباط با من»: a message form that delivers to the owner's dashboard. Outside a published page it only
+  // explains itself. __RI_MAIN__ is replaced by the main site's origin when the public page is served.
+  RI.inboxForm = function (c, o) {
+    if (c.inbox && c.inbox.enabled === false) return '';
+    o = o || {};
+    const live = o.publicBase !== undefined, id = 'ri-inbox-' + (o.idSuffix || 'form');
+    const field = (name, label, attrs, hint) => '<label class="ri-inbox__field" for="' + id + '-' + name + '"><span>' + label + '</span>' + attrs.replace('{id}', id + '-' + name) + (hint ? '<small>' + hint + '</small>' : '') + '</label>';
+    return '<section class="ri-inbox" id="ri-message" aria-labelledby="' + id + '-title"><h2 id="' + id + '-title">ارتباط با من</h2><p class="ri-inbox__lead">پیامت مستقیم به ' + esc(c.profile.name.trim() || 'صاحب این رزومه') + ' می‌رسد؛ جواب را با شماره یا ایمیلی که می‌نویسی می‌گیری.</p>' +
+      '<form class="ri-inbox__form" data-inbox-form data-endpoint="' + esc((o.publicBase || '') + '/message') + '" data-main="' + (live ? '__RI_MAIN__' : (typeof location !== 'undefined' ? location.origin : '')) + '"' + (live ? '' : ' data-preview="1"') + ' novalidate>' +
+      '<div class="ri-inbox__row">' + field('name', 'نام شما', '<input id="{id}" name="name" required minlength="2" maxlength="80" autocomplete="name">') + field('contact', 'شماره موبایل یا ایمیل', '<input id="{id}" name="contact" required maxlength="120" dir="ltr" inputmode="email" autocomplete="email" placeholder="0912… یا name@mail.com">', 'برای دریافت جواب') + '</div>' +
+      field('message', 'پیام', '<textarea id="{id}" name="message" required minlength="10" maxlength="2000" rows="4"></textarea>') +
+      '<div class="ri-inbox__resume">' + field('resume', 'آدرس رزومهٔ تو (اختیاری)', '<input id="{id}" name="resumeUrl" type="url" maxlength="300" dir="ltr" placeholder="https://">') + '<button type="button" class="ri-inbox__attach" data-inbox-attach>' + RI.icon('resume') + 'الصاق رزومهٔ من در ResumeIt</button></div>' +
+      '<input class="ri-inbox__trap" name="website" tabindex="-1" autocomplete="off" aria-hidden="true">' +
+      '<div class="ri-inbox__foot"><button type="submit" class="ri-inbox__send">' + RI.icon('mail') + 'ارسال پیام</button><p class="ri-inbox__status" data-inbox-status role="status"></p></div></form></section>';
+  };
+
+  // In the dashboard preview the form only explains itself instead of submitting.
+  if (typeof document !== 'undefined') document.addEventListener('submit', (e) => { if (!e.target.matches || !e.target.matches('[data-inbox-form][data-preview]')) return; e.preventDefault(); RI.toast && RI.toast('در نسخهٔ منتشرشده، پیام مستقیم به بخش «پیام‌های رزومه» داشبورد می‌رسد.', { kind: 'info' }); }, true);
+
   RI.resumeHtml = function (c, o) {
     o = o || {};
     const theme = Object.assign({}, c.theme, o.theme || {});
@@ -101,7 +120,7 @@
     const empty = !body && !bio ? '<section class="pv-sec pv-empty"><p>هنوز محتوایی برای نمایش اضافه نشده است.</p></section>' : '';
     const cover = '<div class="pv-cover" style="' + esc(RI.bg(p.cover) || 'background:var(--pv-hero)') + '"></div>';
     return '<div class="pv pv--' + t.layout + (t.mono ? ' pv--mono' : '') + '" style="' + esc(RI.resumeVars(t, theme)) + '">' + nav(c, 'resume', o.publicBase) + cover +
-      '<div class="pv-wrap">' + idBlock + '<main class="pv-main">' + bio + body + empty + '</main></div>' + brandFoot(c,'resume') + '</div>';
+      '<div class="pv-wrap">' + idBlock + '<main class="pv-main">' + bio + body + empty + RI.inboxForm(c, { publicBase: o.publicBase }) + '</main></div>' + brandFoot(c,'resume') + '</div>';
   };
 
   RI.linksHtml = function (c, o) {
@@ -240,17 +259,23 @@
   };
 
   /* ---------- بندانگشتی قالب‌ها برای گالری ---------- */
+  // The marker takes the preview's exact place when it leaves, so elements added beside it meanwhile (the
+  // resize divider) cannot end up on the wrong side; the page keeps its scroll position on the way back.
   RI.detachPreviewToggle = (root, side, button) => {
-    const marker=document.createComment('preview-position'),editor=side.closest('.editor');
-    side.before(marker);
+    const marker=document.createComment('preview-position'),editor=side.closest('.editor')||side.parentElement;
     let popup=null,disposed=false;
     const label=()=>{button.textContent=popup?'بازگرداندن پیش‌نمایش':'نمایش پیش‌نمایش در پنجرهٔ جدا';button.setAttribute('aria-pressed',String(!!popup));};
     const restore=()=>{
       const previous=popup;popup=null;
-      if(marker.parentNode)marker.after(side);
-      editor?.classList.remove('is-preview-detached');label();
-      if(previous&&!previous.closed){previous.removeEventListener('pagehide',restore);previous.close();}
-      window.dispatchEvent(new Event('resize'));
+      if(previous){
+        const y=window.scrollY;
+        if(marker.isConnected)marker.replaceWith(side);else if(editor?.isConnected)editor.append(side);
+        editor?.classList.remove('is-preview-detached');
+        window.scrollTo({top:y,behavior:'instant'});
+        if(!previous.closed){previous.removeEventListener('pagehide',restore);previous.close();}
+        window.dispatchEvent(new Event('resize'));
+      }
+      label();
     };
     const toggle=()=>{
       if(disposed)return;
@@ -261,8 +286,8 @@
         const doc=opened.document;doc.title='پیش‌نمایش زندهٔ رزومه';doc.documentElement.lang='fa';doc.documentElement.dir='rtl';
         document.querySelectorAll('link[rel=stylesheet]').forEach(source=>{const link=doc.createElement('link');link.rel='stylesheet';link.href=source.href;doc.head.append(link);});
         const style=doc.createElement('style');style.textContent='body{margin:0;padding:20px;min-width:0}.editor__side{display:block!important;width:100%;max-width:100%;padding:0}.editor__side .sticky{position:static}.pvhost{width:100%}';doc.head.append(style);
-        doc.body.append(side);popup=opened;editor?.classList.add('is-preview-detached');label();opened.addEventListener('pagehide',restore);opened.focus();
-      }catch{opened.close();restore();RI.toast('پنجرهٔ پیش‌نمایش باز نشد؛ دوباره تلاش کن.',{kind:'error'});}
+        side.replaceWith(marker);doc.body.append(side);popup=opened;editor?.classList.add('is-preview-detached');label();opened.addEventListener('pagehide',restore);opened.focus();
+      }catch{if(marker.isConnected&&!side.isConnected)marker.replaceWith(side);opened.close();restore();RI.toast('پنجرهٔ پیش‌نمایش باز نشد؛ دوباره تلاش کن.',{kind:'error'});}
     };
     label();button.addEventListener('click',toggle);
     window.addEventListener('pagehide',restore);
