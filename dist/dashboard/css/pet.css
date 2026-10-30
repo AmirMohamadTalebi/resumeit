@@ -133,3 +133,55 @@
 .pet .ra__done{display:flex;gap:8px;align-items:flex-start;margin:0;padding:12px;border-radius:14px;background:#e3f1e8;color:#2f6448;font-size:12.5px}
 .pet .ra__job summary{display:flex;align-items:center;gap:6px;font-weight:800;font-size:13.5px;cursor:pointer}
 .pet .ra__foot .btnrow{display:flex;flex-wrap:wrap;gap:6px}
+
+/* ---------- Gerdoo: the cat peeking from behind the left edge of the screen ---------- */
+.pet{left:0;bottom:16vh}
+.pet::before{content:"";position:fixed;left:0;bottom:calc(16vh - 30px);width:14px;height:230px;border-radius:0 12px 12px 0;background:linear-gradient(90deg,rgba(28,45,56,.18),transparent);opacity:0;transition:opacity .6s;pointer-events:none}
+.pet.is-in::before{opacity:1}
+.pet__face{width:150px;height:170px;padding:0;border-radius:0;background:none;box-shadow:none;transform-origin:0 100%;opacity:1;transform:translateX(-100%) rotate(0)}
+.pet.is-in .pet__face{animation:cat-peek 1.4s cubic-bezier(.3,1.35,.45,1) .4s forwards}
+.pet.is-hide .pet__face{animation:cat-duck 1.6s cubic-bezier(.5,0,.3,1)}
+.pet.is-stretch .cat__lean{animation:cat-stretch .9s cubic-bezier(.3,1.5,.5,1)}
+.pet__face:hover .cat__head{transition:transform .3s}
+.pet__face:focus-visible{outline:3px solid #875a36;outline-offset:-6px;border-radius:24px}
+.pet__badge{top:18px;right:18px}
+.cat{width:100%;height:100%;overflow:visible;filter:drop-shadow(0 14px 18px rgba(107,70,41,.35))}
+.cat__lean{transform-origin:40px 240px;animation:cat-breathe 4.6s ease-in-out infinite}
+.cat__head{transform-box:view-box;transform-origin:104px 150px;transition:transform .25s ease-out}
+.cat__tail{transform-origin:168px 236px;animation:cat-tail 3.2s ease-in-out infinite}
+.cat__ear{transform-box:fill-box}
+.cat__ear--l{transform-origin:100% 100%}.cat__ear--r{transform-origin:0 100%}
+.pet.is-ear .cat__ear--r{animation:cat-ear .45s ease-in-out 2}
+.cat__pupil{transition:transform .2s ease-out}
+.cat__eye{transform-box:fill-box;transform-origin:center;transition:transform .09s}
+.pet.is-blink .cat__eye{transform:scaleY(.08)}
+.cat__happy{opacity:0;transition:opacity .15s}
+.pet[data-state=happy] .cat__eyes{opacity:0}.pet[data-state=happy] .cat__happy{opacity:1}
+.pet[data-state=happy] .pet__face{animation:cat-hop .7s cubic-bezier(.3,1.6,.5,1);transform:translateX(-30%) rotate(7deg)}
+.pet[data-state=think] .cat__pupil{transform:translate(2px,-4px)!important}
+.pet[data-state=think] .cat__tail{animation-duration:.9s}
+.pet[data-state=talk] .cat__mouth{animation:cat-talk .26s ease-in-out 6 alternate;transform-box:fill-box;transform-origin:center top}
+.pet[data-state=sad] .cat__ear{animation:cat-droop 1.4s ease-in-out}
+.pet__face:hover .cat__paw{animation:cat-wave .7s ease-in-out;transform-box:fill-box;transform-origin:30% 80%}
+.pet__bubble{left:118px;bottom:150px;border-radius:20px 20px 20px 6px}
+.pet__name{display:block;margin-bottom:2px;font-size:12px;color:#b9781c}
+.pet__panel{left:118px;bottom:-4vh;transform-origin:0 70%;clip-path:circle(0 at 0 70%)}
+.pet__avatar{width:100%;height:100%;border-radius:inherit;object-fit:cover}
+.pet__mini{overflow:hidden;padding:0;border-radius:50%}
+.pet__head b span{font-weight:600;color:#6b8090;font-size:12.5px}
+.pet-msg__av{overflow:hidden;border-radius:50%;padding:0}
+@keyframes cat-peek{0%{transform:translateX(-100%) rotate(0)}55%{transform:translateX(-26%) rotate(9deg)}75%{transform:translateX(-36%) rotate(5deg)}100%{transform:translateX(-32%) rotate(7deg)}}
+@keyframes cat-duck{0%{transform:translateX(-32%) rotate(7deg)}35%,60%{transform:translateX(-92%) rotate(2deg)}100%{transform:translateX(-32%) rotate(7deg)}}
+@keyframes cat-hop{0%{transform:translateX(-32%) rotate(7deg)}40%{transform:translateX(-24%) translateY(-14px) rotate(11deg)}100%{transform:translateX(-30%) rotate(7deg)}}
+@keyframes cat-breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.025,.98)}}
+@keyframes cat-stretch{0%,100%{transform:none}40%{transform:scale(1.04,1.08) translateY(-6px)}}
+@keyframes cat-tail{0%,100%{transform:rotate(-6deg)}50%{transform:rotate(10deg)}}
+@keyframes cat-ear{0%,100%{transform:rotate(0)}50%{transform:rotate(16deg)}}
+@keyframes cat-droop{0%,100%{transform:rotate(0)}40%,70%{transform:rotate(-14deg) translateY(4px)}}
+@keyframes cat-talk{from{transform:scaleY(1)}to{transform:scaleY(1.7)}}
+@keyframes cat-wave{0%,100%{transform:rotate(0)}30%{transform:rotate(-14deg) translateY(-4px)}60%{transform:rotate(8deg)}}
+@media(max-width:960px){.pet{left:0;bottom:calc(92px + env(safe-area-inset-bottom))}.pet::before{bottom:calc(70px + env(safe-area-inset-bottom));height:170px}.pet__face{width:104px;height:118px}.pet__bubble{left:76px;bottom:104px}.pet__panel{position:fixed;left:8px;right:8px;bottom:calc(150px + env(safe-area-inset-bottom));width:auto;height:min(600px,calc(100dvh - 210px));transform-origin:0 100%;clip-path:circle(0 at 0 100%)}}
+@media(prefers-reduced-motion:reduce){.pet__face{transform:translateX(-32%) rotate(7deg)!important}.cat__head{transition:none}}
+/* Only Gerdoo's head takes clicks, so its body and tail never cover buttons near the screen edge. */
+.pet__face,.pet__face .cat{pointer-events:none}
+.pet__face .cat__head{pointer-events:auto;cursor:pointer}
