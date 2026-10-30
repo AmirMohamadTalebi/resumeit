@@ -98,10 +98,19 @@
       function navHtml() {
         const pct = RI.completion().pct, label = pct >= 90 ? 'درخشان' : pct >= 70 ? 'قوی' : pct >= 40 ? 'در حال رشد' : 'تازه شروع شده';
         const ring = '<svg class="rs-ring" viewBox="0 0 44 44" aria-hidden="true"><circle cx="22" cy="22" r="19" class="rs-ring__bg"></circle><circle cx="22" cy="22" r="19" class="rs-ring__fg" pathLength="100" style="stroke-dasharray:' + pct + ' 100"></circle></svg>';
-        return '<div class="rs-score" role="status" aria-label="قدرت رزومه ' + RI.fa(pct) + ' درصد، ' + label + '">' + ring + '<div><b>' + RI.fa(pct) + '٪</b><span>' + label + '</span></div></div><ol class="rs-nav__list" id="rs-nav-list">' + order().map(key => {
+        // The section tabs scroll sideways; arrows and edge fades show when there is more, and «همه» lists every section.
+        return '<div class="rs-score" role="status" aria-label="قدرت رزومه ' + RI.fa(pct) + ' درصد، ' + label + '">' + ring + '<div><b>' + RI.fa(pct) + '٪</b><span>' + label + '</span></div></div><div class="rs-nav__scroller"><button type="button" class="rs-nav__arrow" data-nav-scroll="prev" aria-label="بخش‌های قبلی" tabindex="-1">' + RI.icon('chevR') + '</button><ol class="rs-nav__list" id="rs-nav-list">' + order().map(key => {
           const [state, text] = status(key), m = META[key], badge = advisorCounts[key] || 0;
           return '<li class="rs-nav__item' + (visible(key) ? '' : ' is-off') + '" data-key="' + key + '"><button type="button" class="rs-nav__go" data-goto="' + key + '" id="resume-step-' + key + '" title="' + esc(m[0] + (text ? ' · ' + text : '')) + '"><span class="rs-nav__dot is-' + state + '" aria-hidden="true"></span>' + RI.icon(m[1]) + '<span class="rs-nav__txt">' + m[0] + '</span>' + (badge ? '<span class="rs-badge" aria-label="' + RI.fa(badge) + ' پیشنهاد">' + RI.fa(badge) + '</span>' : '') + '<span class="sr-only">' + esc(text) + '</span></button></li>';
-        }).join('') + '</ol>';
+        }).join('') + '</ol><button type="button" class="rs-nav__arrow" data-nav-scroll="next" aria-label="بخش‌های بعدی" tabindex="-1">' + RI.icon('chevL') + '</button></div>' +
+          '<div class="rs-nav__all"><button type="button" class="rs-nav__all-btn" data-nav-all aria-expanded="false" aria-controls="rs-nav-menu">' + RI.icon('menu') + '<span>همهٔ بخش‌ها</span></button><div class="rs-nav__menu" id="rs-nav-menu" hidden>' + order().map(key => { const [state, text] = status(key); return '<button type="button" class="rs-nav__menu-item' + (visible(key) ? '' : ' is-off') + '" data-nav-goto="' + key + '"><span class="rs-nav__dot is-' + state + '" aria-hidden="true"></span>' + RI.icon(META[key][1]) + '<span><b>' + META[key][0] + '</b><small>' + esc(text || '') + '</small></span></button>'; }).join('') + '</div></div>';
+      }
+      // Keeps the arrows and edge fades honest (RTL: scrollLeft runs from 0 down to a negative end) and the active tab in view.
+      function navEdges(center) {
+        const list = navHost.querySelector('.rs-nav__list'), box = navHost.querySelector('.rs-nav__scroller'); if (!list || !box) return;
+        const end = list.scrollWidth - list.clientWidth, pos = Math.abs(list.scrollLeft);
+        box.classList.toggle('can-prev', pos > 2); box.classList.toggle('can-next', end - pos > 2);
+        if (center) { const on = list.querySelector('[aria-current="true"]'); if (on) { const l = list.getBoundingClientRect(), r = on.getBoundingClientRect(); list.scrollBy({ left: (r.left + r.width / 2) - (l.left + l.width / 2), behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); } }
       }
       function paintNav() {
         const active = navHost.querySelector('[aria-current="true"]')?.dataset.goto, scroll = navHost.querySelector('.rs-nav__list')?.scrollLeft || 0, focused = navHost.contains(document.activeElement) ? document.activeElement.id : '';
@@ -109,6 +118,7 @@
         if (focused) document.getElementById(focused)?.focus({ preventScroll: true });
         if (active) navHost.querySelector('[data-goto="' + active + '"]')?.setAttribute('aria-current', 'true');
         const list = navHost.querySelector('.rs-nav__list'); if (list && scroll && list.scrollLeft !== scroll) list.scrollLeft = scroll;
+        requestAnimationFrame(() => navEdges(false));
       }
       function layoutRows() {
         const c = RI.C(), keys = bodyKeys();
@@ -271,7 +281,7 @@
       function showTab() {
         const keys = order(); if (!keys.includes(activeTab)) activeTab = 'profile';
         cardsHost.querySelectorAll(':scope>.rs-card').forEach(el => { const on = el.dataset.section === activeTab; el.classList.toggle('is-active', on); el.toggleAttribute('hidden', !on); });
-        navHost.querySelectorAll('[data-goto]').forEach(b => b.setAttribute('aria-current', String(b.dataset.goto === activeTab)));
+        navHost.querySelectorAll('[data-goto]').forEach(b => b.setAttribute('aria-current', String(b.dataset.goto === activeTab))); navHost.querySelectorAll('[data-nav-goto]').forEach(b => b.setAttribute('aria-current', String(b.dataset.navGoto === activeTab))); requestAnimationFrame(() => navEdges(true));
         const at = keys.indexOf(activeTab), prev = keys[at - 1], next = keys[at + 1], pager = RI.$('#rs-pager', root), name = k => esc((META[k] || [k])[0]);
         if (pager) pager.innerHTML = (prev ? '<button type="button" class="rs-pager__btn" data-goto="' + prev + '">' + RI.icon('chevR') + '<span><small>بخش قبلی</small>' + name(prev) + '</span></button>' : '<span></span>') + '<span class="rs-pager__count">' + RI.fa(at + 1) + ' از ' + RI.fa(keys.length) + '</span>' + (next ? '<button type="button" class="rs-pager__btn rs-pager__btn--next" data-goto="' + next + '"><span><small>بخش بعدی</small>' + name(next) + '</span>' + RI.icon('chevL') + '</button>' : '<span></span>');
       }
@@ -390,6 +400,14 @@
         if (dots && ['ArrowLeft', 'ArrowRight'].includes(e.key)) { e.preventDefault(); const info = findItem(dots); if (!info?.item) return; info.item.level = Math.min(5, Math.max(1, info.item.level + (e.key === 'ArrowLeft' ? 1 : -1))); RI.touch(info.key); paintCard(info.key); RI.$('[data-item="' + info.id + '"] [data-level="' + info.item.level + '"]', root)?.focus(); }
       });
       RI.delegate(root, 'click', '[data-goto]', (e, b) => goto(b.dataset.goto));
+      RI.delegate(navHost, 'click', '[data-nav-goto]', (e, b) => { const menu = navHost.querySelector('.rs-nav__menu'); menu.hidden = true; navHost.querySelector('[data-nav-all]').setAttribute('aria-expanded', 'false'); goto(b.dataset.navGoto); });
+      RI.delegate(navHost, 'click', '[data-nav-scroll]', (e, b) => { const list = navHost.querySelector('.rs-nav__list'); list.scrollBy({ left: (b.dataset.navScroll === 'next' ? -1 : 1) * list.clientWidth * .7, behavior: 'smooth' }); });
+      RI.delegate(navHost, 'click', '[data-nav-all]', (e, b) => { const menu = navHost.querySelector('.rs-nav__menu'), open = menu.hidden; menu.hidden = !open; b.setAttribute('aria-expanded', String(open)); if (open) menu.querySelector('[aria-current="true"],button')?.focus(); });
+      navHost.addEventListener('scroll', e => { if (e.target.classList?.contains('rs-nav__list')) navEdges(false); }, true);
+      navHost.addEventListener('wheel', e => { const list = e.target.closest?.('.rs-nav__list'); if (!list || Math.abs(e.deltaY) <= Math.abs(e.deltaX) || list.scrollWidth <= list.clientWidth) return; e.preventDefault(); list.scrollBy({ left: -e.deltaY }); }, { passive: false });
+      const closeMenu = e => { const menu = navHost.querySelector('.rs-nav__menu'); if (!menu || menu.hidden || navHost.querySelector('.rs-nav__all').contains(e.target)) return; menu.hidden = true; navHost.querySelector('[data-nav-all]').setAttribute('aria-expanded', 'false'); };
+      document.addEventListener('pointerdown', closeMenu); navHost.addEventListener('keydown', e => { if (e.key === 'Escape') { const menu = navHost.querySelector('.rs-nav__menu'); if (menu && !menu.hidden) { menu.hidden = true; const b = navHost.querySelector('[data-nav-all]'); b.setAttribute('aria-expanded', 'false'); b.focus(); } } });
+      const navResize = new ResizeObserver(() => navEdges(false)); navResize.observe(navHost);
       RI.delegate(root, 'click', '[data-template-shift]', (e, b) => {
         const c = RI.C(), groups = RI.templateEditorGroups(c).map(g => g.key), from = groups.indexOf(b.dataset.templateShift), to = from + Number(b.dataset.direction);
         if (from < 0 || to < 0 || to >= groups.length) return;
@@ -455,7 +473,7 @@
       studio.dataset.wide = String(studio.clientWidth >= 760); sizer.observe(studio); placeAssistant();
       function startAdvisor() {
         if (advisorCleanup || !alive()) return;
-        if (!RI.advisorScripts) RI.advisorScripts = (async () => { for (const name of ['advisor-core', 'advisor-ui']) await new Promise((resolve, reject) => { const s = document.createElement('script'); s.src = '/dashboard/js/' + name + '.js?v=' + encodeURIComponent(document.documentElement.dataset.assetVersion || ''); s.onload = resolve; s.onerror = reject; document.head.append(s); }); })().catch(error => { RI.advisorScripts = null; throw error; });
+        if (!RI.advisorScripts) RI.advisorScripts = (async () => { for (const name of ['advisor-core', 'advisor-brain', 'advisor-ui']) await new Promise((resolve, reject) => { const s = document.createElement('script'); s.src = '/dashboard/js/' + name + '.js?v=' + encodeURIComponent(document.documentElement.dataset.assetVersion || ''); s.onload = resolve; s.onerror = reject; document.head.append(s); }); })().catch(error => { RI.advisorScripts = null; throw error; });
         RI.advisorScripts.then(() => {
           if (!alive()) return;
           advisorCleanup = RI.mountAdvisor(assistHost, {
@@ -495,7 +513,7 @@
       if (templateReady) { requestAnimationFrame(() => requestAnimationFrame(startPreview)); startAdvisor(); } else { loadTemplateParts(); assistHost.innerHTML = RI.sectionLoading('دستیار پس از دریافت قالب آماده می‌شود…'); }
       if (initial && initial !== 'profile') requestAnimationFrame(() => goto(initial));
 
-      return () => { delete RI.resumeTab; if (RI.resumePublicationReview) delete RI.resumePublicationReview; delete RI.resumeStudioAddSkill; observer?.disconnect(); clearTimeout(undoTimer); clearTimeout(readyTimer); advisorCleanup?.(); cancelAnimationFrame(raf); off(); offSave(); detachCleanup(); pv.destroy(); sizer.disconnect(); };
+      return () => { document.removeEventListener("pointerdown", closeMenu); navResize.disconnect(); delete RI.resumeTab; if (RI.resumePublicationReview) delete RI.resumePublicationReview; delete RI.resumeStudioAddSkill; observer?.disconnect(); clearTimeout(undoTimer); clearTimeout(readyTimer); advisorCleanup?.(); cancelAnimationFrame(raf); off(); offSave(); detachCleanup(); pv.destroy(); sizer.disconnect(); };
     },
   });
 })();

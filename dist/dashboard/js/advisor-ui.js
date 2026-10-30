@@ -2,7 +2,7 @@
    تحلیل در Worker انجام می‌شود؛ هیچ پیشنهادی متن ساختگی نمی‌سازد و اعمال فقط با کلیک کاربر است. */
 (function () {
   'use strict';
-  const RI = window.RI, core = window.ResumeAdvisor, esc = RI.esc;
+  const RI = window.RI, core = window.ResumeAdvisor, brain = window.ResumeBrain, esc = RI.esc;
   const sha = async text => 'sha256:' + [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text)))].map(x => x.toString(16).padStart(2, '0')).join('');
   const ROLE_LABELS = { development: 'برنامه‌نویسی', design: 'طراحی', data: 'تحلیل داده', marketing: 'بازاریابی', sales: 'فروش', support: 'پشتیبانی', accounting: 'حسابداری', teaching: 'تدریس', content: 'تولید محتوا', management: 'مدیریت پروژه' };
   const ROLE_GOALS = { development: 'توسعه‌دهندهٔ وب', design: 'طراح رابط کاربری', data: 'تحلیل‌گر داده', marketing: 'کارشناس بازاریابی دیجیتال', sales: 'کارشناس فروش', support: 'کارشناس پشتیبانی مشتری', accounting: 'حسابدار', teaching: 'مدرس', content: 'تولیدکنندهٔ محتوا', management: 'مدیر پروژه' };
@@ -20,6 +20,10 @@
     const hidden = f => { const v = session.state.feedback[f.id]; return v && (v.value === 'dismiss' || v.digest === f.dependencyDigest && v.until > Date.now()); };
 
     host.innerHTML = '<section class="ra" aria-labelledby="ra-title"><header class="ra__head"><span class="ra__spark">' + RI.icon('sparkle') + '</span><div><h2 id="ra-title">دستیار رزومه</h2><p data-advisor-summary role="status">در حال آماده‌سازی…</p></div><div class="ra__tools"><button type="button" class="btn btn--icon btn--ghost btn--sm" data-advisor-help aria-label="این دستیار چه می‌کند؟" aria-expanded="false" aria-describedby="ra-help-' + epoch + '">' + RI.icon('info') + '</button><button type="button" class="btn btn--icon btn--ghost btn--sm" data-advisor-run aria-label="بررسی دوباره">' + RI.icon('refresh') + '</button></div><span class="ra__tip" id="ra-help-' + epoch + '" role="tooltip" hidden>این دستیار متن رزومه‌ات را از نظر وضوح، نگارش، تاریخ‌ها و مهارت‌ها بررسی می‌کند و قدم بعدی را پیشنهاد می‌دهد. هیچ متنی از خودش نمی‌سازد و هر تغییر فقط با کلیک تو اعمال می‌شود. هدف شغلی اختیاری است و نبود پیشنهاد به معنی کامل‌بودن رزومه نیست.</span></header>' +
+      '<div class="ra-tabs" role="tablist" aria-label="بخش‌های دستیار"><button type="button" role="tab" data-ra-tab="chat" id="ra-tab-chat-' + epoch + '">' + RI.icon('sparkle') + 'گفت‌وگو</button><button type="button" role="tab" data-ra-tab="score" id="ra-tab-score-' + epoch + '">' + RI.icon('chart') + 'امتیاز</button><button type="button" role="tab" data-ra-tab="review" id="ra-tab-review-' + epoch + '">' + RI.icon('check') + 'بررسی<span class="ra-tabs__count" data-ra-count hidden></span></button></div>' +
+      '<div class="ra-panel ra-chat" data-ra-panel="chat" role="tabpanel"><div class="ra-chat__log" data-ra-log aria-live="polite"></div><div class="ra-chat__chips" data-ra-chips></div><form class="ra-chat__form" data-ra-form><label class="sr-only" for="ra-ask-' + epoch + '">سؤالت از دستیار</label><input class="input" id="ra-ask-' + epoch + '" data-ra-input maxlength="300" autocomplete="off" placeholder="بپرس؛ مثلاً «معرفی‌ام را بهتر کن»"><button type="submit" class="btn btn--primary btn--icon" aria-label="فرستادن">' + RI.icon('chevL') + '</button></form></div>' +
+      '<div class="ra-panel ra-score" data-ra-panel="score" role="tabpanel" hidden></div>' +
+      '<div class="ra-panel" data-ra-panel="review" role="tabpanel" hidden>' +
       '<div class="ra__goal"><label class="rs-field__label" for="advisor-goal">برای چه کاری رزومه می‌سازی؟</label><input class="input" id="advisor-goal" maxlength="160" placeholder="مثلاً توسعه‌دهندهٔ وب با React" disabled aria-describedby="advisor-goal-hint"><div class="ra__roles" data-advisor-roles></div><p class="field__hint" id="advisor-goal-hint" data-advisor-goalhint></p></div>' +
       '<div class="ra__block" data-advisor-next></div>' +
       '<div class="ra__block" data-advisor-skills></div>' +
@@ -27,7 +31,7 @@
       '<aside class="ra__note" data-advisor-source-note hidden><p>متن‌های نمونهٔ قالب تا تأیید تو بررسی نمی‌شوند تا پیشنهادها بر اساس متن آماده نباشند.</p><button type="button" class="btn btn--soft btn--sm" data-advisor-review-source>' + RI.icon('resume') + 'بررسی متن‌های قالب</button></aside>' +
       '<div class="ra__list" data-advisor-findings></div><button type="button" class="btn btn--ghost btn--sm" data-advisor-more hidden></button><button type="button" class="btn btn--soft btn--sm" data-advisor-next-batch hidden>' + RI.icon('chevL') + 'بررسی بخش بعدی متن</button><p class="ra__status" data-advisor-status role="status"></p></div>' +
       '<details class="ra__job"><summary>' + RI.icon('briefcase') + 'مقایسه با یک آگهی شغلی</summary><label class="rs-field__label" for="advisor-job">متن آگهی را بچسبان؛ فقط در همین صفحه می‌ماند و ذخیره نمی‌شود.</label><textarea class="textarea" id="advisor-job" rows="4" maxlength="12000"></textarea><div data-advisor-matches></div></details>' +
-      '<footer class="ra__foot"><small data-advisor-coverage></small><div class="btnrow"><button type="button" class="btn btn--ghost btn--sm" data-advisor-pause></button><button type="button" class="btn btn--ghost btn--sm" data-advisor-restore>بازگرداندن کنارگذاشته‌ها</button><button type="button" class="btn btn--ghost btn--sm" data-advisor-export>' + RI.icon('download') + 'گزارش</button></div></footer></section>';
+      '<footer class="ra__foot"><small data-advisor-coverage></small><div class="btnrow"><button type="button" class="btn btn--ghost btn--sm" data-advisor-pause></button><button type="button" class="btn btn--ghost btn--sm" data-advisor-restore>بازگرداندن کنارگذاشته‌ها</button><button type="button" class="btn btn--ghost btn--sm" data-advisor-export>' + RI.icon('download') + 'گزارش</button></div></footer></div></section>';
     const $ = s => host.querySelector(s), goal = $('#advisor-goal'), job = $('#advisor-job');
     goal.value = session.state.context.goal; job.value = session.job;
     const helpButton = $('[data-advisor-help]'), tip = $('[role=tooltip]'); let pinned = false, tipTimer;
@@ -38,6 +42,57 @@
     const closeTip = e => { if (e.key === 'Escape' || e.type === 'pointerdown' && !helpButton.contains(e.target) && !tip.contains(e.target)) { pinned = false; showTip(false); } };
     document.addEventListener('pointerdown', closeTip); document.addEventListener('keydown', closeTip);
     RI.advisorGoal = () => goal.value;
+
+    /* Conversation and score (advisor-brain.js). The chat answers from the resume as it is right now. */
+    session.chat ||= []; session.tab ||= 'chat';
+    const log = $('[data-ra-log]'), chips = $('[data-ra-chips]'), ask = $('[data-ra-input]');
+    function selectTab(id, focus) {
+      session.tab = id;
+      host.querySelectorAll('[data-ra-tab]').forEach(b => { const on = b.dataset.raTab === id; b.setAttribute('aria-selected', String(on)); b.tabIndex = on ? 0 : -1; if (on && focus) b.focus(); });
+      host.querySelectorAll('[data-ra-panel]').forEach(panel => { panel.hidden = panel.dataset.raPanel !== id; });
+      if (id === 'score') paintScore();
+      if (id === 'chat' && !session.chat.length) say(brain.opening(RI.C(), { goal: goal.value }));
+    }
+    RI.advisorTab = id => selectTab(id);
+    const bubble = m => '<div class="ra-msg ra-msg--' + m.who + '">' + (m.who === 'bot' ? '<span class="ra-msg__avatar">' + RI.icon('sparkle') + '</span>' : '') + '<div class="ra-msg__body"><p>' + esc(m.text).replace(/\n/g, '<br>') + '</p>' + (m.actions?.length ? '<div class="ra-msg__actions">' + m.actions.map((a, i) => '<button type="button" class="ra-act ra-act--' + a.kind + '" data-ra-act="' + m.id + ':' + i + '">' + esc(a.label) + '</button>').join('') + '</div>' : '') + '</div></div>';
+    function paintChat() {
+      log.innerHTML = session.chat.map(bubble).join('');
+      const last = [...session.chat].reverse().find(m => m.who === 'bot');
+      chips.innerHTML = (last?.follow || []).map(f => '<button type="button" class="ra-chip" data-ra-ask="' + esc(f) + '">' + esc(f) + '</button>').join('');
+      log.scrollTop = log.scrollHeight;
+    }
+    function say(answer, question) {
+      if (question) session.chat.push({ id: 'u' + session.chat.length, who: 'me', text: question });
+      session.chat.push({ id: 'b' + session.chat.length, who: 'bot', text: answer.text, actions: answer.actions, follow: answer.follow });
+      if (session.chat.length > 40) session.chat.splice(0, session.chat.length - 40);
+      paintChat();
+    }
+    function askBrain(question) {
+      const q = String(question || '').trim(); if (!q) return;
+      session.chat.push({ id: 'u' + session.chat.length, who: 'me', text: q }); paintChat();
+      log.insertAdjacentHTML('beforeend', '<div class="ra-msg ra-msg--bot ra-msg--typing"><span class="ra-msg__avatar">' + RI.icon('sparkle') + '</span><div class="ra-msg__body"><i></i><i></i><i></i></div></div>'); log.scrollTop = log.scrollHeight;
+      setTimeout(() => { if (!alive) return; say(brain.reply(q, RI.C(), { goal: goal.value })); }, RI.reduceMotion?.() ? 0 : 420);
+    }
+    function act(action) {
+      const c = RI.C();
+      if (action.kind === 'go') opts.focus?.({ section: action.section, field: action.field });
+      else if (action.kind === 'tab') selectTab(action.tab, true);
+      else if (action.kind === 'route') RI.go(action.route, action.tab ? { tab: action.tab } : undefined);
+      else if (action.kind === 'bio' || action.kind === 'title') { c.profile[action.kind] = action.value; RI.touch('profile'); RI.rerender?.(); RI.toast(action.kind === 'bio' ? 'پیش‌نویس در معرفی گذاشته شد؛ ویرایشش کن' : 'عنوان گذاشته شد', { kind: 'info' }); }
+      else if (action.kind === 'skill') { if (RI.resumeStudioAddSkill?.(action.value)) RI.toast('«' + action.value + '» به مهارت‌ها اضافه شد'); }
+    }
+    function paintScore() {
+      const sc = brain.score(RI.C(), { goal: goal.value }), panel = $('[data-ra-panel="score"]');
+      panel.innerHTML = '<div class="ra-score__top"><div class="ra-score__ring" style="--v:' + sc.total + '"><b>' + RI.fa(sc.total) + '</b><small>از ۱۰۰</small></div><div><h3>' + esc(sc.label) + '</h3><p>' + (sc.role ? 'نقش تشخیص‌داده‌شده: <b>' + esc(sc.role.label) + '</b>' : 'نقشت هنوز از متن پیدا نیست؛ هدف شغلی را در «بررسی» بنویس.') + '</p></div></div>' +
+        '<ul class="ra-score__dims">' + sc.dims.map(d => '<li><div class="ra-score__row"><b>' + esc(d.label) + '</b><span>' + RI.fa(d.value) + '</span></div><div class="ra-score__bar"><span style="width:' + d.value + '%" class="' + (d.value >= 75 ? 'is-good' : d.value >= 50 ? 'is-mid' : 'is-low') + '"></span></div>' + (d.reasons.length ? '<ul class="ra-score__why">' + d.reasons.slice(0, 2).map(r => '<li>' + esc(r) + '</li>').join('') + '</ul>' : '') + '</li>').join('') + '</ul>' +
+        '<button type="button" class="btn btn--soft btn--sm" data-ra-ask="قدم بعدی چیه؟">' + RI.icon('zap') + 'قدم بعدی را بگو</button>';
+    }
+    RI.delegate(host, 'click', '[data-ra-tab]', (e, b) => selectTab(b.dataset.raTab));
+    host.querySelector('.ra-tabs').addEventListener('keydown', e => { if (!['ArrowLeft', 'ArrowRight'].includes(e.key)) return; const ids = ['chat', 'score', 'review'], i = ids.indexOf(session.tab); selectTab(ids[(i + (e.key === 'ArrowLeft' ? 1 : -1) + 3) % 3], true); e.preventDefault(); });
+    RI.delegate(host, 'click', '[data-ra-ask]', (e, b) => { if (session.tab !== 'chat') selectTab('chat'); askBrain(b.dataset.raAsk); });
+    RI.delegate(host, 'click', '[data-ra-act]', (e, b) => { const [id, i] = b.dataset.raAct.split(':'), m = session.chat.find(x => x.id === id), a = m?.actions?.[Number(i)]; if (a) act(a); });
+    $('[data-ra-form]').addEventListener('submit', e => { e.preventDefault(); const q = ask.value; ask.value = ''; askBrain(q); });
+    paintChat(); selectTab(session.tab);
     const channel = window.BroadcastChannel ? new BroadcastChannel('resumeit-session') : null;
     if (channel) channel.onmessage = ({ data }) => { if (data?.owner !== owner) RI.advisorClear(); };
 
@@ -95,6 +150,8 @@
       const labels = { supported: 'کاربردش در متن دیده شد', partial: 'فقط نامش آمده', contradicted: 'در متن نفی شده', unknown: 'شاهد کافی نیست' };
       $('[data-advisor-matches]').innerHTML = result?.jobMatches?.length ? '<ul class="ra__matches">' + result.jobMatches.map(x => '<li class="is-' + x.status + '"><b>' + esc(core.lexicon.find(s => s.id === x.id)?.label || x.id) + '</b>' + labels[x.status] + '</li>').join('') + '</ul>' : job.value.trim() ? '<p class="field__hint">مهارت شناخته‌شده‌ای در آگهی پیدا نشد.</p>' : '';
       opts.counts?.(counts());
+      const badge = $('[data-ra-count]'); if (badge) { badge.hidden = !total; badge.textContent = RI.fa(total); }
+      if (session.tab === 'score') paintScore();
     }
     async function persist(operations) {
       if (!active() || !remoteReady || saving) { RI.toast('دستیار هنوز آماده نیست؛ کمی بعد دوباره امتحان کن', { kind: 'info' }); return false; }
@@ -178,6 +235,6 @@
     });
     async function loadState() { try { const next = await RI.dashboardRequest('advisor'); if (active()) { session.state = next.state; session.version = next.version; goal.value = next.state.context.goal; goal.disabled = false; remoteReady = true; opts.goal?.(); invalidate(); } } catch { if (active()) { goal.disabled = false; error = 'تنظیمات ذخیره‌شدهٔ دستیار دریافت نشد؛ با دکمهٔ بررسی دوباره امتحان کن.'; paint(); } } }
     loadState(); paint(); schedule();
-    return () => { alive = false; clearTimeout(timer); stopWorker(); off(); offClear(); channel?.close(); document.removeEventListener('visibilitychange', visible); document.removeEventListener('pointerdown', closeTip); document.removeEventListener('keydown', closeTip); clearTimeout(tipTimer); result = null; sources = []; RI.confirmAdvisorSource = null; delete RI.advisorGoal; };
+    return () => { alive = false; clearTimeout(timer); stopWorker(); off(); offClear(); channel?.close(); document.removeEventListener('visibilitychange', visible); document.removeEventListener('pointerdown', closeTip); document.removeEventListener('keydown', closeTip); clearTimeout(tipTimer); result = null; sources = []; RI.confirmAdvisorSource = null; delete RI.advisorGoal; delete RI.advisorTab; };
   };
 })();

@@ -8,7 +8,7 @@ try{browser=await chromium.launch({channel:process.platform==='win32'?'msedge':u
    await page.route('**/api/dashboard/document*',async r=>{await gate;await r.continue();});
    await page.goto(base+'/dashboard/'+route,{waitUntil:'domcontentloaded'});
    // Staged loading: the shell is usable at once and the page shows its own non-blocking section loader.
-   await page.locator('#sidebar .brand').waitFor({state:'visible'});await page.locator('#view .section-loading').first().waitFor();assert.equal(await page.locator('body').getAttribute('aria-busy'),null);assert.equal(await page.locator('.ri-page-loading:visible').count(),0,'no full-page loading bar over the shell');
+   await page.locator('#sidebar .dn-brand').waitFor({state:'visible'});await page.locator('#view .section-loading').first().waitFor();assert.equal(await page.locator('body').getAttribute('aria-busy'),null);assert.equal(await page.locator('.ri-page-loading:visible').count(),0,'no full-page loading bar over the shell');
    release();await page.locator('#page-title').waitFor();await page.locator('.ri-page-loading').waitFor({state:'detached'});assert.equal(await page.locator('body').getAttribute('aria-busy'),null);
    await page.unroute('**/api/dashboard/document*');
  }

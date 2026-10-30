@@ -43,7 +43,7 @@ function luminance(hex) {
       assert.equal(await page.locator('[data-brand]').count(), 0, 'branding lives in the resume and links editors, not account settings');
       assert(!(await page.locator('#view').innerText()).includes('با اشتراک می‌توانی آن را برداری'));
       assert(await page.evaluate(() => document.querySelector('[data-name]').getBoundingClientRect().top >= document.querySelector('#a_last').getBoundingClientRect().bottom));
-      if (width === 1366) assert(await page.evaluate(() => document.querySelector('.nav__item[data-route=settings]').getBoundingClientRect().bottom <= document.querySelector('.nav').getBoundingClientRect().bottom), 'all navigation entries fit at 768px height');
+      if (width === 1366) assert(await page.evaluate(() => document.querySelector('.dn-item[data-route=support]').getBoundingClientRect().bottom <= document.querySelector('.dn-nav').getBoundingClientRect().bottom), 'all navigation entries fit at 768px height');
       await page.goto(base + '/dashboard/stats/');
       await page.locator('.ch-svg').first().waitFor();
       await page.evaluate(() => document.fonts.ready);

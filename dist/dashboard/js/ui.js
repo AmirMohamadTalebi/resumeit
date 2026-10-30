@@ -56,6 +56,15 @@
   // the chosen tab is remembered per page for this visit. tabs: [[key, label, icon, html], ...]
   const sectionTabKey = (id) => 'ri-tabs:' + id;
   // initial: a tab the address asks for; it wins over the remembered one.
+  // Phone-only tabs: buttons switch which [data-mtab] blocks show at ≤760px; wider screens keep everything visible.
+  RI.mobileTabs = (root, tabs, key) => {
+    const bar = document.createElement('div'); bar.className = 'nv-mtabs'; bar.setAttribute('role', 'tablist'); bar.setAttribute('aria-label', 'بخش‌های صفحه');
+    let current = tabs[0][0]; try { const saved = sessionStorage.getItem('ri-mtab-' + key); if (tabs.some(t => t[0] === saved)) current = saved; } catch {}
+    bar.innerHTML = tabs.map(([id, label, glyph]) => '<button type="button" role="tab" data-mtab-go="' + id + '">' + RI.icon(glyph) + label + '</button>').join('');
+    const paint = () => { bar.querySelectorAll('[data-mtab-go]').forEach(b => b.setAttribute('aria-selected', String(b.dataset.mtabGo === current))); root.querySelectorAll('[data-mtab]').forEach(el => el.classList.toggle('nv-mhide', !el.dataset.mtab.split(' ').includes(current))); };
+    bar.addEventListener('click', e => { const b = e.target.closest('[data-mtab-go]'); if (!b) return; current = b.dataset.mtabGo; try { sessionStorage.setItem('ri-mtab-' + key, current); } catch {} paint(); bar.scrollIntoView({ block: 'nearest' }); });
+    paint(); return bar;
+  };
   RI.sectionTabs = (id, tabs, initial) => {
     let current = tabs[0][0];
     if (initial === undefined) try { const saved = sessionStorage.getItem(sectionTabKey(id)); if (tabs.some((t) => t[0] === saved)) current = saved; } catch {}

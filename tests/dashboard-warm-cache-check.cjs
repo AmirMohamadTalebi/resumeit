@@ -10,7 +10,7 @@ const {createServer}=require('../src/http/server.cjs'),{testStore}=require('./au
  try{
   const context=await browser.newContext();await context.addCookies([{name:'ri_session',value:'e'.repeat(64),url:base}]);const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
   await page.addInitScript(()=>document.addEventListener('ri:dashboard-ready',()=>window.readyAt=performance.now()));
-  await page.goto(base+'/dashboard/wallet/',{waitUntil:'domcontentloaded'});await page.locator('#sidebar .brand').waitFor();assert.equal(await page.locator('#topPreview').isDisabled(),true);
+  await page.goto(base+'/dashboard/wallet/',{waitUntil:'domcontentloaded'});await page.locator('#sidebar .dn-brand').waitFor();assert.equal(await page.locator('#topPreview').isDisabled(),true);
   assert((await page.locator('#view').textContent()).includes('در حال دریافت'));assert.equal(await page.locator('body').getAttribute('aria-busy'),null);
   release();hold=false;await page.waitForFunction(()=>window.readyAt);await page.waitForLoadState('networkidle');const cold=assetRequests;assert(cold<=5,'Shared modules must be bundled on cold load');
   const times=[];

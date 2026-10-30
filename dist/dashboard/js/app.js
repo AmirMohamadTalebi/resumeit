@@ -3,43 +3,54 @@
   'use strict';
   const RI = (window.RI = window.RI || {});
 
+  // Routes and the menu. Notifications are a route but stay out of the menu: the bell in the top bar is enough.
   const NAV = [
-    { group: 'استودیو', items: [['home', 'خانهٔ داشبورد', 'home'], ['resume', 'رزومه', 'resume'], ['links', 'صفحهٔ لینک‌ها', 'link'], ['themes', 'ظاهر و قالب', 'palette'], ['studio', 'آمادگی انتشار', 'check']] },
+    { group: '', items: [['home', 'خانه', 'home']] },
+    { group: 'ساخت صفحه', items: [['resume', 'رزومه', 'resume'], ['links', 'صفحهٔ لینک‌ها', 'link'], ['themes', 'ظاهر و قالب', 'palette'], ['studio', 'آمادگی انتشار', 'check']] },
     { group: 'انتشار', items: [['publish', 'آدرس و انتشار', 'globe'], ['stats', 'آمار', 'chart'], ['messages', 'پیام‌های رزومه', 'mail']] },
-    { group: 'حساب', items: [['wallet', 'کیف پول It', 'card'], ['billing', 'اشتراک و خریدها', 'crown'], ['settings', 'تنظیمات حساب', 'settings']] },
-    { group: 'پشتیبانی', items: [['support', 'تیکت‌ها', 'help'], ['support', 'تیکت جدید', 'plus', {tab:'new'}], ['contact', 'ارتباط با ما', 'mail', {href:'/contact/'}], ['telegram', 'پشتیبانی تلگرام', 'telegram', {href:'https://t.me/amirtalebi_x',external:true}], ['channel', 'کانال تلگرام', 'telegram', {href:'https://t.me/resumeit_ir',external:true}]] },
-    { group: 'اعلان‌ها', items: [['notifications', 'همهٔ اعلان‌ها', 'bell'], ['notifications', 'خوانده‌نشده‌ها', 'eye', {tab:'unread'}], ['notifications', 'تنظیمات اعلان‌ها', 'settings', {tab:'preferences'}], ['changes', 'تغییرات رزومیت', 'refresh', {href:'/changes/'}]] },
+    { group: 'حساب', items: [['wallet', 'کیف پول', 'card'], ['billing', 'اشتراک و خرید', 'crown'], ['settings', 'تنظیمات حساب', 'settings']] },
+    { group: 'کمک', items: [['support', 'پشتیبانی', 'help']] },
+    { group: '', hidden: true, items: [['notifications', 'اعلان‌ها', 'bell']] },
   ];
   const BOTTOM = [['home', 'خانه', 'home'], ['resume', 'رزومه', 'resume'], ['links', 'لینک‌ها', 'link'], ['themes', 'قالب‌ها', 'palette']];
   const LOGO = '<span class="ri-logo"><img src="/brand/resumeit-logo-v1.png" alt="ResumeIt" width="2172" height="724"></span>';
 
   let current = null, cleanup = null, bootstrapping = true;
   function navGroup(g){
-    const id=g.items[0][0],collapsible=['wallet','support','notifications'].includes(id);
-    const links=g.items.filter(i=>i[0]!=='home').map(i=>{const opts=i[3]||{};return '<li><a class="nav__item" href="'+(opts.href||RI.routeUrl(i[0],opts))+'" '+(opts.href?'':('data-route="'+i[0]+'" '+(opts.tab?'data-tab="'+opts.tab+'"':'')))+(opts.external?' target="_blank" rel="noopener noreferrer"':'')+' title="'+i[1]+'">'+RI.icon(i[2])+'<span>'+i[1]+'</span></a></li>';}).join('');
-    return '<ul class="menu nav__group'+(collapsible?' nav__group--collapse':'')+'" data-nav-group="'+id+'" data-open="false"><li class="menu-title nav__label"><span>'+g.group+'</span>'+(collapsible?'<button type="button" class="nav__disclosure" aria-expanded="false" aria-controls="nav-children-'+id+'">'+RI.icon(id==='wallet'?'card':id==='support'?'help':'bell')+'<span>'+g.group+'</span>'+RI.icon('chevD')+'</button>':'')+'</li><li class="nav__children" id="nav-children-'+id+'"><ul>'+links+'</ul></li></ul>';
+    if(g.hidden)return '';
+    const links=g.items.map(([id,label,glyph])=>'<li><a class="dn-item" href="'+RI.routeUrl(id)+'" data-route="'+id+'" title="'+label+'"><span class="dn-item__ico">'+RI.icon(glyph)+'</span><span class="dn-item__txt">'+label+'</span><span class="dn-item__badge" data-nav-badge="'+id+'" hidden></span></a></li>').join('');
+    return '<div class="dn-group">'+(g.group?'<p class="dn-group__label">'+g.group+'</p>':'')+'<ul>'+links+'</ul></div>';
   }
+  function preference(key,value){try{if(value===undefined)return localStorage.getItem(key);localStorage.setItem(key,String(value));}catch{}return null;}
 
   /* ---------- ساخت پوسته ---------- */
+  // One sidebar: brand, grouped destinations, then the account. On desktop it folds to icons; on phones it is a drawer.
   function buildShell() {
-    const acc = RI.state.account;
+    const acc = RI.state.account, app = RI.$('.app');
+    app.classList.add('dn-app');
     RI.$('#sidebar').innerHTML =
-      '<div class="sidebar__glass"><div class="brand"><a href="/" aria-label="خانهٔ ResumeIt">' + LOGO + '</a><button type="button" class="btn btn--icon btn--ghost drawer-close" id="drawerClose" aria-label="بستن منو">'+RI.icon('x')+'</button></div>' +
-      '<nav class="nav" aria-label="بخش‌های داشبورد">' + NAV.map(navGroup).join('')+'</nav>' +
-      '<div class="sidebar__foot">'+(acc.isAdmin?'<a class="panel-switch" href="/admin/">'+RI.icon('shield')+'<span>ورود به مدیریت</span>'+RI.icon('chevL')+'</a>':'')+'<a class="panel-help" href="/dashboard/support/" data-route="support">'+RI.icon('help')+'پشتیبانی</a><button type="button" class="account-btn" id="accountBtn" aria-haspopup="menu"><img class="avatar" id="accAvatar" alt="تصویر پروفایل" src="/brand/resumeit-mark-v1.png"><span class="account-btn__info"><span class="account-btn__name" id="accName"></span><span class="account-btn__sub">پروفایل و دسترسی سریع</span></span>'+RI.icon('chevL')+'</button><small><a href="/changes/" data-site-version>تغییرات رزومیت</a></small></div></div>';
-    if(acc.isSupport||acc.isAdmin)RI.$('.sidebar__foot').insertAdjacentHTML('afterbegin','<a class="panel-switch" href="/staff/">'+RI.icon('help')+'<span>پنل پشتیبانی</span>'+RI.icon('chevL')+'</a>');
+      '<div class="dn"><div class="dn-head"><a class="dn-brand" href="/" aria-label="خانهٔ ResumeIt">' + LOGO + '<img class="dn-brand__mark" src="/brand/resumeit-mark-v1.png" alt="" width="32" height="32"></a>' +
+      '<button type="button" class="dn-fold" id="navFold" aria-label="جمع کردن منو" aria-expanded="true">'+RI.icon('chevR')+'</button><button type="button" class="dn-fold drawer-close" id="drawerClose" aria-label="بستن منو">'+RI.icon('x')+'</button></div>' +
+      '<nav class="dn-nav" aria-label="بخش‌های داشبورد">' + NAV.map(navGroup).join('')+'</nav>' +
+      '<div class="dn-foot"><a class="dn-plan" href="'+RI.routeUrl('billing')+'" data-go="billing" data-nav-plan hidden>'+RI.icon('crown')+'<span><b>اشتراک ویژه</b><small>قالب‌های بیشتر و حذف نشان</small></span></a>' +
+      ((acc.isSupport||acc.isAdmin)?'<div class="dn-switch">'+(acc.isAdmin?'<a href="/admin/" title="پنل مدیریت">'+RI.icon('shield')+'<span>مدیریت</span></a>':'')+'<a href="/staff/" title="پنل پشتیبانی">'+RI.icon('help')+'<span>میز پشتیبانی</span></a></div>':'') +
+      '<button type="button" class="dn-account" id="accountBtn" aria-haspopup="menu"><img class="dn-account__avatar" id="accAvatar" alt="تصویر پروفایل" src="/brand/resumeit-mark-v1.png"><span class="dn-account__info"><span class="dn-account__name" id="accName"></span><span class="dn-account__sub" id="accPlan">حساب رایگان</span></span>'+RI.icon('chevD')+'</button>' +
+      '<a class="dn-version" href="/changes/" data-site-version>تغییرات رزومیت</a></div></div>';
     RI.$('#bottomNav').innerHTML = BOTTOM.filter(i=>RI.workspaceSlot!==3||i[0]!=='resume').map(i=>'<a href="'+RI.routeUrl(i[0])+'" data-route="'+i[0]+'">'+RI.icon(i[2])+'<span>'+i[1]+'</span></a>').join('')+'<button type="button" data-all-pages aria-label="همهٔ بخش‌ها">'+RI.icon('menu')+'<span>بیشتر</span></button>';
+    RI.$$('#sidebar [data-route=resume]').forEach(link=>{link.closest('li').hidden=RI.workspaceSlot===3;});
+    const fold=RI.$('#navFold'),paintFold=closed=>{app.classList.toggle('dn-folded',closed);fold.setAttribute('aria-expanded',String(!closed));fold.setAttribute('aria-label',closed?'باز کردن منو':'جمع کردن منو');fold.innerHTML=RI.icon(closed?'chevL':'chevR');};
+    paintFold(preference('ri-nav-folded')==='true');fold.addEventListener('click',()=>{const closed=!app.classList.contains('dn-folded');paintFold(closed);preference('ri-nav-folded',closed);});
+    RI.collapseMobileGroups=()=>{};
     paintAccount();RI.polishShell?.();
-    const mobileGroups=matchMedia('(max-width:960px)'),groups=RI.$$('.nav__group--collapse');
-    const syncGroups=()=>groups.forEach(g=>{const closed=mobileGroups.matches&&g.dataset.open!=='true',panel=g.querySelector('.nav__children');panel.inert=closed;if(closed)panel.setAttribute('aria-hidden','true');else panel.removeAttribute('aria-hidden');});
-    RI.collapseMobileGroups=()=>{groups.forEach(g=>{g.dataset.open='false';g.querySelector('button').setAttribute('aria-expanded','false');});syncGroups();};
-    RI.$('#sidebar').addEventListener('click',e=>{const button=e.target.closest('.nav__disclosure');if(!button)return;const group=button.closest('.nav__group'),opening=group.dataset.open!=='true';groups.forEach(g=>{const on=g===group&&opening;g.dataset.open=String(on);g.querySelector('button').setAttribute('aria-expanded',String(on));});syncGroups();});
-    mobileGroups.addEventListener('change',syncGroups);syncGroups();
   }
   function paintAccount() {
     RI.$('#accName').textContent = RI.state.account.name;
     RI.$('#accAvatar').src = RI.avatarOf(RI.C().profile);RI.$('#accAvatar').alt='تصویر پروفایل '+RI.state.account.name;
+    const plan=RI.hasSub?.()&&RI.PLANS[RI.state.billing.plan.id];RI.$('#accPlan').textContent=plan?'اشتراک '+plan.name:'حساب رایگان';
+    const promo=RI.$('[data-nav-plan]');if(promo)promo.hidden=!!plan;
   }
+  // Small counts beside menu items (new visitor messages, open support replies); never for notifications.
+  RI.setNavBadge=(id,count)=>{RI.$$('[data-nav-badge="'+id+'"]').forEach(el=>{el.hidden=!count;el.textContent=count>99?'۹۹+':RI.fa(count);});};
 
   /* ---------- نوار بالا و وضعیت ذخیره ---------- */
   // Phones show the save state and undo only once something has actually been saved in this visit.
@@ -136,9 +147,9 @@
     // Each mount owns its listeners; replacing the root discards the previous mount's handlers.
     const view=previousView.cloneNode(false);view.inert=false;previousView.replaceWith(view);
     current = id;
-    RI.$$('[data-route]').forEach((a) => { if (a.dataset.route === id && (!a.closest('#sidebar') || (a.dataset.tab||'') === (RI.routeOpts?.tab||''))) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
+    RI.$$('[data-route]').forEach((a) => { if (a.dataset.route === id) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
     RI.$('#topTitle').textContent = id === 'resume' ? 'رزومهٔ من' : page.title;
-    RI.$('.topbar__crumb').innerHTML = RI.icon(id === 'links' ? 'link' : 'file') + '<span>' + (NAV.find(g=>g.items.some(i=>i[0]===id))?.group || 'داشبورد') + '</span>' + RI.icon('chevL');
+    RI.$('.topbar__crumb').innerHTML = '<span>' + (NAV.find(g=>g.items.some(i=>i[0]===id))?.group || 'داشبورد') + '</span>' + RI.icon('chevL');
     document.title = page.title + ' | ResumeIt';
     closeDrawer();
     const opts = RI.routeOpts; RI.routeOpts = null;
@@ -149,7 +160,7 @@
     RI.$$('a[data-go]', view).forEach(a => { a.href = RI.routeUrl(a.dataset.go, a.dataset); });
     cleanup = page.mount ? page.mount(view, ctx) : null;
     RI.polishView?.(view,id);
-    RI.$$('#sidebar [data-route=resume]').forEach(link=>{link.hidden=RI.workspaceSlot===3;});
+    RI.$$('#sidebar [data-route=resume]').forEach(link=>{link.closest('li').hidden=RI.workspaceSlot===3;});
     RI.animateRings(view); RI.animateBars(view);
     window.scrollTo({ top: 0, behavior: 'instant' in window ? 'instant' : 'auto' });
     if (!force) { const h = RI.$('#page-title', view); if (h) h.focus({ preventScroll: true }); }
@@ -230,7 +241,7 @@
         { label: 'خروج از حساب', icon: 'logout', danger: true, onClick: () => RI.logout() },
       ], { up: true });
     });
-    const bell=document.createElement('button');bell.type='button';bell.className='btn btn--icon btn--soft btn--sm topbar__bell';bell.setAttribute('aria-label','اعلان‌ها');bell.innerHTML=RI.icon('bell');bell.addEventListener('click',()=>RI.go('notifications'));RI.$('.topbar__actions').append(bell);
+    const bell=document.createElement('button');bell.type='button';bell.className='btn btn--icon btn--ghost btn--sm topbar__bell';bell.setAttribute('aria-label','اعلان‌ها');bell.innerHTML=RI.icon('bell');bell.addEventListener('click',()=>RI.go('notifications'));RI.$('.topbar__actions').append(bell);
     RI.on('inbox',()=>{const count=RI.inbox?.unread||0;bell.classList.toggle('has-unread',count>0);bell.setAttribute('aria-label',count?'اعلان‌ها؛ '+RI.fa(count)+' خوانده‌نشده':'اعلان‌ها');bell.title=bell.getAttribute('aria-label');});
     RI.delegate(document, 'click', '[data-copy]', (e, b) => RI.copy(b.dataset.copy));
     RI.delegate(document,'click','a[href="/admin/"]',async e=>{

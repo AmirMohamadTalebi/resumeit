@@ -1,117 +1,83 @@
-/* خانهٔ داشبورد: میز کار، مسیر پیشرفت، وضعیت صفحه‌ها، راهنمای شروع، خلاصهٔ بازدیدها */
+/* خانهٔ داشبورد: یک نگاه به همه‌چیز — قدم بعدی، وضعیت صفحه‌ها، بازدید هفته، حساب و میانبرها */
 (function () {
   'use strict';
   const RI = window.RI, esc = RI.esc;
+  const linksOnly = () => RI.workspaceSlot === 3;
 
   function greeting() {
     const h = new Date().getHours();
     return h < 5 ? 'شب بخیر' : h < 12 ? 'صبح بخیر' : h < 17 ? 'روز بخیر' : h < 20 ? 'عصر بخیر' : 'شب بخیر';
   }
+  const today = () => { try { return new Intl.DateTimeFormat('fa-IR', { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date()); } catch { return ''; } };
+  const stepLink = (i, cls, inner) => '<a class="' + cls + '" href="' + RI.routeUrl(i.route) + '" data-go="' + i.route + '"' + (i.step ? ' data-step="' + i.step + '"' : '') + (i.tab ? ' data-tab="' + i.tab + '"' : '') + (i.anchor ? ' data-anchor="' + i.anchor + '"' : '') + '>' + inner + '</a>';
 
-  function heroText(comp, empty) {
-    const c = RI.C(), first = c.profile.name.trim().split(' ')[0] || 'دوست من';
-    if(empty&&RI.workspaceSlot===3)return {h:'صفحهٔ لینک‌هایت را بساز',p:'لینک‌ها و نام نمایشی‌ات را اضافه کن؛ سپس آمادگی انتشار را بررسی کن.'};
-    if (empty) return { h: 'خوش آمدی به ResumeIt', p: 'این‌جا استودیوی ساخت هویت توست؛ از یک رزومه و یک صفحهٔ لینک شروع می‌کنیم ' + 'با چند قدم کوتاه، صفحه‌ای می‌سازی که اولین برداشت درباره‌ات را خودت تعیین می‌کنی' };
-    const left = comp.items.filter((i) => !i.done).length;
-    if (comp.pct >= 100) return { h: greeting() + '، ' + esc(first), p: 'قدم‌های تکمیل محتوا انجام شده‌اند؛ آمادگی انتشار را جدا بررسی کن' };
-    return { h: greeting() + '، ' + esc(first), p: 'پروفایلت ' + RI.fa(comp.pct) + '٪ کامل است و ' + RI.fa(left) + ' قدم تا صفحهٔ کامل مانده ' + (comp.next ? 'پیشنهاد بعدی: «' + comp.next.label + '».' : '') };
-  }
-
-  function journey(comp) {
-    const bs = RI.badgeState();
-    const firstLocked = bs.findIndex((b) => !b.got);
-    return '<ol class="journey" aria-label="مسیر ساخت هویت">' + bs.map((b, i) => {
-      const cur = i === firstLocked;
-      const need = b.id === 'live' ? 'انتشار صفحه' : RI.fa(b.at) + '٪ تکمیل';
-      return '<li class="journey__step' + (b.got ? ' is-got' : '') + (cur ? ' is-current' : '') + '"><span class="journey__dot">' + RI.icon(b.got ? 'check' : b.icon) + '</span><b>' + esc(b.label) + '</b><small>' + need + '</small></li>';
-    }).join('') + '</ol>';
+  // Progress: the ring, the one next step, and the remaining steps (all of them on demand).
+  function progress(comp) {
+    const left = comp.items.filter(i => !i.done), done = comp.items.length - left.length;
+    const head = comp.pct >= 100 ? 'محتوای صفحه کامل است' : 'پروفایلت ' + RI.fa(comp.pct) + '٪ کامل است';
+    const sub = comp.pct >= 100 ? 'قدم‌های تکمیل انجام شده؛ آمادگی انتشار را بررسی کن و صفحه را منتشر کن.' : RI.fa(left.length) + ' قدم مانده تا صفحه‌ای کامل؛ هر قدم را بزنی همان‌جا باز می‌شود.';
+    const next = comp.next ? stepLink(comp.next, 'btn btn--primary nv-next__cta', RI.icon('zap') + 'قدم بعدی: ' + esc(comp.next.label)) : '<a class="btn btn--primary nv-next__cta" href="' + RI.routeUrl('studio') + '" data-go="studio">' + RI.icon('check') + 'بررسی آمادگی انتشار</a>';
+    const row = i => '<li>' + stepLink(i, 'nv-step' + (i.done ? ' is-done' : ''), '<span class="nv-step__tick">' + (i.done ? RI.icon('check') : '') + '</span><span class="nv-step__label">' + esc(i.label) + '</span><span class="nv-step__w">' + (linksOnly() ? (i.done ? 'انجام شد' : '') : '+' + RI.fa(i.w) + '٪') + '</span>') + '</li>';
+    return '<section class="nv-card nv-next" aria-labelledby="home-progress"><div class="nv-next__top">' + RI.ring(comp.pct, 92, 9) + '<div class="nv-next__text"><h2 id="home-progress">' + head + '</h2><p>' + sub + '</p>' + next + '</div></div>' +
+      (comp.items.length ? '<div class="nv-steps"><div class="nv-steps__head"><b>قدم‌ها</b><span>' + RI.fa(done) + ' از ' + RI.fa(comp.items.length) + '</span></div><ul class="nv-steps__list" data-steps>' + left.slice(0, 4).map(row).join('') + '</ul>' +
+        (comp.items.length > Math.min(4, left.length) ? '<button type="button" class="nv-link" data-all-steps aria-expanded="false">' + RI.icon('chevD') + 'همهٔ قدم‌ها</button><ul class="nv-steps__list" data-steps-all hidden>' + comp.items.map(row).join('') + '</ul>' : '') + '</div>' : '') + '</section>';
   }
 
-  function checklist(comp) {
-    return '<ul class="steps">' + comp.items.map((i) =>
-      '<li><a class="steps__row' + (i.done ? ' is-done' : '') + '" href="' + RI.routeUrl(i.route) + '" data-go="' + i.route + '"' + (i.step ? ' data-step="' + i.step + '"' : '') + (i.tab ? ' data-tab="' + i.tab + '"' : '') + (i.anchor ? ' data-anchor="' + i.anchor + '"' : '') + '>' +
-      '<span class="steps__tick">' + (i.done ? RI.icon('check') : '') + '</span><span class="steps__label">' + esc(i.label) + '</span><span class="steps__w">' + (RI.workspaceSlot===3?(i.done?'انجام شد':'باقی مانده'):'+'+RI.fa(i.w)+'٪') + '</span></a></li>').join('') + '</ul>';
+  function pageRow(k) {
+    const s = RI.state.pub[k], u = RI.urls(), isR = k === 'resume', url = isR ? u.resume : u.links;
+    const dirty = RI.pubDirty(k), live = s.status === 'published', slugOk = RI.slugCheck(RI.C().slug).state === 'ok';
+    const chip = live ? (dirty ? '<span class="nv-chip nv-chip--warn">' + RI.icon('edit') + 'تغییر منتشرنشده</span>' : '<span class="nv-chip nv-chip--ok">' + RI.icon('check') + 'منتشر شده</span>') : '<span class="nv-chip">پیش‌نویس</span>';
+    return '<li class="nv-page"><span class="nv-ico' + (isR ? ' nv-ico--blue' : '') + '">' + RI.icon(isR ? 'resume' : 'link') + '</span><div class="nv-page__main"><div class="nv-page__title"><b>' + (isR ? 'صفحهٔ رزومه' : 'صفحهٔ لینک‌ها') + '</b>' + chip + '</div>' +
+      (slugOk ? '<div class="nv-page__url"><bdi dir="ltr">' + esc(url) + '</bdi><button type="button" class="nv-icon-btn" data-copy="' + esc(url) + '" aria-label="کپی آدرس">' + RI.icon('copy') + '</button>' + (live ? '<button type="button" class="nv-icon-btn" data-open-url="' + esc(url) + '" aria-label="باز کردن صفحه">' + RI.icon('external') + '</button>' : '') + '</div>' : '<span class="nv-row__meta">هنوز آدرسی انتخاب نشده</span>') +
+      '</div><div class="nv-page__actions"><a class="btn btn--soft btn--sm" href="' + RI.routeUrl(isR ? 'resume' : 'links') + '" data-go="' + (isR ? 'resume' : 'links') + '">' + RI.icon('edit') + 'ویرایش</a><button type="button" class="btn btn--sm ' + (live && !dirty ? 'btn--ghost' : 'btn--primary') + '" data-publish="' + k + '">' + RI.icon('rocket') + (live ? (dirty ? 'به‌روزرسانی' : 'انتشار') : 'انتشار') + '</button></div></li>';
   }
 
-  function pageStatus(k) {
-    const s = RI.state.pub[k], u = RI.urls(), isR = k === 'resume';
-    const url = isR ? u.resume : u.links;
-    const dirty = RI.pubDirty(k), live = s.status === 'published';
-    const chip = live ? (dirty ? '<span class="chip chip--warn">' + RI.icon('edit') + 'تغییرات منتشرنشده</span>' : '<span class="chip chip--ok">' + RI.icon('check') + 'منتشر شده · نسخهٔ ' + RI.fa(s.version) + '</span>') : '<span class="chip">پیش‌نویس</span>';
-    const slugOk = RI.slugCheck(RI.C().slug).state === 'ok';
-    return '<section class="pstat pstat--' + (isR ? 'ice' : 'bro') + '"><div class="pstat__head"><span class="pstat__ico">' + RI.icon(isR ? 'resume' : 'link') + '</span><div><h3>' + (isR ? 'صفحهٔ رزومه' : 'صفحهٔ لینک‌ها') + '</h3>' + chip + '</div></div>' +
-      (slugOk ? RI.urlChip(url, { open: url }) : '<p class="field__hint">برای دیدن آدرس، یک نام صفحه انتخاب کنید</p>') +
-      '<div class="pstat__actions"><a class="btn btn--soft btn--sm" href="' + RI.routeUrl(isR ? 'resume' : 'links') + '" data-go="' + (isR ? 'resume' : 'links') + '">' + RI.icon('edit') + 'ویرایش</a>' +
-      '<button type="button" class="btn btn--ghost btn--sm" data-preview="' + k + '">' + RI.icon('eye') + 'پیش‌نمایش</button>' +
-      '<button type="button" class="btn btn--primary btn--sm" data-publish="' + k + '">' + RI.icon('rocket') + (live ? (dirty ? 'به‌روزرسانی' : 'مدیریت انتشار') : 'انتشار') + '</button></div></section>';
+  function stats() {
+    if (RI.statsLoading || (!RI.statsError && RI.statsRows === null)) return '<p class="sr-only" role="status">در حال دریافت آمار بازدیدها…</p><div class="nv-kpis" aria-hidden="true">' + '<div class="nv-kpi"><span class="nv-skeleton"></span></div>'.repeat(3) + '</div>';
+    if (RI.statsRows === null) return '<div class="nv-note nv-note--warn">' + RI.icon('alert') + '<span>آمار دریافت نشد. <button type="button" class="nv-link" data-retry-stats>تلاش دوباره</button></span></div>';
+    const ser = RI.metricSeries(7), sum = a => a.reduce((x, y) => x + y, 0), views = linksOnly() ? ser.linkViews : ser.views;
+    const kpi = (label, value) => '<div class="nv-kpi"><small>' + label + '</small><b>' + RI.fa(value) + '</b></div>';
+    return '<div class="nv-kpis">' + (linksOnly() ? '' : kpi('بازدید رزومه', sum(ser.views))) + kpi('بازدید لینک‌ها', sum(ser.linkViews)) + kpi('کلیک لینک‌ها', sum(ser.clicks)) + '</div>' +
+      '<div class="nv-chart">' + RI.charts.placeholder({ title: 'بازدید هفت روز اخیر', labelTitle: 'روز', height: 170, table: false, labels: views.map((v, i) => i === views.length - 1 ? 'امروز' : RI.fa(views.length - i - 1) + ' روز پیش'), series: [{ name: linksOnly() ? 'بازدید لینک‌ها' : 'بازدید رزومه', values: views, color: '#52788d' }, { name: 'کلیک لینک‌ها', values: ser.clicks, color: '#a47248' }] }) + '</div>';
   }
 
-  function sampleStrip() {
-    if(RI.statsLoading||(!RI.statsError&&RI.statsRows===null))return RI.sectionLoading('در حال دریافت آمار بازدیدها…');
-    if(RI.statsRows===null)return '<div class="section-loading"><p role="alert">آمار دریافت نشد؛ بقیهٔ صفحه آماده است.</p><button type="button" class="btn btn--soft btn--sm" data-retry-stats>تلاش دوباره</button></div>';
-    const ser = RI.metricSeries(7);
-    const sum = (a) => a.reduce((x, y) => x + y, 0);
-    const views=RI.workspaceSlot===3?ser.linkViews:ser.views;
-    return '<section class="strip" aria-label="خلاصهٔ آمار صفحه‌ها"><div class="strip__label"><span class="chip chip--sample">آمار صفحه‌های شما</span><p>بازدیدها و کلیک‌های ثبت‌شده در هفت روز اخیر</p></div>' +
-      '<dl class="strip__nums">' + (RI.workspaceSlot===3?'':'<div><dt>بازدید رزومه</dt><dd class="num">' + RI.fa(sum(ser.views)) + '</dd></div>') + '<div><dt>بازدید لینک‌ها</dt><dd class="num">' + RI.fa(sum(ser.linkViews)) + '</dd></div><div><dt>کلیک روی لینک‌ها</dt><dd class="num">' + RI.fa(sum(ser.clicks)) + '</dd></div></dl>' +
-      '<div class="strip__chart">' + RI.charts.placeholder({ title: 'روند بازدید ۷ روز', labelTitle: 'روز', height: 150, table: false, labels: views.map((v, i) => i === views.length - 1 ? 'امروز' : RI.fa(views.length - i - 1) + ' روز پیش'), series: [{ name: RI.workspaceSlot === 3 ? 'بازدید لینک‌ها' : 'بازدید رزومه', values: views, color: '#52788d' }, { name: 'کلیک لینک‌ها', values: ser.clicks, color: '#a47248' }] }) + '</div>' +
-      '<a class="btn btn--ghost btn--sm" href="/dashboard/stats/" data-go="stats">' + RI.icon('chart') + 'همهٔ آمار</a></section>';
+  function account(wallet) {
+    const plan = RI.hasSub() && RI.PLANS[RI.state.billing.plan.id], days = plan ? Math.max(0, Math.ceil((RI.state.billing.plan.end - Date.now()) / 86400000)) : 0;
+    return '<ul class="nv-list"><li><a class="nv-row" href="' + RI.routeUrl('billing') + '" data-go="billing"><span class="nv-ico">' + RI.icon('crown') + '</span><span class="nv-row__main"><span class="nv-row__title">' + (plan ? 'اشتراک ' + esc(plan.name) : 'حساب رایگان') + '</span><span class="nv-row__meta">' + (plan ? RI.fa(days) + ' روز باقی مانده' : 'برای قالب‌های ویژه و حذف نشان، اشتراک بگیر') + '</span></span>' + RI.icon('chevL') + '</a></li>' +
+      '<li><a class="nv-row" href="' + RI.routeUrl('wallet') + '" data-go="wallet"><span class="nv-ico nv-ico--blue">' + RI.icon('card') + '</span><span class="nv-row__main"><span class="nv-row__title">کیف پول</span><span class="nv-row__meta" data-home-wallet>' + (wallet ? RI.fa(wallet.balance) + ' It موجودی' : 'در حال دریافت موجودی…') + '</span></span>' + RI.icon('chevL') + '</a></li></ul>';
   }
 
-  function guide(open) {
-    const steps = [
-      ['۱', 'خودت را معرفی کن', 'نام، عنوان و یک معرفی کوتاه حدود دو دقیقه', 'resume', 'profile', 'user'],
-      ['۲', 'نمونه‌کارها و مهارت‌ها را اضافه کن', 'هر بخش را خودت روشن یا خاموش می‌کنی', 'resume', 'skills', 'code'],
-      ['۳', 'لینک‌هایت را کنار هم بچین', 'گیت‌هاب، کانال، وبلاگ؛ هر چه می‌خواهی دیده شود', 'links', '', 'link'],
-      ['۴', 'ظاهر را انتخاب کن و منتشر کن', 'قالب، فونت و رنگ؛ بعد یک آدرس شخصی بگیر', 'themes', '', 'palette'],
-    ];
-    return '<details class="guide"' + (open ? ' open' : '') + '><summary><span>' + RI.icon('flag') + 'راهنمای شروع در ' + (RI.workspaceSlot===3?'دو':'چهار') + ' قدم</span>' + RI.icon('chevD', 'guide__chev') + '</summary><ol class="guide__list">' +
-      steps.filter(s=>RI.workspaceSlot!==3||s[3]!=='resume').map((s,i) => '<li><a href="' + RI.routeUrl(s[3]) + '" data-go="' + s[3] + '"' + (s[4] ? ' data-step="' + s[4] + '"' : '') + '><span class="guide__n">' + RI.fa(i+1) + '</span><span class="guide__t"><b>' + s[1] + '</b><small>' + s[2] + '</small></span>' + RI.icon(s[5]) + '</a></li>').join('') + '</ol></details>';
-  }
-
-  /* صحنهٔ استودیو؛ قالب‌های واردشده با تصویر سبک نمایش داده می‌شوند. */
-  function stage() {
-    const c = RI.C();
-    if(RI.workspaceSlot===3)return '';
-    const resume = ['vista','satiar'].includes(c.theme.resume) ? '<img src="/brand/template-thumbs/resume-'+c.theme.resume+'.jpg" alt="نمونهٔ قالب فعال رزومه" width="1120" height="800" style="width:1120px;height:800px;object-fit:cover">' : RI.resumeHtml(c);
-    return '<div class="stage" aria-hidden="true" inert><div class="stage__desk"><div class="stage__chrome"><i></i><i></i><i></i></div><div class="mini" data-nat="1120" data-h="640"><div class="mini__in">' + resume + '</div></div></div>' +
-      '<div class="stage__phone"><div class="mini" data-nat="390" data-h="700"><div class="mini__in">' + RI.linksHtml(c) + '</div></div></div></div>';
-  }
-  function fitMini(root) {
-    RI.$$('.mini', root).forEach((m) => {
-      const nat = +m.dataset.nat, nh = +m.dataset.h, inn = RI.$('.mini__in', m);
-      const k = m.clientWidth / nat;
-      inn.style.width = nat + 'px'; inn.style.height = nh + 'px'; inn.style.transform = 'scale(' + k + ')';
-      m.style.height = nh * k + 'px';
-    });
-  }
+  const SHORTCUTS = [['resume', 'رزومه', 'resume'], ['links', 'لینک‌ها', 'link'], ['themes', 'قالب و رنگ', 'palette'], ['publish', 'آدرس صفحه', 'globe'], ['messages', 'پیام‌ها', 'mail'], ['support', 'پشتیبانی', 'help']];
+  const GUIDE = [['خودت را معرفی کن', 'نام، عنوان و یک معرفی کوتاه', 'resume', 'profile', 'user'], ['نمونه‌کار و مهارت اضافه کن', 'هر بخش را خودت روشن یا خاموش می‌کنی', 'resume', 'skills', 'code'], ['لینک‌هایت را بچین', 'گیت‌هاب، کانال، وبلاگ و هرچه می‌خواهی دیده شود', 'links', '', 'link'], ['قالب را انتخاب و منتشر کن', 'قالب، فونت و رنگ؛ بعد آدرس شخصی', 'themes', '', 'palette']];
 
   RI.registerPage('home', {
-    title: 'خانهٔ داشبورد',
+    title: 'خانه',
     render() {
-      const c = RI.C(), comp = RI.completion();
-      const empty = !c.profile.name.trim() && !c.profile.title.trim() && comp.pct < 25;
-      const t = heroText(comp, empty);
-      const next = comp.next,kind=RI.workspaceSlot===3?'links':'resume';
-      return '<p class="field__hint">' + (RI.workspaceSlot===3?'جایگاه فعال: آدرس مسیری · فقط لینک':'جایگاه فعال: زیردامنهٔ '+RI.fa(RI.workspaceSlot<3?RI.workspaceSlot:RI.workspaceSlot-1)) + '</p><section class="hero' + (RI.workspaceSlot===3?' hero--links':'') + '"><div class="hero__text"><div class="eyebrow">' + RI.icon('sparkle') + 'میز کار شما</div><h1 id="page-title" tabindex="-1">' + t.h + '</h1><p>' + t.p + '</p>' +
-        '<div class="hero__cta">' + (next ? '<a class="btn btn--primary btn--lg" href="' + RI.routeUrl(next.route) + '" data-go="' + next.route + '"' + (next.step ? ' data-step="' + next.step + '"' : '') + (next.tab ? ' data-tab="' + next.tab + '"' : '') + (next.anchor ? ' data-anchor="' + next.anchor + '"' : '') + '>' + RI.icon('zap') + (empty ? (RI.workspaceSlot===3?'تکمیل: '+esc(next.label):'شروع ساخت پروفایل') : 'ادامه: ' + esc(next.label)) + '</a>' : '<button type="button" class="btn btn--primary btn--lg" data-publish="' + kind + '">' + RI.icon('rocket') + 'انتشار صفحه</button>') +
-        '<button type="button" class="btn btn--soft btn--lg" data-preview="' + kind + '">' + RI.icon('eye') + 'پیش‌نمایش</button></div>' +
-        '<div class="hero__progress">' + RI.ring(comp.pct, 96, 9) + '<div><b>مسیر ساخت هویت</b><small>درصد تکمیل محتوا؛ شرایط انتشار در بخش آمادگی بررسی می‌شود</small></div></div></div>' + (RI.workspaceSlot===3?'':'<div data-home-stage>'+RI.sectionLoading('در حال آماده‌سازی نمای صفحه‌ها…')+'</div>') + '</section>' +
-        // Sections as tabs keep the home page near one screen; stats stay on the first tab.
-        RI.sectionTabs('home', [['overview', 'مسیر و آمار', 'flag', '<section class="block"><div class="block__head"><h2>مسیر تو</h2><p>قدم‌های تکمیل صفحه و بررسی آمادگی انتشار</p></div>' + (RI.workspaceSlot===3?'':journey(comp)) +
-        '<details class="allsteps"><summary>' + RI.icon('check') + 'فهرست قدم‌ها (' + RI.fa(comp.items.filter((i) => i.done).length) + ' از ' + RI.fa(comp.items.length) + ')' + RI.icon('chevD') + '</summary>' + checklist(comp) + '</details></section>' + '<section class="block" id="homeStats">' + sampleStrip() + '</section>'], ['pages', 'صفحه‌ها', 'resume', '<section class="block"><div class="block__head"><h2>وضعیت صفحه‌ها</h2><p>' + (RI.workspaceSlot===3?'صفحهٔ لینک‌های جایگاه فعال':'دو صفحهٔ مستقل در جایگاه فعال') + '</p></div><div class="pstat-grid">' + RI.pageKinds().map(pageStatus).join('') + '</div></section>' + '<section class="block"><div class="block__head"><h2>دسترسی سریع</h2></div><ul class="quick">' +
-        [['resume', 'ویرایش رزومه', 'resume'], ['links', 'مدیریت لینک‌ها', 'link'], ['themes', 'ظاهر و قالب', 'palette'], ['publish', 'آدرس و انتشار', 'globe']].filter(q=>RI.workspaceSlot!==3||q[0]!=='resume').map((q) => '<li><a href="' + RI.routeUrl(q[0]) + '" data-go="' + q[0] + '"><span>' + RI.icon(q[2]) + '</span><b>' + q[1] + '</b>' + RI.icon('chevL', 'quick__arrow') + '</a></li>').join('') + '</ul></section>'], ['guide', 'راهنمای شروع', 'book', '<section class="block">' + guide(empty || comp.pct < 40) + '</section>']]);
+      const c = RI.C(), comp = RI.completion(), first = c.profile.name.trim().split(' ')[0];
+      const fresh = !c.profile.name.trim() && !c.profile.title.trim() && comp.pct < 25, kind = linksOnly() ? 'links' : 'resume';
+      const live = RI.pageKinds().some(k => RI.state.pub[k].status === 'published');
+      return '<div class="nv nv-home">' +
+        '<header class="nv-head"><div><p class="nv-head__eyebrow">' + RI.icon('calendar') + esc(today()) + ' · ' + (linksOnly() ? 'جایگاه فقط لینک' : 'جایگاه ' + RI.fa(RI.workspaceSlot < 3 ? RI.workspaceSlot : RI.workspaceSlot - 1)) + '</p>' +
+        '<h1 id="page-title" tabindex="-1">' + (fresh ? 'به ResumeIt خوش آمدی' : greeting() + (first ? '، ' + esc(first) : '')) + '</h1><p>' + (fresh ? 'با چند قدم کوتاه صفحه‌ای می‌سازی که اولین برداشت دیگران از تو را خودت تعیین می‌کنی.' : 'همه‌چیز این‌جا یک نگاه است؛ از قدم بعدی شروع کن.') + '</p></div>' +
+        '<div class="nv-head__actions"><button type="button" class="btn btn--soft" data-preview="' + kind + '">' + RI.icon('eye') + 'پیش‌نمایش</button>' + (live ? '<a class="btn btn--ghost" href="' + RI.routeUrl('stats') + '" data-go="stats">' + RI.icon('chart') + 'آمار کامل</a>' : '') + '</div></header>' +
+        '<div class="nv-home__grid" data-home-grid>' + progress(comp).replace('<section class="nv-card nv-next"', '<section data-mtab="today" class="nv-card nv-next"') +
+        '<section data-mtab="pages" class="nv-card nv-home__pages" aria-labelledby="home-pages"><div class="nv-card__head"><div><h2 id="home-pages">' + RI.icon('globe') + 'صفحه‌های تو</h2><p>وضعیت انتشار و آدرس هر صفحه</p></div></div><ul class="nv-list nv-pages">' + RI.pageKinds().map(pageRow).join('') + '</ul></section>' +
+        '<section data-mtab="stats" class="nv-card nv-home__stats" aria-labelledby="home-stats"><div class="nv-card__head"><div><h2 id="home-stats">' + RI.icon('chart') + 'هفت روز اخیر</h2><p>بازدید و کلیک ثبت‌شده روی صفحه‌هایت</p></div><a class="nv-link" href="' + RI.routeUrl('stats') + '" data-go="stats">همهٔ آمار' + RI.icon('chevL') + '</a></div><div id="homeStats">' + stats() + '</div></section>' +
+        '<div data-mtab="pages" class="nv-stack nv-home__side"><section class="nv-card" aria-labelledby="home-account"><div class="nv-card__head"><div><h2 id="home-account">' + RI.icon('user') + 'حساب</h2></div></div><div data-home-account>' + account(null) + '</div></section>' +
+        '<section class="nv-card" aria-labelledby="home-short"><div class="nv-card__head"><div><h2 id="home-short">' + RI.icon('zap') + 'میانبرها</h2></div></div><ul class="nv-shortcuts">' + SHORTCUTS.filter(s => !linksOnly() || s[0] !== 'resume').map(([id, label, glyph]) => '<li><a href="' + RI.routeUrl(id) + '" data-go="' + id + '"><span>' + RI.icon(glyph) + '</span>' + label + '</a></li>').join('') + '</ul></section></div>' +
+        (comp.pct < 40 ? '<section data-mtab="today" class="nv-card nv-home__guide" aria-labelledby="home-guide"><div class="nv-card__head"><div><h2 id="home-guide">' + RI.icon('flag') + 'شروع در ' + (linksOnly() ? 'دو' : 'چهار') + ' قدم</h2><p>اگر اولین بار است، به همین ترتیب جلو برو.</p></div></div><ol class="nv-guide">' + GUIDE.filter(g => !linksOnly() || g[2] !== 'resume').map((g, i) => '<li><a href="' + RI.routeUrl(g[2]) + '" data-go="' + g[2] + '"' + (g[3] ? ' data-step="' + g[3] + '"' : '') + '><span class="nv-guide__n">' + RI.fa(i + 1) + '</span><span><b>' + g[0] + '</b><small>' + g[1] + '</small></span>' + RI.icon(g[4]) + '</a></li>').join('') + '</ol></section>' : '') +
+        '</div></div>';
     },
     mount(root) {
-      let stageFrame=requestAnimationFrame(()=>{stageFrame=requestAnimationFrame(()=>{const host=root.querySelector('[data-home-stage]');if(!root.isConnected||!host)return;host.innerHTML=stage();fitMini(root);});});
-      fitMini(root);
-      const ro = new ResizeObserver(() => fitMini(root));
-      ro.observe(root);
-      RI.delegate(root, 'click', '[data-preview]', async (e, b) => {try{if(b.dataset.preview==='resume')await RI.loadTemplates([RI.C().theme.resume]);RI.openPreview(b.dataset.preview);}catch(e){RI.toast(e.message,{kind:'error'});}});
+      let alive = true;
+      const grid = root.querySelector('[data-home-grid]'); grid.before(RI.mobileTabs(grid, [['today', 'امروز', 'zap'], ['pages', 'صفحه‌ها و حساب', 'globe'], ['stats', 'آمار', 'chart']], 'home'));
+      RI.delegate(root, 'click', '[data-preview]', async (e, b) => { try { if (b.dataset.preview === 'resume') await RI.loadTemplates([RI.C().theme.resume]); RI.openPreview(b.dataset.preview); } catch (err) { RI.toast(err.message, { kind: 'error' }); } });
       RI.delegate(root, 'click', '[data-publish]', () => RI.go('publish'));
-      RI.delegate(root,'click','[data-retry-stats]',()=>RI.loadStats());
-      const offStats=RI.on('stats',()=>{ RI.$('#homeStats',root).innerHTML=sampleStrip(); });
-      return () => {cancelAnimationFrame(stageFrame);offStats(); ro.disconnect();};
+      RI.delegate(root, 'click', '[data-retry-stats]', () => RI.loadStats());
+      RI.delegate(root, 'click', '[data-all-steps]', (e, b) => { const all = root.querySelector('[data-steps-all]'), open = all.hidden; all.hidden = !open; root.querySelector('[data-steps]').hidden = open; b.setAttribute('aria-expanded', String(open)); b.innerHTML = RI.icon(open ? 'up' : 'chevD') + (open ? 'فقط قدم‌های مانده' : 'همهٔ قدم‌ها'); });
+      const offStats = RI.on('stats', () => { const host = root.querySelector('#homeStats'); if (host) host.innerHTML = stats(); });
+      RI.dashboardRequest('wallet').then(w => { if (alive) root.querySelector('[data-home-account]').innerHTML = account(w); }).catch(() => { if (alive) { const m = root.querySelector('[data-home-wallet]'); if (m) m.textContent = 'موجودی دریافت نشد'; } });
+      return () => { alive = false; offStats(); };
     },
   });
 })();

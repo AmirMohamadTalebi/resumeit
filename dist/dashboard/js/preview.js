@@ -183,9 +183,17 @@
       const horizontal=style=>['paddingLeft','paddingRight','borderLeftWidth','borderRightWidth'].reduce((sum,key)=>sum+(parseFloat(style[key])||0),0);
       const w = Math.max(20,(stage.clientWidth || host.clientWidth || 360)-horizontal(stageStyle)-horizontal(frameStyle));
       let k = Math.min(1, w / nat[0]);
-      if (o.fitHeight) k = Math.min(k, Math.max(0.05, ((host.ownerDocument.defaultView?.innerHeight || window.innerHeight) - o.fitHeight) / (nat[1] + 40)));
-      k=Math.max(0.05,k);
-      if (o.maxScale) k = Math.min(k, o.maxScale);
+      // In the detached window the device itself grows: the phone to the window's height, the desktop to its width.
+      const view = host.ownerDocument.defaultView, detached = host.ownerDocument !== document && view;
+      if (detached) {
+        const free = view.innerHeight - stage.getBoundingClientRect().top - 28 - Math.max(44, Math.min(120, dev.offsetHeight - box.offsetHeight));
+        k = w / nat[0]; if (st.device === 'mobile') k = Math.min(k, free / nat[1]);
+        k = Math.max(0.3, Math.min(2.4, k));
+      } else {
+        if (o.fitHeight) k = Math.min(k, Math.max(0.05, ((view?.innerHeight || window.innerHeight) - o.fitHeight) / (nat[1] + 40)));
+        k = Math.max(0.05, k);
+        if (o.maxScale) k = Math.min(k, o.maxScale);
+      }
       scaler.style.width = nat[0] + 'px'; scaler.style.height = nat[1] + 'px';
       scaler.style.transform = 'scale(' + k + ')';
       box.style.width = nat[0] * k + 'px'; box.style.height = nat[1] * k + 'px';
@@ -250,10 +258,12 @@
         render(); o.onKind && o.onKind(k);
       },
       get kind() { return st.kind; }, get device() { return st.device; },
-      destroy() { ro.disconnect(); },
+      destroy() { ro.disconnect(); window.removeEventListener('resize', onResize); },
     };
     const ro = new ResizeObserver(() => fit());
     ro.observe(stage);
+    // The detached window forwards its resizes here, since the observer may not see a frame in another document.
+    const onResize = () => fit(); window.addEventListener('resize', onResize);
     fit(); render(false);
     return api;
   };
@@ -280,13 +290,16 @@
     const toggle=()=>{
       if(disposed)return;
       if(popup){restore();return;}
-      const opened=window.open('about:blank','_blank','popup,width=900,height=900');
+      const tall=Math.max(700,Math.min((screen.availHeight||1000)-60,1400)),wide=Math.max(560,Math.min((screen.availWidth||1200)*.62,1500));
+      const opened=window.open('about:blank','_blank','popup,width='+Math.round(wide)+',height='+Math.round(tall));
       if(!opened){RI.toast('مرورگر پنجرهٔ پیش‌نمایش را مسدود کرد؛ اجازهٔ بازشدن پنجره را بده و دوباره تلاش کن.',{kind:'info'});return;}
       try{
         const doc=opened.document;doc.title='پیش‌نمایش زندهٔ رزومه';doc.documentElement.lang='fa';doc.documentElement.dir='rtl';
         document.querySelectorAll('link[rel=stylesheet]').forEach(source=>{const link=doc.createElement('link');link.rel='stylesheet';link.href=source.href;doc.head.append(link);});
-        const style=doc.createElement('style');style.textContent='body{margin:0;padding:20px;min-width:0}.editor__side{display:block!important;width:100%;max-width:100%;padding:0}.editor__side .sticky{position:static}.pvhost{width:100%}';doc.head.append(style);
+        const style=doc.createElement('style');style.textContent='html,body{height:100%}body{margin:0;padding:16px 20px;min-width:0;overflow:auto;background:linear-gradient(160deg,#eef4f7,#f7efe7)}.editor__side,.rs-side{display:block!important;position:static!important;width:100%!important;max-width:100%!important;padding:0!important}.editor__side .sticky,.rs-side .sticky{position:static!important;top:auto!important}.pvhost{width:100%}.pvhost__stage{justify-content:center;max-height:none!important;overflow:visible!important;background:transparent!important}.device{max-width:none!important}';doc.head.append(style);
+        doc.body.classList.add('is-detached-preview');
         side.replaceWith(marker);doc.body.append(side);popup=opened;editor?.classList.add('is-preview-detached');label();opened.addEventListener('pagehide',restore);opened.focus();
+        const relay=()=>window.dispatchEvent(new Event('resize'));opened.addEventListener('resize',relay);opened.addEventListener('load',relay);requestAnimationFrame(()=>{relay();setTimeout(relay,300);});
       }catch{if(marker.isConnected&&!side.isConnected)marker.replaceWith(side);opened.close();restore();RI.toast('پنجرهٔ پیش‌نمایش باز نشد؛ دوباره تلاش کن.',{kind:'error'});}
     };
     label();button.addEventListener('click',toggle);

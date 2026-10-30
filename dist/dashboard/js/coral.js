@@ -3,7 +3,9 @@
  'use strict';
  const RI=window.RI,groups=[['home','خانه','home'],['resume','استودیو','resume'],['publish','انتشار','globe'],['wallet','حساب','card'],['support','پشتیبانی','help'],['notifications','اعلان‌ها','bell']];
  function preference(key,value){try{if(value===undefined)return localStorage.getItem(key);localStorage.setItem(key,String(value));}catch{}return null;}
- RI.polishShell=()=>{
+ // The old two-column rail is gone; the sidebar is built in app.js. Kept as a no-op for callers.
+ RI.polishShell=()=>{};
+ RI.polishShellLegacy=()=>{
   const app=document.querySelector('.app');if(document.querySelector('.coral-rail'))return;
   const rail=document.createElement('aside');rail.className='coral-rail';rail.setAttribute('aria-label','بخش‌های اصلی');
   rail.innerHTML='<a class="coral-brand" href="/" aria-label="خانه رزومیت"><img src="/brand/resumeit-mark-v1.png" alt="رزومیت" width="28" height="28"></a><button type="button" class="btn btn--icon coral-collapse" data-coral-collapse="rail" aria-label="جمع کردن منوی اصلی" aria-expanded="true">'+RI.icon('chevR')+'</button><nav>'+groups.map(([id,label,glyph])=>'<a href="'+RI.routeUrl(id)+'" data-route="'+id+'" data-coral-group="'+id+'" title="'+label+'">'+RI.icon(glyph)+'<span>'+label+'</span></a>').join('')+'</nav>'+(RI.state.account.isAdmin?'<a class="coral-admin" href="/admin/" title="پنل مدیر">'+RI.icon('shield')+'</a>':'');
@@ -19,10 +21,6 @@
  RI.polishView=(root,id)=>{
   RI.mountWorkspaceSwitcher?.(root,id);
   root.querySelectorAll('.field__req').forEach(el=>{el.textContent='پایهٔ انتشار';});root.querySelectorAll('.field__opt').forEach(el=>{if(el.textContent==='اختیاری')el.textContent='به انتخاب تو';});
-  const group=['publish','stats','messages'].includes(id)?'publish':['wallet','billing','settings'].includes(id)?'wallet':['home','support','notifications'].includes(id)?id:'resume';
-  document.querySelectorAll('[data-coral-group]').forEach(a=>{if(a.dataset.coralGroup===group)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current');});
-  document.querySelectorAll('#sidebar .nav__group').forEach(el=>{el.hidden=el.dataset.navGroup!==(group==='resume'?'home':group);});
-  const active=document.querySelector('.coral-rail [aria-current="page"]'),nav=active?.parentElement;if(active){nav.style.setProperty('--coral-slot-y',(active.getBoundingClientRect().top-nav.getBoundingClientRect().top)+'px');nav.style.setProperty('--coral-slot-h',active.offsetHeight+'px');}
   const editor=root.querySelector('.editor')||root.querySelector('.rs'),side=editor?.querySelector('.editor__side');if(!editor||!side)return;
   const divider=document.createElement('div');divider.className='coral-divider';divider.tabIndex=0;divider.setAttribute('role','separator');divider.setAttribute('aria-label','تنظیم عرض فرم و پیش‌نمایش');divider.setAttribute('aria-orientation','vertical');divider.setAttribute('aria-valuemin','300');divider.setAttribute('aria-valuemax','800');divider.setAttribute('aria-valuenow','360');divider.innerHTML='<span></span>';side.before(divider);
   let dragging=false;
