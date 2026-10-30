@@ -7,12 +7,16 @@
 .admin-profile-menu{display:grid;gap:6px}
 .field{min-width:0}.field__label{flex-wrap:wrap;line-height:1.8;row-gap:5px}
 .row__actions{gap:6px}
-/* A visible value/edge change survives both neutral and warm display settings. */
-body .admin-nav a:is(:hover,:focus-visible),body .admin-topnav>a:is(:hover,:focus-visible),.public-account__menu>a:is(:hover,:focus-visible),.sidebar .nav__item:is(:hover,:focus-visible),.staff-side .menu a:is(:hover,:focus-visible){background:#f3e6d8;color:#4d3320;box-shadow:inset 0 0 0 1px #dcc2a7}
-body .admin-nav a:is(:hover,:focus-visible) svg{color:inherit}
-.public-account__menu>a:is(:hover,:focus-visible) .account-icon{color:inherit;background:#ffffff1a}
+/* A visible value/edge change survives both neutral and warm display settings.
+   Navigation menus fill with the dark site brown on hover: at least 3:1 against the resting surface and white
+   text above 4.5:1, also under a warm night filter. The current item stays light, so the two never look alike. */
+body .admin-nav a:is(:hover,:focus-visible),body .admin-topnav>a:is(:hover,:focus-visible),.staff-side .menu a:not([aria-current]):is(:hover,:focus-visible),.info-nav a:is(:hover,:focus-visible),.public-account__menu>a:is(:hover,:focus-visible){background:#875a36;color:#fff;box-shadow:0 8px 18px -10px rgba(107,70,41,.8)}
+body .admin-nav a:is(:hover,:focus-visible) svg,.staff-side .menu a:not([aria-current]):is(:hover,:focus-visible) svg{color:inherit}
+.public-account__menu>a:is(:hover,:focus-visible) .account-icon{color:inherit;background:#ffffff29}
 body .admin-nav a::before{background:linear-gradient(110deg,transparent 15%,#ffffff12 45%,#9bc9e014 65%,transparent 85%)}
-body .admin-main .btn:not(:disabled):is(:hover,:focus-visible),.public-account>[data-session-link]:is(:hover,:focus-visible){background:#f3e6d8;color:#4d3320;border-color:#dcc2a7;box-shadow:none;transform:none}
+/* Admin action buttons share the menu hover: dark brown, white text, a soft shadow. */
+body .admin-main .btn:not(:disabled):is(:hover,:focus-visible){background:#875a36;color:#fff;border-color:#6b4629;box-shadow:0 8px 18px -10px rgba(107,70,41,.8);transform:none}
+.public-account>[data-session-link]:is(:hover,:focus-visible){background:#f3e6d8;color:#4d3320;border-color:#dcc2a7;box-shadow:none;transform:none}
 body .admin-main .btn-primary:not(:disabled):hover,body .admin-main .btn-primary:not(:disabled):focus-visible{background:#60412f;color:#fff;border-color:#60412f}
 body .admin-main .btn-error:not(:disabled):is(:hover,:focus-visible){background:#803b4b;color:#fff;border-color:#642838}
 .public-account__logout:hover,.public-account__logout:focus-visible{background:#f1d9df;color:#803b4b;box-shadow:inset 0 0 0 1px #b16d7b}
@@ -23,13 +27,13 @@ body .admin-main .btn-error:not(:disabled):is(:hover,:focus-visible){background:
 .staff-main .ticket-row:is(:hover,:focus-visible) :is(small,time){color:#284d60}
 .app .switch input:checked~.switch__track{background:#346777}
 .header nav a:is(:hover,:focus-visible){color:#593d2b;text-decoration:underline;text-underline-offset:7px;text-decoration-thickness:2px}
-.info-nav a:is(:hover,:focus-visible){background:#f3e6d8;color:#4d3320}
 .header :is(.enter,.mobile-menu):is(:hover,:focus-visible),.template-filters .btn:is(:hover,:focus-visible),.billing .btn:is(:hover,:focus-visible){background:#f3e6d8;color:#4d3320;box-shadow:inset 0 0 0 1px #dcc2a7}
 .auth :is(.segmented button,.eye,.back,.btn--social):not(:disabled):is(:hover,:focus-visible){background:#f3e6d8;color:#4d3320;border-color:#dcc2a7;box-shadow:inset 0 0 0 1px #dcc2a7}
 body .admin-profile-menu #logout:is(:hover,:focus-visible),.public-account__menu>.public-account__logout:is(:hover,:focus-visible){background:#803b4b;color:#fff;box-shadow:inset 0 0 0 1px #642838}
 :is(.app,.admin-shell,.staff-main) :is(input,select,textarea):not(:disabled):hover{border-color:#65899b}
 :is(.app,.admin-shell,.staff-main,.staff-side,.public-account,.auth) :is(a,button,input,select,textarea,summary):focus-visible{outline:3px solid #875a36;outline-offset:3px}
-@media(forced-colors:active){body .admin-nav a:is(:hover,:focus-visible),.sidebar .nav__item:is(:hover,:focus-visible),.coral-rail nav>a:is(:hover,:focus-visible),.public-account__menu>a:is(:hover,:focus-visible){outline:2px solid Highlight;outline-offset:-2px}}
+/* High-contrast mode has no fills to rely on: every focused or hovered menu link shows an outline, including focus moved by script. */
+@media(forced-colors:active){body .admin-nav a:is(:hover,:focus),body .admin-topnav>a:is(:hover,:focus),.dn-nav .dn-item:is(:hover,:focus),.staff-side .menu a:is(:hover,:focus),.info-nav a:is(:hover,:focus),.public-account__menu>a:is(:hover,:focus){outline:2px solid Highlight;outline-offset:-2px}}
 @media(prefers-reduced-motion:reduce){body .admin-main .btn,body .admin-nav a,.public-account>[data-session-link]{transform:none!important}}
 @supports(appearance:base-select){
   select:not([multiple]):not([size]),select:not([multiple]):not([size])::picker(select){appearance:base-select}

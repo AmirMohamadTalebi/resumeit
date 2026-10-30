@@ -30,7 +30,9 @@ html body .app.dn-app>.sidebar{position:sticky;top:0;height:100dvh;padding:0;bac
 .dn-item__ico svg{width:19px;height:19px}
 .dn-item__txt{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .dn-item__badge{min-width:20px;padding:0 6px;border-radius:999px;background:var(--nv-accent);color:#fff;font-size:11px;font-weight:700;line-height:20px;text-align:center}
-.dn-item:hover{background:var(--nv-bg-soft);color:var(--nv-ink)}.dn-item:hover .dn-item__ico{color:var(--nv-accent)}
+/* Hover fills with the dark brown (≥3:1 from the menu surface, white text ≥4.5:1 even under a warm filter); the current item stays light. */
+.dn-item:not([aria-current]):is(:hover,:focus-visible){background:#875a36;color:#fff;box-shadow:0 8px 18px -10px rgba(107,70,41,.8)}.dn-item:not([aria-current]):is(:hover,:focus-visible) .dn-item__ico{color:#fff}
+.dn-item:not([aria-current]):is(:hover,:focus-visible) .dn-item__badge{background:#fff;color:#6b4629}
 .dn-item[aria-current=page]{background:var(--nv-accent-soft);color:var(--nv-accent-d);font-weight:750}
 .dn-item[aria-current=page] .dn-item__ico{background:var(--nv-accent);color:#fff;box-shadow:0 6px 14px -8px rgba(107,70,41,.9)}
 .dn-item:focus-visible,.dn-fold:focus-visible,.dn-account:focus-visible,.dn-plan:focus-visible{outline:3px solid var(--nv-accent);outline-offset:2px}
@@ -400,3 +402,4 @@ html body .ra__spark svg{width:20px;height:20px}
 @media(min-width:961px) and (max-height:860px){.dn-plan{display:none!important}.dn-item{min-height:33px;padding-block:2px}.dn-item__ico{width:26px;height:26px}.dn-group{margin-bottom:6px}.dn-group__label{margin-bottom:2px}.dn-head{padding-bottom:6px}.dn{padding-top:12px}.dn-foot{gap:6px;padding-top:8px}.dn-account{padding:5px}.dn-account__avatar{width:30px;height:30px}}
 @media(max-width:1100px){.nv-support .nv-split{grid-template-columns:minmax(0,1fr)}}
 .nv-stack>*,.nv-split>*,.nv-grid>*,.nv-home__grid>*,.nv-settings__layout>*{min-width:0}
+.nv-seg button:not([aria-pressed=true]):not([aria-selected=true]):hover,.nv-seg__opt:not(:has(input:checked)):hover{background:#f3e6d8;color:#4d3320}

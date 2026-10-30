@@ -80,7 +80,7 @@ html body .admin-head strong{font-weight:700}
 html body .admin-payment{position:relative;padding:6px 12px 6px 14px;border-radius:999px;font-weight:650;display:inline-flex;align-items:center;gap:8px}
 html body .admin-payment::before{content:"";width:8px;height:8px;border-radius:50%;background:currentColor;animation:lq-pulse 2s ease-out infinite}
 html body .admin-topnav>a{transition:background .3s,color .3s,translate .45s var(--lq-spring)}
-html body .admin-topnav>a:hover,html body .admin-topnav>a[aria-current=page]:hover{background:#f3e6d8;color:#4d3320}
+html body .admin-topnav>a:hover,html body .admin-topnav>a[aria-current=page]:hover{background:#875a36;color:#fff;box-shadow:0 8px 18px -10px rgba(107,70,41,.8)}
 html body .admin-topnav>a[aria-current=page]{background:linear-gradient(135deg,#fff,rgba(242,230,218,.9));color:#6b4629;box-shadow:0 8px 18px -10px rgba(135,90,54,.5)}
 
 /* ── Page intro ── */
