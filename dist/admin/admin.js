@@ -756,7 +756,7 @@
       "مدیر ResumeIt";
     const groups=[['دید کلی','chart',['overview','traffic']],['کاربران و صفحات','user',['users','pages']],['امور مالی','card',['payments','transactions','purchases']],['محصولات','palette',['catalog']],['امنیت و سرویس‌ها','shield',['health','otp','audit',...(fullAdmin?['retention']:[])]]],active=groups.find(g=>g[2].includes(section));
     const href=id=>id==='overview'?'/admin/':'/admin/'+id+'/';
-    $("#admin-nav").innerHTML='<ul class="menu">'+groups.map(([label,symbol,ids])=>'<li><a title="'+label+'" href="'+href(ids.includes(section)?section:ids[0])+'" '+(ids.includes(section)?'aria-current="page"':'')+'>'+icon(symbol)+'<span>'+label+'</span></a></li>').join('')+'<li><a href="/staff/" title="پنل پشتیبانی">'+icon('help')+'<span>پشتیبانی و تیکت‌ها</span></a></li></ul>';
+    $("#admin-nav").innerHTML='<ul class="menu">'+groups.map(([label,symbol,ids])=>'<li><a title="'+label+'" href="'+href(ids.includes(section)?section:ids[0])+'" '+(ids.includes(section)?'aria-current="page"':'')+'>'+icon(symbol)+'<span>'+label+'</span></a></li>').join('')+'<li><a href="/staff/" title="پنل پشتیبانی">'+icon('help')+'<span>پشتیبانی و تیکت‌ها</span></a></li><li><a href="/staff/?escalated=1" title="تیکت‌هایی که پشتیبانی به مدیر ارجاع داده">'+icon('shield')+'<span>ارجاع‌های پشتیبانی</span></a></li></ul>';
     $("#admin-menu").innerHTML = icon("menu");
     const topnav=document.createElement('nav');topnav.className='admin-topnav';topnav.setAttribute('aria-label','دسترسی سریع مدیریت');topnav.append($('#admin-menu'));
     for(const id of active[2]){const a=document.createElement('a');a.href=href(id);a.innerHTML=icon(sections[id][1])+'<span>'+sections[id][0]+'</span>';if(id===section)a.setAttribute('aria-current','page');topnav.append(a);}

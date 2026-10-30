@@ -11,10 +11,15 @@ module.exports=async(database,req,path,origin,user,reply,res)=>{
       const file=await database.ticketAttachment(owner,id);if(!file)fail('پیوست پیدا نشد',404);
       res.writeHead(200,{'Content-Type':'application/octet-stream','Content-Length':file.size,'Content-Disposition':"attachment; filename=\"attachment\"; filename*=UTF-8''"+encodeURIComponent(file.name),'X-Content-Type-Options':'nosniff','Cache-Control':'private, no-store'});res.end(Buffer.from(file.data));return true;
     }
+    // The customer's account at a glance for the agent handling a ticket (read-only; credit is a separate action).
+    if(path==='/api/dashboard/support/customer'){
+      if(!staff||!id)fail('شناسهٔ کاربر لازم است');
+      reply(200,await database.supportProfile(user.id,id));return true;
+    }
     if(path==='/api/dashboard/support'){
-      const page=Number(url.searchParams.get('page')||1),q=url.searchParams.get('q')||'',status=url.searchParams.get('status')||'';
-      if(!Number.isSafeInteger(page)||page<1||page>10000||q.length>100||!['','open','answered','closed'].includes(status))fail('فیلتر معتبر نیست');
-      const result=id?await database.ticket(owner,id):await database.tickets(owner,{page,q,status});
+      const page=Number(url.searchParams.get('page')||1),q=url.searchParams.get('q')||'',status=url.searchParams.get('status')||'',department=staff?url.searchParams.get('department')||'':'',escalated=staff&&url.searchParams.get('escalated')==='1';
+      if(!Number.isSafeInteger(page)||page<1||page>10000||q.length>100||!['','open','answered','closed'].includes(status)||(department&&!Object.hasOwn(database.supportDepartments(),department)))fail('فیلتر معتبر نیست');
+      const result=id?await database.ticket(owner,id):await database.tickets(owner,{page,q,status,department,escalated});
       if(id&&staff&&database.supportCustomer)result.customer=await database.supportCustomer(result.user_id);
       if(staff&&database.adminCodes){if(id){const [coded]=await database.adminCodes('tickets',[result]);result.admin_code=coded.admin_code;if(result.customer)[result.customer]=await database.adminCodes('users',[result.customer]);}else result.rows=await database.adminCodes('tickets',result.rows);}
       reply(200,result);
@@ -34,10 +39,23 @@ module.exports=async(database,req,path,origin,user,reply,res)=>{
     attachments=require('./attachments.cjs').validate(input.attachments,staff||billing.plan?.end>Date.now());
   }
   if(path==='/api/dashboard/support'){
-    if(!['account','payment','editor','publication','other'].includes(input.category)||!['normal','high'].includes(input.priority)||!uuid.test(input.requestId||''))fail('موضوع تیکت معتبر نیست');
+    if(!['sales','account','payment','editor','publication','other'].includes(input.category)||!['normal','high'].includes(input.priority)||!uuid.test(input.requestId||''))fail('موضوع تیکت معتبر نیست');
     reply(200,await database.createTicket(user.id,{...input,attachments,subject:clean(input.subject,3,120),body:clean(input.body,10,6000)}));
   }else if(path==='/api/dashboard/support/reply'){
     if(!uuid.test(input.id||'')||!uuid.test(input.requestId||''))fail('شناسه معتبر نیست');reply(200,await database.replyTicket(user.id,input.id,clean(input.body,1,6000),input.requestId,staff,attachments));
+  }else if(staff&&path==='/api/dashboard/support/transfer'){
+    if(!uuid.test(input.id||'')||!uuid.test(input.requestId||'')||typeof input.department!=='string')fail('اطلاعات انتقال معتبر نیست');
+    reply(200,await database.transferTicket(user.id,input.id,input.department,input));
+  }else if(staff&&path==='/api/dashboard/support/escalate'){
+    if(!uuid.test(input.id||'')||!uuid.test(input.requestId||''))fail('اطلاعات ارجاع معتبر نیست');
+    reply(200,await database.escalateTicket(user.id,input.id,input));
+  }else if(staff&&path==='/api/dashboard/support/note'){
+    if(!uuid.test(input.id||'')||!uuid.test(input.requestId||''))fail('شناسه معتبر نیست');
+    reply(200,await database.ticketNote(user.id,input.id,clean(input.body,1,6000),input.requestId));
+  }else if(staff&&path==='/api/dashboard/support/credit'){
+    if(!uuid.test(input.userId||'')||!uuid.test(input.requestId||'')||(input.ticketId!==undefined&&!uuid.test(input.ticketId||'')))fail('اطلاعات شارژ معتبر نیست');
+    await require('../auth/confirm.cjs').confirmPassword(database,user,input.password);
+    reply(200,await database.supportCredit(user.id,input.userId,input));
   }else if(path==='/api/dashboard/support/status'){
     if(!uuid.test(input.id||'')||!['open','closed'].includes(input.status))fail('وضعیت معتبر نیست');await database.ticketStatus(user.id,input.id,input.status,staff);reply(200,{ok:true});
   }else if(path==='/api/dashboard/notifications/read'){
