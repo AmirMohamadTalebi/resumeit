@@ -200,12 +200,14 @@
     for (const [id, keys] of INTENTS) {
       let s = 0;
       for (const k of keys) { const nk = norm(k); if (nk.includes(' ')) { if (q.includes(nk)) s += 3; } else if (ws.some(w => near(w, nk))) s += nk.length >= 4 ? 2 : 1; }
-      if (s && (!best || s > best.s)) best = { id, s };
+      if (s && (!best || s > best.s || (s === best.s && (best.id === 'greet' || best.id === 'thanks')))) best = { id, s };
+      if (s && best && (best.id === 'greet' || best.id === 'thanks') && id !== 'greet' && id !== 'thanks') best = { id, s };
     }
     return best?.id || null;
   }
   const go = (label, section, field) => ({ kind: 'go', label, section, field });
   function reply(question, c, ctx = {}) {
+    const small = chat(question, c, ctx); if (small) return small;
     const said = understand(question), id = said ? 'statement' : intent(question), sc = score(c, ctx), role = sc.role, p = c.profile || {}, weak = sc.dims.slice().sort((a, b) => a.value - b.value), typos = spelling(c);
     const follow = ['امتیاز رزومه‌ام چند است؟', 'قدم بعدی چیه؟', 'یک معرفی برایم پیشنهاد بده', 'چه مهارت‌هایی اضافه کنم؟'];
     const out = (textValue, actions = [], next = follow) => ({ intent: id || 'unknown', text: textValue, actions, follow: next.filter(f => norm(f) !== norm(question)).slice(0, 3) });
@@ -267,11 +269,96 @@
       }
     }
   }
+  /* ---------- Small talk: greetings, how-are-you, date and time, and a little personality ----------
+     Answered before resume intents, and only when the whole message is small talk, so «سلام، امتیازم چنده؟» still
+     reaches the score. Dates and times are Tehran's: Persian calendar first, Gregorian and lunar on request. */
+  const TZ = 'Asia/Tehran';
+  const pick = a => a[Math.floor(Math.random() * a.length)];
+  function clock(at) {
+    const d = at ? new Date(at) : new Date();
+    const parts = (locale, o) => { try { return new Intl.DateTimeFormat(locale, Object.assign({ timeZone: TZ }, o)).formatToParts(d); } catch { return []; } };
+    const get = (p, type) => (p.find(x => x.type === type) || {}).value || '';
+    const day = { day: 'numeric', month: 'long', year: 'numeric' };
+    const pd = parts('fa-IR-u-ca-persian-nu-arabext', Object.assign({ weekday: 'long' }, day)), gd = parts('fa-IR-u-ca-gregory-nu-arabext', day), hd = parts('fa-IR-u-ca-islamic-umalqura-nu-arabext', day);
+    const tm = parts('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false }), hour = Number(get(tm, 'hour')) % 24;
+    const join = p => [get(p, 'day'), get(p, 'month'), get(p, 'year')].filter(Boolean).join(' ');
+    return { weekday: get(pd, 'weekday'), persian: join(pd), gregorian: join(gd), lunar: join(hd), hour, time: fa(String(hour).padStart(2, '0') + ':' + get(tm, 'minute')), part: hour < 5 ? 'نیمه‌شب' : hour < 12 ? 'صبح' : hour < 15 ? 'ظهر' : hour < 18 ? 'بعدازظهر' : hour < 21 ? 'عصر' : 'شب' };
+  }
+  const GREET = ['سلام علیکم', 'علیک سلام', 'سلام', 'درود', 'علیک', 'های', 'هی', 'hello', 'hi', 'hey', 'salam', 'صبح بخیر', 'صبح ها بخیر', 'صبحت بخیر', 'ظهر بخیر', 'عصر بخیر', 'وقت بخیر', 'وقتت بخیر', 'وقتتون بخیر', 'روز بخیر', 'روزت بخیر', 'خسته نباشی', 'خسته نباشید'];
+  const CALLS = ['فندق جان', 'فندقی', 'فندق', 'پیشی', 'گربه', 'جان', 'عزیزم', 'عزیز', 'دوست من', 'رفیق'];
+  const TALK = [
+    ['howareyou', /^(?:تو |شما )?(?:خوبی|خوبین|خوبید|خوب هستی|خوب هستید|چطوری|چطورین|چطورید|حالت چطوره|حالت چطور است|حالت خوبه|حالتون چطوره|حال شما|حالت|احوالت|احوال شما|چه خبر|چه خبرا|چخبر|چه خبر از تو|خوبی تو|how are you|how r u|whats up|what s up|sup)$/],
+    ['moodgood', /^(?:من ?هم |منم |ممنون |مرسی |خداروشکر |شکر )?(?:خوبم|عالیم|عالی ام|خیلی خوبم|بد نیستم|ای بد نیستم|خوب|عالی|روبراهم|سرحالم|فدات خوبم|مرسی خوبم)(?: ممنون| مرسی| شکر)?$/],
+    ['moodbad', /^(?:من |منم )?(?:خوب نیستم|بدم|حالم بده|ناراحتم|غمگینم|خسته ام|خستم|خیلی خسته ام|حوصله ندارم|بی حوصله ام|کلافه ام|استرس دارم|نگرانم|بیکارم|کار پیدا نمیکنم|کار پیدا نمی کنم)$/],
+    ['datetime', /(?:تاریخ|امروز).*(?:ساعت)|(?:ساعت).*(?:تاریخ)/],
+    ['time', /^(?:الان )?(?:ساعت چنده|ساعت چند است|ساعت چند|ساعت چنده الان|چه ساعتیه|چه ساعتی است|ساعت رو بگو|ساعت را بگو|ساعت|what time is it|what time|time)$/],
+    ['date', /^(?:امروز )?(?:چندمه|چندم است|چندمه امروز|تاریخ امروز|تاریخ چنده|تاریخ|چه تاریخیه|چه تاریخی است|امروز چه روزیه|چه روزیه|چه روزی است|چه روزی|چند شنبه است|چندشنبه است|چندشنبست|چند شنبست|چندشنبه|چند شنبه|روز هفته|تاریخ میلادی|تاریخ قمری|میلادی|قمری|امسال چه سالیه|چه سالیه|سال چنده|چه ماهیه|ماه چیه|what s the date|whats the date|what day is it|what day is today|today s date|date)(?: امروز)?$/],
+    ['name', /^(?:اسمت چیه|اسمت چیست|اسم تو چیه|اسم شما چیه|اسمت|تو کی هستی|تو کی هستین|کی هستی|کی هستین|خودتو معرفی کن|خودت را معرفی کن|معرفی کن خودتو|who are you|what s your name|whats your name|your name)$/],
+    ['bot', /^(?:تو |شما )?(?:ربات|بات|آدم|انسان|هوش مصنوعی|واقعی|زنده|گربه واقعی)(?: هستی| ای| هستید| هستین)?$|^are you (?:a )?(?:bot|human|real|ai)$/],
+    ['age', /^(?:چند سالته|چند سالتونه|چند سالت است|سنت چنده|سنت چقدره|how old are you)$/],
+    ['maker', /^(?:کی ساختت|کی تو رو ساخته|کی تو را ساخته|کی ساخته تو رو|سازندت کیه|سازنده ات کیه|سازنده ات کیست|who made you|who built you)$/],
+    ['likes', /^(?:چی دوست داری|چه چیزی دوست داری|به چی علاقه داری|غذای مورد علاقت چیه|غذای مورد علاقه ات چیه|علاقت چیه|what do you like)$/],
+    ['joke', /^(?:یکی دیگه|یکی دیگه بگو|یه دونه دیگه)$|(?:جوک|لطیفه|یه چیز خنده دار|یک چیز خنده دار|بخندونم|منو بخندون|بخندان|joke)/],
+    ['love', /^(?:دوستت دارم|عاشقتم|عاشقتم فندق|خیلی خوبی|تو خیلی خوبی|عالی هستی|عالی ای|باهوشی|خیلی باهوشی|بامزه ای|نازی|خیلی نازی|خوشگلی|گلی|ماهی|ایول|آفرین|دمت گرم|love you|i love you|you re great|you re smart|you re cute)$/],
+    ['rude', /(?:خنگ|احمق|بی مصرف|بیمصرف|بی شعور|بیشعور|مسخره|چرت میگی|چرت می گی|بدرد نخور|به درد نخور|stupid|dumb|useless|idiot)/],
+    ['thanks', /^(?:ممنون|ممنونم|مرسی|متشکرم|تشکر|سپاس|سپاسگزارم|دمت گرم|thanks|thank you|thx|tnx)(?: (?:از ?تو|ازت|خیلی|زیاد|فندق|عزیزم|رفیق))*$/],
+    ['goodnight', /^(?:شب بخیر|شبت بخیر|شب خوش|good night)$/],
+    ['bye', /^(?:خداحافظ|خدانگهدار|خدا نگهدار|بای|بای بای|فعلا|فعلن|فعلا خداحافظ|میرم|می رم|من رفتم|bye|goodbye|see you)$/],
+    ['laugh', /^(?:خ{2,}|ه{2,}|(?:ها){2,}|(?:هه){1,}|lol|haha+|(?:ha){2,})$/],
+    ['yes', /^(?:باشه|اوکی|ok|okay|حله|آره|اره|بله|اوهوم|اهوم|اکی|اوکیه|عالیه|خوبه|باشه مرسی)$/],
+    ['no', /^(?:نه|نخیر|نه ممنون|نه مرسی|no|nope|بیخیال|ولش کن)$/],
+    ['weather', /^(?:هوا|وضع هوا)(?: چطوره| چطور است| سرده| گرمه| بارونیه| خوبه)?$|^(?:weather|how s the weather)$/],
+  ];
+  function chat(question, c, ctx = {}) {
+    const raw = String(question || ''), emoji = (raw.match(/\p{Extended_Pictographic}/gu) || []).join('');
+    let q = norm(raw).replace(/\p{Extended_Pictographic}|[\u{1F3FB}-\u{1F3FF}️‍]/gu, ' ').replace(/[!?؟.,،؛;:…"'«»()\[\]\-_~*]+/g, ' ').replace(/\s+/g, ' ').trim();
+    let greeted = false;
+    for (let changed = true; changed;) {
+      changed = false;
+      for (const g of GREET) if (q === g || q.startsWith(g + ' ')) { q = q.slice(g.length).trim(); greeted = changed = true; break; }
+      for (const w of CALLS) { if (q.startsWith(w + ' ') || q === w) { q = q.slice(w.length).trim(); changed = true; } else if (q.endsWith(' ' + w)) { q = q.slice(0, -w.length).trim(); changed = true; } }
+    }
+    const flat = q.replace(/\s+/g, ' ');
+    let topic = !flat ? (greeted ? 'greet' : emoji ? 'emoji' : null) : null;
+    if (!topic && flat.length <= 48) for (const [id, re] of TALK) if (re.test(flat)) { topic = id; break; }
+    if (!topic) return null;
+    const p = (c && c.profile) || {}, first = text(p.name).split(' ')[0], n = first ? ' ' + first : '', t = clock(ctx.now);
+    const resumeFollow = ['امتیاز رزومه‌ام چند است؟', 'قدم بعدی چیه؟', 'یک معرفی برایم پیشنهاد بده'];
+    const out = (textValue, follow = resumeFollow) => ({ intent: 'smalltalk', topic, text: textValue, actions: [], follow });
+    const datePhrase = () => 'امروز ' + t.weekday + ' ' + t.persian + (/میلادی/.test(flat) ? '؛ به میلادی ' + t.gregorian : ' (' + t.gregorian + ')') + (/قمری/.test(flat) ? '؛ به قمری ' + t.lunar : '');
+    switch (topic) {
+      case 'greet': return out('سلام' + n + '! ' + (t.part === 'صبح' ? 'صبحت بخیر ☀️ ' : t.part === 'شب' || t.part === 'نیمه‌شب' ? 'شبت بخیر 🌙 ' : '') + 'من فندقم، دستیار رزومه‌ات 🐾 حالت چطوره؟ هر وقت خواستی بپرس؛ مثلاً امتیاز رزومه یا قدم بعدی.', ['حالت چطوره؟', 'امروز چندمه؟', 'قدم بعدی چیه؟']);
+      case 'howareyou': return out((greeted ? 'سلام' + n + '! ' : '') + pick(['میو! خوبم، مرسی که پرسیدی. تو چطوری؟', 'عالی‌ام! تازه یک چرت گربه‌ای زدم 😺 تو چطوری؟', 'خوبم و آماده‌ام کمکت کنم. حال تو چطوره؟']), ['خوبم', 'خسته‌ام', 'قدم بعدی چیه؟']);
+      case 'moodgood': return out(pick(['خوشحالم' + n + '! 🌼', 'چه خوب! 😺', 'عالیه!']) + ' می‌خواهی با هم یک قدم کوچک برای رزومه‌ات برداریم؟');
+      case 'moodbad': return out('ای وای' + n + '، خسته نباشی 💙 لازم نیست امروز همه‌چیز را تمام کنی. یک کار دو دقیقه‌ای انتخاب می‌کنیم؛ اگر هم حوصله نداری، بعداً با هم ادامه می‌دهیم.', ['قدم بعدی چیه؟', 'یک جوک بگو']);
+      case 'datetime': return out(datePhrase() + ' و ساعت ' + t.time + ' به وقت تهران است.', ['قدم بعدی چیه؟']);
+      case 'date': return out(datePhrase() + '.', ['ساعت چنده؟', 'قدم بعدی چیه؟']);
+      case 'time': return out('الان ساعت ' + t.time + ' به وقت تهران است' + (t.part === 'نیمه‌شب' ? '؛ دیروقت است، کمی هم استراحت کن 😴' : t.part === 'صبح' ? '؛ صبح، بهترین وقت برای یک قدم تازه است ☀️' : '.'), ['امروز چندمه؟', 'قدم بعدی چیه؟']);
+      case 'name': return out('من فندقم 🐾 گربهٔ سفید رزومیت و دستیار رزومه‌ات. رزومه‌ات را می‌خوانم، غلط‌ها را می‌گیرم، معرفی پیشنهاد می‌دهم و قدم بعدی را نشانت می‌دهم.', ['چه کارهایی بلدی؟', 'امتیاز رزومه‌ام چند است؟']);
+      case 'bot': return out('من یک دستیار هوشمندم، نه آدم؛ ولی گربه‌بودنم واقعی است! 😺 از روی رزومهٔ خودت جواب می‌دهم و چیزی از خودم نمی‌سازم.', ['چه کارهایی بلدی؟']);
+      case 'age': return out('گربه‌ها سنشان را نمی‌گویند! 😼 فقط می‌دانم تازه به رزومیت آمده‌ام و کلی انرژی دارم.');
+      case 'maker': return out('تیم رزومیت مرا ساخته تا کنار تو باشم و رزومه‌ات را بهتر کنیم 💙');
+      case 'likes': return out('رزومه‌های مرتب، معرفی‌های کوتاه و یک گوشهٔ گرم کنار صفحه! 🐾 «فندق» هم اسمم است، نه غذایم 😹');
+      case 'joke': return out(pick(['چرا رزومهٔ گربه‌ها همیشه کوتاه است؟ چون فقط «میو» می‌نویسند! 😹', 'به کارفرما گفتم مهارتم «کار تیمی» است. پرسید با کی؟ گفتم با کیبورد و موس! 😸', 'رزومهٔ بی‌غلط مثل کیبوردی است که گربه رویش راه نرفته؛ کمیاب، ولی شدنی! 😼']), ['یکی دیگه بگو', 'قدم بعدی چیه؟']);
+      case 'love': return out('میو! 💙 تو هم خیلی خوبی' + n + '. بیا رزومه‌ات را هم مثل خودت خوب کنیم.');
+      case 'rude': return out('ببخشید اگر بد فهمیدم 🙏 دوباره بگو چه می‌خواهی؛ مثلاً «امتیاز رزومه‌ام چند است؟» یا «یک معرفی برایم بنویس».');
+      case 'thanks': return out(pick(['خواهش می‌کنم! 🐾 هر وقت لازم بود همین‌جام.', 'قابلی نداشت' + n + '! هر وقت متن را عوض کنی دوباره نگاه می‌کنم.']));
+      case 'goodnight': return out('شب بخیر' + n + '! 🌙 خواب‌های قشنگ ببینی؛ من هم یک چرت گربه‌ای می‌زنم.', []);
+      case 'bye': return out('خداحافظ' + n + '! 👋 هر وقت برگشتی همین‌جا منتظرم.', []);
+      case 'laugh': return out('😹 خوشحالم که خندیدی!', ['یک جوک بگو', 'قدم بعدی چیه؟']);
+      case 'yes': return out('حله! 👌 بگو از کجا شروع کنیم:');
+      case 'no': return out('باشه، هر وقت خواستی بگو؛ همین‌جام 🐾');
+      case 'weather': return out('از پشت این دیوار پنجره‌ای نمی‌بینم ☁️ ولی هوای رزومه‌ات را می‌توانم بگویم! امتیازش را ببینیم؟', ['امتیاز رزومه‌ام چند است؟']);
+      case 'emoji': return out(/[❤💙💜💚🧡💛🤍😍🥰😘]/u.test(emoji) ? 'میو! 💙' : /[😂🤣😹😆😄]/u.test(emoji) ? '😹' : /[👍👌✌]/u.test(emoji) ? '👌 حله!' : '🐾');
+    }
+    return null;
+  }
+
   function opening(c, ctx = {}) {
     const sc = score(c, ctx), p = c.profile || {}, weak = sc.dims.slice().sort((a, b) => a.value - b.value)[0], typos = spelling(c);
     return { intent: 'opening', text: (text(p.name) ? 'سلام ' + text(p.name).split(' ')[0] + '! ' : 'سلام! ') + 'رزومه‌ات ' + fa(sc.total) + ' از ۱۰۰ است (' + sc.label + ')' + (sc.role ? ' و به نظرم «' + sc.role.label + '» هستی' : '') + '. ' + (typos.length ? 'یک چیز کوچک: «' + typos[0].wrong + '» در ' + typos[0].where + ' احتمالاً «' + typos[0].right + '» است.' : weak.value < 70 && weak.reasons[0] ? 'بیشترین اثر را «' + weak.label + '» دارد: ' + weak.reasons[0] + '.' : 'وضعیتش خوب است؛ بپرس تا دقیق‌تر کمک کنم.'), actions: typos.slice(0, 2).map(t => ({ kind: 'fix', label: '«' + t.wrong + '» ← «' + t.right + '»', wrong: t.wrong, value: t.right })), follow: ['قدم بعدی چیه؟', 'یک معرفی برایم پیشنهاد بده', sc.role ? 'چه مهارت‌هایی اضافه کنم؟' : 'من برنامه‌نویس هستم'] };
   }
 
-  const api = { version: '2.0.0', ROLES, normalize: norm, detectRole, missingSkills, years, score, bioDraft, bulletHelp, intent, understand, spelling, fixText, reply, opening };
+  const api = { version: '2.1.0', ROLES, normalize: norm, chat, clock, detectRole, missingSkills, years, score, bioDraft, bulletHelp, intent, understand, spelling, fixText, reply, opening };
   if (typeof module === 'object' && module.exports) module.exports = api; else root.ResumeBrain = api;
 })(typeof self !== 'undefined' ? self : this);

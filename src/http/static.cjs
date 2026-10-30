@@ -12,6 +12,8 @@ publicAssets.set('/public-assets/icons.js','dashboard/js/icons.js');
 publicAssets.set('/public-assets/projects.js','dashboard/js/projects.js');
 publicAssets.set('/public-assets/inbox.js','dashboard/js/inbox-form.js');
 publicAssets.set('/public-assets/charts.js','dashboard/js/charts.js');
+publicAssets.set('/public-assets/fandogh.js','dashboard/js/fandogh.js');
+publicAssets.set('/public-assets/fandogh.css','dashboard/css/fandogh.css');
 publicAssets.set('/public-assets/charts.css','dashboard/css/charts.css');
 function fingerprint(directory){
   for(const item of localFiles.readdirSync(directory,{withFileTypes:true}).sort((a,b)=>a.name.localeCompare(b.name,'en'))){
@@ -25,8 +27,8 @@ const assetRevision=version+'-'+assetHash.digest('hex').slice(0,16);
 // Bundle only shared workspace files; editable source modules remain independent.
 const bundles=new Map();
 for(const [url,files] of [
-  ['/dashboard/js/workspace.js',['icons','core','ui','data','imported-templates','resume-templates','state','api','account','projects','support-files','preview','commerce','workspace-tools','reset-ui','notification-channels','charts','advisor-brain','app','assistant-pet','coral','toolbar','liquid'].map(n=>'dashboard/js/'+n+'.js').concat('templates/vista-runtime.js')],
-  ['/dashboard/css/workspace.css',['tokens','base','shell','components','preview','pages','charts','abgoon','performance','resume-studio','liquid','nova','pet'].map(n=>'dashboard/css/'+n+'.css')]
+  ['/dashboard/js/workspace.js',['icons','core','ui','data','imported-templates','resume-templates','state','api','account','projects','support-files','preview','commerce','workspace-tools','reset-ui','notification-channels','charts','advisor-brain','app','fandogh','assistant-pet','coral','toolbar','liquid'].map(n=>'dashboard/js/'+n+'.js').concat('templates/vista-runtime.js')],
+  ['/dashboard/css/workspace.css',['tokens','base','shell','components','preview','pages','charts','abgoon','performance','resume-studio','liquid','nova','fandogh','pet'].map(n=>'dashboard/css/'+n+'.css')]
 ])bundles.set(url,Buffer.from(files.map(file=>{
   let source=localFiles.readFileSync(path.join(root,file),'utf8');
   if(file.endsWith('.css'))source=source.replace(/url\((["']?)(?!data:|https?:|\/\/)([^)"'?#]+)\1\)/g,(_,quote,url)=>`url(${quote}${path.posix.resolve('/',path.posix.dirname(file),url)}${quote})`);

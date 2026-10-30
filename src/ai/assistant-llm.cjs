@@ -7,7 +7,7 @@ const config=(env=process.env)=>{
   return {enabled:/^https:\/\/[^\s/]+/.test(url)&&key.length>=8,url,key,model:String(env.ASSISTANT_AI_MODEL||'gpt-4o-mini').trim(),timeout:Math.min(60000,Math.max(5000,Number(env.ASSISTANT_AI_TIMEOUT)||25000))};
 };
 
-const SYSTEM=`تو «دستیار رزومیت» هستی؛ یک مشاور رزومهٔ باتجربه و مهربان که فقط فارسی جواب می‌دهد.
+const SYSTEM=`تو «فندق» هستی، گربهٔ سفید و مهربان رزومیت و دستیار رزومهٔ کاربر؛ یک مشاور رزومهٔ باتجربه که فقط فارسی جواب می‌دهد.
 قواعد:
 - فقط بر اساس رزومهٔ کاربر (JSON زیر) و حرف‌های خودش جواب بده. هیچ عدد، شرکت، مدرک، تاریخ یا دستاوردی از خودت نساز؛ اگر لازم است، از کاربر بپرس.
 - غلط‌های املایی و تایپی متن کاربر را ببین و صریح بگو (مثلاً «دانشجوری» ← «دانشجوی»). در متن پیشنهادی هرگز غلط را تکرار نکن.
@@ -16,6 +16,7 @@ const SYSTEM=`تو «دستیار رزومیت» هستی؛ یک مشاور رز
 - اگر متن جایگزین برای «معرفی» پیشنهاد می‌دهی، آن را فقط داخل <<BIO>>…<</BIO>> بگذار (۲ تا ۴ جمله، اول‌شخص).
 - اگر عنوان شغلی پیشنهاد می‌دهی، داخل <<TITLE>>…<</TITLE>> بگذار (حداکثر ۶۰ حرف).
 - اگر مهارت پیشنهاد می‌دهی، نام‌ها را داخل <<SKILLS>>نام۱|نام۲|نام۳<</SKILLS>> بگذار (حداکثر ۶ تا، فقط مهارت‌هایی که از متن یا نقش کاربر برمی‌آید).
+- به سلام، احوالپرسی و گپ کوتاه گرم و کوتاه جواب بده و اگر مناسب بود به رزومه برگرد. تاریخ و ساعت را از خط «زمان» بگو.
 - دربارهٔ چیزهای بی‌ربط به رزومه، کار، شغل‌یابی یا خود سایت رزومیت مؤدبانه بگو که کمکی از دستت برنمی‌آید.`;
 
 // Contact values and image data stay out of the prompt; the model only needs the story.
@@ -39,7 +40,7 @@ function parse(text){
 async function answer({question,content,goal,history,analysis},env=process.env,fetcher=fetch){
   const cfg=config(env);if(!cfg.enabled)return null;
   const facts={resume:trim(content),goal:String(goal||'').slice(0,160),analysis};
-  const messages=[{role:'system',content:SYSTEM},{role:'system',content:'رزومه و تحلیل محلی (JSON):\n'+JSON.stringify(facts)}];
+  const t=require('../../dist/dashboard/js/advisor-brain.js').clock(),messages=[{role:'system',content:SYSTEM},{role:'system',content:'زمان: امروز '+t.weekday+' '+t.persian+' ('+t.gregorian+')، ساعت '+t.time+' به وقت تهران.'},{role:'system',content:'رزومه و تحلیل محلی (JSON):\n'+JSON.stringify(facts)}];
   for(const h of (Array.isArray(history)?history:[]).slice(-6))if(h&&['user','assistant'].includes(h.role)&&typeof h.text==='string')messages.push({role:h.role,content:h.text.slice(0,1200)});
   messages.push({role:'user',content:String(question).slice(0,500)});
   const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),cfg.timeout);

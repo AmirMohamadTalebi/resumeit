@@ -1,4 +1,4 @@
-/* Landing page behaviour (2.7.4): template showcase and filters, the four-step story, FAQ, and the motion layer:
+/* Landing page behaviour (2.7.5): template showcase and filters, the four-step story, FAQ, and the motion layer:
    word-by-word reveals, a parallax hero, count-ups, a typewriter, scroll-speed marquees, tilt cards, magnetic
    buttons and Gerdoo peeking from the edge. On wide screens GSAP + ScrollTrigger are loaded on demand for the
    pinned story and scroll scrubs. Every part checks its own elements, and reduced motion gets a calm, complete page. */
@@ -114,7 +114,7 @@
   });
 
   // Everything else that should arrive on scroll rises in; siblings that enter together are staggered.
-  ['.template-card', '.faq-list details', '.ln-numbers>div', '.ln-dual__visual', '.template-live', '.ln-preview', '.ln-build', '.ln-how__copy h2', '.ln-how .ln-eyebrow', '.step', '.ln-closing__card>p', '.closing-actions', '.ln-footer']
+  ['.template-card', '.faq-list details', '.ln-numbers>div', '.ln-dual__visual', '.template-live', '.ln-preview', '.ln-build', '.ln-how__copy h2', '.ln-how .ln-eyebrow', '.step', '.ln-closing__card>p', '.closing-actions', '.ln-foot__bottom']
     .forEach(s => $$(s).forEach(el => { if (!el.dataset.anim && !el.hasAttribute('data-split')) el.dataset.anim = 'rise'; }));
   const countUp = el => {
     const to = Number(el.dataset.count) || 0, ring = el.closest('.ln-ring');
@@ -128,7 +128,7 @@
     if (el.hasAttribute('data-count')) countUp(el);
     if (el === sheet) { sheetSeen = true; sheet.dataset.buildStep = String(step); }
   };
-  const revealTargets = $$('[data-anim], [data-split], [data-tilt], [data-chat], [data-count], .ln-build__sheet');
+  const revealTargets = $$('[data-anim], [data-split], [data-tilt], [data-chat], [data-count], .ln-build__sheet, .ln-foot__word');
   if (motion) {
     $$('[data-count]').forEach(el => { el.textContent = fa(0); el.closest('.ln-ring')?.style.setProperty('--v', 0); });
     const io = new IntersectionObserver(entries => {
@@ -197,14 +197,21 @@
     if (glow) addEventListener('pointermove', e => { glow.classList.add('is-on'); glow.style.transform = `translate3d(${e.clientX}px,${e.clientY}px,0)`; }, { passive: true });
   }
 
-  // Scroll loop: progress bar, header tone, template wall drift and marquee speed that follows scroll velocity.
+  // Scroll loop: header tone, size and progress line, the gold line under the section being read, template wall
+  // drift and marquee speed that follows scroll velocity.
   $$('.ln-wall__row').forEach(row => row.append(...[...row.children].map(c => c.cloneNode(true))));
-  const header = $('.public-header'), bar = $('.ln-progress'), wall = $('.ln-wall'), loops = $$('.ln-marquee__row, .ln-wall__row');
+  const header = $('.public-header'), bar = $('.ln-head__progress'), spies = $$('[data-spy]'), spyInk = $('.ln-head__ink'), wall = $('.ln-wall'), loops = $$('.ln-marquee__row, .ln-wall__row');
   let lastY = scrollY, vel = 0, ticking = false;
   const frame = () => {
     const y = scrollY, max = document.documentElement.scrollHeight - innerHeight;
     if (bar) bar.style.transform = `scaleX(${max > 0 ? Math.min(1, y / max) : 0})`;
-    if (header && hero) header.classList.toggle('is-light', y > hero.offsetHeight - 90);
+    if (header && hero) { header.classList.toggle('is-light', y > hero.offsetHeight - 90); header.classList.toggle('is-compact', y > 40); }
+    if (spyInk && innerWidth > 960) {
+      const mid = innerHeight * .35; let on = null;
+      for (const s of spies) { const sec = document.getElementById(s.dataset.spy), r = sec?.getBoundingClientRect(); if (r && r.top <= mid && r.bottom > mid) on = s; }
+      if (on) { const b = on.getBoundingClientRect(), n = spyInk.parentElement.getBoundingClientRect(); spyInk.style.width = Math.max(18, b.width - 26) + 'px'; spyInk.style.transform = 'translateX(' + (b.left - n.left + 13).toFixed(1) + 'px)'; }
+      spyInk.classList.toggle('is-on', !!on);
+    }
     if (wall && motion) { const r = wall.getBoundingClientRect(), p = (innerHeight - r.top) / (innerHeight + r.height) - .5; wall.style.setProperty('--wx', (p * 260).toFixed(1) + 'px'); wall.querySelector('.ln-wall__row--b')?.style.setProperty('--wx', (-p * 260).toFixed(1) + 'px'); }
     if (motion) {
       vel += ((y - lastY) - vel) * .25;
@@ -218,40 +225,42 @@
   addEventListener('scroll', () => { if (!ticking) { ticking = true; requestAnimationFrame(frame); } }, { passive: true });
   frame();
 
-  // Gerdoo peeks in from the left edge, follows the pointer with its eyes, blinks and comments on each section.
-  const cat = $('.ln-cat');
-  if (cat) {
-    const bubble = cat.querySelector('.ln-cat__bubble'), pupils = [...cat.querySelectorAll('.cat__pupil')], head = cat.querySelector('.cat__head');
-    let hush = 0;
-    const say = text => {
-      if (!bubble) return;
-      bubble.innerHTML = ''; const name = document.createElement('b'); name.textContent = 'گردو'; bubble.append(name, text);
-      cat.classList.add('is-talk'); clearTimeout(hush); hush = setTimeout(() => cat.classList.remove('is-talk'), 4600);
-    };
-    setTimeout(() => { cat.classList.add('is-in'); setTimeout(() => say('میو! بیا با هم رزومه‌ات را بسازیم.'), motion ? 1400 : 0); }, motion ? 2400 : 0);
-    if (motion) {
-      const blink = () => { cat.classList.add('is-blink'); setTimeout(() => cat.classList.remove('is-blink'), 140); setTimeout(blink, 2400 + Math.random() * 4200); };
-      setTimeout(blink, 3200);
-      let raf = 0, px = 0, py = 0;
-      addEventListener('pointermove', e => {
-        px = e.clientX; py = e.clientY;
-        if (!raf) raf = requestAnimationFrame(() => {
-          raf = 0; const r = cat.getBoundingClientRect(); if (!r.width) return;
-          const dx = px - (r.left + r.width * .55), dy = py - (r.top + r.height * .4), d = Math.hypot(dx, dy) || 1;
-          const k = Math.min(1, d / 400), ux = dx / d * k, uy = dy / d * k;
-          pupils.forEach(p => { p.style.transform = `translate(${(ux * 3.4).toFixed(2)}px,${(uy * 3).toFixed(2)}px)`; });
-          if (head) head.style.transform = `rotate(${(ux * 7 + uy * 3).toFixed(2)}deg)`;
-        });
-      }, { passive: true });
+  // Header: «محصول» opens on hover (after a short pause) or click; Escape, outside clicks and focus leaving close it.
+  const mega = $('[data-mega]'), trigger = mega?.querySelector('.ln-head__trigger');
+  if (mega && trigger) {
+    let timer = 0;
+    const setMega = open => { clearTimeout(timer); mega.classList.toggle('is-open', open); trigger.setAttribute('aria-expanded', String(open)); };
+    trigger.addEventListener('click', () => setMega(!mega.classList.contains('is-open')));
+    if (finePointer) {
+      mega.addEventListener('pointerenter', () => { clearTimeout(timer); timer = setTimeout(() => setMega(true), 90); });
+      mega.addEventListener('pointerleave', () => { clearTimeout(timer); timer = setTimeout(() => setMega(false), 240); });
     }
-    const lines = { features: 'این‌ها همه برای توست؛ من هم یکی از امکاناتم!', how: 'چهار قدم کوتاه؛ من هر قدم کنارت هستم.', templates: 'من «یخچال» را دوست دارم، تو کدام؟', pricing: 'روزی ۵ پیام با من رایگان است.', faq: 'سؤالی ماند؟ بعد از ثبت‌نام از خودم بپرس.' };
-    if ('IntersectionObserver' in window) {
+    mega.addEventListener('focusout', e => { if (!mega.contains(e.relatedTarget)) setMega(false); });
+    mega.addEventListener('click', e => { if (e.target.closest('a')) setMega(false); });
+    document.addEventListener('pointerdown', e => { if (!mega.contains(e.target)) setMega(false); });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape' && mega.classList.contains('is-open')) { setMega(false); trigger.focus(); } });
+  }
+
+  // Fandogh, desktop only: loaded once the page has settled, she peeks from the bottom-left corner, greets the
+  // visitor and says one thing about each section. Phones never load her.
+  const fdHost = $('[data-fandogh]');
+  if (fdHost && matchMedia('(min-width: 1024px)').matches) {
+    const css = href => new Promise(ok => { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = href; l.onload = l.onerror = ok; document.head.append(l); });
+    const js = src => new Promise((ok, fail) => { const s = document.createElement('script'); s.src = src; s.onload = ok; s.onerror = fail; document.head.append(s); });
+    const start = () => css('/public-assets/fandogh.css').then(() => js('/public-assets/fandogh.js')).then(() => {
+      if (!window.Fandogh) return;
+      const go = () => { location.href = $('[data-start-link]')?.getAttribute('href') || '/register/'; };
+      const invite = { actions: [{ label: 'شروع رایگان', primary: true }], onAction: go };
+      const fd = window.Fandogh.mount(fdHost, { base: '/brand/fandogh/', label: 'فندق؛ بیا رزومه‌ات را بسازیم', onClick: () => { fd.play('purr'); fd.say('میو! بیا با هم رزومه‌ات را بسازیم؛ شروعش رایگان است.', invite); } });
+      setTimeout(() => fd.say('میو! من فندقم، دستیار رزومه‌ات در رزومیت 🐾', invite), 3400);
+      const lines = { features: 'این‌ها همه برای توست؛ من هم یکی از امکاناتم!', how: 'چهار قدم کوتاه؛ من هر قدم کنارت هستم.', templates: 'من «یخچال» را دوست دارم، تو کدام؟', pricing: 'روزی ۵ پیام با من رایگان است.', faq: 'سؤالی ماند؟ بعد از ثبت‌نام از خودم بپرس.' };
       const seen = new IntersectionObserver(entries => entries.forEach(entry => {
-        if (!entry.isIntersecting || !cat.classList.contains('is-in')) return;
-        say(lines[entry.target.id]); seen.unobserve(entry.target);
+        if (!entry.isIntersecting || fd.state.speaking) return;
+        fd.say(lines[entry.target.id]); seen.unobserve(entry.target);
       }), { threshold: .35 });
       Object.keys(lines).forEach(id => { const s = document.getElementById(id); if (s) seen.observe(s); });
-    }
+    }).catch(() => {});
+    if (document.readyState === 'complete') setTimeout(start, 900); else addEventListener('load', () => setTimeout(start, 900), { once: true });
   }
 
   // Wide screens: load GSAP for the pinned story and scroll scrubs. Phones keep the lighter CSS motion.

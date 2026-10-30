@@ -35,3 +35,10 @@ assert(B.reply('غلط املایی دارم؟',slip).actions.some(a=>a.kind==='
 for(const [q,role] of [['من فول استک دولوپر هستم','توسعه‌دهندهٔ فول‌استک'],['میخوام طراح رابط کاربری بشم','طراح رابط و تجربهٔ کاربری'],['من یه دیزاینر هستم','طراح رابط و تجربهٔ کاربری'],['من حسابدار هستم','حسابدار']]){const r=B.reply(q,slip);assert.equal(r.intent,'statement',q);assert(r.actions.some(a=>a.kind==='goal'&&a.value===role),q);}
 assert.equal(B.understand('میخوام امتیاز رزومه رو بدونم'),null,'questions are not statements');
 console.log('PASS assistant brain: typo-tolerant Persian intents, five-dimension score with reasons, role detection, ordered skill gaps, fact-only drafts and personalised replies with actions.');
+// Small talk: greetings, how-are-you, Tehran date and time, and real questions still win over a greeting.
+{const at={now:'2026-10-30T12:00:00Z'},p={profile:{name:'نیکا راد'}};
+for(const [q,topic] of [['سلام','greet'],['سلام فندق جان!','greet'],['خوبی؟','howareyou'],['حالت چطوره','howareyou'],['خسته‌ام','moodbad'],['امروز چندمه؟','date'],['ساعت چنده؟','time'],['اسمت چیه','name'],['جوک بگو','joke'],['ممنون','thanks'],['خداحافظ','bye'],['❤️','emoji']])assert.equal(B.chat(q,p,at)?.topic,topic,q);
+assert(B.chat('امروز چندمه؟',p,at).text.includes('جمعه ۸ آبان ۱۴۰۵'));assert(B.chat('ساعت چنده؟',p,at).text.includes('۱۵:۳۰'));assert(B.chat('تاریخ قمری',p,at).text.includes('قمری'));
+for(const q of ['سلام، امتیاز رزومه‌ام چند است؟','رزومه‌ام چطوره؟','بلبلبل','من فول استک دولوپر هستم'])assert.equal(B.chat(q,p,at),null,q);
+assert.equal(B.reply('سلام، امتیاز رزومه‌ام چند است؟',p).intent,'score');assert.equal(B.reply('ساعت چنده؟',p,at).topic,'time');
+console.log('PASS small talk: greetings, mood, Tehran date and time (Persian, Gregorian, lunar), personality and greeting-plus-question.');}
