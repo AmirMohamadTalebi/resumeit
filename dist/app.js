@@ -1,77 +1,79 @@
-const enamadSeal=document.querySelector('[data-enamad-seal]');
-if(enamadSeal){const image=enamadSeal.querySelector('img'),fallback=document.querySelector('.footer-enamad-fallback');const update=()=>{const loaded=image.complete&&image.naturalWidth>0;enamadSeal.hidden=!loaded;fallback.hidden=loaded;};image.addEventListener('load',update);image.addEventListener('error',update);update();}
-const galleryThemes={studio:['یخچال','شروع روشن و منظم','niloofar','glacier'],terminal:['ترمینال','برای آدم‌هایی که با کد می‌سازند','niloofar','terminal'],journal:['دفترچه','برای اولین قدم‌های بزرگ','niloofar','journal']};
-function selectGallery(theme){
-  const selected=galleryThemes[theme];if(!selected)return;
-  const frame=document.querySelector('#gallery-preview');const url='/resume'+selected[3]+'/';
-  document.querySelectorAll('[data-gallery]').forEach(button=>{const active=button.dataset.gallery===theme;button.classList.toggle('active',active);button.setAttribute('aria-pressed',String(active))});
-  document.querySelector('.template-live').dataset.theme=theme;
-  document.querySelector('#gallery-title').textContent=selected[0];document.querySelector('#gallery-description').textContent=selected[1];document.querySelector('#gallery-address').textContent=selected[2]+'.ResumeIt.ir';
-  document.querySelector('#gallery-open').href=url;frame.alt='نمای قالب '+selected[0];
-  frame.src='/brand/template-thumbs/resume-'+selected[3]+'.jpg';
-}
-document.querySelectorAll('[data-gallery]').forEach(button=>button.addEventListener('click',()=>selectGallery(button.dataset.gallery)));
-document.querySelectorAll('[data-filter]').forEach(button=>button.addEventListener('click',()=>{document.querySelectorAll('[data-filter]').forEach(b=>{b.classList.toggle('active',b===button);b.setAttribute('aria-pressed',String(b===button))});document.querySelectorAll('[data-category]').forEach(card=>{card.hidden=button.dataset.filter!=='all'&&card.dataset.category!==button.dataset.filter;document.querySelector('[data-gallery="'+card.dataset.themeName+'"]').hidden=card.hidden});const selected=document.querySelector('.template-card:not([hidden])');if(selected)selectGallery(selected.dataset.themeName)}));
-const steps=[['سلام، قهرمانِ قصه!','هر مسیر بزرگ، از معرفی خودت شروع می‌شود','من نیکام؛ دانشجو و عاشق ساختن چیزهای تازه','✦ شروع یک فصل تازه'],['چیزهایی که می‌توانی بسازی','تجربه فقط شغل نیست؛ پروژه‌های تو هم حرف دارند','مهارت‌ها: طراحی، برنامه‌نویسی، عکاسی','✦ توانایی‌هایت را پیدا کردی'],['این رنگ، شبیه توست','ظاهر صفحه‌ات را با حال و هوای خودت هماهنگ کن','قالب یخچال · فونت وزیرمتن · آبی یخی','✦ سبک خودت را ساختی'],['یک آدرس به نام تو','قصه‌ات آماده است تا جای خودش را در وب پیدا کند','nika.ResumeIt.ir + /links','✦ آمادهٔ دیده شدن']];let currentStep=0;
-function showStep(index){currentStep=index;document.querySelector('.game-preview').dataset.step=String(index);document.querySelectorAll('button[data-step]').forEach(b=>{const active=Number(b.dataset.step)===index;b.classList.toggle('active',active);b.setAttribute('aria-pressed',String(active))});document.querySelector('#level').textContent=`مرحلهٔ ${['۱','۲','۳','۴'][index]} از ۴`;document.querySelector('.game-progress i').style.width=`${(index+1)*25}%`;['step-title','step-copy','step-example','step-reward'].forEach((id,i)=>document.getElementById(id).textContent=steps[index][i]);document.querySelector('.guide-start').hidden=index!==3;document.querySelector('#next-step').textContent=index===3?'از اول ↻':'مرحلهٔ بعد ←'}
-document.querySelectorAll('button[data-step]').forEach(b=>b.addEventListener('click',()=>showStep(Number(b.dataset.step))));document.querySelector('#next-step')?.addEventListener('click',()=>showStep((currentStep+1)%4));
+/* Landing page behaviour: template showcase and filters, the four-step preview, FAQ accordion, gentle reveals.
+   Every part checks its own elements so the page works if a section is removed. No animation library. */
+(() => {
+  'use strict';
+  const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
+  const calm = matchMedia('(prefers-reduced-motion: reduce)');
 
-const faqItems=[...document.querySelectorAll('.faq-list details')];
-const faqAnimations=new Map(),faqTargets=new Map();
-function setFaq(detail,opening){
- const answer=detail.querySelector('.faq-answer'),from=detail.open?answer.getBoundingClientRect().height:0;
- faqAnimations.get(detail)?.cancel();faqTargets.set(detail,opening);
- if(matchMedia('(prefers-reduced-motion: reduce)').matches){detail.open=opening;return;}
- detail.open=true;
- const animation=answer.animate([{height:from+'px',opacity:from?1:0},{height:(opening?answer.scrollHeight:0)+'px',opacity:opening?1:0}],{duration:480,easing:'cubic-bezier(.22,1,.36,1)',fill:'both'});faqAnimations.set(detail,animation);
- animation.onfinish=()=>{detail.open=opening;animation.cancel();faqAnimations.delete(detail);};
-}
-faqItems.forEach(detail=>detail.querySelector('summary').addEventListener('click',event=>{event.preventDefault();const opening=!(faqTargets.get(detail)??detail.open);if(opening)faqItems.forEach(other=>{if(other!==detail&&(faqTargets.get(other)??other.open))setFaq(other,false);});setFaq(detail,opening);}));
+  // e-Namad seal: show the official image when it loads, a text link otherwise.
+  const seal = $('[data-enamad-seal]');
+  if (seal) {
+    const image = seal.querySelector('img'), fallback = $('.footer-enamad-fallback');
+    const update = () => { const loaded = image.complete && image.naturalWidth > 0; seal.hidden = !loaded; if (fallback) fallback.hidden = loaded; };
+    image.addEventListener('load', update); image.addEventListener('error', update); update();
+  }
 
-function desktopMotion(){
-  if(!window.gsap||!window.ScrollTrigger)return;
-  gsap.registerPlugin(ScrollTrigger);
-  const motion=gsap.matchMedia();
-  motion.add('(min-width:961px) and (pointer:fine) and (prefers-reduced-motion: no-preference)',()=>{
-    gsap.to('.orb-a',{x:90,y:50,duration:12,repeat:-1,yoyo:true,ease:'sine.inOut'});
-    gsap.to('.orb-b',{x:-70,y:-90,duration:16,repeat:-1,yoyo:true,ease:'sine.inOut'});
+  // Template showcase: the big preview follows the selected thumbnail; filters hide whole cards.
+  const THEMES = {
+    glacier: ['یخچال', 'دو ستونی، روشن و منظم؛ انتخاب امن برای شروع'], vista: ['ویستا', 'تک‌صفحه‌ای با مهارت‌ها و نمونه‌کارهای برجسته'],
+    satiar: ['ساتیار', 'تصویری و تک‌صفحه‌ای برای معرفی پررنگ'], terminal: ['ترمینال', 'تیره با حال‌وهوای خط فرمان برای برنامه‌نویس‌ها'],
+    mono: ['تک‌رنگ', 'مینیمال با تأکید روی پروژه‌ها و مهارت‌ها'], journal: ['دفترچه', 'حال‌وهوای نوشتاری برای بلاگرها و دانشجوها'],
+    campus: ['پردیس', 'تک‌ستونی و گرم، مناسب دانشجو و دانش‌آموز'], spotlight: ['نورافکن', 'جلوهٔ تصویری بزرگ برای تولیدکننده‌های محتوا'],
+  };
+  function selectGallery(theme) {
+    const t = THEMES[theme], frame = $('#gallery-preview'); if (!t || !frame) return;
+    $$('[data-gallery]').forEach(b => { const on = b.dataset.gallery === theme; b.classList.toggle('active', on); b.setAttribute('aria-pressed', String(on)); });
+    const live = $('.template-live'); if (live) live.dataset.theme = theme;
+    $('#gallery-title').textContent = t[0]; $('#gallery-description').textContent = t[1]; $('#gallery-address').textContent = 'niloofar.ResumeIt.ir';
+    $('#gallery-open').href = '/resume' + theme + '/'; frame.alt = 'نمای قالب ' + t[0];
+    if (!calm.matches) frame.animate([{ opacity: .35, transform: 'scale(.985)' }, { opacity: 1, transform: 'none' }], { duration: 320, easing: 'cubic-bezier(.2,.8,.2,1)' });
+    frame.src = '/brand/template-thumbs/resume-' + theme + '.jpg';
+  }
+  $$('[data-gallery]').forEach(b => b.addEventListener('click', () => selectGallery(b.dataset.gallery)));
+  $$('[data-filter]').forEach(button => button.addEventListener('click', () => {
+    $$('[data-filter]').forEach(b => { b.classList.toggle('active', b === button); b.setAttribute('aria-pressed', String(b === button)); });
+    $$('[data-category]').forEach(card => { card.hidden = button.dataset.filter !== 'all' && !card.dataset.category.split(' ').includes(button.dataset.filter); });
+    const current = $('[data-gallery][aria-pressed="true"]');
+    if (!current || current.closest('[hidden]')) { const first = $('.template-card:not([hidden]) [data-gallery]'); if (first) selectGallery(first.dataset.gallery); }
+  }));
 
-    gsap.utils.toArray('.reveal').forEach(el=>gsap.from(el,{y:55,opacity:0,rotationX:4,duration:1,ease:'power3.out',scrollTrigger:{trigger:el,start:'top 92%',once:true}}));
-    gsap.to('.scroll-progress',{scaleX:1,ease:'none',scrollTrigger:{trigger:document.body,start:'top top',end:'bottom bottom',scrub:true}});
-    gsap.from('.intro h2',{y:50,opacity:.2,scrollTrigger:{trigger:'.intro',start:'top 85%',end:'center 60%',scrub:1}});
-    gsap.to('.phone',{rotation:8,rotationY:15,y:-45,scrollTrigger:{trigger:'.dual-section',start:'top 85%',end:'bottom 15%',scrub:1}});
-    gsap.to('.link-orbit',{rotation:100,scale:1.2,scrollTrigger:{trigger:'.dual-section',start:'top bottom',end:'bottom top',scrub:1}});
-    gsap.to('.closing-star',{rotation:180,scale:1.4,scrollTrigger:{trigger:'.closing',start:'top bottom',end:'bottom top',scrub:1}});
-    gsap.from('.closing h2',{y:70,rotationX:18,opacity:.2,scrollTrigger:{trigger:'.closing',start:'top 90%',end:'center 65%',scrub:1}});
-    const cleanups=[];
-    gsap.from('.question-orbit',{rotation:-25,scale:.8,opacity:0,duration:1.2,ease:'back.out(1.4)',scrollTrigger:{trigger:'.faq',start:'top 85%',once:true}});
-    gsap.to('.question-orbit>span',{y:-12,rotation:8,duration:3.5,repeat:-1,yoyo:true,ease:'sine.inOut'});
-    gsap.to('.question-orbit i',{rotation:35,duration:8,repeat:-1,yoyo:true,ease:'sine.inOut'});
-    gsap.from('.faq-list details',{y:25,opacity:0,stagger:.1,duration:.7,scrollTrigger:{trigger:'.faq-list',start:'top 85%',once:true}});
-    const indicator=document.querySelector('.faq-follow');
-    document.querySelectorAll('.faq-list summary').forEach(summary=>{const follow=()=>{const row=summary.parentElement;gsap.to(indicator,{y:row.offsetTop,height:summary.offsetHeight,opacity:1,duration:.4,ease:'power3.out',overwrite:true})};summary.addEventListener('pointerenter',follow);summary.addEventListener('focus',follow);cleanups.push(()=>{summary.removeEventListener('pointerenter',follow);summary.removeEventListener('focus',follow)})});
-    const hideFollow=()=>gsap.to(indicator,{opacity:0,duration:.3});document.querySelector('.faq-list').addEventListener('pointerleave',hideFollow);cleanups.push(()=>document.querySelector('.faq-list').removeEventListener('pointerleave',hideFollow));
-    gsap.from('.address-ticket',{rotationY:-35,rotation:-20,y:50,opacity:0,duration:1.2,ease:'power3.out',scrollTrigger:{trigger:'.closing',start:'top 85%',once:true}});
-    gsap.to('.address-ticket',{y:-20,rotation:-3,duration:4,repeat:-1,yoyo:true,ease:'sine.inOut',delay:1.2});
-    gsap.to('.ticket-orbit',{rotation:90,scrollTrigger:{trigger:'.closing',start:'top bottom',end:'bottom top',scrub:1}});
-    gsap.from('.footer-identity,.footer-note,.footer-top',{y:25,opacity:0,duration:.7,stagger:.15,scrollTrigger:{trigger:'.footer-section',start:'top 95%',once:true}});
-    function animatePanel(){gsap.fromTo('.game-preview',{rotationY:-8,scale:.97,opacity:.4},{rotationY:0,scale:1,opacity:1,duration:.45,ease:'power3.out',overwrite:true})}
-    document.querySelectorAll('button[data-step],#next-step').forEach(b=>{b.addEventListener('click',animatePanel);cleanups.push(()=>b.removeEventListener('click',animatePanel))});
-    document.querySelectorAll('[data-filter]').forEach(b=>{const enter=()=>gsap.fromTo('.template-card:not([hidden])',{y:30,scale:.96,opacity:0},{y:0,scale:1,opacity:1,duration:.5,stagger:.08,ease:'power3.out',overwrite:true});b.addEventListener('click',enter);cleanups.push(()=>b.removeEventListener('click',enter))});
-    const pricing=()=>gsap.fromTo('#plan-price',{y:8,opacity:.3},{y:0,opacity:1,duration:.3,overwrite:true});document.querySelectorAll('[data-months]').forEach(b=>{b.addEventListener('click',pricing);cleanups.push(()=>b.removeEventListener('click',pricing))});
-    return()=>cleanups.forEach(fn=>fn());
-  });
-  motion.add('(hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference)',()=>{
-    const remove=[];document.querySelectorAll('.template-card').forEach(card=>{
-      const x=gsap.quickTo(card,'rotationY',{duration:.4}),y=gsap.quickTo(card,'rotationX',{duration:.4});
-      const move=e=>{const r=card.getBoundingClientRect();x((e.clientX-r.left-r.width/2)/r.width*12);y(-(e.clientY-r.top-r.height/2)/r.height*12)};
-      const leave=()=>{x(0);y(0)};card.addEventListener('pointermove',move);card.addEventListener('pointerleave',leave);remove.push(()=>{card.removeEventListener('pointermove',move);card.removeEventListener('pointerleave',leave)});
-    });return()=>remove.forEach(fn=>fn());
-  });
-}
+  // Four-step preview.
+  const STEPS = [['سلام، قهرمانِ قصه!', 'هر مسیر بزرگ، از معرفی خودت شروع می‌شود', 'من نیکام؛ دانشجو و عاشق ساختن چیزهای تازه', '✦ شروع یک فصل تازه'], ['چیزهایی که می‌توانی بسازی', 'تجربه فقط شغل نیست؛ پروژه‌های تو هم حرف دارند', 'مهارت‌ها: طراحی، برنامه‌نویسی، عکاسی', '✦ توانایی‌هایت را پیدا کردی'], ['این رنگ، شبیه توست', 'ظاهر صفحه‌ات را با حال و هوای خودت هماهنگ کن', 'قالب یخچال · فونت وزیرمتن · آبی یخی', '✦ سبک خودت را ساختی'], ['یک آدرس به نام تو', 'قصه‌ات آماده است تا جای خودش را در وب پیدا کند', 'nika.ResumeIt.ir + /links', '✦ آمادهٔ دیده شدن']];
+  const preview = $('.game-preview'); let step = 0;
+  function showStep(index) {
+    if (!preview) return; step = index; preview.dataset.step = String(index);
+    $$('button[data-step]').forEach(b => { const on = Number(b.dataset.step) === index; b.classList.toggle('active', on); b.setAttribute('aria-pressed', String(on)); });
+    $('#level').textContent = 'مرحلهٔ ' + '۱۲۳۴'[index] + ' از ۴';
+    const bar = $('.game-progress i'); if (bar) bar.style.width = (index + 1) * 25 + '%';
+    ['step-title', 'step-copy', 'step-example', 'step-reward'].forEach((id, i) => { const el = document.getElementById(id); if (el) el.textContent = STEPS[index][i]; });
+    const start = $('.guide-start'); if (start) start.hidden = index !== 3;
+    $('#next-step').textContent = index === 3 ? 'از اول ↻' : 'مرحلهٔ بعد ←';
+    if (!calm.matches) preview.animate([{ opacity: .55, transform: 'translateY(6px)' }, { opacity: 1, transform: 'none' }], { duration: 300, easing: 'cubic-bezier(.2,.8,.2,1)' });
+  }
+  $$('button[data-step]').forEach(b => b.addEventListener('click', () => showStep(Number(b.dataset.step))));
+  $('#next-step')?.addEventListener('click', () => showStep((step + 1) % 4));
+  if (preview) showStep(0);
 
-const pricingMotion=document.querySelector('.pricing-motion');if(pricingMotion){if('IntersectionObserver' in window)new IntersectionObserver(entries=>entries.forEach(entry=>entry.target.classList.toggle('in-view',entry.isIntersecting)),{rootMargin:'100px'}).observe(pricingMotion);else pricingMotion.classList.add('in-view');}
-if(matchMedia('(min-width:961px) and (pointer:fine) and (prefers-reduced-motion:no-preference)').matches){
- const script=url=>new Promise((resolve,reject)=>{const node=document.createElement('script');node.src=url+'?v='+encodeURIComponent(document.documentElement.dataset.assetVersion||'');node.onload=resolve;node.onerror=reject;document.head.append(node);});
- script('/assets/gsap.min.js').then(()=>script('/assets/ScrollTrigger.min.js')).then(desktopMotion).catch(()=>{});
-}
+  // FAQ: one answer open at a time, with a short height animation.
+  const items = $$('.faq-list details');
+  function setFaq(detail, opening) {
+    const answer = detail.querySelector('.faq-answer');
+    if (calm.matches || !answer) { detail.open = opening; return; }
+    const from = detail.open ? answer.getBoundingClientRect().height : 0; detail.open = true;
+    const run = answer.animate([{ height: from + 'px', opacity: from ? 1 : 0 }, { height: (opening ? answer.scrollHeight : 0) + 'px', opacity: opening ? 1 : 0 }], { duration: 360, easing: 'cubic-bezier(.2,.8,.2,1)' });
+    run.onfinish = () => { detail.open = opening; };
+  }
+  items.forEach(detail => detail.querySelector('summary').addEventListener('click', e => {
+    e.preventDefault(); const opening = !detail.open;
+    if (opening) items.forEach(other => { if (other !== detail && other.open) setFaq(other, false); });
+    setFaq(detail, opening);
+  }));
+
+  // Sections fade in once as they enter the viewport.
+  const reveals = $$('.ln-reveal');
+  if (!calm.matches && 'IntersectionObserver' in window) {
+    document.documentElement.classList.add('ln-motion');
+    const io = new IntersectionObserver(entries => entries.forEach(entry => { if (entry.isIntersecting) { entry.target.classList.add('is-in'); io.unobserve(entry.target); } }), { rootMargin: '0px 0px -8% 0px' });
+    reveals.forEach(el => io.observe(el));
+  }
+})();
