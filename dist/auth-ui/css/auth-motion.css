@@ -19,3 +19,12 @@
 @keyframes auth-bob{to{translate:0 -1.2cqw}}
 @keyframes auth-glow{0%{opacity:0;scale:.6}40%{opacity:1}100%{opacity:0;scale:1.2}}
 @media(prefers-reduced-motion:reduce){.auth-piece.card{transition:none;animation:none}.auth-mark-home{transform:none}.auth-assembly[data-progress="3"]::after{display:none}}
+/* Fandogh, full body, leans on the R; he cheers once the form is complete. */
+.art{position:relative}
+.art__cat{position:absolute;left:-2%;bottom:6%;z-index:2;width:clamp(120px,10vw,170px);pointer-events:none;filter:drop-shadow(0 20px 28px rgba(0,0,0,.6));animation:auth-cat-in 1s .9s cubic-bezier(.3,1.4,.5,1) both,auth-cat-bob 5s 2s ease-in-out infinite alternate}
+.art:has(.auth-assembly[data-progress="3"]) .art__cat{animation:auth-cat-cheer .8s cubic-bezier(.3,1.4,.5,1),auth-cat-bob 5s .8s ease-in-out infinite alternate}
+@keyframes auth-cat-in{from{opacity:0;translate:-40% 30%;rotate:-14deg}}
+@keyframes auth-cat-bob{to{translate:0 -8px}}
+@keyframes auth-cat-cheer{40%{translate:0 -24px;rotate:-6deg}}
+@media(max-width:1180px){.art__cat{display:none}}
+@media(prefers-reduced-motion:reduce){.art__cat{animation:none}}

@@ -194,3 +194,34 @@
 @keyframes pet-strike{from{transform:scaleX(0)}}
 @keyframes pet-mark{to{background-size:100% 100%}}
 @media(prefers-reduced-motion:reduce){.pet-edits,.pet-edits li,.pet-edits::before,.pet-edits del::after,.pet__mode button svg,.pet-edits__head i{animation:none}.pet-edits ins{animation:none;background-size:100% 100%}}
+
+/* ---------- Settings tab: the assistant's name, tone, length, edit mode and the person's own model key ---------- */
+.pet__settings{overflow:auto;padding:4px 2px 10px}
+.pet-set{display:grid;gap:12px}
+.pet-set__wait{padding:20px;text-align:center;color:#5a6f86;font-size:13px}
+.pet-set__card{display:grid;gap:12px;padding:14px;border-radius:18px;background:#fff;border:1px solid #d9e4f1;box-shadow:0 14px 30px -24px rgba(31,79,134,.55);animation:pet-edits-in .5s calc(var(--i,0) * .08s) cubic-bezier(.3,1.4,.5,1) both}
+.pet-set__card h3{display:flex;align-items:center;gap:8px;margin:0;font-size:14px;color:#1f3550}
+.pet-set__card h3 svg{width:18px;height:18px;color:#2f6fb3}
+.pet-set__card h3 em{font-style:normal;padding:1px 9px;border-radius:999px;background:#e2f5ec;color:#2f7a55;font-size:11px;font-weight:800}
+.pet-set__field{display:grid;gap:6px;font-size:12.5px;font-weight:700;color:#35506e}
+.pet-set__field small{font-weight:600;color:#6a7f94}
+.pet-set__field .input{min-height:40px;padding:6px 12px;border-radius:12px;border:1px solid #d9e4f1;background:#f8fbfe;font:inherit;font-size:13px;color:#1f3550;transition:border-color .25s,box-shadow .3s,background .25s}
+.pet-set__field .input:focus{outline:none;border-color:#2f6fb3;background:#fff;box-shadow:0 0 0 3px rgba(47,111,179,.18)}
+.pet-set__seg{display:flex;flex-wrap:wrap;gap:6px}
+.pet-set__seg label{position:relative;cursor:pointer}
+.pet-set__seg input{position:absolute;opacity:0;pointer-events:none}
+.pet-set__seg span{display:inline-flex;align-items:center;min-height:32px;padding:0 12px;border-radius:999px;border:1px solid #d9e4f1;background:#fff;font-size:12px;font-weight:800;color:#35506e;transition:background .25s,color .25s,border-color .25s,transform .4s cubic-bezier(.3,1.5,.5,1)}
+.pet-set__seg input:checked+span{background:#2f6fb3;border-color:#2f6fb3;color:#fff;animation:pet-pop .4s cubic-bezier(.3,1.5,.5,1)}
+.pet-set__seg input:focus-visible+span{outline:3px solid #2f6fb3;outline-offset:2px}
+.pet-set__seg label:hover span{transform:translateY(-1px)}
+.pet-set__note{margin:0;font-size:12px;line-height:1.9;color:#5a6f86}
+.pet-set__switch{display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:800;color:#1f3550;cursor:pointer}
+.pet-set__switch input{width:16px;height:16px;accent-color:#2f6fb3}
+.pet-set__own{display:grid;gap:10px;animation:pet-edits-in .45s cubic-bezier(.3,1.4,.5,1)}
+.pet-set__row,.pet-set__save{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.pet-set__row .pet__act,.pet-set__save .pet__act{display:inline-flex;align-items:center;gap:5px}
+.pet-set__row svg,.pet-set__save svg{width:14px;height:14px}
+.pet-set__status{margin:0;font-size:12px;color:#5a6f86;overflow-wrap:anywhere}
+.pet-set__status[data-kind=ok]{color:#2f7a55}.pet-set__status[data-kind=error]{color:#b0443a}
+.pet__tabs [data-pet-tab]{min-width:0}
+@media(prefers-reduced-motion:reduce){.pet-set__card,.pet-set__own,.pet-set__seg input:checked+span{animation:none}}

@@ -68,6 +68,9 @@ h1{margin:0;font-size:clamp(26px,4vw,40px);font-weight:900;line-height:1.5;color
 .btn--gold:hover svg{animation:hop .6s var(--spring)}
 .btn--ghost{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.16);color:#e6eef2}
 .btn--ghost:hover{background:rgba(255,255,255,.14);border-color:rgba(240,189,82,.55);transform:translateY(-3px)}
+.cat{position:fixed;left:3vw;bottom:0;z-index:1;width:clamp(150px,14vw,230px);pointer-events:none;filter:drop-shadow(0 22px 30px rgba(0,0,0,.6));animation:cat-in 1.1s .5s var(--spring) both,float 5s 1.6s ease-in-out infinite alternate}
+@keyframes cat-in{from{opacity:0;translate:-40% 30%;rotate:-12deg}}
+@media(max-width:1023px){.cat{display:none}}
 .foot{position:relative;z-index:1;padding:0 16px 22px;text-align:center;font-size:13px;color:#7f97a5}
 .foot a{color:#c9d7df}.foot a:hover{color:var(--gold)}
 @media(max-width:640px){.top{width:calc(100% - 24px);height:58px;margin-top:10px;padding-inline:14px 8px}.logo{width:110px;height:23px}.actions{display:grid;width:100%}.btn{width:100%}.addr{font-size:13px}}
@@ -100,6 +103,7 @@ h1{margin:0;font-size:clamp(26px,4vw,40px);font-weight:900;line-height:1.5;color
 <div class="actions"><a class="btn btn--gold" href="{{home}}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>رفتن به صفحهٔ اصلی رزومیت</a>{{second}}</div>
 </section>
 </main>
+<img class="cat" src="/brand/fandogh/full.webp" alt="" width="518" height="900" aria-hidden="true">
 <footer class="foot">© ResumeIt · <a href="{{home}}contact/">ارتباط با پشتیبانی</a></footer>
 </body>
 </html>

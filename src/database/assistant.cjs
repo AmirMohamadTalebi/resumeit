@@ -3,10 +3,11 @@
 
 // Owner settings live in one row; provider keys sit sealed in their own column. AI usage is counted per day and
 // provider so the panel can show calls, failures and tokens without storing any conversation.
-const settings=require('../owner/assistant-settings.cjs'),{requireOwner}=require('../admin/access.cjs'),{fail}=require('../dashboard/model.cjs'),{randomUUID,createHash}=require('node:crypto');
+const userSettings=require('../dashboard/assistant-user.cjs'),settings=require('../owner/assistant-settings.cjs'),{requireOwner}=require('../admin/access.cjs'),{fail}=require('../dashboard/model.cjs'),{randomUUID,createHash}=require('node:crypto');
 async function initialize(execute){
   await execute('CREATE TABLE IF NOT EXISTS assistant_usage(user_id CHAR(36) NOT NULL,day INT NOT NULL,used INT NOT NULL DEFAULT 0,PRIMARY KEY(user_id,day),FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE) ENGINE=InnoDB');
   await execute('CREATE TABLE IF NOT EXISTS assistant_settings(id INT PRIMARY KEY,settings JSON NOT NULL,secrets TEXT NULL) ENGINE=InnoDB');
+  await execute('CREATE TABLE IF NOT EXISTS assistant_user_settings(user_id CHAR(36) PRIMARY KEY,settings JSON NOT NULL,secret TEXT NULL,FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE) ENGINE=InnoDB');
   await execute('CREATE TABLE IF NOT EXISTS assistant_ai_usage(day INT NOT NULL,provider VARCHAR(24) NOT NULL,calls INT NOT NULL DEFAULT 0,failures INT NOT NULL DEFAULT 0,input_tokens BIGINT NOT NULL DEFAULT 0,output_tokens BIGINT NOT NULL DEFAULT 0,PRIMARY KEY(day,provider)) ENGINE=InnoDB');
 }
 const parse=x=>typeof x==='string'?JSON.parse(x):x;
@@ -60,6 +61,22 @@ module.exports=({execute,transaction})=>({
       if(row)await con.execute('UPDATE assistant_settings SET settings=?,secrets=? WHERE id=1',[JSON.stringify(value),sealed]);else await con.execute('INSERT INTO assistant_settings(id,settings,secrets) VALUES(1,?,?)',[JSON.stringify(value),sealed]);
       await con.execute('INSERT INTO admin_audit(id,actor_id,target_id,action,reason,details,request_id,created_at) VALUES(?,?,NULL,?,?,?,?,?)',[randomUUID(),actor,'owner-assistant',input.reason.trim(),JSON.stringify({previous:row?parse(row.settings):null,settings:value,keys:Object.fromEntries(Object.entries(changes).map(([id,key])=>[id,key===null?'removed':'set'])),fingerprint}),input.requestId,Date.now()]);
       return {ok:true};
+    });
+  },
+  // A person's own Fandogh settings and their opened key (server-side only).
+  async assistantUserSettings(userId){
+    const [row]=await execute('SELECT settings,secret FROM assistant_user_settings WHERE user_id=?',[userId]);
+    return {settings:userSettings.merge(row?parse(row.settings):null),key:row?userSettings.open(row.secret):''};
+  },
+  // Saves validated settings; key undefined keeps the stored key, null removes it, a string replaces it.
+  async saveAssistantUserSettings(userId,value,key){
+    return transaction(async con=>{
+      const [[row]]=await con.execute('SELECT secret FROM assistant_user_settings WHERE user_id=? FOR UPDATE',[userId]);
+      const current=row?userSettings.open(row.secret):'',next=key===undefined?current:key===null?'':key;
+      if(value.own.enabled&&!next)fail('برای استفاده از هوش مصنوعی خودت، اول کلیدش را وارد کن');
+      if(row)await con.execute('UPDATE assistant_user_settings SET settings=?,secret=? WHERE user_id=?',[JSON.stringify(value),userSettings.seal(next),userId]);
+      else await con.execute('INSERT INTO assistant_user_settings(user_id,settings,secret) VALUES(?,?,?)',[userId,JSON.stringify(value),userSettings.seal(next)]);
+      return {settings:value,key:next};
     });
   },
   async recordAssistantAI(provider,ok,input=0,output=0,now=Date.now()){

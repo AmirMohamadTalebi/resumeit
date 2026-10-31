@@ -348,6 +348,13 @@
         fd.say(lines[entry.target.id]); seen.unobserve(entry.target);
       }), { threshold: .35 });
       Object.keys(lines).forEach(id => { const s = document.getElementById(id); if (s) seen.observe(s); });
+      // Where the full-body Fandogh stands on the page, the small one ducks behind the wall with only its ears showing.
+      let ducked = false;
+      const twin = new IntersectionObserver(entries => entries.forEach(entry => {
+        if (entry.isIntersecting && !fd.state.tucked) { ducked = true; fd.tuck(true); }
+        else if (!entry.isIntersecting && ducked) { ducked = false; fd.tuck(false); }
+      }), { threshold: .15 });
+      document.querySelectorAll('.sc-cat').forEach(c => twin.observe(c));
     }).catch(() => {});
     if (document.readyState === 'complete') setTimeout(start, 900); else addEventListener('load', () => setTimeout(start, 900), { once: true });
   }

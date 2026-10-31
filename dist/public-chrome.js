@@ -96,3 +96,13 @@
     image.addEventListener('load', update); image.addEventListener('error', update); update();
   }
 })();
+
+// Scroll cinema chapters: where the browser has no scroll timelines, one throttled listener writes --sc-p.
+(() => {
+  const chapters = [...document.querySelectorAll('.sc-ch')];
+  if (!chapters.length || matchMedia('(prefers-reduced-motion: reduce)').matches || CSS.supports('animation-timeline: view()')) return;
+  let queued = false;
+  const frame = () => { queued = false; for (const c of chapters) { const r = c.getBoundingClientRect(), p = Math.min(1, Math.max(0, -r.top / Math.max(1, r.height - innerHeight))); c.firstElementChild.style.setProperty('--sc-p', p.toFixed(4)); } };
+  addEventListener('scroll', () => { if (!queued) { queued = true; requestAnimationFrame(frame); } }, { passive: true });
+  addEventListener('resize', frame); frame();
+})();

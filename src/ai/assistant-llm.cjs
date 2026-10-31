@@ -45,10 +45,10 @@ function parse(text){
 const resolve=source=>source&&source.provider?source:(cfg=>cfg.enabled?{provider:'custom',url:cfg.url,key:cfg.key,model:cfg.model,timeout:cfg.timeout,temperature:.4,maxTokens:900}:null)(config(source||process.env));
 const MODE={auto:'حالت ویرایش: خودکار. تغییرهایت بلافاصله اعمال می‌شوند و کاربر می‌تواند برگرداند؛ در متن بگو چه کردی («این‌ها را درست کردم»).',ask:'حالت ویرایش: با تأیید. کاربر تغییرهایت را با «قبل/بعد» می‌بیند و تأیید می‌کند؛ در متن بگو چه پیشنهاد می‌کنی.'};
 // Returns {text, actions, edits, usage} or null; with `report`, failures come back as {error} for the owner's usage log.
-async function answer({question,content,goal,history,analysis,mode,page},source=process.env,fetcher=fetch,report=false){
+async function answer({question,content,goal,history,analysis,mode,page,persona},source=process.env,fetcher=fetch,report=false){
   const cfg=resolve(source);if(!cfg)return null;
   const facts={resume:trim(content),goal:String(goal||'').slice(0,160),page:String(page||'').slice(0,24),analysis};
-  const t=require('../../dist/dashboard/js/advisor-brain.js').clock(),system=[SYSTEM,edits.PROTOCOL,MODE[mode]||MODE.ask,providers.IDENTITY,'زمان: امروز '+t.weekday+' '+t.persian+' ('+t.gregorian+')، ساعت '+t.time+' به وقت تهران.','رزومه و تحلیل محلی (JSON):\n'+JSON.stringify(facts)].join('\n\n'),messages=[];
+  const t=require('../../dist/dashboard/js/advisor-brain.js').clock(),system=[SYSTEM,edits.PROTOCOL,MODE[mode]||MODE.ask,providers.IDENTITY,...(persona?[persona]:[]),'زمان: امروز '+t.weekday+' '+t.persian+' ('+t.gregorian+')، ساعت '+t.time+' به وقت تهران.','رزومه و تحلیل محلی (JSON):\n'+JSON.stringify(facts)].join('\n\n'),messages=[];
   for(const h of (Array.isArray(history)?history:[]).slice(-8))if(h&&['user','assistant'].includes(h.role)&&typeof h.text==='string')messages.push({role:h.role,content:h.text.slice(0,1200)});
   messages.push({role:'user',content:String(question).slice(0,500)});
   try{

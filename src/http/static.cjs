@@ -13,6 +13,8 @@ publicAssets.set('/public-assets/projects.js','dashboard/js/projects.js');
 publicAssets.set('/public-assets/inbox.js','dashboard/js/inbox-form.js');
 publicAssets.set('/public-assets/charts.js','dashboard/js/charts.js');
 publicAssets.set('/public-assets/fandogh.js','dashboard/js/fandogh.js');
+// Fandogh's full-body art also appears on the 404 page, which people's subdomains serve too.
+publicAssets.set('/brand/fandogh/full.webp','brand/fandogh/full.webp');
 publicAssets.set('/public-assets/fandogh.css','dashboard/css/fandogh.css');
 publicAssets.set('/public-assets/charts.css','dashboard/css/charts.css');
 function fingerprint(directory){
