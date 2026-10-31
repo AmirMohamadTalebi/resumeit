@@ -33,7 +33,8 @@
     mute.addEventListener('click', () => { const on = !muted(); store('ri-pet-muted', on ? '1' : null); mute.setAttribute('aria-pressed', String(on)); RI.toast(on ? 'فندق دیگر خودش پیام نمی‌دهد' : 'فندق گاهی پیشنهاد می‌دهد', { kind: 'info' }); });
     root.addEventListener('click', onClick);
     root.querySelector('[data-pet-form]').addEventListener('submit', e => { e.preventDefault(); const input = root.querySelector('#pet-input'), q = input.value.trim(); if (!q) return; input.value = ''; flyout(); ask(q); });
-    document.addEventListener('keydown', e => { if (e.key === 'Escape' && open) { toggle(false); } });
+    // Escape closes the innermost thing first: an open tooltip inside the panel, then the panel itself.
+    document.addEventListener('keydown', e => { if (e.key === 'Escape' && open && !e.defaultPrevented && !root.querySelector('.pet__panel [role=tooltip]:not([hidden])')) { toggle(false); } });
     RI.delegate(document, 'click', '[data-pet-open]', () => { if (RI.$('#sidebar')?.dataset.open === 'true') RI.$('#scrim')?.click(); opener = document.activeElement; toggle(true); });
     mountCat(); wide.addEventListener('change', mountCat);
     menuEntry(); new MutationObserver(menuEntry).observe(RI.$('#sidebar') || document.body, { childList: true, subtree: true });

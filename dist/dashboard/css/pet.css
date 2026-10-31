@@ -123,7 +123,15 @@
 
 /* ---------- Text review, redesigned for the companion panel ---------- */
 .pet .ra{display:grid;gap:12px;padding:0;margin:0;background:none;border:0;box-shadow:none}
-.pet .ra__head{display:none}
+/* Fandogh already names the panel, so the review keeps only its status line and tools: what was checked, help,
+   and «run again» (the only way to review while automatic review is paused). */
+.pet .ra__head{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:8px;padding:10px 12px;border-radius:16px;background:linear-gradient(135deg,#eef7fb,#f7fafb);border:1px solid #e3eef3;animation:pet-msg .45s cubic-bezier(.2,1.2,.4,1) backwards}
+.pet .ra__head .ra__spark,.pet .ra__head h2{display:none}
+.pet .ra__head p{margin:0;font-size:12px;line-height:1.8;color:#435867}
+.pet .ra__tools{display:flex;gap:4px}
+.pet .ra__tools .btn{width:32px;height:32px;min-height:32px;border-radius:10px}
+.pet .ra__tools [data-advisor-run] svg{transition:transform .6s cubic-bezier(.3,1.3,.5,1)}.pet .ra__tools [data-advisor-run]:hover svg{transform:rotate(-180deg)}
+.pet .ra__tip{inset-inline:8px;top:calc(100% + 6px);z-index:5}
 .pet .ra>*{margin:0}
 .pet .ra__goal,.pet .ra__block,.pet .ra__job,.pet .ra__foot{display:grid;gap:8px;padding:14px;border-radius:18px;background:#f4f7f9;border:1px solid #eef2f4;animation:pet-msg .45s cubic-bezier(.2,1.2,.4,1) backwards}
 .pet .ra__block:nth-of-type(2){animation-delay:.05s}.pet .ra__block:nth-of-type(3){animation-delay:.1s}

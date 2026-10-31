@@ -35,7 +35,7 @@
     const leaveTip = () => { tipTimer = setTimeout(() => { if (!pinned && document.activeElement !== helpButton && !tip.matches(':hover')) showTip(false); }, 120); };
     helpButton.addEventListener('pointerenter', () => showTip(true)); helpButton.addEventListener('focus', () => showTip(true)); helpButton.addEventListener('pointerleave', leaveTip); helpButton.addEventListener('blur', leaveTip); tip.addEventListener('pointerleave', leaveTip);
     helpButton.addEventListener('click', e => { e.preventDefault(); pinned = !pinned; showTip(pinned); });
-    const closeTip = e => { if (e.key === 'Escape' || e.type === 'pointerdown' && !helpButton.contains(e.target) && !tip.contains(e.target)) { pinned = false; showTip(false); } };
+    const closeTip = e => { if (e.key === 'Escape' || e.type === 'pointerdown' && !helpButton.contains(e.target) && !tip.contains(e.target)) { if (e.key === 'Escape' && !tip.hidden) e.preventDefault(); pinned = false; showTip(false); } };
     document.addEventListener('pointerdown', closeTip); document.addEventListener('keydown', closeTip);
     RI.advisorGoal = () => goal.value;
     const channel = window.BroadcastChannel ? new BroadcastChannel('resumeit-session') : null;
