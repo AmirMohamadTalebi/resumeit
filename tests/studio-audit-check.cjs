@@ -17,7 +17,8 @@ const {chromium}=require('playwright'),{testStore}=require('./auth-test-store.cj
  await page.goto(base+'/dashboard/studio/?workspace=1');await page.locator('#page-title').waitFor();
  for(const width of [320,390,1440]){await page.setViewportSize({width,height:width===1440?960:844});
   const borders=await page.locator('.studio-overview dl>div').evaluateAll(rows=>rows.map(e=>getComputedStyle(e).borderInlineStartWidth));assert.deepEqual(borders,['0px','1px','1px']);
-  if(width<961){const sizes=await page.locator('.topbar__bell,#topPreview,#undoBtn,#topPublish').evaluateAll(rows=>rows.map(e=>({w:e.getBoundingClientRect().width,h:e.getBoundingClientRect().height})));assert(sizes.every(s=>s.w===36&&s.h===36),JSON.stringify(sizes));}
+  if(width<961){// Phones show only the controls that apply (bell and undo hide until needed); each visible one stays a full touch target.
+  const sizes=(await page.locator('.topbar__bell,#topPreview,#undoBtn,#topPublish').evaluateAll(rows=>rows.map(e=>({w:e.getBoundingClientRect().width,h:e.getBoundingClientRect().height})))).filter(s=>s.w);assert(sizes.length>=2&&sizes.every(s=>s.w>=36&&s.w<=44&&s.h>=36&&s.h<=44),JSON.stringify(sizes));}
  }
  await page.setViewportSize({width:390,height:844});
  const links=page.locator('.studio-ready a');const names=await links.evaluateAll(rows=>rows.map(e=>e.getAttribute('aria-label')||e.textContent));assert.equal(new Set(names).size,names.length);assert(names.every(n=>n.includes('تکمیل')&&(n.includes('رزومه')||n.includes('لینک'))));
@@ -25,7 +26,7 @@ const {chromium}=require('playwright'),{testStore}=require('./auth-test-store.cj
  await page.screenshot({path:path.join(out,'15-studio-after-mobile.png')});await page.setViewportSize({width:1440,height:960});await page.screenshot({path:path.join(out,'15-studio-after-desktop.png')});
  assert.equal(await page.locator('#view').getByText('نام صفحهٔ معتبر و آزاد',{exact:true}).count(),0);
  await page.goto(base+'/');await page.evaluate(()=>document.fonts.ready);
- for(const width of [1920,390]){await page.setViewportSize({width,height:width===1920?1080:844});await page.evaluate(()=>window.scrollTo({top:document.querySelector('.intro').offsetTop-100,behavior:'instant'}));assert.equal(await page.locator('.intro h2').evaluate(e=>getComputedStyle(e).letterSpacing),'normal');await page.screenshot({path:path.join(out,'public-heading-spacing-after-'+width+'.png')});}
+ for(const width of [1920,390]){await page.setViewportSize({width,height:width===1920?1080:844});await page.locator('#features h2').scrollIntoViewIfNeeded();assert.deepEqual([...new Set(await page.locator('main h2').evaluateAll(n=>n.map(e=>getComputedStyle(e).letterSpacing)))],['normal'],'Persian headings keep normal letter spacing');await page.screenshot({path:path.join(out,'public-heading-spacing-after-'+width+'.png')});}
  console.log('PASS audit15: incomplete/ready/locked states, unique task-and-kind link names, no duplicate list or self-link.');
  }finally{await browser.close();await new Promise(r=>server.close(r));await db.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});

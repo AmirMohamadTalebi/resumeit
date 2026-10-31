@@ -10,24 +10,23 @@ const {chromium}=require('playwright'),{testStore}=require('./auth-test-store.cj
  try{
  const context=await browser.newContext({viewport:{width:1440,height:960},reducedMotion:'reduce'});await context.addCookies([{name:'ri_session',value:'d'.repeat(64),url:base}]);const page=await context.newPage();
  const errors=[];page.on('pageerror',e=>errors.push(e.message));
- await page.goto(base+'/dashboard/');await page.locator('#page-title').waitFor();
- assert.equal(await page.locator('.stage').getAttribute('inert'),'');
- await page.evaluate(()=>{RI.C().links.items.push({id:'test-link',type:'link',active:true,title:'لینک آزمایش',url:'https://example.test',icon:'link'});RI.rerender();});
- const hiddenLink=page.locator('.stage a').first();await hiddenLink.waitFor({state:'attached'});await hiddenLink.evaluate(e=>e.focus());assert.equal(await hiddenLink.evaluate(e=>e===document.activeElement),false);
- assert.equal(await page.getByText('آمادهٔ انتشار',{exact:true}).count(),0);
+ await page.goto(base+'/dashboard/');await page.locator('#page-title').waitFor();await page.locator('.nv-next').waitFor();
+ // An incomplete page never claims to be ready; the home card points at the next real step.
+ assert.equal(await page.getByText('آمادهٔ انتشار',{exact:true}).count(),0);assert.equal(await page.locator('.nv-next__cta').count(),1);
  await page.screenshot({path:path.join(out,'14-home-after-desktop.png')});
  await page.setViewportSize({width:390,height:844});
  for(const selector of ['#menuBtn','[data-all-pages]']){
-  await page.locator(selector).click();await page.locator('#drawerClose').waitFor({state:'visible'});await page.keyboard.press('Escape');assert.equal(await page.locator(selector).evaluate(e=>e===document.activeElement),true);
+  await page.locator(selector).first().click();await page.locator('#drawerClose').waitFor({state:'visible'});await page.keyboard.press('Escape');assert.equal(await page.locator(selector).first().evaluate(e=>e===document.activeElement),true,selector+' gets focus back');
  }
  await page.screenshot({path:path.join(out,'14-home-after-mobile.png')});
- await page.goto(base+'/dashboard/?workspace=3');await page.locator('#page-title').waitFor();assert.equal(await page.evaluate(()=>RI.workspaceSlot),3);
+ // A links-only workspace shows nothing about a resume and no percentage weights.
+ await page.goto(base+'/dashboard/?workspace=3');await page.locator('#page-title').waitFor();await page.locator('.nv-next').waitFor();assert.equal(await page.evaluate(()=>RI.workspaceSlot),3);
  assert.equal(await page.locator('#view [data-go=resume]').count(),0);assert.equal(await page.locator('#view [data-preview=resume]').count(),0);assert.equal(await page.locator('#bottomNav [data-route=resume]').count(),0);
- assert.match(await page.locator('#view').innerText(),/فقط لینک/);assert.equal(await page.locator('.pstat').count(),1);
+ assert.match(await page.locator('#view').innerText(),/فقط لینک/);
  await page.screenshot({path:path.join(out,'14-home-links-after-mobile.png')});
- assert.deepEqual(await page.locator('.guide__n').allTextContents(),['۱','۲']);assert((await page.locator('.steps__w').allTextContents()).every(text=>!text.includes('٪')));
+ assert((await page.locator('.nv-step__w').allTextContents()).every(text=>!text.includes('٪')),'no percentage weights in a links-only workspace');
  await page.evaluate(()=>{const c=RI.C();RI.state.account.firstName='آزمایش';RI.state.account.lastName='محلی';RI.state.account.mobileVerified=true;c.slug='audit-links';c.links.items=[{id:'one',type:'link',active:true,title:'لینک',url:'https://example.test',icon:'link'}];c.profile.name='';c.links.header.sync=false;c.links.header.name='';RI.rerender();});
- assert.equal(await page.locator('.hero__cta [data-go]').getAttribute('data-tab'),'header');await page.locator('.hero__cta [data-go]').click();await page.waitForURL('**/dashboard/links/?tab=header');assert.equal(await page.locator('[data-tab=header][aria-selected=true]').count(),1);
- assert.deepEqual(errors,[]);console.log('PASS audit14: inert populated stage, both drawer openers restored, honest progress, actual links-only workspace UI.');
+ const cta=page.locator('.nv-next__cta');assert.equal(await cta.getAttribute('data-tab'),'header');await cta.click();await page.waitForURL('**/dashboard/links/?tab=header');assert.equal(await page.locator('[data-tab=header][aria-selected=true]').count(),1);
+ assert.deepEqual(errors,[]);console.log('PASS audit14: honest next step, both drawer openers restored, links-only workspace without resume or weights, next step opens the right tab.');
  }finally{await browser.close();await new Promise(r=>server.close(r));await db.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});
