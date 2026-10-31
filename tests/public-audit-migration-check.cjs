@@ -13,15 +13,20 @@ const {chromium}=require('playwright');
    await page.waitForFunction(()=>!document.querySelector('[data-months="3"]').disabled);
    for(const plan of catalog.plans){await page.locator(`[data-months="${plan.months}"]`).click();assert.match(await page.locator('#plan-total').innerText(),new RegExp(plan.price.toLocaleString('fa-IR')));}
    assert.match(await page.locator('#catalog-status').innerText(),new RegExp(catalog.rate.toLocaleString('fa-IR')));
-   assert.equal(await page.locator('.featured>a').getAttribute('href'),'/dashboard/billing/');
-   for(const [filter,theme,name]of [['creative','studio','یخچال'],['developer','terminal','ترمینال'],['student','journal','دفترچه']]){
-    await page.locator(`[data-filter="${filter}"]`).click();assert.equal(await page.locator('[data-gallery]:visible').count(),1);
-    assert.equal(await page.locator('[data-gallery]:visible').getAttribute('data-gallery'),theme);
+   assert.equal(await page.locator('.ln-price--featured a[href="/dashboard/billing/"]').getAttribute('href'),'/dashboard/billing/');
+   // Filters narrow the template cards; the preview thumbnails pick what the large frame shows.
+   const cards=page.locator('[data-category]'),total=await cards.count();
+   for(const filter of ['creative','developer','student']){
+    await page.locator(`[data-filter="${filter}"]`).click();const shown=await page.locator('[data-category]:visible').evaluateAll(n=>n.map(e=>e.dataset.category));
+    assert(shown.length>0&&shown.length<total&&shown.every(c=>c.split(' ').includes(filter)),filter);
+   }
+   for(const [theme,name]of [['terminal','ترمینال'],['journal','دفترچه']]){
+    await page.locator(`[data-gallery="${theme}"]`).evaluate(b=>b.click());assert.equal(await page.locator(`[data-gallery="${theme}"]`).getAttribute('aria-pressed'),'true');
     assert.equal(await page.locator('#gallery-title').innerText(),name);assert.equal(await page.locator('#gallery-address').innerText(),'niloofar.ResumeIt.ir');
    }
-   await page.locator('[data-filter="all"]').click();assert.equal(await page.locator('[data-gallery]:visible').count(),3);
+   await page.locator('[data-filter="all"]').click();assert.equal(await page.locator('[data-category]:visible').count(),total);
    await page.locator('#how').scrollIntoViewIfNeeded();
-   for(let i=0;i<4;i++){await page.locator(`button[data-step="${i}"]`).press('Enter');assert.equal(await page.locator(`button[data-step="${i}"]`).getAttribute('aria-controls'),'guide-preview');if(width<760){const box=await page.locator('#step-title').boundingBox();assert(box.y>=0&&box.y+box.height<900);}}
+   for(let i=0;i<4;i++){await page.locator(`button[data-step="${i}"]`).press('Enter');assert.equal(await page.locator(`button[data-step="${i}"]`).getAttribute('aria-controls'),'guide-preview');if(width<760){const box=await page.locator('#step-title').boundingBox();assert(box.y>=0&&box.y+box.height<900,"step title in view "+JSON.stringify(box)+" step "+i);}}
    assert(await page.locator('.guide-start').isVisible());assert.equal(await page.locator('#guide-preview').getAttribute('aria-pressed'),null);
    if(width===390)await page.screenshot({path:path.join(out,'guide-main-mobile.png')});
    await page.locator('#next-step').click();assert.equal(await page.locator('button[data-step="0"]').getAttribute('aria-pressed'),'true');
@@ -44,7 +49,7 @@ const {chromium}=require('playwright');
    if(mode==='network'){await page.setViewportSize({width:390,height:900});await page.locator('.catalog-message').scrollIntoViewIfNeeded();await page.screenshot({path:path.join(out,'catalog-error-main-mobile.png')});}
    await page.unroute('**/api/catalog');if(mode!=='stopped'){await page.locator('#catalog-retry').click();await page.waitForFunction(()=>!document.querySelector('[data-months="3"]').disabled);}
   }
-  await page.goto(base+'/');await page.waitForFunction(()=>!document.querySelector('[data-months="3"]').disabled);await page.locator('#pricing').scrollIntoViewIfNeeded();await page.locator('.featured').scrollIntoViewIfNeeded();await page.waitForFunction(()=>document.querySelector('#plan-total').checkVisibility({contentVisibilityAuto:true}));await page.screenshot({path:path.join(out,'pricing-main-mobile.png')});
+  await page.goto(base+'/');await page.waitForFunction(()=>!document.querySelector('[data-months="3"]').disabled);await page.locator('#pricing').scrollIntoViewIfNeeded();await page.locator('.ln-price--featured').scrollIntoViewIfNeeded();await page.waitForFunction(()=>document.querySelector('#plan-total').checkVisibility({contentVisibilityAuto:true}));await page.screenshot({path:path.join(out,'pricing-main-mobile.png')});
   assert.deepEqual(errors,[]);console.log('PASS: main migration at 3 widths; shared menu/session shell, current-page links, catalog failures/retry/paused products, It rate, gallery, guide, fictional contact, generated samples and real release history.');
  }finally{await browser?.close();await new Promise(resolve=>server.close(resolve));await db.close();}
 })().catch(error=>{console.error(error);process.exitCode=1;});

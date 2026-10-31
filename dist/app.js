@@ -65,7 +65,9 @@
     if (sheet && sheetSeen) sheet.dataset.buildStep = String(index);
     if (motion) ['#step-title', '#step-copy', '#step-example'].forEach((s, i) => $(s)?.animate([{ opacity: 0, transform: 'translateY(14px)', filter: 'blur(4px)' }, { opacity: 1, transform: 'none', filter: 'none' }], { duration: 480, delay: i * 70, easing: 'cubic-bezier(.2,.8,.2,1)', fill: 'backwards' }));
   }
-  $$('button[data-step]').forEach(b => b.addEventListener('click', () => showStep(Number(b.dataset.step))));
+  // On phones the preview sits below the four steps; bring it into view so the change is seen, not just made.
+  const reveal = () => { if (innerWidth < 760 && preview) { const r = preview.getBoundingClientRect(); if (r.top < 70 || r.top > innerHeight * .5) preview.scrollIntoView({ block: 'start', behavior: motion ? 'smooth' : 'auto' }); } };
+  $$('button[data-step]').forEach(b => b.addEventListener('click', () => { showStep(Number(b.dataset.step)); reveal(); }));
   $('#next-step')?.addEventListener('click', () => showStep((step + 1) % 4));
   if (sheet && motion) sheet.removeAttribute('data-build-step');
   if (preview) showStep(0);

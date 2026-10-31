@@ -528,3 +528,6 @@ body.ln{margin:0;background:var(--cream);color:var(--ink);font-family:Vazirmatn,
 .ln-faq__search,.ln-claim__field{transition:border-color .3s,box-shadow .4s,background .3s,transform .45s var(--spring)}
 @keyframes ln-edge{to{--ln-edge:360deg}}
 @media(prefers-reduced-motion:reduce){.ln-faq__search:focus-within::after,.ln-claim__field:focus-within::after{animation:none;background:linear-gradient(90deg,#f0bd52,#ffe7ad,#f0bd52)}.ln-faq__search:focus-within,.ln-claim__field:focus-within{transform:none}}
+
+/* The phone step picker scrolls the preview into view; keep it clear of the floating header. */
+.game-preview{scroll-margin-top:92px}
