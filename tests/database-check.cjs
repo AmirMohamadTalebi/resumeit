@@ -36,7 +36,8 @@ try { process.loadEnvFile(); } catch (error) { if (error.code !== 'ENOENT') thro
     const verifiedSocial=await database.session('f'.repeat(64));assert.equal(verifiedSocial.first_name,'سارا');assert.equal(verifiedSocial.last_name,'محمدی');assert.equal(verifiedSocial.phone_verified,1);assert.equal(verifiedSocial.github,1);
     const now=Date.now(), challenge=randomUUID(), grant=digest('test-registration-grant');
     const reserved=await Promise.all(Array.from({length:4},()=>database.reserveOtp({id:challenge,phone:'09120000003',purpose:'register',hash:digest(challenge+'123456')},'otp-test-ip',now)));
-    assert.equal(reserved.filter(Boolean).length,1);
+    // A refused reservation returns its reason ({reason, retryAfter}); only one may succeed.
+    assert.equal(reserved.filter(r=>r===true).length,1);assert.equal(reserved.filter(r=>r?.reason==='resend').length,3);
     await database.finishOtpSend(challenge,true);
     assert.equal(await database.verifyOtp(challenge,digest(challenge+'123456'),'login',null,now),null);
     assert.equal(await database.verifyOtp(challenge,digest(challenge+'654321'),'register',grant,now),null);
