@@ -29,8 +29,8 @@ const assetRevision=version+'-'+assetHash.digest('hex').slice(0,16);
 // Bundle only shared workspace files; editable source modules remain independent.
 const bundles=new Map();
 for(const [url,files] of [
-  ['/dashboard/js/workspace.js',['icons','core','ui','data','imported-templates','resume-templates','state','api','account','projects','support-files','preview','template-shabtab','commerce','workspace-tools','reset-ui','notification-channels','charts','advisor-brain','app','fandogh','assistant-edits','assistant-pet','coral','toolbar','liquid'].map(n=>'dashboard/js/'+n+'.js').concat('templates/vista-runtime.js')],
-  ['/dashboard/css/workspace.css',['tokens','base','shell','components','preview','pages','charts','abgoon','performance','resume-studio','liquid','nova','fandogh','pet'].map(n=>'dashboard/css/'+n+'.css')]
+  ['/dashboard/js/workspace.js',['icons','core','ui','data','imported-templates','resume-templates','state','api','account','projects','support-files','preview','template-shabtab','commerce','workspace-tools','reset-ui','notification-channels','charts','advisor-brain','app','fandogh','assistant-edits','fandogh-core','assistant-pet','coral','toolbar','liquid'].map(n=>'dashboard/js/'+n+'.js').concat('templates/vista-runtime.js')],
+  ['/dashboard/css/workspace.css',['tokens','base','shell','components','preview','pages','charts','abgoon','performance','resume-studio','liquid','nova','fandogh','pet','fandogh-studio'].map(n=>'dashboard/css/'+n+'.css')]
 ])bundles.set(url,Buffer.from(files.map(file=>{
   let source=localFiles.readFileSync(path.join(root,file),'utf8');
   if(file.endsWith('.css'))source=source.replace(/url\((["']?)(?!data:|https?:|\/\/)([^)"'?#]+)\1\)/g,(_,quote,url)=>`url(${quote}${path.posix.resolve('/',path.posix.dirname(file),url)}${quote})`);
@@ -85,7 +85,7 @@ async function serveStatic(req, res, pathname, origin, account, restricted) {
   let file = path.resolve(root, publicAssets.get(pathname) || '.' + pathname);
   const sample=/^\/(resume|link)([a-z0-9-]+)\/$/.exec(pathname),samplePage=new URL(req.url,origin).searchParams.get('page');
   if(sample&&samplePage&&/^[a-z0-9]+$/.test(samplePage)&&samplePage!=='home')file=path.join(file,samplePage+'.html');
-  const workspacePage=/^\/dashboard\/(support|notifications|studio|messages)\/$/.exec(pathname);
+  const workspacePage=/^\/dashboard\/(support|notifications|studio|messages|fandogh|assistant)\/$/.exec(pathname);
   if(workspacePage)file=path.join(root,'dashboard/index.html');
   const retentionPage=pathname==='/admin/retention/';if(retentionPage)file=path.join(root,'admin/health/index.html');
   // Fandogh's settings hold provider keys and allowances: the owner's page, like retention.

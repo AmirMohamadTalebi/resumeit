@@ -12,6 +12,7 @@ function defaults(env = process.env) {
     paidDaily: positive(env.ASSISTANT_PAID_DAILY, 200),
     ai: { enabled: false, provider: 'openai', temperature: 0.4, maxTokens: 1200, dailyCalls: 2000, smalltalk: false },
     providers: {},
+    models: {},
   };
 }
 const int = (v, min, max, message) => { if (!Number.isSafeInteger(v) || v < min || v > max) fail(message); return v; };
@@ -37,6 +38,7 @@ function validate(input) {
     if (id === 'custom' && !url && (model || ai.provider === 'custom')) fail('برای سرویس سازگار با OpenAI نشانی لازم است');
     out.providers[id] = { model, url: id === 'custom' ? url : '' };
   }
+  out.models = require('../ai/catalog.cjs').validate(input.models, fail);
   return out;
 }
 // A new key per provider: a string to set, null to remove; anything else is refused.

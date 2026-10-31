@@ -18,7 +18,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
  const server=createServer(db);await new Promise(r=>server.listen(0,'127.0.0.1',r));const base='http://127.0.0.1:'+server.address().port;
  const send=async(route,body,token='a')=>{const r=await real(base+route,{method:body?'POST':'GET',headers:{Cookie:'ri_session='+token.repeat(64),Origin:base,'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined});return {status:r.status,body:await r.json()};};
  const content={profile:{name:'روژان مهر',title:'طراح رابط کاربری',bio:'',avatar:''},skills:[{name:'Figma'}],experience:[],education:[],projects:[],contacts:[],socials:[]};
- const ask=(question,history=[])=>send('/api/dashboard/assistant/ask',{question,content,history},'b');
+ const ask=(question,history=[],model='luna')=>send('/api/dashboard/assistant/ask',{question,content,history,model},'b');
  try{
   // Owner only: an ordinary admin cannot read or change Fandogh's settings.
   await db.saveAccountRole(owner,target,{role:'admin',reason:'ادمین عادی برای آزمون فندق',requestId:randomUUID()});
@@ -44,18 +44,24 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
   r=(await ask('سلام چطوری خوبی')).body.reply;assert.equal(r.source,'local');assert(r.topics.includes('howareyou')&&r.text.startsWith('سلام'));assert.equal(calls.length,0,'small talk stays local by default');
   r=(await ask('معرفی‌ام را چطور بنویسم؟')).body.reply;assert.equal(r.source,'ai');assert.equal(calls.length,1);assert(r.text.includes('من فندقم')&&!r.text.includes('ChatGPT'),'identity claims are replaced');
   assert(calls[0].messages[0].content.includes('اسم تو فقط «فندق» است'),'the identity rules go with every request');
-  let stats=(await send('/api/admin/assistant')).body.stats;assert.equal(stats.today.aiCalls,1);assert.equal(stats.today.tokens,150);assert.equal(stats.today.messages,3);assert.equal(stats.top[0].id,target);
+  let stats=(await send('/api/admin/assistant')).body.stats;assert.equal(stats.today.aiCalls,1);assert.equal(stats.today.tokens,150);assert.equal(stats.today.messages,1,'only the GPT Luna answer used the allowance');assert.equal(stats.top[0].id,target);
   // Resume edits come back checked against the resume that was sent; the mode reaches the model's instructions.
-  const edit=(await send('/api/dashboard/assistant/ask',{question:'عنوانم را درست کن',content,history:[],mode:'auto'},'b')).body.reply;
+  const edit=(await send('/api/dashboard/assistant/ask',{question:'عنوانم را درست کن',content,history:[],mode:'auto',model:'luna'},'b')).body.reply;
   assert.deepEqual(edit.edits.map(e=>[e.op,e.field,e.after]),[['set','title','طراح ارشد رابط کاربری']]);assert(calls.at(-1).messages[0].content.includes('حالت ویرایش: خودکار'));
   // Daily cap on model calls: past it, answers come from the local brain.
   assert.equal((await save(settings({ai:{enabled:true,provider:'openai',dailyCalls:1},providers:{openai:{model:'gpt-4o-mini',url:''}}}))).status,200);
   r=(await ask('یک معرفی برایم بنویس')).body.reply;assert.equal(r.source,'local');assert.equal(calls.length,2);
   // Allowances come from the panel; a paused Fandogh says so instead of answering.
   view=(await send('/api/admin/assistant')).body;
-  assert.equal((await save(settings({freeDaily:4,paidDaily:50}))).status,200);
-  assert.equal((await send('/api/dashboard/assistant',null,'b')).body.limit,4);
-  assert.equal((await ask('امتیاز رزومه‌ام چنده؟')).status,429,'the fifth question today is over the new allowance');
+  assert.equal((await save(settings({freeDaily:2,paidDaily:50,ai:{dailyCalls:100}}))).status,200);
+  assert.equal((await send('/api/dashboard/assistant',null,'b')).body.limit,2);
+  const over=await ask('امتیاز رزومه‌ام چنده؟');assert.equal(over.status,429,'two GPT Luna answers already used the new allowance');assert.match(over.body.error,/فندق محلی/);
+  assert.equal((await ask('امتیاز رزومه‌ام چنده؟',[],'local')).status,200,'local Fandogh still answers for free');
+  // A heavier model costs its multiple: Opus is ten messages, so it is refused while Luna-sized room remains.
+  assert.equal((await save(settings({freeDaily:5,paidDaily:50,ai:{dailyCalls:100},models:{'claude-opus':{enabled:true,cost:10,model:'',label:''},'gpt-4-1':{enabled:true,cost:4,model:'',label:''}}}))).status,200);
+  const opus=await ask('کل رزومه‌ام را بازنویسی کن',[],'claude-opus');assert.equal(opus.status,200);assert.equal(opus.body.reply.model.id,'local','no anthropic key: falls back locally, free');
+  const heavy=await ask('تجربه‌هایم را تحلیل کن',[],'gpt-4-1');assert.equal(heavy.status,429,'GPT-4.1 now costs 4 and only 3 are left');assert.match(heavy.body.error,/۴ پیام/);
+  const offered=(await send('/api/dashboard/assistant',null,'b')).body.models;assert.equal(offered.find(m=>m.id==='gpt-4-1').cost,4);assert.equal(offered.find(m=>m.id==='claude-opus').available,false);assert.equal(offered.find(m=>m.id==='luna').available,true);
   assert.equal((await save(settings({enabled:false}))).status,200);
   const paused=await ask('سلام');assert.equal(paused.status,503);assert.equal(paused.body.code,'ASSISTANT_PAUSED');
   assert.equal((await save(settings({enabled:true,freeDaily:20}))).status,200);
@@ -70,7 +76,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
    const context=await browser.newContext({reducedMotion:'reduce'});await context.addCookies([{name:'ri_session',value:'a'.repeat(64),url:base}]);const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
    for(const width of [1440,390]){
     await page.setViewportSize({width,height:900});await page.goto(base+'/admin/assistant/');await page.locator('[data-fx-root]').waitFor();
-    assert.equal(await page.locator('.fx-provider').count(),9);assert.equal(await page.locator('.fx-provider.is-active').getAttribute('data-provider'),'openai');
+    assert.equal(await page.locator('.fx-provider').count(),9);assert.equal(await page.locator('.fx-model').count(),9);assert.equal(await page.locator('.fx-model[data-model-id=gpt-4-1] [data-m-cost]').inputValue(),'3','the last save went back to the catalog cost');assert.equal(await page.locator('.fx-provider.is-active').getAttribute('data-provider'),'openai');
     assert(await page.locator('.fx-provider.is-active [data-key]').isVisible());assert(!(await page.locator('.fx-provider[data-provider=anthropic] [data-key]').isVisible()));
     assert.equal(await page.locator('#admin-nav a[aria-current=page]').count(),1);
     assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'no sideways scroll at '+width);
@@ -81,7 +87,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
    await page.locator('.fx-provider[data-provider=openai]').click();
    await page.locator('.fx-provider.is-active [data-test]').click();await page.locator('.fx-provider.is-active [data-test-result][data-kind=ok]').waitFor();
    await page.locator('[data-fx-free]').fill('7');await page.locator('[data-fx-save]').click();await page.locator('[data-fx-status][data-kind=error]').waitFor();
-   await page.locator('[data-fx-reason]').fill('سهمیهٔ رایگان تازه');await page.locator('[data-fx-save]').click();await page.locator('[data-fx-status][data-kind=ok]').waitFor();
+   await page.locator('[data-fx-reason]').fill('سهمیهٔ رایگان تازه');await page.locator('[data-fx-save]').click();await page.waitForFunction(()=>document.querySelector('[data-fx-status]')?.dataset.kind==='ok'||/[^s]/.test(document.querySelector('[data-fx-status]')?.textContent||'')&&document.querySelector('[data-fx-status]').textContent!=='');assert.equal(await page.locator('[data-fx-status]').getAttribute('data-kind'),'ok',await page.locator('[data-fx-status]').textContent());
    assert.equal(await page.locator('[data-fx-free]').inputValue(),'7');
    await page.locator('[data-fx-reason]').fill('قیمت تازهٔ دستیار');await page.locator('[data-plan="assistant:m1"] [data-plan-price]').fill('12');await page.locator('[data-plan="assistant:m1"] [data-plan-save]').click();await page.locator('[data-fx-status][data-kind=ok]').waitFor();
    assert.equal(await page.locator('[data-plan="assistant:m1"] [data-plan-price]').inputValue(),'12');

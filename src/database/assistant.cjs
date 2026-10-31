@@ -25,21 +25,21 @@ module.exports=({execute,transaction})=>({
     const [row]=await execute('SELECT used FROM assistant_usage WHERE user_id=? AND day=?',[userId,tehranDay(now)]);
     return Number(row?.used||0);
   },
-  // Takes one question from today's allowance, or refuses with ASSISTANT_LIMIT when it is used up.
-  async useAssistant(userId,limit,now=Date.now()){
+  // Takes a question from today's allowance (heavier models cost more than one), or refuses with ASSISTANT_LIMIT.
+  async useAssistant(userId,limit,now=Date.now(),amount=1){
     const day=tehranDay(now);
     return transaction(async con=>{
       await con.execute('INSERT IGNORE INTO assistant_usage(user_id,day,used) VALUES(?,?,0)',[userId,day]);
       const [[row]]=await con.execute('SELECT used FROM assistant_usage WHERE user_id=? AND day=? FOR UPDATE',[userId,day]);
       const used=Number(row?.used||0);
-      if(used>=limit)throw Object.assign(new Error('سهمیهٔ امروز دستیار تمام شد'),{status:429,code:'ASSISTANT_LIMIT'});
-      await con.execute('UPDATE assistant_usage SET used=? WHERE user_id=? AND day=?',[used+1,userId,day]);
-      return used+1;
+      if(used+amount>limit)throw Object.assign(new Error('سهمیهٔ امروز دستیار تمام شد'),{status:429,code:'ASSISTANT_LIMIT'});
+      await con.execute('UPDATE assistant_usage SET used=? WHERE user_id=? AND day=?',[used+amount,userId,day]);
+      return used+amount;
     });
   },
   // Gives a question back when no answer could be produced at all.
-  async refundAssistant(userId,now=Date.now()){
-    await execute('UPDATE assistant_usage SET used=CASE WHEN used>0 THEN used-1 ELSE 0 END WHERE user_id=? AND day=?',[userId,tehranDay(now)]);
+  async refundAssistant(userId,now=Date.now(),amount=1){
+    await execute('UPDATE assistant_usage SET used=CASE WHEN used>? THEN used-? ELSE 0 END WHERE user_id=? AND day=?',[amount,amount,userId,tehranDay(now)]);
   },
   // Server-side view: settings merged over defaults and the opened provider keys. Never sent to a browser.
   async assistantSettings(){

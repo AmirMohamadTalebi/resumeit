@@ -5,10 +5,10 @@
 
   // Routes and the menu. Notifications are a route but stay out of the menu: the bell in the top bar is enough.
   const NAV = [
-    { group: '', items: [['home', 'خانه', 'home']] },
+    { group: '', items: [['home', 'خانه', 'home'], ['fandogh', 'فندق، دستیار رزومه', 'sparkle']] },
     { group: 'ساخت صفحه', items: [['resume', 'رزومه', 'resume'], ['links', 'صفحهٔ لینک‌ها', 'link'], ['themes', 'ظاهر و قالب', 'palette'], ['studio', 'آمادگی انتشار', 'check']] },
     { group: 'انتشار', items: [['publish', 'آدرس و انتشار', 'globe'], ['stats', 'آمار', 'chart'], ['messages', 'پیام‌های رزومه', 'mail']] },
-    { group: 'حساب', items: [['wallet', 'کیف پول', 'card'], ['billing', 'اشتراک و خرید', 'crown'], ['settings', 'تنظیمات حساب', 'settings']] },
+    { group: 'حساب', items: [['wallet', 'کیف پول', 'card'], ['billing', 'اشتراک و خرید', 'crown'], ['settings', 'تنظیمات حساب', 'settings'], ['assistant', 'تنظیمات فندق', 'sliders']] },
     { group: 'کمک', items: [['support', 'پشتیبانی', 'help']] },
     { group: '', hidden: true, items: [['notifications', 'اعلان‌ها', 'bell']] },
   ];

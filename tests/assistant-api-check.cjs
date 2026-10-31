@@ -5,16 +5,18 @@ const assert=require('node:assert/strict'),{randomUUID}=require('node:crypto'),l
   const origin='http://127.0.0.1',call=async(path,body,method=body?'POST':'GET')=>{let out;const req={method,headers:{origin,'content-type':'application/json'},resume(){},async *iterator(){if(body)yield Buffer.from(JSON.stringify(body));}};
    try{await route(db,req,path,origin,{id:target},(status,data)=>{out={status,data};});}catch(e){out={status:e.status||500,data:{error:e.message}};}return out;};
   const content={profile:{name:'امیرمحمد طالبی',title:'دانشجوری کامپیوتر',bio:'Code Lover',avatar:'data:image/png;base64,AAAA'},skills:[{name:'Figma'}],experience:[],education:[],projects:[{title:'ResumeIt'}],contacts:[{type:'phone',value:'09120000000',public:true}],socials:[]};
-  // Free allowance: five questions a day, then a clear refusal with the plans to buy.
+  // Local Fandogh is free: it answers every question without touching the five-a-day allowance.
   let s=await call('/api/dashboard/assistant');assert.equal(s.status,200);assert.equal(s.data.plan,'free');assert.equal(s.data.limit,5);assert.equal(s.data.plans.length,3);assert.equal(s.data.ai,false);
-  for(let i=0;i<5;i++){const r=await call('/api/dashboard/assistant/ask',{question:'من فول استک دولوپر هستم',content});assert.equal(r.status,200,JSON.stringify(r.data));assert.equal(r.data.reply.source,'local');assert.equal(r.data.usage.remaining,4-i);}
-  const r1=await call('/api/dashboard/assistant/ask',{question:'سلام',content});assert.equal(r1.data.code,'ASSISTANT_LIMIT');assert.equal(r1.status,429);assert.equal(r1.data.usage.plans.length,3);
+  assert.equal(s.data.engine,'local');assert.equal(s.data.models[0].id,'local');assert.equal(s.data.models[0].cost,0);assert.equal(s.data.models.find(m=>m.id==='luna').cost,1);
+  for(let i=0;i<7;i++){const r=await call('/api/dashboard/assistant/ask',{question:'من فول استک دولوپر هستم',content});assert.equal(r.status,200,JSON.stringify(r.data));assert.equal(r.data.reply.source,'local');assert.equal(r.data.reply.model.cost,0);assert.equal(r.data.usage.remaining,5);}
+  // A paid model that is not connected answers locally, charges nothing and points to what would help.
+  const r1=await call('/api/dashboard/assistant/ask',{question:'یک برنامهٔ شش ماهه برای مهاجرت کاری بنویس',content,model:'claude-opus'});assert.equal(r1.status,200);assert.equal(r1.data.usage.remaining,5);assert.equal(r1.data.reply.model.id,'local');assert.match(r1.data.reply.text,/در دسترس نیست/);
   // The local brain understood the statement and the typo.
   const local=require('../dist/dashboard/js/advisor-brain.js').reply('من فول استک دولوپر هستم',content);assert.equal(local.intent,'statement');assert(local.actions.some(a=>a.kind==='title'&&a.value==='توسعه‌دهندهٔ فول‌استک'));
   // Buying the assistant alone: priced by the month, stacks, and lifts the allowance.
   await store.execute('INSERT OR IGNORE INTO wallets(user_id,balance_units) VALUES(?,?)',[target,200000]);await store.execute('UPDATE wallets SET balance_units=200000 WHERE user_id=?',[target]);
   assert.equal(await db.purchaseWithWallet(target,'assistant:m1',randomUUID(),20000),true);
-  s=await call('/api/dashboard/assistant');assert.equal(s.data.plan,'assistant');assert.equal(s.data.limit,200);assert.equal(s.data.remaining,195);
+  s=await call('/api/dashboard/assistant');assert.equal(s.data.plan,'assistant');assert.equal(s.data.limit,200);assert.equal(s.data.remaining,200);
   const first=s.data.until;assert.equal(await db.purchaseWithWallet(target,'assistant:m3',randomUUID(),54000),true);
   assert.equal((await call('/api/dashboard/assistant')).data.until>first,true,'periods stack');
   const [tx]=await store.execute("SELECT label FROM wallet_transactions WHERE user_id=? AND product_ref='assistant:m3'",[target]);assert.equal(tx.label,'دستیار هوشمند سه‌ماهه');
@@ -34,6 +36,6 @@ const assert=require('node:assert/strict'),{randomUUID}=require('node:crypto'),l
   assert.equal(seen.url,'https://ai.example.test/v1/chat/completions');assert.equal(seen.auth,'Bearer test-key-123');assert(!JSON.stringify(seen.body).includes('09120000000'));assert.equal(answer.edits[0].name,'React');
   assert.equal(await llm.answer({question:'سلام',content},env,async()=>({ok:false})),null);
   assert.equal(await llm.answer({question:'سلام',content},{ASSISTANT_AI_URL:'http://insecure.test',ASSISTANT_AI_KEY:'test-key-123'}),null,'only https endpoints');
-  console.log('PASS assistant API: daily free allowance with limit refusal and plans, monthly assistant purchase that stacks, subscription inclusion, validation, private prompt, tagged model actions and local fallback.');
+  console.log('PASS assistant API: free local Fandogh that never uses the allowance, a model that is not connected falling back without charge, monthly assistant purchase that stacks, subscription inclusion, validation, private prompt, tagged model actions and local fallback.');
  }finally{store.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});

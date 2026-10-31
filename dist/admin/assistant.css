@@ -101,3 +101,14 @@
 .fx-hero input.toggle:checked{background:var(--fx-gold)}
 .fx .fx-master{display:inline-flex;grid-auto-flow:column}
 .fx-keystate bdi{direction:ltr;unicode-bidi:isolate}
+
+/* Models and their per-message cost */
+.fx-models header p{margin:4px 0 0;font-size:13px;line-height:1.9;color:#5a7080}
+.fx-model-list{display:grid;gap:8px;margin-top:14px}
+.fx-model{display:grid;grid-template-columns:minmax(180px,1.2fr) minmax(0,1fr) minmax(0,1fr) 130px;align-items:end;gap:10px;padding:10px 12px;border-radius:14px;background:#f6fafb;border:1px solid var(--fx-line);animation:fx-model-in .45s calc(var(--n,0)*40ms) cubic-bezier(.2,.9,.3,1) backwards;transition:opacity .3s}
+.fx-model:has([data-m-on]:not(:checked)){opacity:.6}
+.fx-model label{display:grid;gap:4px;font-size:12px}
+.fx-model .fx-inline{display:flex;align-items:center;gap:8px;align-self:center}
+@keyframes fx-model-in{from{opacity:0;transform:translateY(8px)}}
+@media(max-width:900px){.fx-model{grid-template-columns:1fr 1fr}.fx-model .fx-inline{grid-column:1/-1}}
+@media(prefers-reduced-motion:reduce){.fx-model{animation:none}}

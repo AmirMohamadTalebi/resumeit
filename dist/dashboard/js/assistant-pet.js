@@ -12,8 +12,7 @@
   const goal = () => store('ri-pet-goal-' + RI.ownerId) || '';
   const muted = () => store('ri-pet-muted') === '1';
   // How Fandogh's own resume edits land: «ask» shows them with before/after first, «auto» applies them and offers undo.
-  const editMode = () => store('ri-pet-edits-' + RI.ownerId) === 'auto' ? 'auto' : 'ask';
-  const undo = new Map();
+  const editMode = () => RI.Fandogh.editMode();
 
   /* ---------- Shell ---------- */
   function build() {
@@ -21,12 +20,14 @@
     root.innerHTML = '<div class="pet__stage"></div>' +
       '<section class="pet__panel" id="pet-panel" role="dialog" aria-label="فندق، دستیار رزومه" hidden>' +
       '<header class="pet__head"><span class="pet__face">' + AVATAR + '</span><div class="pet__title"><b>فندق <span>دستیار رزومه</span></b><div class="pet__quota"><i data-pet-quota></i></div><small data-pet-usage>در حال آماده‌سازی…</small></div>' +
+      '<button type="button" class="pet__icon" data-pet-studio title="باز کردن در صفحهٔ کامل">' + RI.icon('external') + '</button>' +
+      '<button type="button" class="pet__icon" data-pet-settings title="تنظیمات فندق">' + RI.icon('settings') + '</button>' +
       '<button type="button" class="pet__icon" data-pet-mute title="پیام‌های خودکار فندق" aria-pressed="false">' + RI.icon('bell') + '</button>' +
       '<button type="button" class="pet__icon" data-pet-tuck title="فندق پشت دیوار برود">' + RI.icon('eyeOff') + '</button>' +
       '<button type="button" class="pet__icon" data-pet-close aria-label="بستن">' + RI.icon('x') + '</button></header>' +
-      '<nav class="pet__tabs" role="tablist" aria-label="بخش‌های دستیار"><span class="pet__ink" aria-hidden="true"></span><button type="button" role="tab" data-pet-tab="chat">' + RI.icon('sparkle') + 'گفت‌وگو</button><button type="button" role="tab" data-pet-tab="score">' + RI.icon('chart') + 'امتیاز</button><button type="button" role="tab" data-pet-tab="review">' + RI.icon('check') + 'بررسی متن</button><button type="button" role="tab" data-pet-tab="settings">' + RI.icon('sliders') + 'تنظیمات</button></nav>' +
+      '<nav class="pet__tabs" role="tablist" aria-label="بخش‌های دستیار"><span class="pet__ink" aria-hidden="true"></span><button type="button" role="tab" data-pet-tab="chat">' + RI.icon('sparkle') + 'گفت‌وگو</button><button type="button" role="tab" data-pet-tab="score">' + RI.icon('chart') + 'امتیاز</button><button type="button" role="tab" data-pet-tab="review">' + RI.icon('check') + 'بررسی متن</button></nav>' +
       '<div class="pet__view" data-pet-view="chat"><div class="pet__log" data-pet-log aria-live="polite"></div><div class="pet__chips" data-pet-chips></div><div class="pet__mode" role="group" aria-label="وقتی فندق رزومه را تغییر می‌دهد"><span>تغییرهای فندق</span><button type="button" data-pet-mode="ask">' + RI.icon('eye') + 'اول نشانم بده</button><button type="button" data-pet-mode="auto">' + RI.icon('zap') + 'خودش انجام بدهد</button></div><form class="pet__ask" data-pet-form><label class="sr-only" for="pet-input">سؤالت از فندق</label><input id="pet-input" class="input" maxlength="500" autocomplete="off" placeholder="بپرس یا بگو چه کاره‌ای…"><button type="submit" class="pet__send" aria-label="فرستادن">' + RI.icon('chevL') + '</button></form></div>' +
-      '<div class="pet__view pet__score" data-pet-view="score" hidden></div><div class="pet__view pet__review" data-pet-view="review" hidden></div><div class="pet__view pet__settings" data-pet-view="settings" hidden></div></section>';
+      '<div class="pet__view pet__score" data-pet-view="score" hidden></div><div class="pet__view pet__review" data-pet-view="review" hidden></div></section>';
     document.body.append(root);
     panel = root.querySelector('.pet__panel');
     root.querySelector('[data-pet-close]').addEventListener('click', () => toggle(false));
@@ -35,6 +36,9 @@
     mute.setAttribute('aria-pressed', String(muted()));
     mute.addEventListener('click', () => { const on = !muted(); store('ri-pet-muted', on ? '1' : null); mute.setAttribute('aria-pressed', String(on)); RI.toast(on ? 'فندق دیگر خودش پیام نمی‌دهد' : 'فندق گاهی پیشنهاد می‌دهد', { kind: 'info' }); });
     root.addEventListener('click', onClick);
+    root.querySelector('[data-pet-studio]').addEventListener('click', () => { toggle(false); RI.go('fandogh'); });
+    root.querySelector('[data-pet-settings]').addEventListener('click', () => { toggle(false); RI.go('assistant'); });
+    document.addEventListener('ri:fandogh-status', e => { status = e.detail; paintUsage(); });
     paintMode();
     root.querySelector('[data-pet-form]').addEventListener('submit', e => { e.preventDefault(); const input = root.querySelector('#pet-input'), q = input.value.trim(); if (!q) return; input.value = ''; flyout(); ask(q); });
     // Escape closes the innermost thing first: an open tooltip inside the panel, then the panel itself.
@@ -54,7 +58,7 @@
   }
   function menuEntry() {
     const nav = RI.$('#sidebar .dn-nav'); if (!nav || nav.querySelector('[data-pet-open]')) return;
-    nav.insertAdjacentHTML('beforeend', '<div class="dn-group dn-group--pet"><ul><li><button type="button" class="dn-item dn-item--pet" data-pet-open><span class="dn-item__ico">' + AVATAR + '</span><span class="dn-item__txt">فندق، دستیار رزومه</span></button></li></ul></div>');
+    nav.insertAdjacentHTML('beforeend', '<div class="dn-group dn-group--pet"><ul><li><button type="button" class="dn-item dn-item--pet" data-pet-open><span class="dn-item__ico">' + AVATAR + '</span><span class="dn-item__txt">پنجرهٔ سریع فندق</span></button></li></ul></div>');
   }
 
   /* ---------- Speech: proactive, local, rate-limited ---------- */
@@ -123,7 +127,6 @@
     root.querySelectorAll('[data-pet-tab]').forEach(b => { const on = b.dataset.petTab === id; b.setAttribute('aria-selected', String(on)); b.tabIndex = on ? 0 : -1; if (b.dataset.petTab === 'review') b.hidden = !reviewHost; });
     root.querySelectorAll('[data-pet-view]').forEach(v => { v.hidden = v.dataset.petView !== id; });
     if (id === 'score') paintScore();
-    if (id === 'settings') paintSettings();
     if (id === 'review' && reviewHost && reviewHost.parentElement !== root.querySelector('[data-pet-view=review]')) root.querySelector('[data-pet-view=review]').append(reviewHost);
     requestAnimationFrame(ink);
   }
@@ -146,14 +149,15 @@
   function flyout() { const b = root.querySelector('.pet__send'); b.classList.remove('is-sent'); void b.offsetWidth; b.classList.add('is-sent'); }
   // Small talk (greetings, how-are-you, date and time…) is answered on the spot: no server call, no allowance used.
   const REACT = { joke: 'laugh', laugh: 'laugh', love: 'purr', thanks: 'purr', greet: 'purr', moodgood: 'celebrate', rude: 'surprise' };
-  async function ask(question) {
-    if (busy) return; busy = true; push('me', question); cat?.mood('think'); root.classList.add('is-busy');
+  let lastQuestion = '';
+  async function ask(question, model) {
+    if (busy) return; busy = true; lastQuestion = question; push('me', question); cat?.mood('think'); root.classList.add('is-busy');
     const log = root.querySelector('[data-pet-log]'); log.insertAdjacentHTML('beforeend', '<div class="pet-msg pet-msg--bot pet-msg--typing"><span class="pet-msg__av">' + AVATAR + '</span><div class="pet-msg__body"><i></i><i></i><i></i></div></div>'); log.scrollTop = log.scrollHeight;
     // Same reading as the server, with the conversation so far; identity questions always stay here. When the owner
     // paused Fandogh or wants small talk answered by the model too, the server decides.
     const B = brain(), said = B?.reply ? B.reply(question, RI.C(), { goal: goal(), history: history.slice(0, -1) }) : B?.chat?.(question, RI.C(), { goal: goal() });
     const mine = said && said.intent === 'smalltalk' && (said.topics || [said.topic]).some(t => ['name', 'model', 'bot', 'maker'].includes(t));
-    const local = said && said.intent === 'smalltalk' && status?.enabled !== false && (mine || !status?.smalltalk) ? said : null;
+    const local = !model && said && said.intent === 'smalltalk' && status?.enabled !== false && (mine || !status?.smalltalk) ? said : null;
     if (local) {
       await new Promise(r => setTimeout(r, calm.matches ? 0 : 450 + Math.min(700, local.text.length * 6)));
       log.querySelector('.pet-msg--typing')?.remove(); push('bot', local.text, local.actions, local.follow);
@@ -161,13 +165,13 @@
       busy = false; root.classList.remove('is-busy'); return;
     }
     try {
-      const c = RI.C(), mode = editMode(), r = await RI.dashboardRequest('assistant/ask', { question, goal: goal(), mode, page: document.body.dataset.page || '', history: history.slice(-9, -1), content: { profile: c.profile, skills: c.skills, experience: c.experience, education: c.education, projects: c.projects, certs: c.certs, languages: c.languages, contacts: c.contacts, socials: c.socials, sections: c.sections } });
-      status = r.usage; paintUsage(); log.querySelector('.pet-msg--typing')?.remove();
-      push('bot', r.reply.text, r.reply.actions || [], r.reply.follow || []); cat?.mood('happy', 1200);
-      if (r.reply.edits?.length) edits(r.reply.edits, mode);
+      const mode = editMode(), reply = await RI.Fandogh.ask(question, { mode, model, history: history.slice(-9, -1) });
+      log.querySelector('.pet-msg--typing')?.remove();
+      push('bot', reply.text, reply.actions || [], reply.follow || []); cat?.mood('happy', 1200);
+      if (reply.edits?.length) edits(reply.edits, mode);
     } catch (e) {
       log.querySelector('.pet-msg--typing')?.remove();
-      if (e.code === 'ASSISTANT_LIMIT') { if (e.data?.usage) { status = e.data.usage; paintUsage(); } upsell(e.message); }
+      if (e.code === 'ASSISTANT_LIMIT') { if (e.data?.usage) { status = RI.Fandogh.status = e.data.usage; paintUsage(); } upsell(e.message); }
       else push('bot', e.message || 'الان نتوانستم جواب بدهم؛ کمی بعد دوباره بپرس.');
       cat?.mood('sad', 1600);
     } finally { busy = false; root.classList.remove('is-busy'); }
@@ -175,99 +179,29 @@
   /* ---------- Fandogh's own edits: a before/after card, applied after a yes or right away with undo ---------- */
   function paintMode() { const m = editMode(); root.querySelectorAll('[data-pet-mode]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.petMode === m))); }
   const note = text => { history.push({ role: 'user', text }); if (history.length > 12) history.splice(0, history.length - 12); };
-  const editBtn = (key, label, icon, primary) => '<button type="button" class="pet__act' + (primary ? ' pet__act--primary' : '') + '" data-edits-act="' + key + '">' + RI.icon(icon) + label + '</button>';
   function edits(list, mode) {
-    const id = 'e' + Date.now().toString(36), log = root.querySelector('[data-pet-log]');
-    log.insertAdjacentHTML('beforeend', '<div class="pet-edits" data-edits="' + id + '" data-state="pending"><div class="pet-edits__head"><i>' + RI.icon('edit') + '</i><b data-edits-title></b></div><ul>' + list.map((e, i) => '<li style="--i:' + i + '"><label><input type="checkbox" data-edit-pick="' + i + '" checked><span>' + esc(e.label) + '</span></label>' + (e.before ? '<del>' + esc(e.before.length > 160 ? e.before.slice(0, 158) + '…' : e.before) + '</del>' : '') + '<ins' + (e.after ? '' : ' class="is-gone"') + '>' + esc(e.after || 'حذف می‌شود') + '</ins></li>').join('') + '</ul><div class="pet-edits__acts"></div></div>');
-    const card = log.querySelector('[data-edits="' + id + '"]'); card._edits = list;
-    if (mode === 'auto') applyEdits(card); else paintEdits(card);
+    const log = root.querySelector('[data-pet-log]');
+    RI.Fandogh.editCard(log, list, mode, {
+      applied: picked => { cat?.play('celebrate'); note('(فندق این تغییرها را در رزومه داد: ' + picked.map(e => e.label + (e.after ? ' ← ' + e.after.slice(0, 60) : '')).join('؛ ') + ')'); },
+      undone: () => { cat?.mood('think', 1000); note('(تغییرهای قبلی فندق را برگرداندم)'); },
+      note, kept: () => cat?.play('purr')
+    });
     log.scrollTo({ top: log.scrollHeight, behavior: calm.matches ? 'auto' : 'smooth' });
   }
-  function paintEdits(card) {
-    const s = card.dataset.state, n = card._edits.length;
-    card.querySelector('[data-edits-title]').textContent = s === 'pending' ? (n > 1 ? RI.fa(n) + ' تغییر برای رزومه‌ات؛ تیک هر کدام را که نمی‌خواهی بردار' : 'یک تغییر برای رزومه‌ات') : s === 'applied' ? 'این تغییرها را در رزومه‌ات دادم' : s === 'undone' ? 'برگرداندم؛ رزومه مثل قبل شد' : 'باشه، چیزی عوض نشد';
-    card.querySelectorAll('[data-edit-pick]').forEach(x => { x.disabled = s !== 'pending'; });
-    card.querySelector('.pet-edits__acts').innerHTML = s === 'pending' ? editBtn('apply', 'اعمال کن', 'check', true) + editBtn('skip', 'نه، ممنون', 'x') : s === 'applied' ? editBtn('keep', 'خوبه', 'check', true) + editBtn('show', 'نشانم بده', 'eye') + editBtn('undo', 'برگردان', 'undo') : s === 'undone' ? editBtn('redo', 'دوباره اعمال کن', 'refresh') : '';
-  }
-  function applyEdits(card) {
-    const E = window.FandoghEdits, c = RI.C(); if (!E) return;
-    const picked = card._edits.filter((e, i) => card.querySelector('[data-edit-pick="' + i + '"]')?.checked !== false);
-    if (!picked.length) { card.dataset.state = 'skipped'; paintEdits(card); return; }
-    undo.set(card.dataset.edits, E.snapshot(c));
-    const scopes = E.apply(c, picked); card._applied = picked;
-    if (scopes.length) { RI.touch(scopes[0]); RI.rerender?.(); }
-    card.dataset.state = 'applied'; paintEdits(card); cat?.play('celebrate');
-    note('(فندق این تغییرها را در رزومه داد: ' + picked.map(e => e.label + (e.after ? ' ← ' + e.after.slice(0, 60) : '')).join('؛ ') + ')');
-  }
-  function undoEdits(card) {
-    const snap = undo.get(card.dataset.edits); if (!snap) return;
-    window.FandoghEdits.restore(RI.C(), snap); RI.touch('profile'); RI.rerender?.();
-    card.dataset.state = 'undone'; paintEdits(card); cat?.mood('think', 1000); note('(تغییرهای قبلی فندق را برگرداندم)');
-  }
-  function showEdit(card) {
-    const e = (card._applied || [])[0]; if (!e) return;
-    const target = e.op === 'set' || e.op === 'replace' ? { section: 'profile', field: e.field || 'bio' } : /skill/.test(e.op) ? { section: 'skills' } : { section: e.section, itemId: e.id, field: e.field };
-    if (RI.resumeFocus && document.body.dataset.page === 'resume') RI.resumeFocus(target); else RI.go('resume', { step: target.section });
-  }
   /* ---------- The person's own settings: the name they call Fandogh, tone, answer length and their own model key ---------- */
-  let mine = null;
-  const label = () => (status?.name || mine?.settings?.name || 'فندق');
+  const label = () => (status?.name || 'فندق');
   function paintName() { const b = root.querySelector('.pet__title b'); if (b && b.firstChild) b.firstChild.textContent = label() + ' '; }
-  async function paintSettings() {
-    const host = root.querySelector('[data-pet-view=settings]');
-    if (!mine) { host.innerHTML = '<p class="pet-set__wait">در حال آماده‌سازی…</p>'; try { mine = await RI.dashboardRequest('assistant/me'); } catch (e) { host.innerHTML = '<p class="pet-set__wait">' + esc(e.message || 'تنظیمات دریافت نشد') + '</p>'; return; } }
-    const s = mine.settings, own = s.own, provider = id => mine.providers.find(p => p.id === id);
-    const seg = (name, value, options) => '<div class="pet-set__seg" role="radiogroup">' + options.map(([v, t]) => '<label><input type="radio" name="' + name + '" value="' + v + '"' + (value === v ? ' checked' : '') + '><span>' + t + '</span></label>').join('') + '</div>';
-    host.innerHTML = '<form class="pet-set" data-pet-set novalidate>' +
-      '<section class="pet-set__card" style="--i:0"><h3>' + RI.icon('user') + 'شخصیت دستیار</h3>' +
-      '<label class="pet-set__field"><span>اسمی که صدایش می‌کنی</span><input class="input" name="name" maxlength="20" value="' + esc(s.name) + '" autocomplete="off"></label>' +
-      '<div class="pet-set__field"><span>لحن</span>' + seg('tone', s.tone, [['friendly', 'صمیمی'], ['formal', 'رسمی']]) + '</div>' +
-      '<div class="pet-set__field"><span>طول جواب</span>' + seg('answer', s.length, [['short', 'کوتاه'], ['detailed', 'مفصل']]) + '</div>' +
-      '<div class="pet-set__field"><span>تغییرهای رزومه</span>' + seg('edits', editMode(), [['ask', 'اول نشانم بده'], ['auto', 'خودش انجام بدهد']]) + '</div></section>' +
-      '<section class="pet-set__card pet-set__card--own" style="--i:1"><h3>' + RI.icon('key') + 'هوش مصنوعی خودت <em>رایگان</em></h3>' +
-      '<p class="pet-set__note">با کلید خودت، پیام‌ها از سهمیهٔ روزانه کم نمی‌شوند و دستیار از حساب خودت جواب می‌دهد؛ هزینهٔ سرویس با خودت است. کلید رمزگذاری‌شده نگه داشته می‌شود و دوباره نمایش داده نمی‌شود.</p>' +
-      '<label class="pet-set__switch"><input type="checkbox" name="own"' + (own.enabled ? ' checked' : '') + '><span>از کلید خودم استفاده کن</span></label>' +
-      '<div class="pet-set__own"' + (own.enabled ? '' : ' hidden') + '>' +
-      '<label class="pet-set__field"><span>سرویس</span><select class="input" name="provider">' + mine.providers.map(p => '<option value="' + p.id + '"' + (p.id === own.provider ? ' selected' : '') + '>' + esc(p.label) + '</option>').join('') + '</select></label>' +
-      '<label class="pet-set__field"><span>مدل <small>(خالی یعنی پیش‌فرض)</small></span><input class="input" name="model" dir="ltr" maxlength="80" value="' + esc(own.model) + '" list="pet-models" placeholder="' + esc(provider(own.provider)?.model || '') + '"><datalist id="pet-models">' + (provider(own.provider)?.models || []).map(m => '<option value="' + esc(m) + '">').join('') + '</datalist></label>' +
-      '<label class="pet-set__field" data-own-url' + (own.provider === 'custom' ? '' : ' hidden') + '><span>نشانی سرویس</span><input class="input" name="url" dir="ltr" maxlength="200" value="' + esc(own.url) + '" placeholder="https://"></label>' +
-      '<label class="pet-set__field"><span>کلید API ' + (mine.key.set ? '<small>ذخیره‌شده ' + esc(mine.key.hint) + '</small>' : '') + '</span><input class="input" name="key" type="password" dir="ltr" autocomplete="off" placeholder="' + (mine.key.set ? 'برای عوض کردن، کلید تازه را بنویس' : 'sk-…') + '"></label>' +
-      '<div class="pet-set__row"><button type="button" class="pet__act" data-set-test>' + RI.icon('zap') + 'آزمون اتصال</button>' + (mine.key.set ? '<button type="button" class="pet__act" data-set-forget>' + RI.icon('trash') + 'حذف کلید</button>' : '') + '</div><p class="pet-set__status" data-set-test-status role="status"></p></div></section>' +
-      '<div class="pet-set__save"><button type="submit" class="pet__act pet__act--primary">' + RI.icon('check') + 'ذخیرهٔ تنظیمات</button><p class="pet-set__status" data-set-status role="status"></p></div></form>';
-    const form = host.querySelector('[data-pet-set]'), field = n => form.elements[n];
-    form.addEventListener('change', e => {
-      if (e.target.name === 'own') form.querySelector('.pet-set__own').hidden = !e.target.checked;
-      if (e.target.name === 'provider') { const p = provider(e.target.value); form.querySelector('[data-own-url]').hidden = e.target.value !== 'custom'; field('model').placeholder = p?.model || ''; form.querySelector('#pet-models').innerHTML = (p?.models || []).map(m => '<option value="' + esc(m) + '">').join(''); }
-      if (e.target.name === 'edits') { store('ri-pet-edits-' + RI.ownerId, e.target.value === 'auto' ? 'auto' : null); paintMode(); }
-    });
-    const draft = () => ({ name: field('name').value.trim(), tone: field('tone').value, length: field('answer').value, own: { enabled: field('own').checked, provider: field('provider').value, model: field('model').value.trim(), url: field('url').value.trim() } });
-    const key = () => field('key').value.trim();
-    const note = (sel, text, kind) => { const el = form.querySelector(sel); el.textContent = text; el.dataset.kind = kind || ''; };
-    form.addEventListener('submit', async e => {
-      e.preventDefault(); note('[data-set-status]', 'در حال ذخیره…');
-      try { mine = await RI.dashboardRequest('assistant/me', { settings: draft(), ...(key() ? { key: key() } : {}) }); await refresh(); paintName(); paintSettings(); RI.toast(label() + ' تنظیماتت را یاد گرفت', { kind: 'success' }); cat?.play('celebrate'); }
-      catch (err) { note('[data-set-status]', err.message, 'error'); }
-    });
-    form.querySelector('[data-set-test]').addEventListener('click', async () => {
-      note('[data-set-test-status]', 'در حال آزمون…');
-      try { const r = await RI.dashboardRequest('assistant/me/test', { own: draft().own, ...(key() ? { key: key() } : {}) }); note('[data-set-test-status]', r.ok ? 'وصل شد: «' + r.reply + '»' : r.error, r.ok ? 'ok' : 'error'); }
-      catch (err) { note('[data-set-test-status]', err.message, 'error'); }
-    });
-    form.querySelector('[data-set-forget]')?.addEventListener('click', async () => {
-      try { const d = draft(); d.own.enabled = false; mine = await RI.dashboardRequest('assistant/me', { settings: d, key: null }); await refresh(); paintSettings(); RI.toast('کلیدت حذف شد', { kind: 'info' }); }
-      catch (err) { note('[data-set-test-status]', err.message, 'error'); }
-    });
-  }
   function upsell(message) {
     const plans = status?.plans || [], log = root.querySelector('[data-pet-log]');
     log.insertAdjacentHTML('beforeend', '<div class="pet-upsell"><b>' + esc(message || 'پیام‌های رایگان امروز تمام شد') + '</b><p>با هر اشتراک رزومیت، دستیار خودکار فعال است. یا فقط دستیار را بگیر:</p><div class="pet-upsell__plans">' + plans.map((p, i) => '<button type="button" class="pet-plan" data-buy="' + p.id + '" style="--i:' + i + '"' + (p.paused ? ' disabled' : '') + '><b>' + esc(p.period) + '</b><span>' + RI.it(p.price) + '</span>' + (p.months > 1 ? '<small>' + RI.fa(Math.round((1 - p.price / p.months / (plans[0].price || 1)) * 100)) + '٪ ارزان‌تر</small>' : '<small>ماهانه</small>') + '</button>').join('') + '</div><a class="pet__link" href="' + RI.routeUrl('billing') + '" data-go="billing">دیدن اشتراک‌ها</a></div>');
     log.scrollTop = log.scrollHeight;
   }
-  async function refresh() { try { status = await RI.dashboardRequest('assistant'); paintUsage(); } catch { root.querySelector('[data-pet-usage]').textContent = 'وضعیت سهمیه دریافت نشد'; } }
+  async function refresh() { try { status = await RI.Fandogh.refresh(); paintUsage(); } catch { root.querySelector('[data-pet-usage]').textContent = 'وضعیت سهمیه دریافت نشد'; } }
   function paintUsage() {
     if (!status) return; const el = root.querySelector('[data-pet-usage]'), bar = root.querySelector('[data-pet-quota]');
     paintName();
-    el.textContent = status.own ? 'با کلید خودت · بدون سهمیه' : status.plan === 'free' ? RI.fa(status.remaining) + ' پیام رایگان از ' + RI.fa(status.limit) + ' برای امروز' : (status.plan === 'subscription' ? 'فعال با اشتراک' : 'دستیار فعال') + ' · ' + RI.fa(status.remaining) + ' پیام باقی امروز';
+    const engine = (status.models || []).find(m => m.id === status.engine);
+    el.textContent = engine && !engine.cost ? (engine.id === 'local' ? 'فندق محلی · رایگان و بی‌سهمیه' : 'با کلید خودت · بدون سهمیه') : status.plan === 'free' ? RI.fa(status.remaining) + ' پیام رایگان از ' + RI.fa(status.limit) + ' برای امروز' : (status.plan === 'subscription' ? 'فعال با اشتراک' : 'دستیار فعال') + ' · ' + RI.fa(status.remaining) + ' پیام باقی امروز';
     const low = status.plan === 'free' && status.remaining <= 1; el.dataset.low = String(low); bar.dataset.low = String(low);
     bar.style.setProperty('--q', Math.max(0, Math.min(100, Math.round(status.remaining / (status.limit || 1) * 100))) + '%');
   }
@@ -287,7 +221,8 @@
     if (!a) return; const c = RI.C();
     if (a.kind === 'open') { toggle(true); return; }
     if (a.kind === 'tab') { if (!open) toggle(true); select(a.tab === 'review' && !reviewHost ? 'chat' : a.tab); if (a.tab === 'review' && !reviewHost) RI.go('resume'); return; }
-    if (a.kind === 'route') { RI.go(a.route, a.tab ? { tab: a.tab } : undefined); return; }
+    if (a.kind === 'route') { if (open) toggle(false); RI.go(a.route, a.tab ? { tab: a.tab } : undefined); return; }
+    if (a.kind === 'model') { if (lastQuestion) ask(lastQuestion, a.value); return; }
     if (a.kind === 'go') { if (RI.resumeFocus) RI.resumeFocus({ section: a.section, field: a.field }); else RI.go('resume', { step: a.section }); return; }
     if (a.kind === 'goal') { store('ri-pet-goal-' + RI.ownerId, a.value); RI.toast('هدفت ثبت شد: ' + a.value); if (tab === 'score') paintScore(); return; }
     if (a.kind === 'bio' || a.kind === 'title') { c.profile[a.kind] = a.value; RI.touch('profile'); RI.rerender?.(); RI.toast(a.kind === 'bio' ? 'معرفی گذاشته شد؛ هر جا خواستی ویرایشش کن' : 'عنوان به‌روز شد'); cat?.mood('happy', 1200); return; }
@@ -302,17 +237,8 @@
   }
   function onClick(e) {
     if (e.target === root && open) { toggle(false); return; }
-    const t = e.target.closest('[data-pet-tab],[data-ask],[data-msg-act],[data-buy],[data-edits-act],[data-pet-mode]'); if (!t) return;
-    if (t.dataset.editsAct) {
-      const card = t.closest('[data-edits]'), k = t.dataset.editsAct;
-      if (k === 'apply' || k === 'redo') applyEdits(card);
-      else if (k === 'undo') undoEdits(card);
-      else if (k === 'show') showEdit(card);
-      else if (k === 'skip') { card.dataset.state = 'skipped'; paintEdits(card); note('(این تغییرها را نخواستم)'); }
-      else if (k === 'keep') { card.querySelector('.pet-edits__acts').innerHTML = editBtn('undo', 'برگردان', 'undo'); cat?.play('purr'); }
-      return;
-    }
-    if (t.dataset.petMode) { store('ri-pet-edits-' + RI.ownerId, t.dataset.petMode === 'auto' ? 'auto' : null); paintMode(); RI.toast(t.dataset.petMode === 'auto' ? 'از این به بعد فندق تغییرها را خودش انجام می‌دهد و می‌توانی برگردانی' : 'از این به بعد فندق اول تغییرها را نشانت می‌دهد', { kind: 'info' }); return; }
+    const t = e.target.closest('[data-pet-tab],[data-ask],[data-msg-act],[data-buy],[data-pet-mode]'); if (!t) return;
+    if (t.dataset.petMode) { RI.Fandogh.setEditMode(t.dataset.petMode); paintMode(); RI.toast(t.dataset.petMode === 'auto' ? 'از این به بعد فندق تغییرها را خودش انجام می‌دهد و می‌توانی برگردانی' : 'از این به بعد فندق اول تغییرها را نشانت می‌دهد', { kind: 'info' }); return; }
     if (t.dataset.petTab) select(t.dataset.petTab);
     else if (t.dataset.ask) { if (tab !== 'chat') select('chat'); ask(t.dataset.ask); }
     else if (t.dataset.msgAct) { const [id, i] = t.dataset.msgAct.split(':'), a = chat.find(m => m.id === id)?.actions?.[Number(i)]; if (a) act(a); }

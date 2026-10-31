@@ -31,7 +31,7 @@
       '<section class="fx-hero"><img class="fx-hero__cat" src="/brand/fandogh/avatar.webp" alt="" width="76" height="76"><div class="fx-hero__text"><h2>فندق، دستیار رزومه</h2><p>' + status + '</p></div>' +
       '<label class="fx-master"><span>' + (s.enabled ? 'روشن' : 'خاموش') + '</span><input type="checkbox" class="toggle" data-fx-enabled' + (s.enabled ? ' checked' : '') + ' aria-label="روشن یا خاموش بودن فندق"></label></section>' +
       '<div class="fx-kpis">' +
-      kpi('پیام‌های امروز', t.messages, fa(t.users) + ' کاربر', 'bell') +
+      kpi('سهمیهٔ مصرف‌شدهٔ امروز', t.messages, fa(t.users) + ' کاربر', 'bell') +
       kpi('پاسخ هوش مصنوعی امروز', t.aiCalls, t.aiFailures ? fa(t.aiFailures) + ' خطا' : 'بدون خطا', 'sparkle') +
       kpi('توکن امروز', t.tokens, 'ورودی و خروجی', 'layers') +
       kpi('سقف روزانهٔ هوش مصنوعی', s.ai.dailyCalls, fa(Math.max(0, s.ai.dailyCalls - t.aiCalls)) + ' باقی‌مانده', 'sliders') +
@@ -61,6 +61,9 @@
       '<label>سقف روزانهٔ کل سایت<span class="fx-num"><input class="input" type="number" min="1" max="1000000" step="1" data-fx-calls value="' + s.ai.dailyCalls + '"><em>پاسخ</em></span></label>' +
       '<label class="fx-inline fx-wide"><input type="checkbox" class="toggle" data-fx-small' + (s.ai.smalltalk ? ' checked' : '') + '>سلام و احوالپرسی هم با هوش مصنوعی جواب داده شود (هزینه بیشتر؛ معرفی فندق همیشه داخلی می‌ماند)</label>' +
       '</div></section>' +
+      '<section class="panel fx-models"><header><div><h2>' + icon('layers') + 'مدل‌ها و هزینهٔ هر پیام</h2><p>هزینه یعنی هر پرسش با این مدل چند پیام از سهمیهٔ روزانهٔ کاربر برمی‌دارد؛ GPT Luna یک پیام است. فندق محلی و کلید شخصی کاربران همیشه رایگان‌اند. مدلی که سرویسش کلید ندارد به کاربر «در دسترس نیست» نشان داده می‌شود.</p></div></header><div class="fx-model-list">' +
+      (d.models || []).map((m, i) => '<div class="fx-model" data-model-id="' + m.id + '" style="--n:' + i + '"><label class="fx-inline"><input type="checkbox" class="toggle" data-m-on' + (m.enabled ? ' checked' : '') + '><b>' + esc(m.base.label) + '</b><small class="fx-keystate' + (m.available ? ' is-set' : '') + '">' + (m.available ? 'آماده' : 'بدون کلید') + '</small></label><label>نام نمایشی<input class="input" data-m-label maxlength="40" value="' + esc(m.label === m.base.label ? '' : m.label) + '" placeholder="' + esc(m.base.label) + '"></label><label>شناسهٔ مدل<input class="input" dir="ltr" data-m-model maxlength="80" value="' + esc(m.model === m.base.model ? '' : m.model) + '" placeholder="' + esc(m.base.model || 'مدل فعال سرویس') + '"></label><label>هزینه<span class="fx-num"><input class="input" type="number" min="1" max="50" step="1" data-m-cost value="' + m.cost + '"><em>پیام</em></span></label></div>').join('') +
+      '</div></section>' +
       '<section class="panel fx-save"><label>دلیل تغییر<textarea class="input" data-fx-reason minlength="5" maxlength="500" placeholder="مثلاً: وصل‌کردن فندق به سرویس جدید"></textarea></label><div class="fx-save__row"><button type="button" class="btn btn-primary" data-fx-save>' + icon('save') + 'ذخیرهٔ تنظیمات فندق</button><p class="fx-result" data-fx-status role="status"></p></div></section>' +
       '</div>';
   }
@@ -81,7 +84,9 @@
   function collect() {
     const providers = {};
     for (const card of $$('.fx-provider')) { const model = card.querySelector('[data-model]').value.trim(), url = card.querySelector('[data-url]')?.value.trim() || ''; if (model || url) providers[card.dataset.provider] = { model, url }; }
-    return { enabled: $('[data-fx-enabled]').checked, freeDaily: Number($('[data-fx-free]').value), paidDaily: Number($('[data-fx-paid]').value), providers,
+    const models = {};
+    for (const row of $$('.fx-model')) { const base = data.models.find(m => m.id === row.dataset.modelId).base, v = { enabled: row.querySelector('[data-m-on]').checked, cost: Number(row.querySelector('[data-m-cost]').value), model: row.querySelector('[data-m-model]').value.trim(), label: row.querySelector('[data-m-label]').value.trim() }; if (!v.enabled || v.cost !== base.cost || v.model || v.label) models[row.dataset.modelId] = v; }
+    return { models, enabled: $('[data-fx-enabled]').checked, freeDaily: Number($('[data-fx-free]').value), paidDaily: Number($('[data-fx-paid]').value), providers,
       ai: { enabled: $('[data-fx-ai]').checked, provider: ($('[name="fx-provider"]:checked') || {}).value || data.settings.ai.provider, temperature: Number($('[data-fx-temp]').value) / 100, maxTokens: Number($('[data-fx-tokens]').value), dailyCalls: Number($('[data-fx-calls]').value), smalltalk: $('[data-fx-small]').checked } };
   }
   const reason = () => { const r = $('[data-fx-reason]').value.trim(); if (r.length < 5) { $('[data-fx-reason]').focus(); throw new Error('دلیل تغییر را دست‌کم در پنج حرف بنویس'); } return r; };
