@@ -99,3 +99,29 @@ body:has(.ri-imported[data-template=vista])>.sample-label{position:static;displa
 .ri-imported[data-template=vista] .ri-inbox{grid-column:2;grid-row:1 / span 12;margin:0;max-width:none;--ri-inbox-line:var(--vista-line);--ri-inbox-bg:var(--vista-surface);--ri-inbox-field:var(--vista-bg);--ri-inbox-ink:var(--vista-ink);--ri-section-accent:var(--vista-accent);--ri-inbox-on:var(--vista-bg);color:var(--vista-ink)}
 .ri-imported[data-template=vista] .ri-inbox__lead{color:var(--vista-muted);opacity:1}
 @media(max-width:900px){.ri-imported[data-template=vista] .ri-inbox{grid-column:auto;grid-row:auto}}
+
+/* «اعداد و ارقام» and the «work together» card, restored from the original page. Cards rise in turn, their numbers
+   count up and the bars grow; the call-to-action card gets a slow light sweep. Reduced motion shows the end state. */
+.ri-imported[data-template=vista] .ri-vista-stats,.ri-imported[data-template=vista] .ri-vista-cta{display:block;width:100%}
+.ri-imported[data-template=vista] .ri-vista-stats .bento-ico svg,.ri-imported[data-template=vista] .ri-vista-cta .vista-icon-wrap svg{width:22px;height:22px;fill:none;stroke:currentColor}
+.ri-imported[data-template=vista] .ri-vista-cta .vista-icon-wrap svg{width:16px;height:16px}
+.ri-imported[data-template=vista] .bento-cell.ri-count-wait{opacity:0;transform:translateY(22px)}
+.ri-imported[data-template=vista] .bento-cell.ri-count-in{animation:ri-vista-rise .7s calc(var(--ri-i,0)*120ms) cubic-bezier(.2,.9,.3,1) backwards}
+.ri-imported[data-template=vista] .bento-cell.ri-count-in .mini-bar{transform-origin:50% 100%;animation:ri-vista-bar .9s calc(.3s + var(--ri-i,0)*120ms) cubic-bezier(.3,1.4,.5,1) backwards}
+.ri-imported[data-template=vista] .bento-cell.ri-count-in .mini-bar:nth-child(2){animation-delay:.38s}.ri-imported[data-template=vista] .bento-cell.ri-count-in .mini-bar:nth-child(3){animation-delay:.46s}.ri-imported[data-template=vista] .bento-cell.ri-count-in .mini-bar:nth-child(4){animation-delay:.54s}.ri-imported[data-template=vista] .bento-cell.ri-count-in .mini-bar:nth-child(5){animation-delay:.62s}
+.ri-imported[data-template=vista] .ri-vista-cta .dark-bg{position:relative;overflow:hidden;isolation:isolate}
+.ri-imported[data-template=vista] .ri-vista-cta .dark-bg::before{content:"";position:absolute;inset:-40% -10%;z-index:-1;background:linear-gradient(105deg,transparent 40%,color-mix(in srgb,var(--vista-accent,#00b894) 22%,transparent) 50%,transparent 60%);transform:translateX(-60%);animation:ri-vista-sweep 7s ease-in-out infinite}
+.ri-imported[data-template=vista] .ri-vista-cta .elementor-element-ec78f95{justify-content:center;flex-wrap:wrap;gap:10px}
+.ri-imported[data-template=vista] .ri-vista-cta .vista-btn{transition:transform .3s cubic-bezier(.3,1.5,.5,1)}
+.ri-imported[data-template=vista] .ri-vista-cta .vista-btn:hover{transform:translateY(-3px)}
+@keyframes ri-vista-rise{from{opacity:0;transform:translateY(22px)}}
+@keyframes ri-vista-bar{from{transform:scaleY(0)}}
+@keyframes ri-vista-sweep{50%{transform:translateX(60%)}}
+@media(prefers-reduced-motion:reduce){.ri-imported[data-template=vista] :is(.bento-cell,.mini-bar,.dark-bg::before){animation:none!important}.ri-imported[data-template=vista] .ri-vista-cta .dark-bg::before{display:none}}
+.ri-imported[data-template=vista] .ri-vista-cta>.ri-section-head{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.ri-imported[data-template=vista] .ri-resume-section.ri-vista-cta .elementor-widget-vista-section-title{display:block}
+.ri-imported[data-template=vista] .ri-vista-cta .vista-section-title{color:#fff;text-align:center}
+.ri-imported[data-template=vista] .ri-vista-cta h5.vista-section-title{opacity:.8;font-size:14px;letter-spacing:0}
+.ri-imported[data-template=vista] .ri-vista-cta p.vista-section-title{max-width:56ch;margin-inline:auto;opacity:.85;font-size:15px;line-height:2}
+.ri-imported[data-template=vista] .ri-vista-cta .elementor-element-4dead33 .vista-btn,.ri-imported[data-template=vista] .ri-vista-cta .elementor-element-4dead33 .vista-icon-wrap{color:#14212b!important}
+.ri-imported[data-template=vista] :is(.ri-vista-cta .vista-icon-wrap,.ri-vista-stats .bento-ico) svg{fill:none!important;stroke:currentColor!important}

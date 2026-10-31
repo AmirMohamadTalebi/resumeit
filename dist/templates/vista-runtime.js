@@ -19,6 +19,16 @@
   // The visitor message form posts through /public-assets/inbox.js; in the dashboard preview it only explains itself.
   if(options.preview)root.querySelector('[data-inbox-form]')?.addEventListener('submit',event=>{event.preventDefault();options.onExternal?.();});
   const observer=new view.IntersectionObserver(entries=>entries.forEach(entry=>entry.target.classList.toggle('vista-offscreen',!entry.isIntersecting)),{rootMargin:'100px'});root.querySelectorAll('.vista-hi-img-col').forEach(el=>observer.observe(el));options.signal?.addEventListener('abort',()=>observer.disconnect(),{once:true});
+  // «اعداد و ارقام»: each number counts up and its bars rise the first time the cards come into view; the final
+  // number is already in the page, so reduced motion and no-script readers see it as is.
+  const cells=[...root.querySelectorAll('.ri-vista-stats .bento-cell')];
+  if(cells.length&&!view.matchMedia('(prefers-reduced-motion:reduce)').matches&&view.IntersectionObserver){
+   const fa=n=>Math.round(n).toLocaleString('fa-IR',{useGrouping:false});
+   cells.forEach((cell,i)=>{cell.classList.add('ri-count-wait');cell.style.setProperty('--ri-i',i);const n=cell.querySelector('.bento-count');if(n)n.textContent=fa(0);});
+   const count=new view.IntersectionObserver(entries=>entries.forEach(entry=>{if(!entry.isIntersecting)return;count.unobserve(entry.target);const cell=entry.target,n=cell.querySelector('.bento-count'),end=Number(n?.dataset.count||0),start=view.performance.now()+Number(cell.style.getPropertyValue('--ri-i'))*120;cell.classList.replace('ri-count-wait','ri-count-in');
+    const step=now=>{const k=Math.min(1,Math.max(0,(now-start)/1100));if(n)n.textContent=fa(end*(1-Math.pow(1-k,3)));if(k<1)view.requestAnimationFrame(step);};view.requestAnimationFrame(step);}),{threshold:.35});
+   cells.forEach(cell=>count.observe(cell));options.signal?.addEventListener('abort',()=>count.disconnect(),{once:true});
+  }
  };
  if(document.querySelector('.ri-imported'))window.bindVistaPage(document);
 })();

@@ -51,6 +51,7 @@
         { key: 'mode', label: 'حالت پیش‌فرض قالب', type: 'select', options: [...(id==='vista'?[['system','طبق دستگاه بازدیدکننده']]:[]),['dark','تیره'],['light','روشن']], default: id==='vista'?'system':'dark' },
         { key: 'font', label: 'فونت نوشته‌ها', type: 'select', options: [['theme','طبق انتخاب ظاهر و قالب'],['original','فونت اصلی قالب'],...RI.FONTS.map(f=>[f.id,f.name+(f.access==='buy'?' · '+RI.it(f.price):' · رایگان')])], default: 'theme' },
         { key: 'compose', label: 'نمایش فرم تماس با برنامهٔ ایمیل', type: 'checkbox', default: true, group: 'home:compose' },
+        ...(id==='vista'?[{ key: 'show_vista_stats', label: 'نمایش «اعداد و ارقام» (از روی پروژه‌ها، سابقه و مهارت‌های رزومه)', type: 'checkbox', default: true },{ key: 'show_vista_cta', label: 'نمایش کارت دعوت به همکاری', type: 'checkbox', default: true }]:[]),
         { key: 'section_order', label: 'ترتیب بخش‌ها', type: 'order', keys: t.groups.map(g=>g.key).concat(t.legacyGroups||[]), default: '', max: 50000 },
         ...Object.entries(t.colors).map(([color, key]) => ({ key, label: 'رنگ ' + color, type: 'color', default: color })),
         ...Object.entries(t.backgrounds || {}).map(([url, key]) => ({ key, label: 'تصویر زمینه ' + key.replace('background', ''), type: 'image', default: url, max: 3 * 1024 * 1024 })),
@@ -138,6 +139,32 @@
     const vistaGroupVisible=key=>settings['show_'+key.replace(/:/g,'_')]!==false&&t.collections.filter(collection=>collection.group===key).some(collection=>values.collections?.[collection.key]?.length!==0);
     const vistaLinks=[['ri-resume-top','معرفی'],...(vista?Object.entries(vistaSections).filter(([key])=>vistaGroupVisible(key)).map(([,v])=>['ri-vista-'+v[0],v[1]]):[['home:about','دربارهٔ من'],['home:resume','سوابق و مهارت‌ها']].filter(([key])=>settings['show_'+key.replace(':','_')]!==false).map(([key,label])=>['ri-satiar-'+key.split(':')[1],label])),...(hasProjects?[['ri-projects','پروژه‌ها']]:[]),['ri-contact','تماس']];
     const vistaNav=()=>vistaLinks.map(([href,label])=>'<a href="#'+href+'">'+esc(label)+'</a>').join('');
+    // The original page's stats and «work together» blocks, in its own markup so its styles apply. The numbers come
+    // from the resume itself (projects, years since the first job, skills, degrees and courses), never sample claims.
+    const vistaTitle=(el,text,tag,align,line)=>'<div class="elementor-element elementor-element-'+el+' elementor-widget elementor-widget-vista-section-title"><div class="elementor-widget-container"><div class="vista-section-title-wrap vista-align-'+align+'" data-align="'+align+'"><div class="vista-section-title-inner">'+(line?'<span class="vista-title-line"></span>':'')+'<div class="vista-section-title-text"><'+tag+' class="vista-section-title">'+text+'</'+tag+'></div></div></div></div></div>';
+    const shown=key=>!c.sections.some(s=>s.key===key&&!s.visible);
+    const yearOf=v=>{const m=/(\d{4})/.exec(String(v||'').replace(/[۰-۹]/g,d=>'۰۱۲۳۴۵۶۷۸۹'.indexOf(d)));return m?+m[1]:0;},gregorian=y=>y&&y<1700?y+621:y;
+    function vistaYears(){
+      const now=new Date().getFullYear();let first=0,last=0;
+      for(const x of shown('experience')?c.experience:[]){const from=gregorian(yearOf(x.from));if(!from)continue;const to=x.current?now:gregorian(yearOf(x.to))||from;first=first?Math.min(first,from):from;last=Math.max(last,to);}
+      return first&&last>first?Math.min(60,last-first):0;
+    }
+    function vistaStats(){
+      if(settings.show_vista_stats===false)return '';
+      const cells=[[shown('projects')?c.projects.length:0,'','پروژه و نمونه‌کار','کارهایی که در همین رزومه آمده','layers'],[vistaYears(),'+','سال تجربهٔ کاری','از اولین سابقهٔ کاری تا امروز','briefcase'],[shown('skills')?c.skills.length:0,'','مهارت و ابزار','توانایی‌هایی که با آن‌ها کار می‌کنم','sparkle'],[(shown('education')?c.education.length:0)+(shown('certs')?(c.certs||[]).length:0),'','مدرک و دوره','تحصیلات و گواهی‌های گذرانده','award'],[shown('languages')?(c.languages||[]).length:0,'','زبان','زبان‌هایی که با آن‌ها کار می‌کنم','language']].filter(x=>x[0]>0).slice(0,3);
+      if(cells.length<2)return '';
+      const bars=[40,70,50,90,60].map(h=>'<div class="mini-bar" style="height:'+h+'%"></div>').join('');
+      return '<section class="ri-resume-section ri-vista-stats" id="ri-vista-stats" aria-labelledby="ri-h-vista-stats"><header class="ri-section-head"><h2 id="ri-h-vista-stats">اعداد و ارقام</h2></header><div class="elementor-element elementor-element-01b0d6e e-flex e-con-boxed e-con e-parent"><div class="e-con-inner">'+vistaTitle('a94a213','آمار · Stats','h2','right',true)+vistaTitle('6b59389','اعداد و ارقام','h2','right')+
+        '<div class="elementor-element elementor-element-e5a1de9 elementor-widget elementor-widget-vista-stats"><div class="elementor-widget-container"><div class="vista-stats-wrap"><div class="bento">'+cells.map(([n,suf,label,sub,icon],i)=>'<div class="bento-cell on'+(i===0?' feature span2':'')+'"><div class="bento-ico">'+RI.icon(icon)+'</div><div class="bento-n"><span class="bento-count" data-count="'+n+'">'+RI.fa(n)+'</span>'+(suf?'<span class="bento-suf">'+suf+'</span>':'')+'</div><div class="bento-label">'+label+'</div><div class="bento-sub">'+sub+'</div>'+(i===0?'<div class="mini-bar-chart" aria-hidden="true">'+bars+'</div>':'')+'</div>').join('')+'</div></div></div></div></div></div></section>';
+    }
+    function vistaCta(){
+      if(settings.show_vista_cta===false||!contactsVisible&&!compose)return '';
+      const button=(el,href,icon,text,page)=>'<div class="elementor-element elementor-element-'+el+' elementor-widget elementor-widget-vista-button"><div class="elementor-widget-container"><div class="vista-btn-wrapper"><a class="vista-btn vista-btn-size-sm vista-btn-icon-before" href="'+esc(href)+'"'+(page?' data-pv-page="'+page+'"':'')+'><span class="vista-icon-wrap" aria-hidden="true">'+RI.icon(icon)+'</span><span class="vista-btn-text">'+text+'</span></a></div></div></div>';
+      const role=c.profile.title.trim();
+      return '<section class="ri-resume-section ri-vista-cta" aria-labelledby="ri-h-vista-cta"><header class="ri-section-head"><h2 id="ri-h-vista-cta">همکاری</h2></header><div class="elementor-element elementor-element-50cef7d e-flex e-con-boxed e-con e-parent"><div class="e-con-inner"><div class="elementor-element elementor-element-fc32812 e-con-full dark-bg e-flex e-con e-child">'+
+        vistaTitle('13604cb','آماده‌ام با هم کار کنیم','h5','center')+vistaTitle('9f886ca','پروژهٔ بعدی‌ات می‌تواند استثنایی باشد','h2','center')+vistaTitle('5600bb6',esc(role?'اگر دنبال '+role+' هستی، خوشحال می‌شوم بشنوم چه در ذهن داری؛ از ایده تا نتیجه کنارت هستم.':'خوشحال می‌شوم بشنوم چه در ذهن داری؛ از ایده تا نتیجه کنارت هستم.'),'p','center')+
+        '<div class="elementor-element elementor-element-ec78f95 e-con-full e-flex e-con e-child">'+(compose?button('4dead33',base+'/?page=contact','mail','شروع همکاری','contact'):button('4dead33','#ri-contact','mail','شروع همکاری'))+(hasProjects?button('1e91f28','#ri-projects','layers','نمونه‌کارها'):'')+'</div></div></div></div></section>';
+    }
     const vistaHeader=()=>'<header class="site-header vista-header"><div class="header-inner"><a class="vista-wordmark" href="#ri-resume-top">'+esc(c.profile.name||'رزومه')+'</a><nav class="vista-desktop-nav" aria-label="بخش‌های رزومه">'+vistaNav()+'</nav><div class="vista-header-actions"><button type="button" class="btn theme-toggle-btn" id="themeToggleBtn" aria-label="تغییر حالت روشن و تیره" title="تغییر حالت روشن و تیره">'+RI.icon('sun')+'</button><a class="btn vista-contact-button" href="#ri-contact">'+RI.icon('mail')+'<span>تماس</span></a><button type="button" class="btn vista-menu-toggle" id="menuToggle" aria-label="باز کردن منو" aria-controls="mobile-nav-panel" aria-expanded="false">'+RI.icon('menu')+'</button></div></div></header><div class="vista-menu-overlay" id="mobileNavOverlay" hidden></div><nav class="vista-mobile-nav" id="mobile-nav-panel" aria-label="بخش‌های رزومه" inert hidden><div class="vista-mobile-head"><b>'+esc(c.profile.name||'رزومه')+'</b><button type="button" class="btn" id="mobileNavClose" aria-label="بستن منو">'+RI.icon('x')+'</button></div>'+vistaNav()+'</nav>';
     const value = (ref, overrides) => {
       const f = fields.get(ref.field); if (!f) return '';
@@ -200,7 +227,8 @@
       const children=RI.orderTemplateChildren(n.children,settings.section_order);
       if (n.tag === 'body') return '<div class="' + esc(page.bodyClass) + ' ri-imported-body">' + children.map(child => renderNode(child, overrides, suffix)).join('') + '</div>';
       const tag=(vista&&n.tag==='h2'&&n.children.some(child=>child?.field==='f68'))||(satiar&&n.children.some(child=>child?.field==='f48'))?'h1':(vista&&n.tag==='h5'&&n.children.some(child=>child?.field==='f67'))||(satiar&&n.children.some(child=>child?.field==='f49'))?'p':n.tag;
-      const inner=voids.has(tag)?'':children.map(child=>renderNode(child,overrides,suffix)).join('');
+      // Vista's «اعداد و ارقام» and «پروژهٔ بعدی» blocks sit around the social section, as in the original page.
+      const inner=voids.has(tag)?'':children.map(child=>{const out=renderNode(child,overrides,suffix);return vista&&child?.group==='home:67d220d'&&/\be-parent\b/.test(child.attrs?.class||'')?vistaStats()+out+vistaCta():out;}).join('');
       if(/^h[1-6]$/.test(tag)&&!inner.trim())return '';
       const html='<' + tag + attrs + (n.group?' data-ri-section="'+esc(n.group)+'"':'') + '>' + (voids.has(tag) ? '' : inner + '</' + tag + '>');
       const group=n.group&&spec.groups.find(g=>g.key===n.group);
