@@ -73,6 +73,7 @@ html:has(body.vista-menu-open),body.vista-menu-open{overflow:hidden!important}
 .ri-imported[data-template=vista] .project-dialog a{color:var(--vista-accent)}
 .ri-imported[data-template=vista] .project-address{font-size:13px;color:var(--vista-muted);text-align:start}
 .ri-imported[data-template=vista] .project-close{background:var(--vista-line);color:var(--vista-ink);margin:0 0 12px auto;position:sticky;top:0}
+.ri-imported[data-template=vista] .ri-cp{--cc-bg:var(--vista-bg);--cc-card:var(--vista-surface);--cc-ink:var(--vista-ink);--cc-muted:var(--vista-muted);--cc-accent:var(--vista-accent);--cc-line:var(--vista-line)}
 .ri-imported[data-template=vista] .ri-template-contact{--cc-bg:var(--vista-bg);--cc-card:var(--vista-surface);--cc-ink:var(--vista-ink);--cc-muted:var(--vista-muted);--cc-accent:var(--vista-accent);--cc-line:var(--vista-line);max-width:1060px;margin:24px auto;padding:24px 0;display:grid;grid-template-columns:1fr 1fr;gap:12px 40px;background:var(--vista-bg);color:var(--vista-ink);font:inherit;border-top:1px solid var(--vista-line);align-items:start}
 .ri-imported[data-template=vista] .ri-compose{grid-column:2;grid-row:1 / span 12;display:grid;gap:8px;width:100%;max-width:none;margin:0}
 .ri-imported[data-template=vista] .ri-compose h3{font-size:18px;margin:0}.ri-imported[data-template=vista] .ri-compose p{font-size:13px;color:var(--vista-muted);margin:0 0 8px}

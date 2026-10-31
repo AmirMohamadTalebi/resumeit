@@ -18,7 +18,7 @@ const {chromium}=require('playwright'),{createServer}=require('../src/http/serve
     assert((await page.locator('body').innerText()).includes('آزمایش قالب'));
     await page.screenshot({path:'artifacts/imported-templates/'+template+'-'+width+'.png',fullPage:false});
     const dimensions=await page.evaluate(()=>({width:innerWidth,scroll:document.documentElement.scrollWidth,height:document.documentElement.scrollHeight}));console.log(template,width,dimensions);assert(dimensions.scroll<=width+1,'horizontal overflow '+template+' '+width);assert(dimensions.height>1000,'content must scroll');
-    assert.equal(await page.locator('[data-template-page="home"]').count(),1,'one resume page');assert.equal(await page.locator('a[href*="?page="]').count(),0,'removed pages are not navigation destinations');
+    assert.equal(await page.locator('[data-template-page="home"]').count(),1,'one resume page');assert.equal(await page.locator('a[href*="?page="]:not([href$="?page=contact"])').count(),0,'removed pages are not navigation destinations; only the contact page is');
     const imgs=await page.locator('img').evaluateAll(images=>images.filter(i=>i.getBoundingClientRect().top<innerHeight&&i.src&&i.complete&&!i.naturalWidth).map(i=>i.src));assert.deepEqual(imgs,[],'broken visible images');
     if(width===390){
      const toggle=page.locator('.mobile-menu-toggle,.mobile-nav-toggle,.menu-button,.menu-toggle').first();

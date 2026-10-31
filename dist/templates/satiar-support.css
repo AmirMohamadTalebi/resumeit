@@ -60,6 +60,7 @@ html:has(body.vista-menu-open),body.vista-menu-open{overflow:hidden!important}
 .ri-imported[data-template=satiar] .project-trigger .pv-proj__body{display:grid;gap:10px;text-align:start}
 .ri-imported[data-template=satiar] :is(.project-trigger b,.project-dialog h2){color:var(--s-ink)!important}
 .ri-imported[data-template=satiar] .project-trigger span{color:var(--s-muted)}
+.ri-imported[data-template=satiar] .ri-cp{--cc-bg:var(--s-bg);--cc-card:var(--s-surface);--cc-ink:var(--s-ink);--cc-muted:var(--s-muted);--cc-accent:var(--s-accent);--cc-line:var(--s-line)}
 .ri-imported[data-template=satiar] .ri-template-contact{--cc-bg:var(--s-surface);--cc-card:var(--s-bg);--cc-ink:var(--s-ink);--cc-muted:var(--s-muted);--cc-accent:var(--s-accent);--cc-line:var(--s-line);max-width:1060px;margin:20px auto 0;padding:28px 24px;background:var(--s-surface);color:var(--s-ink);border-radius:24px;box-sizing:border-box;font:15px/1.9 Vazirmatn}
 .ri-imported[data-template=satiar] .ri-compose{margin:12px 0;max-width:640px}
 .ri-imported[data-template=satiar] .ri-compose :is(input,textarea,button){background:var(--s-bg);color:var(--s-ink);border-color:var(--s-line);border-radius:12px}

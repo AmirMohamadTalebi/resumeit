@@ -83,7 +83,7 @@
     o = o || {};
     const live = o.publicBase !== undefined, id = 'ri-inbox-' + (o.idSuffix || 'form');
     const field = (name, label, attrs, hint) => '<label class="ri-inbox__field" for="' + id + '-' + name + '"><span>' + label + '</span>' + attrs.replace('{id}', id + '-' + name) + (hint ? '<small>' + hint + '</small>' : '') + '</label>';
-    return '<section class="ri-inbox" id="ri-message" aria-labelledby="' + id + '-title"><h2 id="' + id + '-title">ارتباط با من</h2><p class="ri-inbox__lead">پیامت مستقیم به ' + esc(c.profile.name.trim() || 'صاحب این رزومه') + ' می‌رسد؛ جواب را با شماره یا ایمیلی که می‌نویسی می‌گیری.</p>' +
+    return '<section class="ri-inbox" id="ri-message" aria-labelledby="' + id + '-title"><h2 id="' + id + '-title">' + esc(o.title || 'ارتباط با من') + '</h2><p class="ri-inbox__lead">پیامت مستقیم به ' + esc(c.profile.name.trim() || 'صاحب این رزومه') + ' می‌رسد؛ جواب را با شماره یا ایمیلی که می‌نویسی می‌گیری.</p>' +
       '<form class="ri-inbox__form" data-inbox-form data-endpoint="' + esc((o.publicBase || '') + '/message') + '" data-main="' + (live ? '__RI_MAIN__' : (typeof location !== 'undefined' ? location.origin : '')) + '"' + (live ? '' : ' data-preview="1"') + ' novalidate>' +
       '<div class="ri-inbox__row">' + field('name', 'نام شما', '<input id="{id}" name="name" required minlength="2" maxlength="80" autocomplete="name">') + field('contact', 'شماره موبایل یا ایمیل', '<input id="{id}" name="contact" required maxlength="120" dir="ltr" inputmode="email" autocomplete="email" placeholder="0912… یا name@mail.com">', 'برای دریافت جواب') + '</div>' +
       field('message', 'پیام', '<textarea id="{id}" name="message" required minlength="10" maxlength="2000" rows="4"></textarea>') +
@@ -234,9 +234,11 @@
     RI.delegate(host, 'click', '[data-dev]', (e, b) => api.setDevice(b.dataset.dev));
     RI.delegate(host, 'click', '[data-kind]', (e, b) => api.setKind(b.dataset.kind));
     host.addEventListener('click', (e) => {
-      const a = e.target.closest('[data-pv-go],[data-pv-link]');
+      const a = e.target.closest('[data-pv-go],[data-pv-link],[data-pv-page]');
       if (!a) return;
       e.preventDefault();
+      // A template's own pages (Vista and Satiar's contact page) open inside the preview.
+      if (a.dataset.pvPage) { api.setTemplatePage(a.dataset.pvPage); return; }
       if (a.dataset.pvGo) api.setKind(a.dataset.pvGo);
       else RI.toast('در صفحهٔ واقعی این لینک در تب جدید باز می‌شود.', { kind: 'info' });
     });

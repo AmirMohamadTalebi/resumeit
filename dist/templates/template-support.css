@@ -66,15 +66,15 @@ html,body{height:auto!important;min-height:100vh;overflow-y:auto!important}
    that leans on hover, a light sweep) and the social accounts as chips that fill with their brand colour.
    Cards rise in as they scroll into view where scroll-driven animation exists; reduced motion keeps them still. */
 .ri-imported .ri-cc{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:28px 44px;align-items:start;background:var(--cc-bg);color:var(--cc-ink)}
-.ri-imported .ri-cc:not(:has(.ri-inbox)){grid-template-columns:minmax(0,1fr)}
-.ri-imported .ri-cc>.ri-inbox{grid-column:2;grid-row:1;margin:0;max-width:none}
+.ri-imported .ri-cc:not(:has(.ri-inbox,.ri-cc__invite)){grid-template-columns:minmax(0,1fr)}
+.ri-imported .ri-cc>:is(.ri-inbox,.ri-cc__invite){grid-column:2;grid-row:1;margin:0;max-width:none}
 .ri-imported .ri-cc__intro{display:grid;gap:14px;min-width:0;align-content:start}
 .ri-imported .ri-cc__kicker{display:inline-flex;align-items:center;gap:8px;justify-self:start;padding:4px 12px;border-radius:999px;background:color-mix(in srgb,var(--cc-accent) 16%,var(--cc-bg));color:var(--cc-ink);font-size:12.5px;font-weight:700}
 .ri-imported .ri-cc__kicker::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--cc-accent)}
 .ri-imported .ri-cc__intro>h2{margin:0;font-size:24px;line-height:1.5;color:var(--cc-ink)}
 .ri-imported .ri-cc__intro>p{margin:-8px 0 4px;color:var(--cc-muted)}
 .ri-imported .ri-cc__list{display:grid;gap:10px}
-.ri-imported .ri-cc:not(:has(.ri-inbox)) .ri-cc__list{grid-template-columns:repeat(auto-fill,minmax(260px,1fr))}
+.ri-imported .ri-cc:not(:has(.ri-inbox,.ri-cc__invite)) .ri-cc__list{grid-template-columns:repeat(auto-fill,minmax(260px,1fr))}
 .ri-imported .ri-cc__item{position:relative;display:flex;align-items:center;gap:14px;min-height:66px;padding:10px 14px;border-radius:18px;background:var(--cc-card);border:1px solid var(--cc-line);color:var(--cc-ink);text-decoration:none;overflow:hidden;isolation:isolate;transition:transform .45s cubic-bezier(.3,1.4,.5,1),border-color .3s,box-shadow .35s}
 .ri-imported .ri-cc__item::after{content:"";position:absolute;inset:0;z-index:-1;background:linear-gradient(115deg,transparent 38%,color-mix(in srgb,var(--cc-accent) 22%,transparent) 50%,transparent 62%);transform:translateX(-110%);transition:transform .9s cubic-bezier(.2,.8,.2,1)}
 .ri-imported .ri-cc__ico{flex:none;display:grid;place-items:center;width:44px;height:44px;border-radius:14px;background:color-mix(in srgb,var(--cc-accent) 18%,var(--cc-card));color:var(--cc-accent);transition:transform .5s cubic-bezier(.3,1.4,.5,1),background .3s,color .3s}
@@ -102,4 +102,84 @@ html,body{height:auto!important;min-height:100vh;overflow-y:auto!important}
 @keyframes ri-cc-ping{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--cc-accent) 65%,transparent)}70%,100%{box-shadow:0 0 0 9px transparent}}
 @keyframes ri-cc-in{from{opacity:0;translate:0 26px;scale:.96}}
 @media(prefers-reduced-motion:reduce){.ri-imported :is(.ri-cc__item,.ri-cc__soc,.ri-cc__ico,.ri-cc__go,.ri-cc__soc svg),.ri-imported .ri-cc__item::after{transition:none}}
-@media(max-width:860px){.ri-imported .ri-cc{grid-template-columns:minmax(0,1fr)}.ri-imported .ri-cc>.ri-inbox{grid-column:1;grid-row:auto}}
+@media(max-width:860px){.ri-imported .ri-cc{grid-template-columns:minmax(0,1fr)}.ri-imported .ri-cc>:is(.ri-inbox,.ri-cc__invite){grid-column:1;grid-row:auto}}
+
+/* The invite on the resume: a lit card with a turning light border, a breathing mail orb and an arrow that leans,
+   leading to the template's own contact page. */
+@property --cc-spin{syntax:'<angle>';inherits:false;initial-value:0deg}
+.ri-imported .ri-cc__invite{position:relative;isolation:isolate;overflow:hidden;display:grid;gap:18px;align-content:start;padding:28px;border-radius:26px;background:radial-gradient(120% 90% at 100% 0%,color-mix(in srgb,var(--cc-accent) 20%,var(--cc-card)),var(--cc-card) 60%);color:var(--cc-ink);text-decoration:none;box-shadow:0 30px 60px -40px color-mix(in srgb,var(--cc-accent) 70%,transparent);transition:transform .5s cubic-bezier(.3,1.4,.5,1),box-shadow .4s}
+.ri-imported .ri-cc__invite::before{content:"";position:absolute;inset:0;z-index:-1;padding:1.5px;border-radius:inherit;background:conic-gradient(from var(--cc-spin),var(--cc-accent),transparent 25%,color-mix(in srgb,var(--cc-accent) 40%,var(--cc-ink)) 50%,transparent 75%,var(--cc-accent));-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) content-box exclude,linear-gradient(#000 0 0)}
+.ri-imported .ri-cc__invite-orb{position:relative;display:grid;place-items:center;width:64px;height:64px;border-radius:22px;background:var(--cc-accent);color:var(--cc-bg);box-shadow:0 16px 34px -14px var(--cc-accent)}
+.ri-imported .ri-cc__invite-orb svg{width:28px;height:28px}
+.ri-imported .ri-cc__invite-orb::after{content:"";position:absolute;inset:-7px;border-radius:26px;border:1.5px solid color-mix(in srgb,var(--cc-accent) 60%,transparent)}
+.ri-imported .ri-cc__invite-text{display:grid;gap:6px}
+.ri-imported .ri-cc__invite-text small{font-size:12.5px;font-weight:700;color:var(--cc-accent)}
+.ri-imported .ri-cc__invite-text b{font-size:clamp(22px,2.6vw,30px);line-height:1.45;color:var(--cc-ink)}
+.ri-imported .ri-cc__invite-text span{color:var(--cc-muted);font-size:14.5px;line-height:1.9}
+.ri-imported .ri-cc__invite-go{display:inline-flex;align-items:center;gap:8px;justify-self:start;min-height:48px;padding:0 20px;border-radius:999px;background:var(--cc-accent);color:var(--cc-bg);font-weight:800;font-size:14.5px;transition:gap .45s cubic-bezier(.3,1.4,.5,1)}
+.ri-imported .ri-cc__invite-go svg{width:18px;height:18px}
+.ri-imported .ri-cc__invite:hover{transform:translateY(-4px);box-shadow:0 36px 70px -36px color-mix(in srgb,var(--cc-accent) 90%,transparent)}
+.ri-imported .ri-cc__invite:hover .ri-cc__invite-go{gap:14px}
+.ri-imported .ri-cc__invite:focus-visible{outline:3px solid var(--cc-accent);outline-offset:4px}
+
+/* The contact page of Vista and Satiar: a hero with the photo in orbit, the ways to reach the person, the form. */
+.ri-imported .ri-cp{max-width:1060px;margin:0 auto;padding:28px 24px 56px;color:var(--cc-ink);box-sizing:border-box}
+.ri-imported .ri-cp__hero{position:relative;display:grid;justify-items:center;gap:14px;padding:30px 0 40px;text-align:center}
+.ri-imported .ri-cp__back{justify-self:start;display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:0 16px 0 12px;border-radius:999px;border:1px solid var(--cc-line);background:var(--cc-card);color:var(--cc-ink);font-size:13.5px;font-weight:700;text-decoration:none;transition:transform .45s cubic-bezier(.3,1.4,.5,1),border-color .3s}
+.ri-imported .ri-cp__back svg{width:17px;height:17px;transition:transform .45s cubic-bezier(.3,1.4,.5,1)}
+.ri-imported .ri-cp__back:hover{border-color:var(--cc-accent);transform:translateY(-2px)}
+.ri-imported .ri-cp__back:hover svg{transform:translateX(4px)}
+.ri-imported .ri-cp__orb{position:relative;width:200px;aspect-ratio:1;display:grid;place-items:center;margin-top:6px}
+.ri-imported .ri-cp__orb i{position:absolute;display:block;border-radius:50%}
+.ri-imported .ri-cp__ring{inset:6%;padding:2px;background:conic-gradient(from var(--cc-spin),var(--cc-accent),transparent 30%,color-mix(in srgb,var(--cc-accent) 35%,var(--cc-ink)) 55%,transparent 80%,var(--cc-accent));-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) content-box exclude,linear-gradient(#000 0 0)}
+.ri-imported .ri-cp__dash{inset:-2%;border:1.5px dashed color-mix(in srgb,var(--cc-ink) 28%,transparent)}
+.ri-imported .ri-cp__moon{inset:-2%}
+.ri-imported .ri-cp__moon::after{content:"";position:absolute;top:-6px;left:50%;width:12px;height:12px;margin-left:-6px;border-radius:50%;background:var(--cc-accent);box-shadow:0 0 16px var(--cc-accent)}
+.ri-imported .ri-cp__orb img{width:72%;height:72%;border-radius:50%;object-fit:cover;border:4px solid var(--cc-bg);box-shadow:0 26px 50px -24px rgba(0,0,0,.8),0 0 60px color-mix(in srgb,var(--cc-accent) 30%,transparent)}
+.ri-imported .ri-cp h1{margin:0;font-size:clamp(32px,5vw,54px);line-height:1.35;font-weight:900;background:linear-gradient(90deg,var(--cc-ink) 0%,var(--cc-accent) 40%,var(--cc-ink) 70%);background-size:220% 100%;-webkit-background-clip:text;background-clip:text;color:transparent}
+.ri-imported .ri-cp__hero>p{max-width:36em;margin:0;color:var(--cc-muted);font-size:15.5px;line-height:1.9}
+.ri-imported .ri-cp__grid{display:grid;grid-template-columns:minmax(0,.85fr) minmax(0,1.15fr);gap:24px;align-items:start}
+.ri-imported .ri-cp__grid--solo{grid-template-columns:minmax(0,1fr);max-width:640px;margin:0 auto}
+.ri-imported .ri-cp__ways{display:grid;gap:14px;min-width:0}
+.ri-imported .ri-cp__empty{margin:0;padding:18px;border-radius:18px;border:1px dashed var(--cc-line);color:var(--cc-muted)}
+.ri-imported .ri-cp .ri-inbox{grid-column:auto;grid-row:auto;margin:0;max-width:none;padding:26px;border-radius:26px;border-color:var(--cc-line);background:var(--cc-card);box-shadow:0 40px 80px -50px rgba(0,0,0,.85);--ri-inbox-line:var(--cc-line);--ri-inbox-bg:var(--cc-card);--ri-inbox-field:var(--cc-bg);--ri-inbox-ink:var(--cc-ink);--ri-section-accent:var(--cc-accent);--ri-inbox-on:var(--cc-bg)}
+.ri-imported .ri-cp .ri-inbox h2{font-size:22px}
+.ri-imported .ri-cp .ri-inbox__lead{color:var(--cc-muted);opacity:1}
+.ri-imported .ri-cp .ri-inbox :is(input,textarea){border-radius:14px;min-height:50px;transition:border-color .3s,box-shadow .35s,transform .45s cubic-bezier(.3,1.4,.5,1)}
+.ri-imported .ri-cp .ri-inbox :is(input,textarea):focus{outline:none;border-color:var(--cc-accent);box-shadow:0 0 0 4px color-mix(in srgb,var(--cc-accent) 22%,transparent),0 16px 30px -22px var(--cc-accent);transform:translateY(-1px)}
+.ri-imported .ri-cp .ri-inbox__field:focus-within>span{color:var(--cc-accent)}
+.ri-imported .ri-cp .ri-inbox__send{position:relative;isolation:isolate;overflow:hidden;min-height:52px;padding:0 26px;border-radius:999px;font-size:15px;transition:transform .45s cubic-bezier(.3,1.4,.5,1)}
+.ri-imported .ri-cp .ri-inbox__send::before{content:"";position:absolute;inset:0;z-index:-1;background:linear-gradient(115deg,transparent 35%,rgba(255,255,255,.5) 50%,transparent 65%);transform:translateX(-130%)}
+.ri-imported .ri-cp .ri-inbox__send:hover{transform:translateY(-2px)}
+.ri-imported .ri-cp .ri-inbox__send svg{transition:transform .45s cubic-bezier(.3,1.4,.5,1)}
+.ri-imported .ri-cp .ri-inbox__send:hover svg{transform:translate(-4px,-3px) rotate(-12deg)}
+.ri-imported .ri-cp .ri-inbox__attach{border-radius:999px}
+@media(prefers-reduced-motion:no-preference){
+ .ri-imported .ri-cc__invite::before,.ri-imported .ri-cp__ring{animation:ri-cc-spin 7s linear infinite}
+ .ri-imported .ri-cc__invite-orb::after{animation:ri-cc-breathe 2.6s ease-out infinite}
+ .ri-imported .ri-cp__dash{animation:ri-cc-turn 40s linear infinite}
+ .ri-imported .ri-cp__moon{animation:ri-cc-turn 8s linear infinite}
+ .ri-imported .ri-cp h1{animation:ri-cc-rise .9s .3s cubic-bezier(.3,1.4,.5,1) both,ri-cc-shine 6s 1.4s linear infinite}
+ .ri-imported .ri-cp__orb{animation:ri-cc-orb 1.1s .1s cubic-bezier(.3,1.4,.5,1) both}
+ .ri-imported .ri-cp__hero>:is(.ri-cp__back,.ri-cc__kicker,p){animation:ri-cc-rise .8s calc(.2s + var(--d,0s)) cubic-bezier(.3,1.4,.5,1) both}
+ .ri-imported .ri-cp__hero>.ri-cc__kicker{--d:.1s}
+ .ri-imported .ri-cp__hero>p{--d:.35s}
+ .ri-imported .ri-cp__grid>*{animation:ri-cc-rise .9s .55s cubic-bezier(.3,1.4,.5,1) both}
+ .ri-imported .ri-cp__grid>*+*{animation-delay:.7s}
+ .ri-imported .ri-cp .ri-inbox__form>*{animation:ri-cc-rise .7s calc(.85s + var(--d,0s)) cubic-bezier(.3,1.4,.5,1) both}
+ .ri-imported .ri-cp .ri-inbox__form>:nth-child(2){--d:.08s}
+ .ri-imported .ri-cp .ri-inbox__form>:nth-child(3){--d:.16s}
+ .ri-imported .ri-cp .ri-inbox__form>:nth-child(5){--d:.24s}
+ .ri-imported .ri-cp .ri-inbox__send::before{animation:ri-cc-sheen 4.6s 2s ease-in-out infinite}
+}
+@keyframes ri-cc-spin{to{--cc-spin:360deg}}
+@keyframes ri-cc-turn{to{transform:rotate(360deg)}}
+@keyframes ri-cc-breathe{0%{transform:scale(.92);opacity:.9}100%{transform:scale(1.25);opacity:0}}
+@keyframes ri-cc-rise{from{opacity:0;translate:0 24px;filter:blur(5px)}}
+@keyframes ri-cc-orb{from{opacity:0;scale:.6;rotate:-25deg;filter:blur(8px)}}
+@keyframes ri-cc-shine{to{background-position:-220% 0}}
+@keyframes ri-cc-sheen{0%,60%{transform:translateX(-130%)}100%{transform:translateX(130%)}}
+@media(max-width:860px){.ri-imported .ri-cp__grid{grid-template-columns:minmax(0,1fr)}.ri-imported .ri-cp{padding:18px 16px 40px}.ri-imported .ri-cc__invite{padding:22px}}
+@media(prefers-reduced-motion:reduce){.ri-imported :is(.ri-cc__invite,.ri-cc__invite-go,.ri-cp__back,.ri-cp__back svg,.ri-cp .ri-inbox__send,.ri-cp .ri-inbox__send svg){transition:none}.ri-imported .ri-cp .ri-inbox :is(input,textarea){transition:none}}
+.ri-imported .ri-cp__hero>.ri-cc__kicker{justify-self:center}
+.ri-imported .ri-cp .ri-inbox__field{align-content:start}
