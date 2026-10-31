@@ -4,6 +4,8 @@ const { randomBytes, randomUUID } = require('node:crypto');
 const { openDatabase } = require('../src/database/database.cjs');
 
 try { process.loadEnvFile(); } catch (error) { if (error.code !== 'ENOENT') throw error; }
+// The owner comes from host secrets; the check names its own so it does not depend on this machine's .env.
+process.env.OWNER_PHONE = '09120000777';
 (async () => {
   const options = { host: process.env.MYSQL_HOST, port: Number(process.env.MYSQL_PORT || 3306), user: process.env.MYSQL_USER, password: process.env.MYSQL_PASSWORD };
   const name = 'resumeit_check_' + randomBytes(6).toString('hex');
@@ -132,7 +134,7 @@ try { process.loadEnvFile(); } catch (error) { if (error.code !== 'ENOENT') thro
     const race=await Promise.allSettled(['rt:vista','rt:satiar'].map(ref=>database.purchaseWithWallet(emptyAccount,ref,randomUUID())));assert.equal(race.filter(r=>r.status==='fulfilled').length,1);assert.equal((await database.wallet(emptyAccount)).balance,0);
     await database.purchaseWithWallet(owner,'subscription:q',randomUUID());assert((await database.billing(owner)).plan.end>Date.now());assert.equal((await database.wallet(owner)).balance,297);
     for(const ref of ['font:estedad','font:naskh','font:lalezar'])await database.purchaseWithWallet(owner,ref,randomUUID());assert.equal((await database.wallet(owner)).balance,218);
-    const manager=await database.provisionAccount('09047045951',hash);await database.markPhoneVerified(manager);
+    const manager=await database.provisionAccount(process.env.OWNER_PHONE,hash);await database.markPhoneVerified(manager);
     await database.close();database=await openDatabase(config);await database.createSession('2'.repeat(64),manager,Date.now()+600000);
     assert.equal((await database.session('2'.repeat(64))).is_admin,1);
     const adminCredit={requestId:randomUUID().replace(/-/g,''),reason:'Database admin credit test',toman:10000};
