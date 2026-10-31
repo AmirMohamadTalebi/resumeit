@@ -27,7 +27,7 @@ const assetRevision=version+'-'+assetHash.digest('hex').slice(0,16);
 // Bundle only shared workspace files; editable source modules remain independent.
 const bundles=new Map();
 for(const [url,files] of [
-  ['/dashboard/js/workspace.js',['icons','core','ui','data','imported-templates','resume-templates','state','api','account','projects','support-files','preview','commerce','workspace-tools','reset-ui','notification-channels','charts','advisor-brain','app','fandogh','assistant-pet','coral','toolbar','liquid'].map(n=>'dashboard/js/'+n+'.js').concat('templates/vista-runtime.js')],
+  ['/dashboard/js/workspace.js',['icons','core','ui','data','imported-templates','resume-templates','state','api','account','projects','support-files','preview','template-shabtab','commerce','workspace-tools','reset-ui','notification-channels','charts','advisor-brain','app','fandogh','assistant-pet','coral','toolbar','liquid'].map(n=>'dashboard/js/'+n+'.js').concat('templates/vista-runtime.js')],
   ['/dashboard/css/workspace.css',['tokens','base','shell','components','preview','pages','charts','abgoon','performance','resume-studio','liquid','nova','fandogh','pet'].map(n=>'dashboard/css/'+n+'.css')]
 ])bundles.set(url,Buffer.from(files.map(file=>{
   let source=localFiles.readFileSync(path.join(root,file),'utf8');

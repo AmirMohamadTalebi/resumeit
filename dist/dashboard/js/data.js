@@ -40,6 +40,8 @@
       v: { bg: '#16304a', surface: '#1d3d5c', ink: '#eaf3fb', muted: '#9fbad2', accent: '#8fd0ff', accent2: '#f2c48d', hero: 'linear-gradient(135deg,#1d3d5c,#16304a)', line: '#2c5174' } },
     { id: 'sunroom', name: 'آفتاب‌گیر', cats: ['creator', 'student'], access: 'sub', layout: 'hero', desc: 'روشن و پرجزئیات؛ ویژهٔ اشتراک.',
       v: { bg: '#fdf6ec', surface: '#ffffff', ink: '#3b2a1d', muted: '#82705d', accent: '#c07a3d', accent2: '#52788d', hero: 'linear-gradient(135deg,#f6dcb8,#fdf6ec)', line: '#f0e0c8' } },
+    { id: 'shabtab', name: 'شب‌تاب', cats: ['dev', 'creator', 'student'], access: 'sub', layout: 'hero', desc: 'آسمان شب صفحهٔ اصلی رزومیت: نام طلایی، عکس در مدار و حرکت‌های زنده؛ ویژهٔ اشتراک.',
+      v: { bg: '#0b141b', surface: '#14222d', ink: '#eef4f7', muted: '#a9bdc9', accent: '#f0bd52', accent2: '#8ec5d6', hero: 'linear-gradient(135deg,#1b3242,#0b141b)', line: '#2a3e50' } },
   ];
 
   RI.LINK_TEMPLATES = [

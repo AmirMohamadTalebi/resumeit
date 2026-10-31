@@ -52,6 +52,7 @@
     return '<footer class="pv-foot"><span>ساخته‌شده با</span> <span class="ri-logo"><img src="/brand/resumeit-logo-v1.png" alt="ResumeIt" width="2172" height="724"></span></footer>';
   }
   RI.brandFoot=brandFoot;
+  RI.resumeNav=(c,active,base)=>nav(c,active,base);
   function nav(c, active, base) {
     const nm = c.profile.name.trim() || 'نام شما';
     if(c._linksOnly)return '<nav class="pv-nav" aria-label="صفحهٔ لینک"><span class="pv-nav__brand">'+esc(nm)+'</span></nav>';

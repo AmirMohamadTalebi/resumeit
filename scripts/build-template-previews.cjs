@@ -3,6 +3,8 @@ const root=path.resolve(__dirname,'../dist');
 for(const [kind,items] of [['resume',RI.RESUME_TEMPLATES],['links',RI.LINK_TEMPLATES]])for(const item of items){
  const c=JSON.parse(JSON.stringify(RI.seed('full')));c.theme[kind]=item.id;c.slug='sample';c._linksOnly=kind==='links';
  if(kind==='links')for(const link of c.links.items)if(link.icon==='resume')link.url='https://resumeit.ir/resume'+c.theme.resume+'/';
+ // «شب‌تاب» is shown in its own night-sky gold rather than the shared sample palette.
+ if(kind==='resume'&&item.id==='shabtab')c.theme.palette='default';
  if(kind==='resume'&&['vista','satiar'].includes(item.id)){c.profile.name='ماهان رضایی';c.profile.title='توسعه‌دهندهٔ فرانت‌اند';c.profile.bio='روی ساخت رابط‌های وب خوانا و سریع کار می‌کنم. این رزومه، مسیر یادگیری و چند نمونه از کارهایم را نشان می‌دهد.';for(const contact of c.contacts){if(contact.type==='email')contact.value='mahan@example.com';if(contact.type==='website')contact.value='mahan.example.com';}c.socials.forEach(s=>s.handle='mahan-example');}
  if(kind==='resume'&&item.id==='vista'){c.resumeTemplates.vista={fields:{},settings:{},collections:{}};for(const field of RI.IMPORTED_TEMPLATES.vista.fields)if(field.group==='home:67d220d'&&typeof field.default==='string'&&field.default.includes('sigma_ui'))c.resumeTemplates.vista.fields[field.key]=field.default.replaceAll('sigma_ui','mahan-example');c.projects.forEach(project=>project.url='https://example.com/projects/'+project.id);}
  const directory=path.join(root,(kind==='resume'?'resume':'link')+item.id);fs.mkdirSync(directory,{recursive:true});
