@@ -52,6 +52,7 @@
       "settings",
       "نسخهٔ سایت، اتصال سرویس‌ها و محدودیت‌های فعال.",
     ],
+    assistant:['فندق، دستیار هوشمند','sparkle','سهمیهٔ پیام‌ها، اشتراک دستیار، آمار استفاده و اتصال به سرویس‌های هوش مصنوعی.'],
     retention:['نگهداری و پاک‌سازی','history','پیش‌نمایش بازه، بایگانی قابل‌بازیابی اسناد و حذف محدود داده‌های قدیمی.'],
   };
   const section = document.body.dataset.section || "overview",
@@ -616,7 +617,7 @@
               "</section>"
             : section === "catalog"
               ? catalog(d)
-              : section==='retention'?retention(d):section === "health"
+              : section==='assistant'?window.ownerAssistant(d):section==='retention'?retention(d):section === "health"
                 ? health(d)
                 : detailId && section === "users"
                   ? detail(d)
@@ -754,7 +755,7 @@
     $("#admin-name").textContent =
       [user.first_name, user.last_name].filter(Boolean).join(" ") ||
       "مدیر ResumeIt";
-    const groups=[['دید کلی','chart',['overview','traffic']],['کاربران و صفحات','user',['users','pages']],['امور مالی','card',['payments','transactions','purchases']],['محصولات','palette',['catalog']],['امنیت و سرویس‌ها','shield',['health','otp','audit',...(fullAdmin?['retention']:[])]]],active=groups.find(g=>g[2].includes(section));
+    const groups=[['دید کلی','chart',['overview','traffic']],['کاربران و صفحات','user',['users','pages']],['امور مالی','card',['payments','transactions','purchases']],['محصولات','palette',['catalog',...(fullAdmin?['assistant']:[])]],['امنیت و سرویس‌ها','shield',['health','otp','audit',...(fullAdmin?['retention']:[])]]],active=groups.find(g=>g[2].includes(section));
     const href=id=>id==='overview'?'/admin/':'/admin/'+id+'/';
     $("#admin-nav").innerHTML='<ul class="menu">'+groups.map(([label,symbol,ids])=>'<li><a title="'+label+'" href="'+href(ids.includes(section)?section:ids[0])+'" '+(ids.includes(section)?'aria-current="page"':'')+'>'+icon(symbol)+'<span>'+label+'</span></a></li>').join('')+'<li><a href="/staff/" title="پنل پشتیبانی">'+icon('help')+'<span>پشتیبانی و تیکت‌ها</span></a></li><li><a href="/staff/?escalated=1" title="تیکت‌هایی که پشتیبانی به مدیر ارجاع داده">'+icon('shield')+'<span>ارجاع‌های پشتیبانی</span></a></li></ul>';
     $("#admin-menu").innerHTML = icon("menu");
@@ -789,8 +790,8 @@
         ? '<option value="active">فعال</option><option value="suspended">تعلیق‌شده</option>'
         : '<option value="accepted">پذیرفته‌شده</option><option value="failed">ناموفق</option><option value="pending">در انتظار</option>');
     $("#catalog-controls").hidden = true;
-    if(section==='retention')$('#filters').hidden=true;
-    $("#export").hidden = ["overview", "traffic", "catalog", "health"].includes(
+    if(section==='retention'||section==='assistant')$('#filters').hidden=true;
+    $("#export").hidden = ["overview", "traffic", "catalog", "health", "assistant"].includes(
       section,
     );
     if (new URL(location.href).searchParams.has("user")) {

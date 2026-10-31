@@ -42,3 +42,17 @@ assert(B.chat('امروز چندمه؟',p,at).text.includes('جمعه ۸ آبا�
 for(const q of ['سلام، امتیاز رزومه‌ام چند است؟','رزومه‌ام چطوره؟','بلبلبل','من فول استک دولوپر هستم'])assert.equal(B.chat(q,p,at),null,q);
 assert.equal(B.reply('سلام، امتیاز رزومه‌ام چند است؟',p).intent,'score');assert.equal(B.reply('ساعت چنده؟',p,at).topic,'time');
 console.log('PASS small talk: greetings, mood, Tehran date and time (Persian, Gregorian, lunar), personality and greeting-plus-question.');}
+// Conversations that used to fail: several acts in one message, filler words, swapped letters, follow-ups that lean
+// on what was just said, identity questions about the model, and a role named in the question.
+{const at={now:'2026-10-30T12:00:00Z'},me={...dev,profile:{...dev.profile,name:'امیرمحمد طالبی'}};
+assert.equal(B.chat('چطوری خوبی',me,at)?.topic,'howareyou');assert.equal(B.reply('چطوری خوبی',me,at).intent,'smalltalk','how-are-you never turns into the resume score');
+const both=B.chat('سلام فندق جان خوبی؟ ساعت چنده؟',me,at);assert.deepEqual(both.topics,['greet','howareyou','time']);assert(both.text.startsWith('سلام امیرمحمد!')&&both.text.includes('۱۵:۳۰'));
+for(const [q,topic] of [['ساعت چنده اونجا','time'],['الان ساعت چنده','time'],['حالا امروز چندمه','date'],['از فردا','defer'],['فردا شروع کنیم','defer'],['خیلی خنگی','rude'],['فندق','call'],['فعلاً نه','no']])assert.equal(B.chat(q,me,at)?.topic,topic,q);
+for(const q of ['تو کلادی؟','از چه هوش مصنوعی استفاده میکنی','تو جی پی تی هستی؟','chatgpt هستی؟'])assert.equal(B.reply(q,me,at).topic,'model',q);
+assert.equal(B.chat('مهارت های دیگه',me,at),null,'«های» in «مهارت‌های» is not a greeting');
+const offer=[{role:'user',text:'خوبم'},{role:'assistant',text:B.chat('خوبم',me,at).text}];assert.equal(B.reply('آره',me,{...at,history:offer}).intent,'next','yes after an offer starts the next step');
+const first=B.reply('چه مهارت‌هایی اضافه کنم؟',me),more=B.reply('مهرات های دیگه ای پیشنهاد بده',me,{history:[{role:'user',text:'چه مهارت‌هایی اضافه کنم؟'},{role:'assistant',text:first.text}]});
+assert.equal(more.intent,'skills','a swapped-letter typo still reaches skills');const names=a=>a.actions.filter(x=>x.kind==='skill').map(x=>x.value);assert(names(more).length&&!names(more).some(n=>names(first).includes(n)),'«more» shows new skills');
+assert(names(B.reply('منابع انسانی چه مهارت هایی میخواد',me)).includes('جذب و استخدام'),'a role named in the question wins');
+assert.equal(B.reply('نکات یک رزومه خوب',me).intent,'tips');assert.equal(B.reply('سابقه کار ندارم',me).intent,'noexp');assert.equal(B.reply('سلام امتیازم چنده',me).text.startsWith('سلام امیرمحمد!'),true);
+console.log('PASS conversation: combined acts, fillers, swapped letters, follow-ups with context, identity questions, named roles and new resume topics.');}

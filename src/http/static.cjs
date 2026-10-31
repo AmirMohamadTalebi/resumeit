@@ -86,12 +86,14 @@ async function serveStatic(req, res, pathname, origin, account, restricted) {
   const workspacePage=/^\/dashboard\/(support|notifications|studio|messages)\/$/.exec(pathname);
   if(workspacePage)file=path.join(root,'dashboard/index.html');
   const retentionPage=pathname==='/admin/retention/';if(retentionPage)file=path.join(root,'admin/health/index.html');
+  // Fandogh's settings hold provider keys and allowances: the owner's page, like retention.
+  const ownerPage=retentionPage||pathname==='/admin/assistant/';
   try {
     const staffPath=pathname.toLowerCase()==='/staff'||pathname.toLowerCase().startsWith('/staff/');
     if(staffPath){res.setHeader('Cache-Control','no-store');const user=account&&await account(req);if(!user){res.writeHead(303,{Location:await signin()});res.end();return;}if(!require('../admin/access.cjs').isSupport(user)){send(403,'Forbidden');return;}}
     // Authenticate the resolved file as well as the URL (case aliases and symlinks included).
     const adminPath=pathname.toLowerCase()==='/admin'||pathname.toLowerCase().startsWith('/admin/');
-    if(adminPath){const user=account&&await account(req);if(!user){res.writeHead(303,{Location:await signin()});res.end();return;}if(!require('../admin/access.cjs').isAdmin(user)||retentionPage&&!require('../admin/access.cjs').isOwner(user)){send(403,'Forbidden');return;}}
+    if(adminPath){const user=account&&await account(req);if(!user){res.writeHead(303,{Location:await signin()});res.end();return;}if(!require('../admin/access.cjs').isAdmin(user)||ownerPage&&!require('../admin/access.cjs').isOwner(user)){send(403,'Forbidden');return;}}
     const guarded = pathname.toLowerCase() === '/dashboard' || pathname.toLowerCase().startsWith('/dashboard/');
     if (guarded) {
       res.setHeader('Cache-Control', 'no-store');

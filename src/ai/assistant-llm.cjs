@@ -1,5 +1,5 @@
-// Optional language model behind the resume assistant. Any OpenAI-compatible chat endpoint works (including
-// Iranian gateways); it stays off until ASSISTANT_AI_URL and ASSISTANT_AI_KEY are set. The model sees a trimmed
+// Optional language model behind the resume assistant. The owner picks the provider and key in the admin panel
+// (src/ai/providers.cjs); the older ASSISTANT_AI_URL and ASSISTANT_AI_KEY variables still work as a fallback. The model sees a trimmed
 // copy of the resume (no contact values) plus the local analysis, and answers in Persian. Suggested replacement
 // text comes back in tagged blocks so the dashboard can offer one-click actions; nothing is applied server-side.
 const config=(env=process.env)=>{
@@ -7,6 +7,7 @@ const config=(env=process.env)=>{
   return {enabled:/^https:\/\/[^\s/]+/.test(url)&&key.length>=8,url,key,model:String(env.ASSISTANT_AI_MODEL||'gpt-4o-mini').trim(),timeout:Math.min(60000,Math.max(5000,Number(env.ASSISTANT_AI_TIMEOUT)||25000))};
 };
 
+const providers=require('./providers.cjs');
 const SYSTEM=`تو «فندق» هستی، گربهٔ سفید و مهربان رزومیت و دستیار رزومهٔ کاربر؛ یک مشاور رزومهٔ باتجربه که فقط فارسی جواب می‌دهد.
 قواعد:
 - فقط بر اساس رزومهٔ کاربر (JSON زیر) و حرف‌های خودش جواب بده. هیچ عدد، شرکت، مدرک، تاریخ یا دستاوردی از خودت نساز؛ اگر لازم است، از کاربر بپرس.
@@ -37,19 +38,19 @@ function parse(text){
   return {text:out.replace(/\n{3,}/g,'\n\n').trim().slice(0,2400),actions};
 }
 
-async function answer({question,content,goal,history,analysis},env=process.env,fetcher=fetch){
-  const cfg=config(env);if(!cfg.enabled)return null;
+// The provider settings from the owner panel, or the older ASSISTANT_AI_* variables as a plain OpenAI-style service.
+const resolve=source=>source&&source.provider?source:(cfg=>cfg.enabled?{provider:'custom',url:cfg.url,key:cfg.key,model:cfg.model,timeout:cfg.timeout,temperature:.4,maxTokens:700}:null)(config(source||process.env));
+// Returns {text, actions, usage} or null; with `report`, failures come back as {error} for the owner's usage log.
+async function answer({question,content,goal,history,analysis},source=process.env,fetcher=fetch,report=false){
+  const cfg=resolve(source);if(!cfg)return null;
   const facts={resume:trim(content),goal:String(goal||'').slice(0,160),analysis};
-  const t=require('../../dist/dashboard/js/advisor-brain.js').clock(),messages=[{role:'system',content:SYSTEM},{role:'system',content:'زمان: امروز '+t.weekday+' '+t.persian+' ('+t.gregorian+')، ساعت '+t.time+' به وقت تهران.'},{role:'system',content:'رزومه و تحلیل محلی (JSON):\n'+JSON.stringify(facts)}];
+  const t=require('../../dist/dashboard/js/advisor-brain.js').clock(),system=[SYSTEM,providers.IDENTITY,'زمان: امروز '+t.weekday+' '+t.persian+' ('+t.gregorian+')، ساعت '+t.time+' به وقت تهران.','رزومه و تحلیل محلی (JSON):\n'+JSON.stringify(facts)].join('\n\n'),messages=[];
   for(const h of (Array.isArray(history)?history:[]).slice(-6))if(h&&['user','assistant'].includes(h.role)&&typeof h.text==='string')messages.push({role:h.role,content:h.text.slice(0,1200)});
   messages.push({role:'user',content:String(question).slice(0,500)});
-  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),cfg.timeout);
   try{
-    const response=await fetcher(cfg.url+'/chat/completions',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+cfg.key},body:JSON.stringify({model:cfg.model,messages,temperature:.4,max_tokens:700}),signal:controller.signal});
-    if(!response.ok)return null;
-    const data=await response.json(),text=data?.choices?.[0]?.message?.content;
-    if(typeof text!=='string'||!text.trim())return null;
-    return parse(text);
-  }catch{return null;}finally{clearTimeout(timer);}
+    const out=await providers.chat(cfg,{system,messages},fetcher);
+    if(!out.text.trim())return report?{error:'پاسخ خالی',usage:out}:null;
+    return {...parse(providers.guard(out.text)),usage:{input:out.input,output:out.output},provider:cfg.provider};
+  }catch(error){return report?{error:error.message,usage:{input:0,output:0}}:null;}
 }
-module.exports={config,answer,parse,trim};
+module.exports={config,answer,parse,trim,resolve};

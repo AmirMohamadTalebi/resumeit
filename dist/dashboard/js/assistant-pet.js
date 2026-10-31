@@ -143,7 +143,11 @@
   async function ask(question) {
     if (busy) return; busy = true; push('me', question); cat?.mood('think'); root.classList.add('is-busy');
     const log = root.querySelector('[data-pet-log]'); log.insertAdjacentHTML('beforeend', '<div class="pet-msg pet-msg--bot pet-msg--typing"><span class="pet-msg__av">' + AVATAR + '</span><div class="pet-msg__body"><i></i><i></i><i></i></div></div>'); log.scrollTop = log.scrollHeight;
-    const local = brain()?.chat?.(question, RI.C(), { goal: goal() });
+    // Same reading as the server, with the conversation so far; identity questions always stay here. When the owner
+    // paused Fandogh or wants small talk answered by the model too, the server decides.
+    const B = brain(), said = B?.reply ? B.reply(question, RI.C(), { goal: goal(), history: history.slice(0, -1) }) : B?.chat?.(question, RI.C(), { goal: goal() });
+    const mine = said && said.intent === 'smalltalk' && (said.topics || [said.topic]).some(t => ['name', 'model', 'bot', 'maker'].includes(t));
+    const local = said && said.intent === 'smalltalk' && status?.enabled !== false && (mine || !status?.smalltalk) ? said : null;
     if (local) {
       await new Promise(r => setTimeout(r, calm.matches ? 0 : 450 + Math.min(700, local.text.length * 6)));
       log.querySelector('.pet-msg--typing')?.remove(); push('bot', local.text, local.actions, local.follow);
