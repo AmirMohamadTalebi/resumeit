@@ -146,8 +146,13 @@
 .ln-foot__up svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
 .ln-foot__up:hover i{background:var(--pc-gold);border-color:var(--pc-gold);color:#3a2410;transform:translateY(-4px)}
 .ln-foot__up:hover svg{animation:pc-launch .7s var(--pc-spring)}
+/* The info pages also load style.css and frozen.css, whose old .footer-section rules (a wrapping flex row, 9px small
+   print, centred phone padding) would flatten this footer; undo them so every page closes the same way. */
+.ln-foot.footer-section{display:block;gap:0;text-align:start;padding:84px 0 0}
+.ln-foot.footer-section>div{display:block;gap:0;font-size:inherit}
+.ln-foot.footer-section small{flex-basis:auto;text-align:start;font-size:inherit;color:inherit;border:0;padding:0}
 @media(max-width:1080px){.ln-foot__top{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.ln-foot__cols{grid-column:1/-1;order:3}}
-@media(max-width:640px){.ln-foot{margin-top:80px;padding-top:56px;border-radius:30px 30px 0 0}.ln-foot__top{grid-template-columns:minmax(0,1fr);gap:30px}.ln-foot__cols{grid-template-columns:repeat(2,minmax(0,1fr));gap:20px 12px}.ln-foot .ln-foot__word{margin-top:36px}.ln-foot__bottom{flex-direction:column-reverse;align-items:flex-start}}
+@media(max-width:640px){.ln-foot,.ln-foot.footer-section{margin-top:80px;padding-top:56px;border-radius:30px 30px 0 0}.ln-foot__top{grid-template-columns:minmax(0,1fr);gap:30px}.ln-foot__cols{grid-template-columns:repeat(2,minmax(0,1fr));gap:20px 12px}.ln-foot .ln-foot__word{margin-top:36px}.ln-foot__bottom{flex-direction:column-reverse;align-items:flex-start}}
 
 @keyframes pc-sheen{0%,72%{background-position:-150% 0}100%{background-position:250% 0}}
 @keyframes pc-mega-in{from{opacity:0;transform:translateY(10px) scale(.96)}}

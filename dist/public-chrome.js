@@ -71,7 +71,7 @@
       const lift = () => { const y = Math.min(scrollY, 600); hero.style.setProperty('--lift', y.toFixed(0)); };
       addEventListener('scroll', () => requestAnimationFrame(lift), { passive: true }); lift();
     }
-    const cards = $$('.lg-glance li, .lg-steps li, .lg-principles li, .lg-channel, .lg-panel, .lg-sec, .lg-cta, .lg-kicker, .cl-release, .cl-toolbar, .cl-index, .lg-toc');
+    const cards = $$('.lg-glance li, .lg-steps li, .lg-principles li, .lg-channel, .lg-panel, .lg-sec, .lg-cta, .lg-kicker, .cl-release, .cl-toolbar, .cl-index, .lg-toc, .ln-foot [data-anim]');
     const io = new IntersectionObserver(entries => entries.filter(e => e.isIntersecting).forEach((e, i) => { e.target.style.setProperty('--d', Math.min(i, 6) * 90 + 'ms'); e.target.classList.add('is-in'); io.unobserve(e.target); }), { rootMargin: '0px 0px -6% 0px' });
     cards.forEach(el => { el.classList.add('lg-reveal'); io.observe(el); });
     if (fine) {

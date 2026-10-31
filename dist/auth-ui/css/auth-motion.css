@@ -1,21 +1,21 @@
-.brand__name{font-size:24px}
-.art{display:flex;flex-direction:column;justify-content:center;align-items:center;gap:32px;padding:40px 24px;background:#dce8ee;color:#294753}
-.art__copy{position:relative;inset:auto;width:90%;padding:0 20px}
-.art__copy p{color:#4d6775}
-.auth-mark-home{position:relative;width:min(100%,600px);aspect-ratio:600/585;flex-shrink:0}
+/* «R» هشت‌کارتی صفحهٔ اصلی، این‌جا به شکل شیشه روی آسمان شب: کارت‌ها پراکنده شناورند، با پیشرفت فرم سر جایشان می‌نشینند
+   و وقتی فرم کامل شد، R یک‌بار با نور طلایی روشن می‌شود. کل نشان کمی به سمت اشاره‌گر خم می‌شود. */
+.auth-mark-home{position:relative;width:min(100%,520px);aspect-ratio:600/585;flex-shrink:0;margin-top:4px;transform:rotateX(calc(var(--py,0)*-7deg)) rotateY(calc(var(--px,0)*9deg));transition:transform 1s cubic-bezier(.2,.8,.2,1)}
 .auth-assembly{position:relative;width:100%;aspect-ratio:600/585;container-type:inline-size;transform-origin:top left;direction:ltr}
-.auth-piece.card{position:absolute;left:var(--fx);top:var(--fy);width:var(--w);height:var(--h);margin:0;padding:2cqw;border-radius:2.3cqw;direction:rtl;display:flex;flex-direction:column;gap:1cqw;color:#294753;background:#f4f8fae6;border:1px solid #fff;box-shadow:0 12px 24px -18px #36566c66;backdrop-filter:blur(10px);transform:rotate(var(--angle));transition:transform 760ms cubic-bezier(.16,1,.3,1);transition-delay:var(--delay);overflow:hidden}
+.auth-piece.card{position:absolute;left:var(--fx);top:var(--fy);width:var(--w);height:var(--h);margin:0;padding:2cqw;border-radius:2.3cqw;direction:rtl;display:flex;flex-direction:column;gap:1cqw;color:#e6eef2;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);box-shadow:inset 0 1px 0 rgba(255,255,255,.14),0 24px 40px -24px rgba(0,0,0,.85);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);transform:rotate(var(--angle));transition:transform 760ms cubic-bezier(.16,1,.3,1),border-color .6s,box-shadow .6s;transition-delay:var(--delay);overflow:hidden;animation:auth-piece-in .9s cubic-bezier(.3,1.4,.5,1) calc(var(--delay) * 4 + 350ms) both,auth-bob 6s ease-in-out calc(var(--delay) * -30) infinite alternate}
 .auth-assembly[data-progress="1"] [data-group="1"],.auth-assembly[data-progress="2"] [data-group="1"],.auth-assembly[data-progress="2"] [data-group="2"],.auth-assembly[data-progress="3"] .auth-piece{transform:translate(var(--dx),var(--dy)) rotate(0)}
-.auth-piece b{font-size:3.8cqw;line-height:1.4;font-weight:750}.auth-piece small{font-size:2.1cqw;line-height:1.6;color:#49626c}
-.mark-person{background:#ecd7c4ed!important;color:#654936!important}.mark-person small{color:#654936}
-.mark-avatar{width:7cqw;height:7cqw;display:grid;place-items:center;border-radius:50%;background:#fbf4ed;font-size:2.8cqw}
-.mark-project{background:#e1c6afed!important}.mark-project>span{background:#527080;color:#f5ede6;padding:2cqw;border-radius:1cqw;font-size:4cqw;text-align:center;margin-top:1cqw}
-.mark-skills b{font-size:3.8cqw}.mark-links{background:#cfdfe7f0!important}.mark-links b{font-size:3.2cqw}
-.mark-link{direction:ltr;border-top:1px solid #9eb7c680;padding:1cqw 0;font-size:2.1cqw}
-.mark-address b{font-size:3.2cqw;text-align:left}.mark-theme{background:#edddcfee!important}.mark-contact{background:#b4cbd5ee!important}
-.mark-contact b{font-size:3.2cqw}.mark-swatches{display:flex;gap:1.2cqw}.mark-swatches i{width:3.4cqw;height:3.4cqw;border-radius:50%;background:#88a6b4}.mark-swatches i:nth-child(2){background:#89624a}.mark-swatches i:nth-child(3){background:#d7ad8a}
-.mark-lines{height:1cqw;width:65%;border-radius:1cqw;background:#b3c9d5;box-shadow:0 2cqw 0 #d2b599}
-@media(max-width:960px){.auth__art{display:none}.auth__main{padding-top:16px}.auth__top{gap:16px}}
-@media(prefers-reduced-motion:reduce){.auth-piece.card{transition:none}}
-
-.input::-ms-reveal,.input::-ms-clear{display:none}
+.auth-assembly[data-progress="3"] .auth-piece{border-color:rgba(240,189,82,.5);box-shadow:inset 0 1px 0 rgba(255,255,255,.18),0 0 34px -8px rgba(240,189,82,.55),0 24px 40px -24px rgba(0,0,0,.85)}
+.auth-assembly[data-progress="3"]::after{content:"";position:absolute;inset:-6%;border-radius:50%;background:radial-gradient(circle,rgba(240,189,82,.35),transparent 62%);pointer-events:none;animation:auth-glow 1.6s .5s ease-out both}
+.auth-piece b{font-size:3.8cqw;line-height:1.4;font-weight:800;color:#fff}.auth-piece small{font-size:2.1cqw;line-height:1.6;color:#9fb5c2}
+.mark-person{background:rgba(240,189,82,.16)!important;border-color:rgba(240,189,82,.38)!important}.mark-person small{color:#f3d79c}
+.mark-avatar{width:7cqw;height:7cqw;display:grid;place-items:center;border-radius:50%;background:linear-gradient(135deg,#ffe3a0,#e2a03a);color:#3a2410;font-size:2.8cqw;font-weight:900}
+.mark-project{background:rgba(135,90,54,.32)!important;border-color:rgba(214,170,120,.35)!important}.mark-project>span{background:linear-gradient(135deg,#f0bd52,#e2a03a);color:#2b1a05;padding:2cqw;border-radius:1cqw;font-size:4cqw;font-weight:900;text-align:center;margin-top:1cqw}
+.mark-skills b{font-size:3.8cqw}.mark-links{background:rgba(61,140,156,.22)!important;border-color:rgba(142,197,214,.35)!important}.mark-links b{font-size:3.2cqw}
+.mark-link{direction:ltr;border-top:1px solid rgba(255,255,255,.14);padding:1cqw 0;font-size:2.1cqw;color:#cfe6ee}
+.mark-address b{font-size:3.2cqw;text-align:left;color:#f3d79c}.mark-theme{background:rgba(255,255,255,.1)!important}.mark-contact{background:rgba(142,197,214,.18)!important}
+.mark-contact b{font-size:3.2cqw}.mark-swatches{display:flex;gap:1.2cqw}.mark-swatches i{width:3.4cqw;height:3.4cqw;border-radius:50%;background:#3d8c9c;box-shadow:0 0 1.4cqw rgba(61,140,156,.7)}.mark-swatches i:nth-child(2){background:#875a36;box-shadow:0 0 1.4cqw rgba(135,90,54,.7)}.mark-swatches i:nth-child(3){background:#f0bd52;box-shadow:0 0 1.4cqw rgba(240,189,82,.7)}
+.mark-lines{height:1cqw;width:65%;border-radius:1cqw;background:linear-gradient(90deg,#f0bd52,#3d8c9c);box-shadow:0 2cqw 0 rgba(255,255,255,.18)}
+@keyframes auth-piece-in{from{opacity:0;scale:.6;filter:blur(6px)}}
+@keyframes auth-bob{to{translate:0 -1.2cqw}}
+@keyframes auth-glow{0%{opacity:0;scale:.6}40%{opacity:1}100%{opacity:0;scale:1.2}}
+@media(prefers-reduced-motion:reduce){.auth-piece.card{transition:none;animation:none}.auth-mark-home{transform:none}.auth-assembly[data-progress="3"]::after{display:none}}

@@ -137,7 +137,8 @@ async function serveStatic(req, res, pathname, origin, account, restricted) {
     if(rewriteKey){if(rewrittenBodies.size>=256)rewrittenBodies.delete(rewrittenBodies.keys().next().value);rewrittenBodies.set(rewriteKey,body);}
     send(200,body,type);
   } catch (error) {
-    send(['ENOENT', 'ENOTDIR', 'EISDIR'].includes(error.code) ? 404 : 503, 'Page unavailable');
+    if(['ENOENT','ENOTDIR','EISDIR'].includes(error.code))require('./not-found.cjs').notFound(req,res,pathname,{home:origin?new URL('/',origin).href:'/'});
+    else send(503,'Page unavailable');
   }
 }
 

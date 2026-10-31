@@ -1,7 +1,7 @@
 const {readJson,securityHeaders}=require('../http/security.cjs');
 const model=require('./model.cjs'),{render,RI}=require('./render.cjs');
 const {gzipSync}=require('node:zlib');
-const {serveStatic,publicAssets}=require('../http/static.cjs');
+const {serveStatic,publicAssets}=require('../http/static.cjs'),{notFound}=require('../http/not-found.cjs');
 const pubData=(c,k)=>RI.publicationData(k,c);
 const metrics=require('./metrics.cjs'),mediaCache=require('./media-cache.cjs'),stored=require('./media.cjs');
 const extension=type=>type==='image/jpeg'?'jpg':type.slice(6);
@@ -22,7 +22,7 @@ function dashboardHandler(database,auth,notifications,options){const reset=requi
   const pathPages=samplePages||(pathAddress&&model.slugValid(pathAddress[1])&&database.publicWorkspace?await database.publicWorkspace(pathAddress[1],'path'):null);
   if(sub!==null||local||pathPages){
     const slug=sub||local?.[1]||pathAddress[1],rawRoute=local?local[2]||'/':pathPages?pathAddress[2]||'/':pathname,route=rawRoute==='/'?'/':rawRoute.replace(/\/$/,''),base=local?'/u/'+slug:pathPages?'/'+slug:'';
-    if(!model.slugValid(slug)&&!samplePages&&!(sub&&slug.length<=24&&/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug))){res.writeHead(404);res.end('صفحه پیدا نشد');return true;}
+    if(!model.slugValid(slug)&&!samplePages&&!(sub&&slug.length<=24&&/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug))){notFound(req,res,pathname,{home:new URL('/',origin).href});return true;}
     // Visitor message from the page's «ارتباط با من» form, accepted only from the page's own origin.
     if(route==='/message'&&req.method==='POST'){
       const found=pathPages||(database.publicWorkspace?await database.publicWorkspace(slug):{resume:await database.publicPage(slug,'resume')}),page=found?.resume;
@@ -51,8 +51,11 @@ function dashboardHandler(database,auth,notifications,options){const reset=requi
     const pages=pathPages||(database.publicWorkspace?await database.publicWorkspace(slug):{resume:await database.publicPage(slug,'resume'),links:await database.publicPage(slug,'links')});
     const linksPath=pathPages?'':'/'+(pages?.links?.content.routing?.links||'link'),resumePath=pages?.resume?.content.routing?.resume?'/'+pages.resume.content.routing.resume:'';
     const outgoing=/^\/out\/([a-z0-9_-]+)$/i.exec(route),linkRoutes=pathPages?['/','/share-image']:['/link','/links',linksPath,'/link/share-image','/links/share-image',linksPath+'/share-image'],kind=linkRoutes.includes(route)||outgoing?'links':'resume';
-    if(![...linkRoutes,'/','/share-image',resumePath,resumePath+'/share-image'].includes(route)&&!outgoing){res.writeHead(404);res.end('صفحه پیدا نشد');return true;}
-    const page=pages?.[kind];if(!page){res.writeHead(404);res.end('صفحه پیدا نشد');return true;}
+    if(![...linkRoutes,'/','/share-image',resumePath,resumePath+'/share-image'].includes(route)&&!outgoing||!pages?.[kind]){
+      // A wrong path under a real address still offers that address's own page.
+      notFound(req,res,pathname,{home:new URL('/',origin).href,page:pathPages?(pages?.links?base:null):pages?.resume?base+'/':pages?.links?base+linksPath:null});return true;
+    }
+    const page=pages[kind];
     if(outgoing){const link=page.content.links.items.find(x=>x.id===outgoing[1]&&x.type==='link'&&x.active);const url=link&&model.webUrl(link.url);if(!url){res.writeHead(404);res.end();return true;}if(metrics.countable(req,'click|'+page.id+'|'+link.id+'|'+host))await database.recordMetric(page.id,'click',link.id,Date.now(),page.slot||1);res.writeHead(302,{Location:url});res.end();return true;}
     if(route.endsWith('/share-image')){const img=RI.shareCard(page.content,kind).image,ref=stored.refHash(img),row=ref&&database.dashboardMedia?await database.dashboardMedia(page.id,ref):null;if(row){res.writeHead(200,{'Content-Type':row.type,'Content-Length':row.body.length});res.end(req.method==='HEAD'?undefined:row.body);return true;}const m=/^data:image\/(png|jpeg|webp);base64,(.+)$/.exec(img||'');if(!m){res.writeHead(404);res.end();return true;}res.writeHead(200,{'Content-Type':'image/'+m[1]});res.end(req.method==='HEAD'?undefined:Buffer.from(m[2],'base64'));return true;}
     const c=model.publicContent(page.content,database.billing?await database.billing(page.id):{}),esc=RI.esc,canonical=pathPages?root.protocol+'//'+domain+base:local?origin+base+(kind==='links'?linksPath:resumePath):root.protocol+'//'+slug+'.'+domain+(kind==='links'?linksPath:resumePath);

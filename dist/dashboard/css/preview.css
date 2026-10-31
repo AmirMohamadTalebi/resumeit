@@ -62,11 +62,30 @@
 .pv-name { font-size: 30px; line-height: 1.3; margin-top: 10px; }
 .pv-title { color: var(--pv-muted); font-weight: 500; margin-top: 2px; }
 .pv-loc { display: flex; gap: 6px; align-items: center; color: var(--pv-muted); font-size: 13.5px; margin-top: 6px; }
-.pv-contacts, .pv-socials { display: grid; gap: 6px; margin-top: 14px; font-size: 13.5px; }
-.pv-contacts li, .pv-socials li { display: flex; gap: 8px; align-items: center; min-width: 0; }
-.pv-contacts svg, .pv-socials svg { color: var(--pv-accent); }
-.pv-contacts span, .pv-socials span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.pv-socials { margin-top: 10px; }
+/* راه‌های تماس: هر کدام یک کارت کوچک با کاشی آیکن، عنوان و خود نشانی؛ شبکه‌ها قرص‌هایی که با رنگ برندشان پر می‌شوند */
+.pv-contacts { display: grid; gap: 8px; margin-top: 16px; font-size: 13.5px; }
+.pv-contacts li { display: flex; min-width: 0; }
+.pv-contact { position: relative; isolation: isolate; overflow: hidden; display: flex; flex: 1; align-items: center; gap: 12px; min-width: 0; min-height: 54px; padding: 8px 12px; border-radius: calc(var(--pv-r) + 4px); background: var(--pv-surface); border: 1px solid var(--pv-line); color: var(--pv-ink); text-decoration: none; transition: transform .45s cubic-bezier(.3,1.4,.5,1), border-color .3s, box-shadow .35s; }
+.pv-contact::after { content: ""; position: absolute; inset: 0; z-index: -1; background: linear-gradient(115deg, transparent 38%, color-mix(in srgb, var(--pv-accent) 18%, transparent) 50%, transparent 62%); transform: translateX(-110%); transition: transform .9s cubic-bezier(.2,.8,.2,1); }
+.pv-contact__ico { flex: none; display: grid; place-items: center; width: 38px; height: 38px; border-radius: var(--pv-r); background: color-mix(in srgb, var(--pv-accent) 15%, var(--pv-surface)); color: var(--pv-accent); transition: transform .5s cubic-bezier(.3,1.4,.5,1), background .3s, color .3s; }
+.pv-contact__ico svg { width: 18px; height: 18px; }
+.pv-contact__text { display: grid; min-width: 0; line-height: 1.5; text-align: start; }
+.pv-contact__text small { font-size: 11.5px; color: var(--pv-muted); }
+.pv-contact__text b { font-weight: 650; overflow-wrap: anywhere; text-align: right; }
+.pv-contact:hover { transform: translateY(-2px); border-color: color-mix(in srgb, var(--pv-accent) 55%, var(--pv-line)); box-shadow: 0 16px 30px -22px color-mix(in srgb, var(--pv-accent) 80%, transparent); }
+.pv-contact:hover::after { transform: translateX(110%); }
+.pv-contact:hover .pv-contact__ico { background: var(--pv-accent); color: var(--pv-on); transform: rotate(-8deg) scale(1.06); }
+.pv-socials { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; font-size: 13px; }
+.pv-socials li { display: flex; min-width: 0; }
+.pv-socials a { --brand: var(--pv-accent); gap: 7px; padding: 0 14px 0 10px; border-radius: 999px; background: var(--pv-surface); border: 1px solid var(--pv-line); color: var(--pv-ink); font-weight: 600; text-decoration: none; transition: transform .45s cubic-bezier(.3,1.4,.5,1), background .3s, border-color .3s, color .3s; }
+.pv-socials svg { width: 17px; height: 17px; color: var(--pv-accent); transition: transform .5s cubic-bezier(.3,1.4,.5,1), color .3s; }
+.pv-socials span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pv-socials a[data-platform=github] { --brand: #24292f; } .pv-socials a[data-platform=linkedin] { --brand: #0a66c2; } .pv-socials a[data-platform=telegram] { --brand: #1a6fa0; } .pv-socials a[data-platform=instagram] { --brand: #c13584; } .pv-socials a[data-platform=twitter] { --brand: #0f1419; } .pv-socials a[data-platform=youtube] { --brand: #cc0000; }
+.pv-socials a:hover { background: var(--brand); border-color: var(--brand); color: #fff; transform: translateY(-2px); }
+.pv-socials a:hover svg { color: #fff; transform: rotate(-12deg) scale(1.15); }
+@media (prefers-reduced-motion: no-preference) { @supports (animation-timeline: view()) { .pv-contacts li, .pv-socials li { animation: pv-contact-in linear both; animation-timeline: view(); animation-range: entry 0% entry 90%; } } }
+@keyframes pv-contact-in { from { opacity: 0; translate: 0 18px; scale: .96; } }
+@media (prefers-reduced-motion: reduce) { .pv-contact, .pv-contact::after, .pv-contact__ico, .pv-socials a, .pv-socials svg { transition: none; } }
 .pv-main { display: grid; gap: 22px; margin-top: 22px; align-content: start; }
 .pv-sec :is(h2,h3) { font-size: 17px; display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
 .pv-sec :is(h2,h3)::before { content: ''; width: 18px; height: 4px; border-radius: 4px; background: var(--pv-accent); }
@@ -124,7 +143,8 @@
 .pv--stack .pv-wrap { max-width: 720px; margin: 0 auto; }
 .pv--stack .pv-id { text-align: center; }
 .pv--stack .pv-avatar { margin-inline: auto; display: block; }
-.pv--stack .pv-contacts, .pv--stack .pv-socials { justify-items: center; grid-auto-flow: row; }
+.pv--stack .pv-contacts { grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr)); }
+.pv--stack .pv-socials { justify-content: center; }
 .pv--stack .pv-loc { justify-content: center; }
 .pv--stack .pv-cover { height: 140px; }
 /* قهرمان */
@@ -133,7 +153,7 @@
 .pv--hero .pv-wrap { max-width: 1020px; margin: -70px auto 0; position: relative; z-index: 1; }
 .pv--hero .pv-avatar { margin-top: 0; width: 128px; height: 128px; box-shadow: 0 10px 30px -10px rgba(0,0,0,.4); }
 .pv--hero .pv-name { font-size: 38px; }
-.pv--hero .pv-contacts { grid-auto-flow: column; justify-content: start; gap: 18px; }
+.pv--hero .pv-contacts { grid-template-columns: repeat(auto-fill, minmax(min(100%, 230px), 1fr)); }
 .pv--hero .pv-sec:not(.pv-about) { background: var(--pv-surface); border: 1px solid var(--pv-line); border-radius: calc(var(--pv-r) + 6px); padding: 20px 22px; }
 
 /* تک‌ستونی در عرض کم (موبایل) */
