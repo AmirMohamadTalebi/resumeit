@@ -25,15 +25,23 @@ const assert = require('node:assert/strict'), { chromium } = require('playwright
       assert.equal(await page.locator('[data-faq-count=pay]').textContent(), '۲');
 
       // One answer open at a time, with its own link; a second click closes it; Enter works from the keyboard.
-      await summaries.nth(0).click(); await page.waitForTimeout(550);
-      assert(await open(details.nth(0)), 'first answer opens');
+      // Each step waits for the accordion's height animation to finish (slower on CI runners) before checking.
+      const until = async (check, message) => {
+        for (const started = Date.now(); ; await page.waitForTimeout(100)) {
+          const idle = await page.evaluate(() => !document.getAnimations().some(a => a.playState === 'running' && a.effect?.getTiming().iterations !== Infinity && a.effect?.target?.closest?.('.faq-list')));
+          if (idle && await check()) return;
+          if (Date.now() - started > 4000) assert.fail(message);
+        }
+      };
+      await summaries.nth(0).click();
+      await until(() => open(details.nth(0)), 'first answer opens');
       assert.equal(new URL(page.url()).hash, '#faq-what', 'opening gives the answer its own link');
-      await summaries.nth(1).click(); await page.waitForTimeout(550);
-      assert(!(await open(details.nth(0))) && await open(details.nth(1)), 'opening another closes the first');
-      await summaries.nth(1).click(); await page.waitForTimeout(550);
-      assert(!(await open(details.nth(1))), 'second click closes');
-      await summaries.nth(2).focus(); await page.keyboard.press('Enter'); await page.waitForTimeout(550);
-      assert(await open(details.nth(2)), 'Enter opens from the keyboard');
+      await summaries.nth(1).click();
+      await until(async () => !(await open(details.nth(0))) && await open(details.nth(1)), 'opening another closes the first');
+      await summaries.nth(1).click();
+      await until(async () => !(await open(details.nth(1))), 'second click closes');
+      await summaries.nth(2).focus(); await page.keyboard.press('Enter');
+      await until(() => open(details.nth(2)), 'Enter opens from the keyboard');
 
       // Categories narrow the list and mark the pressed chip.
       await page.locator('.ln-faq__cat[data-faq-cat=pay]').click(); await page.waitForTimeout(250);
