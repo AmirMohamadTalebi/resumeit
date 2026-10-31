@@ -20,7 +20,8 @@ function run(name){
  return new Promise(resolve=>{
   const started=Date.now(),child=spawn(process.execPath,[path.join('tests',name+'.cjs')],{cwd:process.cwd(),env:{...process.env,PUBLIC_ORIGIN:''},windowsHide:true});
   let output='';child.stdout.on('data',b=>output+=b);child.stderr.on('data',b=>output+=b);
-  const timer=setTimeout(()=>{output+='\n[timed out after 180s]';child.kill();},180000);
+  // Generous: the heaviest browser checks take about a minute here and two to three on a CI runner.
+  const timer=setTimeout(()=>{output+='\n[timed out after 300s]';child.kill();},300000);
   child.once('error',e=>{clearTimeout(timer);resolve({name,code:-1,output:output+e.message,seconds:0});});
   child.once('close',code=>{clearTimeout(timer);resolve({name,code,output,seconds:Math.round((Date.now()-started)/1000)});});
  });
