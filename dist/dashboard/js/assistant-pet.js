@@ -11,6 +11,9 @@
   let root, cat = null, panel, status = null, history = [], chat = [], tab = 'chat', open = false, busy = false, lastTip = 0, tipsShown = 0, reviewHost = null, typingTimer = 0, opener = null;
   const goal = () => store('ri-pet-goal-' + RI.ownerId) || '';
   const muted = () => store('ri-pet-muted') === '1';
+  // How Fandogh's own resume edits land: «ask» shows them with before/after first, «auto» applies them and offers undo.
+  const editMode = () => store('ri-pet-edits-' + RI.ownerId) === 'auto' ? 'auto' : 'ask';
+  const undo = new Map();
 
   /* ---------- Shell ---------- */
   function build() {
@@ -22,7 +25,7 @@
       '<button type="button" class="pet__icon" data-pet-tuck title="فندق پشت دیوار برود">' + RI.icon('eyeOff') + '</button>' +
       '<button type="button" class="pet__icon" data-pet-close aria-label="بستن">' + RI.icon('x') + '</button></header>' +
       '<nav class="pet__tabs" role="tablist" aria-label="بخش‌های دستیار"><span class="pet__ink" aria-hidden="true"></span><button type="button" role="tab" data-pet-tab="chat">' + RI.icon('sparkle') + 'گفت‌وگو</button><button type="button" role="tab" data-pet-tab="score">' + RI.icon('chart') + 'امتیاز</button><button type="button" role="tab" data-pet-tab="review">' + RI.icon('check') + 'بررسی متن</button></nav>' +
-      '<div class="pet__view" data-pet-view="chat"><div class="pet__log" data-pet-log aria-live="polite"></div><div class="pet__chips" data-pet-chips></div><form class="pet__ask" data-pet-form><label class="sr-only" for="pet-input">سؤالت از فندق</label><input id="pet-input" class="input" maxlength="500" autocomplete="off" placeholder="بپرس یا بگو چه کاره‌ای…"><button type="submit" class="pet__send" aria-label="فرستادن">' + RI.icon('chevL') + '</button></form></div>' +
+      '<div class="pet__view" data-pet-view="chat"><div class="pet__log" data-pet-log aria-live="polite"></div><div class="pet__chips" data-pet-chips></div><div class="pet__mode" role="group" aria-label="وقتی فندق رزومه را تغییر می‌دهد"><span>تغییرهای فندق</span><button type="button" data-pet-mode="ask">' + RI.icon('eye') + 'اول نشانم بده</button><button type="button" data-pet-mode="auto">' + RI.icon('zap') + 'خودش انجام بدهد</button></div><form class="pet__ask" data-pet-form><label class="sr-only" for="pet-input">سؤالت از فندق</label><input id="pet-input" class="input" maxlength="500" autocomplete="off" placeholder="بپرس یا بگو چه کاره‌ای…"><button type="submit" class="pet__send" aria-label="فرستادن">' + RI.icon('chevL') + '</button></form></div>' +
       '<div class="pet__view pet__score" data-pet-view="score" hidden></div><div class="pet__view pet__review" data-pet-view="review" hidden></div></section>';
     document.body.append(root);
     panel = root.querySelector('.pet__panel');
@@ -32,6 +35,7 @@
     mute.setAttribute('aria-pressed', String(muted()));
     mute.addEventListener('click', () => { const on = !muted(); store('ri-pet-muted', on ? '1' : null); mute.setAttribute('aria-pressed', String(on)); RI.toast(on ? 'فندق دیگر خودش پیام نمی‌دهد' : 'فندق گاهی پیشنهاد می‌دهد', { kind: 'info' }); });
     root.addEventListener('click', onClick);
+    paintMode();
     root.querySelector('[data-pet-form]').addEventListener('submit', e => { e.preventDefault(); const input = root.querySelector('#pet-input'), q = input.value.trim(); if (!q) return; input.value = ''; flyout(); ask(q); });
     // Escape closes the innermost thing first: an open tooltip inside the panel, then the panel itself.
     document.addEventListener('keydown', e => { if (e.key === 'Escape' && open && !e.defaultPrevented && !root.querySelector('.pet__panel [role=tooltip]:not([hidden])')) { toggle(false); } });
@@ -156,15 +160,53 @@
       busy = false; root.classList.remove('is-busy'); return;
     }
     try {
-      const c = RI.C(), r = await RI.dashboardRequest('assistant/ask', { question, goal: goal(), history: history.slice(-7, -1), content: { profile: c.profile, skills: c.skills, experience: c.experience, education: c.education, projects: c.projects, certs: c.certs, languages: c.languages, contacts: c.contacts, socials: c.socials } });
+      const c = RI.C(), mode = editMode(), r = await RI.dashboardRequest('assistant/ask', { question, goal: goal(), mode, page: document.body.dataset.page || '', history: history.slice(-9, -1), content: { profile: c.profile, skills: c.skills, experience: c.experience, education: c.education, projects: c.projects, certs: c.certs, languages: c.languages, contacts: c.contacts, socials: c.socials, sections: c.sections } });
       status = r.usage; paintUsage(); log.querySelector('.pet-msg--typing')?.remove();
       push('bot', r.reply.text, r.reply.actions || [], r.reply.follow || []); cat?.mood('happy', 1200);
+      if (r.reply.edits?.length) edits(r.reply.edits, mode);
     } catch (e) {
       log.querySelector('.pet-msg--typing')?.remove();
       if (e.code === 'ASSISTANT_LIMIT') { if (e.data?.usage) { status = e.data.usage; paintUsage(); } upsell(e.message); }
       else push('bot', e.message || 'الان نتوانستم جواب بدهم؛ کمی بعد دوباره بپرس.');
       cat?.mood('sad', 1600);
     } finally { busy = false; root.classList.remove('is-busy'); }
+  }
+  /* ---------- Fandogh's own edits: a before/after card, applied after a yes or right away with undo ---------- */
+  function paintMode() { const m = editMode(); root.querySelectorAll('[data-pet-mode]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.petMode === m))); }
+  const note = text => { history.push({ role: 'user', text }); if (history.length > 12) history.splice(0, history.length - 12); };
+  const editBtn = (key, label, icon, primary) => '<button type="button" class="pet__act' + (primary ? ' pet__act--primary' : '') + '" data-edits-act="' + key + '">' + RI.icon(icon) + label + '</button>';
+  function edits(list, mode) {
+    const id = 'e' + Date.now().toString(36), log = root.querySelector('[data-pet-log]');
+    log.insertAdjacentHTML('beforeend', '<div class="pet-edits" data-edits="' + id + '" data-state="pending"><div class="pet-edits__head"><i>' + RI.icon('edit') + '</i><b data-edits-title></b></div><ul>' + list.map((e, i) => '<li style="--i:' + i + '"><label><input type="checkbox" data-edit-pick="' + i + '" checked><span>' + esc(e.label) + '</span></label>' + (e.before ? '<del>' + esc(e.before.length > 160 ? e.before.slice(0, 158) + '…' : e.before) + '</del>' : '') + '<ins' + (e.after ? '' : ' class="is-gone"') + '>' + esc(e.after || 'حذف می‌شود') + '</ins></li>').join('') + '</ul><div class="pet-edits__acts"></div></div>');
+    const card = log.querySelector('[data-edits="' + id + '"]'); card._edits = list;
+    if (mode === 'auto') applyEdits(card); else paintEdits(card);
+    log.scrollTo({ top: log.scrollHeight, behavior: calm.matches ? 'auto' : 'smooth' });
+  }
+  function paintEdits(card) {
+    const s = card.dataset.state, n = card._edits.length;
+    card.querySelector('[data-edits-title]').textContent = s === 'pending' ? (n > 1 ? RI.fa(n) + ' تغییر برای رزومه‌ات؛ تیک هر کدام را که نمی‌خواهی بردار' : 'یک تغییر برای رزومه‌ات') : s === 'applied' ? 'این تغییرها را در رزومه‌ات دادم' : s === 'undone' ? 'برگرداندم؛ رزومه مثل قبل شد' : 'باشه، چیزی عوض نشد';
+    card.querySelectorAll('[data-edit-pick]').forEach(x => { x.disabled = s !== 'pending'; });
+    card.querySelector('.pet-edits__acts').innerHTML = s === 'pending' ? editBtn('apply', 'اعمال کن', 'check', true) + editBtn('skip', 'نه، ممنون', 'x') : s === 'applied' ? editBtn('keep', 'خوبه', 'check', true) + editBtn('show', 'نشانم بده', 'eye') + editBtn('undo', 'برگردان', 'undo') : s === 'undone' ? editBtn('redo', 'دوباره اعمال کن', 'refresh') : '';
+  }
+  function applyEdits(card) {
+    const E = window.FandoghEdits, c = RI.C(); if (!E) return;
+    const picked = card._edits.filter((e, i) => card.querySelector('[data-edit-pick="' + i + '"]')?.checked !== false);
+    if (!picked.length) { card.dataset.state = 'skipped'; paintEdits(card); return; }
+    undo.set(card.dataset.edits, E.snapshot(c));
+    const scopes = E.apply(c, picked); card._applied = picked;
+    if (scopes.length) { RI.touch(scopes[0]); RI.rerender?.(); }
+    card.dataset.state = 'applied'; paintEdits(card); cat?.play('celebrate');
+    note('(فندق این تغییرها را در رزومه داد: ' + picked.map(e => e.label + (e.after ? ' ← ' + e.after.slice(0, 60) : '')).join('؛ ') + ')');
+  }
+  function undoEdits(card) {
+    const snap = undo.get(card.dataset.edits); if (!snap) return;
+    window.FandoghEdits.restore(RI.C(), snap); RI.touch('profile'); RI.rerender?.();
+    card.dataset.state = 'undone'; paintEdits(card); cat?.mood('think', 1000); note('(تغییرهای قبلی فندق را برگرداندم)');
+  }
+  function showEdit(card) {
+    const e = (card._applied || [])[0]; if (!e) return;
+    const target = e.op === 'set' || e.op === 'replace' ? { section: 'profile', field: e.field || 'bio' } : /skill/.test(e.op) ? { section: 'skills' } : { section: e.section, itemId: e.id, field: e.field };
+    if (RI.resumeFocus && document.body.dataset.page === 'resume') RI.resumeFocus(target); else RI.go('resume', { step: target.section });
   }
   function upsell(message) {
     const plans = status?.plans || [], log = root.querySelector('[data-pet-log]');
@@ -209,7 +251,17 @@
   }
   function onClick(e) {
     if (e.target === root && open) { toggle(false); return; }
-    const t = e.target.closest('[data-pet-tab],[data-ask],[data-msg-act],[data-buy]'); if (!t) return;
+    const t = e.target.closest('[data-pet-tab],[data-ask],[data-msg-act],[data-buy],[data-edits-act],[data-pet-mode]'); if (!t) return;
+    if (t.dataset.editsAct) {
+      const card = t.closest('[data-edits]'), k = t.dataset.editsAct;
+      if (k === 'apply' || k === 'redo') applyEdits(card);
+      else if (k === 'undo') undoEdits(card);
+      else if (k === 'show') showEdit(card);
+      else if (k === 'skip') { card.dataset.state = 'skipped'; paintEdits(card); note('(این تغییرها را نخواستم)'); }
+      else if (k === 'keep') { card.querySelector('.pet-edits__acts').innerHTML = editBtn('undo', 'برگردان', 'undo'); cat?.play('purr'); }
+      return;
+    }
+    if (t.dataset.petMode) { store('ri-pet-edits-' + RI.ownerId, t.dataset.petMode === 'auto' ? 'auto' : null); paintMode(); RI.toast(t.dataset.petMode === 'auto' ? 'از این به بعد فندق تغییرها را خودش انجام می‌دهد و می‌توانی برگردانی' : 'از این به بعد فندق اول تغییرها را نشانت می‌دهد', { kind: 'info' }); return; }
     if (t.dataset.petTab) select(t.dataset.petTab);
     else if (t.dataset.ask) { if (tab !== 'chat') select('chat'); ask(t.dataset.ask); }
     else if (t.dataset.msgAct) { const [id, i] = t.dataset.msgAct.split(':'), a = chat.find(m => m.id === id)?.actions?.[Number(i)]; if (a) act(a); }

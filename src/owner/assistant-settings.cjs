@@ -10,7 +10,7 @@ function defaults(env = process.env) {
     enabled: true,
     freeDaily: positive(env.ASSISTANT_FREE_DAILY, RI.ASSISTANT_FREE_DAILY),
     paidDaily: positive(env.ASSISTANT_PAID_DAILY, 200),
-    ai: { enabled: false, provider: 'openai', temperature: 0.4, maxTokens: 700, dailyCalls: 2000, smalltalk: false },
+    ai: { enabled: false, provider: 'openai', temperature: 0.4, maxTokens: 1200, dailyCalls: 2000, smalltalk: false },
     providers: {},
   };
 }

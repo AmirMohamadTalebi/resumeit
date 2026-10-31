@@ -26,12 +26,12 @@ const assert=require('node:assert/strict'),{randomUUID}=require('node:crypto'),l
   assert.equal((await call('/api/dashboard/assistant/ask',{question:'',content})).status,400);
   assert.equal((await call('/api/dashboard/assistant/ask',{question:'سلام'})).status,400);
   const trimmed=llm.trim(content);assert(!JSON.stringify(trimmed).includes('09120000000'));assert(!JSON.stringify(trimmed).includes('base64'));assert.equal(trimmed.contacts[0].filled,true);
-  // Model replies: tagged blocks become actions; failures fall back to the local brain.
+  // Model replies: tagged blocks become checked resume edits; failures fall back to the local brain.
   const parsed=llm.parse('عنوانت غلط دارد.<<TITLE>>دانشجوی کامپیوتر<</TITLE>>\n<<BIO>>دانشجوی کامپیوتر و علاقه‌مند به طراحی.<</BIO>><<SKILLS>>Figma|پروتوتایپ<</SKILLS>>');
-  assert.deepEqual(parsed.actions.map(a=>a.kind),['bio','title','skill','skill']);assert(!parsed.text.includes('<<'));
+  assert.deepEqual(parsed.edits.map(a=>a.op),['set','set','add_skill','add_skill']);assert(!parsed.text.includes('<<'));
   const env={ASSISTANT_AI_URL:'https://ai.example.test/v1',ASSISTANT_AI_KEY:'test-key-123'};let seen;
   const answer=await llm.answer({question:'سلام',content,goal:'',history:[],analysis:{}},env,async(url,init)=>{seen={url,body:JSON.parse(init.body),auth:init.headers.Authorization};return {ok:true,json:async()=>({choices:[{message:{content:'سلام! <<SKILLS>>React<</SKILLS>>'}}]})};});
-  assert.equal(seen.url,'https://ai.example.test/v1/chat/completions');assert.equal(seen.auth,'Bearer test-key-123');assert(!JSON.stringify(seen.body).includes('09120000000'));assert.equal(answer.actions[0].value,'React');
+  assert.equal(seen.url,'https://ai.example.test/v1/chat/completions');assert.equal(seen.auth,'Bearer test-key-123');assert(!JSON.stringify(seen.body).includes('09120000000'));assert.equal(answer.edits[0].name,'React');
   assert.equal(await llm.answer({question:'سلام',content},env,async()=>({ok:false})),null);
   assert.equal(await llm.answer({question:'سلام',content},{ASSISTANT_AI_URL:'http://insecure.test',ASSISTANT_AI_KEY:'test-key-123'}),null,'only https endpoints');
   console.log('PASS assistant API: daily free allowance with limit refusal and plans, monthly assistant purchase that stacks, subscription inclusion, validation, private prompt, tagged model actions and local fallback.');

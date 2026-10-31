@@ -11,6 +11,8 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
   if(!String(url).startsWith('https://api.openai.com/'))return real(url,init);
   const body=JSON.parse(init.body);calls.push(body);
   if(init.headers.Authorization!=='Bearer sk-test-fandogh-1234')return {ok:false,status:401,json:async()=>({error:{message:'Incorrect API key provided: sk-test-wrong'}})};
+  // Asked to fix the title, the model answers with an edit list (one valid, one aimed at a field it may not touch).
+  if(body.messages.at(-1).content.includes('عنوانم'))return {ok:true,status:200,json:async()=>({choices:[{message:{content:'عنوانت را درست کردم. <<EDITS>>[{"op":"set","field":"title","value":"طراح ارشد رابط کاربری"},{"op":"set","field":"slug","value":"x"}]<</EDITS>>'}}],usage:{prompt_tokens:150,completion_tokens:40}})};
   return {ok:true,status:200,json:async()=>({choices:[{message:{content:'سلام! من ChatGPT هستم. معرفی‌ات را کوتاه‌تر کن.'}}],usage:{prompt_tokens:120,completion_tokens:30}})};
  };
  const server=createServer(db);await new Promise(r=>server.listen(0,'127.0.0.1',r));const base='http://127.0.0.1:'+server.address().port;
@@ -43,9 +45,12 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
   r=(await ask('معرفی‌ام را چطور بنویسم؟')).body.reply;assert.equal(r.source,'ai');assert.equal(calls.length,1);assert(r.text.includes('من فندقم')&&!r.text.includes('ChatGPT'),'identity claims are replaced');
   assert(calls[0].messages[0].content.includes('اسم تو فقط «فندق» است'),'the identity rules go with every request');
   let stats=(await send('/api/admin/assistant')).body.stats;assert.equal(stats.today.aiCalls,1);assert.equal(stats.today.tokens,150);assert.equal(stats.today.messages,3);assert.equal(stats.top[0].id,target);
+  // Resume edits come back checked against the resume that was sent; the mode reaches the model's instructions.
+  const edit=(await send('/api/dashboard/assistant/ask',{question:'عنوانم را درست کن',content,history:[],mode:'auto'},'b')).body.reply;
+  assert.deepEqual(edit.edits.map(e=>[e.op,e.field,e.after]),[['set','title','طراح ارشد رابط کاربری']]);assert(calls.at(-1).messages[0].content.includes('حالت ویرایش: خودکار'));
   // Daily cap on model calls: past it, answers come from the local brain.
   assert.equal((await save(settings({ai:{enabled:true,provider:'openai',dailyCalls:1},providers:{openai:{model:'gpt-4o-mini',url:''}}}))).status,200);
-  r=(await ask('یک معرفی برایم بنویس')).body.reply;assert.equal(r.source,'local');assert.equal(calls.length,1);
+  r=(await ask('یک معرفی برایم بنویس')).body.reply;assert.equal(r.source,'local');assert.equal(calls.length,2);
   // Allowances come from the panel; a paused Fandogh says so instead of answering.
   view=(await send('/api/admin/assistant')).body;
   assert.equal((await save(settings({freeDaily:4,paidDaily:50}))).status,200);
