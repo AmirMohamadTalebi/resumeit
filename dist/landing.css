@@ -513,3 +513,18 @@ body.ln{margin:0;background:var(--cream);color:var(--ink);font-family:Vazirmatn,
 .ln-fandogh{position:fixed;left:0;bottom:0;z-index:90;pointer-events:none}
 .ln-fandogh .gr{--h:280px}
 @media(max-width:1023.98px){.ln-fandogh{display:none}}
+.ln-faq__search input:focus-visible,.ln-claim__field input:focus-visible{outline:none}
+.ln-claim__window{z-index:3}
+.ln-claim__stage::before{filter:blur(28px)}
+
+/* Focus, redesigned: no thick ring around the field — a thin gold edge of light travels around it, the field lifts a
+   little and a soft glow settles underneath. */
+@property --ln-edge{syntax:'<angle>';inherits:false;initial-value:0deg}
+.ln-faq__search,.ln-claim__field{position:relative;isolation:isolate}
+.ln-faq__search::after,.ln-claim__field::after{content:"";position:absolute;inset:-1px;z-index:-1;padding:1.5px;border-radius:inherit;background:conic-gradient(from var(--ln-edge),transparent 0 55%,#f0bd52 72%,#ffe7ad 80%,#c98a2b 88%,transparent 100%);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) content-box exclude,linear-gradient(#000 0 0);opacity:0;transition:opacity .4s;pointer-events:none}
+.ln-faq__search:focus-within::after,.ln-claim__field:focus-within::after{opacity:1;animation:ln-edge 3.2s linear infinite}
+.ln-faq__search:focus-within{border-color:#ead9bf;box-shadow:0 22px 44px -26px rgba(166,112,40,.55);transform:translateY(-2px)}
+.ln-claim__field:focus-within{border-color:rgba(255,255,255,.4);background:rgba(255,255,255,.17);box-shadow:0 22px 50px -24px rgba(240,189,82,.55),inset 0 1px 0 rgba(255,255,255,.3);transform:translateY(-2px)}
+.ln-faq__search,.ln-claim__field{transition:border-color .3s,box-shadow .4s,background .3s,transform .45s var(--spring)}
+@keyframes ln-edge{to{--ln-edge:360deg}}
+@media(prefers-reduced-motion:reduce){.ln-faq__search:focus-within::after,.ln-claim__field:focus-within::after{animation:none;background:linear-gradient(90deg,#f0bd52,#ffe7ad,#f0bd52)}.ln-faq__search:focus-within,.ln-claim__field:focus-within{transform:none}}

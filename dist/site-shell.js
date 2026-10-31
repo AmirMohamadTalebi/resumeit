@@ -14,12 +14,15 @@
  document.addEventListener('keydown',e=>{if(e.key!=='Escape')return;if(popover&&!popover.hidden){close();trigger.focus();}if(menu?.getAttribute('aria-expanded')==='true'){setMenu(false);menu.focus();}});
  async function paint(user){
   if(!original)return;
+  document.querySelector('.ln-head')?.classList.toggle('is-signed',!!user);
   if(!user){control?.replaceWith(original.cloneNode(true));control=trigger=popover=null;identity='';return;}
   const key=String(user.id);if(control&&identity===key)return;
   await icons;
   const link=document.querySelector('[data-session-link]');if(!link&&!control)return;
   const wrapper=document.createElement('div');wrapper.className='public-account';
   const dashboard=original.cloneNode(true);dashboard.href='/dashboard/';dashboard.innerHTML=icon('home')+'<span>داشبورد</span>';
+  // In the landing-style header a signed-in visitor sees one greeting capsule instead of «ورود» and «شروع رایگان».
+  const chrome=link?.closest('.ln-head')||control?.closest('.ln-head');if(chrome){const first=String(user.first_name||'').trim();dashboard.innerHTML='<span class="public-account__hi"><small></small><b>داشبورد من</b></span><svg class="public-account__go" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12H4m6-6-6 6 6 6"/></svg>';dashboard.querySelector('small').textContent=first?'سلام، '+first:'خوش برگشتی';}
   trigger=document.createElement('button');trigger.type='button';trigger.className='public-account__trigger';trigger.setAttribute('aria-label','دسترسی سریع حساب');trigger.setAttribute('aria-expanded','false');trigger.setAttribute('aria-controls','public-account-menu');
   const avatar=document.createElement('img');avatar.src='/brand/resumeit-mark-v1.png';avatar.alt='تصویر پروفایل';avatar.width=40;avatar.height=40;trigger.append(avatar);
   popover=document.createElement('div');popover.id='public-account-menu';popover.className='public-account__menu';popover.hidden=true;

@@ -23,6 +23,8 @@
     mega.addEventListener('click', e => { if (e.target.closest('a')) set(false); });
     document.addEventListener('pointerdown', e => { if (!mega.contains(e.target)) set(false); });
     document.addEventListener('keydown', e => { if (e.key === 'Escape' && mega.classList.contains('is-open')) { set(false); trigger.focus(); } });
+    // Each product tile carries a light that follows the pointer.
+    if (fine) mega.querySelectorAll('.ln-mega__item').forEach(item => item.addEventListener('pointermove', e => { const r = item.getBoundingClientRect(); item.style.setProperty('--mx', (e.clientX - r.left).toFixed(0) + 'px'); item.style.setProperty('--my', (e.clientY - r.top).toFixed(0) + 'px'); }));
   }
 
   // Scroll: light glass past the dark hero, compact after the first scroll, progress line, gold line under the section.
@@ -52,12 +54,38 @@
     else { const io = new IntersectionObserver(([e]) => { if (e.isIntersecting) { word.classList.add('is-in'); io.disconnect(); } }, { threshold: .4 }); io.observe(word); }
   }
 
-  // Info pages: cards rise in as they scroll into view; siblings entering together are staggered.
+  /* Info pages: a living hero (grid floor, orbit rings, drifting sparks, a title that arrives word by word,
+     auroras that follow the pointer, content that lifts away as you scroll), cards that tilt toward the pointer
+     with a following light and rise in with their icons drawing themselves, magnetic buttons and a soft glow
+     that follows the cursor. Everything is skipped with reduced motion. */
   if (document.body.classList.contains('pub') && !calm.matches && 'IntersectionObserver' in window) {
-    const cards = $('.lg-glance li, .lg-steps li, .lg-principles li, .lg-channel, .lg-panel, .lg-sec, .lg-cta, .lg-kicker');
     document.documentElement.classList.add('pub-motion');
-    const io = new IntersectionObserver(entries => entries.filter(e => e.isIntersecting).forEach((e, i) => { e.target.style.setProperty('--d', Math.min(i, 6) * 80 + 'ms'); e.target.classList.add('is-in'); io.unobserve(e.target); }), { rootMargin: '0px 0px -6% 0px' });
+    const hero = $('.lg-hero, .cl-hero');
+    if (hero) {
+      hero.insertAdjacentHTML('afterbegin', '<span class="lg-sky" aria-hidden="true"><i class="lg-floor"></i><i class="lg-orbit"><b></b></i><i class="lg-orbit lg-orbit--2"><b></b></i>' + '<i class="lg-spark"></i>'.repeat(14) + '</span>');
+      hero.querySelectorAll('.lg-spark').forEach(s => { s.style.cssText = '--x:' + (Math.random() * 100).toFixed(1) + '%;--y:' + (20 + Math.random() * 70).toFixed(1) + '%;--s:' + (2 + Math.random() * 4).toFixed(1) + 'px;--t:' + (5 + Math.random() * 7).toFixed(1) + 's;--w:' + (-Math.random() * 8).toFixed(1) + 's'; });
+      // Words, not letters, so Persian letters keep joining.
+      const title = hero.querySelector('h1');
+      if (title) { let i = 0; title.innerHTML = title.textContent.trim().split(/(\s+)/).map(w => /^\s+$/.test(w) ? w : '<span class="lg-w" style="--i:' + i++ + '">' + w + '</span>').join(''); title.classList.add('is-split'); }
+      if (fine) hero.addEventListener('pointermove', e => { const r = hero.getBoundingClientRect(); hero.style.setProperty('--px', ((e.clientX - r.left) / r.width - .5).toFixed(3)); hero.style.setProperty('--py', ((e.clientY - r.top) / r.height - .5).toFixed(3)); });
+      const lift = () => { const y = Math.min(scrollY, 600); hero.style.setProperty('--lift', y.toFixed(0)); };
+      addEventListener('scroll', () => requestAnimationFrame(lift), { passive: true }); lift();
+    }
+    const cards = $$('.lg-glance li, .lg-steps li, .lg-principles li, .lg-channel, .lg-panel, .lg-sec, .lg-cta, .lg-kicker, .cl-release, .cl-toolbar, .cl-index, .lg-toc');
+    const io = new IntersectionObserver(entries => entries.filter(e => e.isIntersecting).forEach((e, i) => { e.target.style.setProperty('--d', Math.min(i, 6) * 90 + 'ms'); e.target.classList.add('is-in'); io.unobserve(e.target); }), { rootMargin: '0px 0px -6% 0px' });
     cards.forEach(el => { el.classList.add('lg-reveal'); io.observe(el); });
+    if (fine) {
+      $$('.lg-glance li, .lg-steps li, .lg-principles li, .lg-channel').forEach(card => {
+        card.addEventListener('pointermove', e => { const r = card.getBoundingClientRect(), x = (e.clientX - r.left) / r.width, y = (e.clientY - r.top) / r.height; card.style.setProperty('--mx', (x * 100).toFixed(1) + '%'); card.style.setProperty('--my', (y * 100).toFixed(1) + '%'); card.style.transform = 'perspective(900px) rotateX(' + ((.5 - y) * 8).toFixed(2) + 'deg) rotateY(' + ((x - .5) * 10).toFixed(2) + 'deg) translateY(-4px)'; });
+        card.addEventListener('pointerleave', () => { card.style.transform = ''; });
+      });
+      $$('.lg-btn, .ln-head__cta').forEach(btn => {
+        btn.addEventListener('pointermove', e => { const r = btn.getBoundingClientRect(); btn.style.translate = ((e.clientX - r.left - r.width / 2) * .25).toFixed(1) + 'px ' + ((e.clientY - r.top - r.height / 2) * .35).toFixed(1) + 'px'; });
+        btn.addEventListener('pointerleave', () => { btn.style.translate = ''; });
+      });
+      const glow = document.createElement('span'); glow.className = 'lg-glow'; glow.setAttribute('aria-hidden', 'true'); document.body.append(glow);
+      addEventListener('pointermove', e => { glow.classList.add('is-on'); glow.style.transform = 'translate3d(' + e.clientX + 'px,' + e.clientY + 'px,0)'; }, { passive: true });
+    }
   }
 
   // e-Namad seal: the official image when it loads, a text link otherwise.
