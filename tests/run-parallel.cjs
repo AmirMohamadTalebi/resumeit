@@ -1,10 +1,13 @@
 // Runs check files side by side instead of one after another. Arguments are test names (tests/<name>.cjs) or
 // package scripts (npm:check:security), which expand to the node files they chain. Each test owns its port and
 // store, so they are independent; the output of a failing test is printed in full once everything has finished.
-// RI_JOBS sets how many run at once (default: half the cores, at least 2, at most 6).
+// RI_JOBS sets how many run at once (default: half the cores, at least 2, at most 6). suite:ui stands for the
+// full UI suite. RI_SHARD=i/n keeps only this machine's share, balanced by known durations, so CI can split the
+// checks across n parallel jobs.
 const {spawn}=require('node:child_process'),os=require('node:os'),path=require('node:path');
 const scripts=require('../package.json').scripts;
 function expand(arg){
+ if(arg==='suite:ui')return require('./full-ui-suite.cjs');
  if(!arg.startsWith('npm:'))return [arg.replace(/^tests\//,'').replace(/\.cjs$/,'')];
  const body=scripts[arg.slice(4)];if(!body)throw new Error('unknown script '+arg);
  return body.split('&&').map(s=>s.trim()).flatMap(step=>{
@@ -26,8 +29,8 @@ const SOLO=new Set(['dashboard-performance-check','dashboard-save-ui-check','edi
 async function runAll(names,jobs=Math.min(6,Math.max(2,Math.floor(os.cpus().length/2)))){
  jobs=Number(process.env.RI_JOBS)||jobs;
  // Longest tests start first (times from the previous run), so the slow ones do not trail at the end alone.
- const timesFile=path.resolve('artifacts/test-times.json');let times={};try{times=JSON.parse(require('node:fs').readFileSync(timesFile,'utf8'));}catch{}
- const queue=[...new Set(names)].sort((x,y)=>(times[y]??60)-(times[x]??60)),results=[];
+ const timesFile=path.resolve('artifacts/test-times.json'),times=durations(timesFile);
+ const queue=shard([...new Set(names)],times).sort((x,y)=>(times[y]??60)-(times[x]??60)),results=[];
  // Checks that measure speed or race timings run alone after the batch, where other browsers cannot slow them.
  const solo=queue.filter(n=>SOLO.has(n));for(const n of solo)queue.splice(queue.indexOf(n),1);
  const report=r=>{results.push(r);console.log((r.code===0?'PASS ':'FAIL ')+r.name+' ('+r.seconds+'s)');};
@@ -35,6 +38,15 @@ async function runAll(names,jobs=Math.min(6,Math.max(2,Math.floor(os.cpus().leng
  for(const n of solo)report(await run(n));
  try{for(const r of results)if(r.code===0)times[r.name]=r.seconds;require('node:fs').mkdirSync(path.dirname(timesFile),{recursive:true});require('node:fs').writeFileSync(timesFile,JSON.stringify(times,null,1));}catch{}
  return results;
+}
+// Durations: this machine's last run when there is one, else the baseline kept with the tests.
+function durations(file){const fs=require('node:fs');let base={},own={};try{base=JSON.parse(fs.readFileSync(path.join(__dirname,'test-times.json'),'utf8'));}catch{}try{own=JSON.parse(fs.readFileSync(file,'utf8'));}catch{}return {...base,...own};}
+// Longest first, each to the lightest shard, so the n machines finish at about the same time.
+function shard(names,times){
+ const m=String(process.env.RI_SHARD||'').match(/^(\d+)\/(\d+)$/);if(!m)return names;
+ const [i,n]=[Number(m[1]),Number(m[2])],load=Array(n).fill(0),mine=[];
+ for(const name of [...names].sort((x,y)=>(times[y]??30)-(times[x]??30)||x.localeCompare(y))){const k=load.indexOf(Math.min(...load));load[k]+=times[name]??30;if(k===i-1)mine.push(name);}
+ console.log('shard '+i+'/'+n+': '+mine.length+' of '+names.length+' checks');return mine;
 }
 module.exports={runAll,expand};
 if(require.main===module)(async()=>{
