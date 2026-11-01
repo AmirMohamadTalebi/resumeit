@@ -27,7 +27,13 @@ const assert=require('node:assert/strict'),{randomUUID}=require('node:crypto'),l
    assert.equal(catalog.charge(m('luna'),11667,0,settings),5251);assert.equal(catalog.charge(m('gpt-6-astra'),11667,0,settings),525015);assert.equal(catalog.charge(m('luna'),0,1000,settings),2250);
    assert.equal(catalog.charge(m('luna'),1000,0,{...settings,billing:{...settings.billing,markup:0}}),300,'no margin: 1,000 Luna tokens are 30 toman');}
   // The wallet on the store: charges, top-ups from the main wallet (It), and a repeated request id does nothing.
-  assert.equal(await db.chargeFandogh(target,5251,{model:'luna',input:11667,output:0,label:'GPT-6 Luna'}),50000-5251);
+  // A hold takes the typical price under the wallet lock: parallel holds can never spend the same credit twice.
+  const holds=await Promise.all(Array.from({length:6},()=>db.holdFandogh(target,20000,{model:'luna',label:'GPT-6 Luna'})));
+  assert.equal(holds.filter(Boolean).length,2,'50,000 rial covers two holds of 20,000, never more');assert.equal((await db.fandoghWallet(target)).balance,10000);
+  for(const id of holds.filter(Boolean))assert.equal(typeof await db.settleFandogh(target,id,0),'number','no answer returns the hold');
+  assert.equal((await db.fandoghWallet(target)).balance,50000);assert.equal((await db.fandoghWallet(target)).daily.length,0,'a returned hold leaves no usage row');
+  const held=await db.holdFandogh(target,20000,{model:'luna',label:'GPT-6 Luna'});
+  assert.equal(await db.settleFandogh(target,held,5251,{input:11667,output:0}),50000-5251,'the real price replaces the hold');
   await store.execute('INSERT OR IGNORE INTO wallets(user_id,balance_units) VALUES(?,?)',[target,0]);await store.execute('UPDATE wallets SET balance_units=? WHERE user_id=?',[20000,target]);
   await assert.rejects(()=>db.topUpFandogh(target,11,'a'.repeat(32)),/کافی نیست/);
   const rid=randomUUID().replace(/-/g,'');const up=await call('/api/dashboard/assistant/topup',{its:10,requestId:rid});assert.equal(up.status,200,JSON.stringify(up.data));
@@ -49,7 +55,12 @@ const assert=require('node:assert/strict'),{randomUUID}=require('node:crypto'),l
   assert.equal((await call('/api/dashboard/assistant')).data.until>first,true,'periods stack');
   const [tx]=await store.execute("SELECT label FROM wallet_transactions WHERE user_id=? AND product_ref='assistant:arash'",[target]);assert.equal(tx.label,'اشتراک فندق «آرش» یک‌ماهه');
   // «کوروش» opens everything; the better plan wins when someone holds two.
-  assert.equal(await db.purchaseWithWallet(target,'assistant:kourosh',randomUUID(),510000),true);
+  // The starter credit fails right after the purchase is saved: a retry of the same request gives it, once.
+  const retryId=randomUUID(),creditFandogh=db.creditFandogh;db.creditFandogh=async()=>{throw new Error('database hiccup');};
+  await assert.rejects(()=>db.purchaseWithWallet(target,'assistant:kourosh',retryId,510000));db.creditFandogh=creditFandogh;
+  assert.equal(await db.purchaseWithWallet(target,'assistant:kourosh',retryId,510000),false,'the purchase itself is not repeated');
+  await db.purchaseWithWallet(target,'assistant:kourosh',retryId,510000);
+  assert.equal((await store.execute('SELECT id FROM fandogh_ledger WHERE ref=?',['starter:'+retryId])).length,1,'the starter credit arrives once');
   s=await call('/api/dashboard/assistant');assert.equal(s.data.plan,'kourosh');assert.equal(s.data.level,3);assert(s.data.models.every(m=>!m.locked));
   await assert.rejects(()=>db.purchaseWithWallet(target,'assistant:m9',randomUUID(),20000));
   await assert.rejects(()=>db.purchaseWithWallet(target,'assistant:m1',randomUUID(),20000),'the old monthly plans are no longer sold');
@@ -73,6 +84,9 @@ const assert=require('node:assert/strict'),{randomUUID}=require('node:crypto'),l
   assert.equal(seen.url,'https://ai.example.test/v1/chat/completions');assert.equal(seen.auth,'Bearer test-key-123');assert(!JSON.stringify(seen.body).includes('09120000000'));assert.equal(answer.edits[0].name,'React');
   assert.equal(await llm.answer({question:'سلام',content},env,async()=>({ok:false})),null);
   assert.equal(await llm.answer({question:'سلام',content},{ASSISTANT_AI_URL:'http://insecure.test',ASSISTANT_AI_KEY:'test-key-123'}),null,'only https endpoints');
+  // One person cannot flood the assistant: past 20 questions a minute the answer is 429 until the minute passes.
+  const statuses=[];for(let i=0;i<24;i++)statuses.push((await call('/api/dashboard/assistant/ask',{question:'سلام',content})).status);
+  assert(statuses.includes(429),'a flood is slowed down');assert(statuses.slice(0,statuses.indexOf(429)).every(x=>x===200));
   console.log('PASS assistant API: free local Fandogh, welcome credit, token pricing with the 50% margin, wallet charges and It top-ups, models grouped with their own prices, plan locks, the three Fandogh plans with starter credit and legacy purchases, a model that is not connected falling back without charge, plan purchases that stack, subscription with every model, validation, private prompt, tagged model actions and local fallback.');
  }finally{store.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});

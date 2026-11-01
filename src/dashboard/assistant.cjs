@@ -52,6 +52,14 @@ function content(raw){
   return c;
 }
 
+// At most 20 questions a minute per person, so one account cannot use up the site's daily AI calls for everyone.
+// shortcut: counted in this process only; move it to the database if the site ever runs several processes.
+const asked=new Map();
+function tooFast(id,now=Date.now()){
+  const list=(asked.get(id)||[]).filter(t=>now-t<60000);list.push(now);asked.set(id,list);
+  if(asked.size>5000)for(const [key,times] of asked)if(now-times[times.length-1]>60000)asked.delete(key);
+  return list.length>20;
+}
 module.exports=async(database,req,path,origin,user,reply)=>{
   if(!ROUTES.includes(path))return false;
   if(!database.assistantAccess)fail('دستیار فعلاً در دسترس نیست',503);
@@ -80,6 +88,7 @@ module.exports=async(database,req,path,origin,user,reply)=>{
     const out=await database.topUpFandogh(user.id,body.its,body.requestId);
     reply(200,{ok:true,repeated:!!out.repeated,usage:await status(database,user.id,config)});return true;
   }
+  if(tooFast(user.id)){fail('پیام‌ها خیلی پشت سر هم است؛ چند ثانیه صبر کن و دوباره بپرس',429);}
   const me=await mine(database,user.id),own=userAssistant.runtime(me.settings,me.key);
   const input=await readJson(req,128*1024);
   const question=typeof input.question==='string'?input.question.trim():'',goal=typeof input.goal==='string'?input.goal.trim().slice(0,160):'';
@@ -97,11 +106,12 @@ module.exports=async(database,req,path,origin,user,reply)=>{
   const talk=local.intent==='smalltalk',identity=talk&&(local.topics||[local.topic]).some(t=>IDENTITY.has(t));
   const useModel=!!cfg&&!identity&&(!talk||settings.ai.smalltalk||pick.id==='own');
   const shared=useModel&&pick.id!=='own',capped=shared&&database.assistantAICalls?await database.assistantAICalls()>=settings.ai.dailyCalls:false;
-  // A paid model needs enough credit for a typical message; the real price is taken once the answer is here.
+  // A paid model needs credit for a typical message; the real price replaces it once the answer is here.
   const paid=useModel&&!capped&&pick.id!=='own',estimate=paid?catalog.typical(pick,settings):0;
-  if(paid&&database.fandoghWallet){
-    const {balance}=await database.fandoghWallet(user.id,1);
-    if(balance<estimate){reply(402,{error:'اعتبار کیف پول فندق برای «'+pick.label+'» کافی نیست (هر پیام حدود '+RI.fa(Math.ceil(estimate/10))+' تومان). کیف پول فندق را با It شارژ کن؛ فندق محلی همچنان رایگان جواب می‌دهد.',code:'FANDOGH_BALANCE',usage:await status(database,user.id,config,me)});return true;}
+  // The typical price is held up front, so parallel messages cannot spend the same credit twice.
+  const hold=paid&&database.holdFandogh?await database.holdFandogh(user.id,estimate,{model:pick.id,label:pick.label}):null;
+  if(paid&&database.holdFandogh){
+    if(!hold){reply(402,{error:'اعتبار کیف پول فندق برای «'+pick.label+'» کافی نیست (هر پیام حدود '+RI.fa(Math.ceil(estimate/10))+' تومان). کیف پول فندق را با It شارژ کن؛ فندق محلی همچنان رایگان جواب می‌دهد.',code:'FANDOGH_BALANCE',usage:await status(database,user.id,config,me)});return true;}
   }
   let ai=null;
   if(useModel&&!capped){
@@ -111,10 +121,11 @@ module.exports=async(database,req,path,origin,user,reply)=>{
     if(ai?.error)ai=null;
     // Charged only for an answer that came: the tokens the provider reported (a typical message when it reported
     // none) at the model's price plus the margin. No answer, nothing to pay; the local brain answers for free.
-    if(ai&&paid&&database.chargeFandogh){
-      const input=ai.usage?.input||0,output=ai.usage?.output||0,rial=input||output?catalog.charge(pick,input,output,settings):estimate;
-      await database.chargeFandogh(user.id,rial,{model:pick.id,input:input||8000,output:output||2000,label:pick.label});
-      ai.bill={rial,input:input||8000,output:output||2000};
+    if(hold){
+      const reported=!!(ai?.usage?.input||ai?.usage?.output),input=reported?ai.usage.input||0:8000,output=reported?ai.usage.output||0:2000,rial=!ai?0:reported?catalog.charge(pick,input,output,settings):estimate;
+      // A failed settlement keeps the held typical price; the answer is still delivered.
+      try{await database.settleFandogh(user.id,hold,rial,{input,output});}catch(error){require('../http/log.cjs').logFailure('assistant',req,error);}
+      if(ai)ai.bill={rial,input,output};
     }
   }
   const keep=local.actions.filter(a=>['go','route','tab','goal'].includes(a.kind));

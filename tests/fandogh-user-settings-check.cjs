@@ -22,6 +22,8 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
   const settings=s=>({...view.settings,...s,own:{...view.settings.own,...(s.own||{})}});
   assert.equal((await send('/api/dashboard/assistant/me',{settings:settings({own:{enabled:true}})})).status,400,'own model needs a key');
   assert.equal((await send('/api/dashboard/assistant/me',{settings:settings({name:'یک اسم خیلی خیلی طولانی برای گربه'})})).status,400);
+  // A custom service may not point at this server or its network: the connection test refuses before any request.
+  for(const url of ['https://127.0.0.1:8443','https://10.0.0.5','https://169.254.169.254']){const t=await send('/api/dashboard/assistant/me/test',{own:{provider:'custom',url,model:'m'},key:'sk-test-abcdefgh'});assert.equal(t.body.ok,false,url);assert.match(t.body.error,/سرویس عمومی/,url);}
   // A browser autofilling the hidden service address (a username, say) must not block saving for a non-custom service.
   assert.equal((await send('/api/dashboard/assistant/me',{settings:settings({own:{provider:'openai',url:'amir@example'}})})).status,200);assert.equal((await send('/api/dashboard/assistant/me',{settings:settings({own:{provider:'custom',url:'amir@example'}})})).status,400);
   view=(await send('/api/dashboard/assistant/me',{settings:settings({name:'پشمک',tone:'formal',length:'detailed',engine:'own',own:{enabled:true,provider:'openai',model:'gpt-4o-mini'}}),key:'sk-mine-abcd1234'})).body;

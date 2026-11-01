@@ -57,10 +57,29 @@ module.exports=({execute,transaction})=>({
       await move(con,userId,rial,{kind,label,ref},now);return true;
     });
   },
-  // An answer's price, taken after it arrived; the balance may dip below zero by one answer at most.
-  async chargeFandogh(userId,rial,row,now=Date.now()){
+  // Takes a typical message's price before the model is called, inside the wallet row's lock, so parallel requests
+  // cannot spend the same credit twice. Returns the ledger row id, or null when the balance is short.
+  async holdFandogh(userId,rial,row,now=Date.now()){
     if(!Number.isSafeInteger(rial)||rial<=0)return null;
-    return transaction(con=>move(con,userId,-rial,{kind:'usage',...row},now));
+    return transaction(async con=>{
+      await con.execute('INSERT IGNORE INTO fandogh_wallets(user_id,balance,updated_at) VALUES(?,0,?)',[userId,now]);
+      const [[w]]=await con.execute('SELECT balance FROM fandogh_wallets WHERE user_id=? FOR UPDATE',[userId]);if(Number(w?.balance||0)<rial)return null;
+      const id=randomUUID(),balance=Number(w.balance)-rial;
+      await con.execute('UPDATE fandogh_wallets SET balance=?,updated_at=? WHERE user_id=?',[balance,now,userId]);
+      await con.execute('INSERT INTO fandogh_ledger(id,user_id,at,delta,balance,kind,model,input_tokens,output_tokens,label,ref) VALUES(?,?,?,?,?,?,?,0,0,?,NULL)',[id,userId,now,-rial,balance,'usage',row.model||null,String(row.label||'').slice(0,160)]);
+      return id;
+    });
+  },
+  // Turns a hold into the real price (actual tokens), or returns it all when no answer came (rial 0).
+  async settleFandogh(userId,id,rial,row={},now=Date.now()){
+    return transaction(async con=>{
+      const [[held]]=await con.execute("SELECT delta FROM fandogh_ledger WHERE id=? AND user_id=? AND kind='usage'",[id,userId]);if(!held)return null;
+      const [[w]]=await con.execute('SELECT balance FROM fandogh_wallets WHERE user_id=? FOR UPDATE',[userId]),balance=Number(w?.balance||0)-Number(held.delta)-Math.max(0,rial);
+      await con.execute('UPDATE fandogh_wallets SET balance=?,updated_at=? WHERE user_id=?',[balance,now,userId]);
+      if(rial>0)await con.execute('UPDATE fandogh_ledger SET delta=?,balance=?,input_tokens=?,output_tokens=? WHERE id=?',[-rial,balance,Math.max(0,Math.round(row.input||0)),Math.max(0,Math.round(row.output||0)),id]);
+      else await con.execute('DELETE FROM fandogh_ledger WHERE id=?',[id]);
+      return balance;
+    });
   },
   // A top-up: It from the main wallet becomes toman in the Fandogh wallet at the shop's rate. Repeating the same
   // request id does nothing.

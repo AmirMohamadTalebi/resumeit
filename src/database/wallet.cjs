@@ -31,8 +31,9 @@ module.exports=({execute,transaction})=>({
       await con.execute('INSERT INTO account_access(user_id,ref,price_units,expires_at,created_at) VALUES(?,?,?,?,?) ON DUPLICATE KEY UPDATE price_units=VALUES(price_units),expires_at=VALUES(expires_at),created_at=VALUES(created_at)',[id,ref,price,end,now]);
       await con.execute('INSERT INTO wallet_transactions(id,user_id,delta_units,balance_units,label,reference,created_at,product_ref) VALUES(?,?,?,?,?,?,?,?)',[randomUUID(),id,-price,balance,plan?planLabel:'خرید '+item.name,'purchase:'+requestId,now,ref]);return true;
     });
-    // Fandogh plans and ResumeIt subscriptions add starter credit to the Fandogh wallet, once per purchase.
-    if(done&&plan&&this.creditFandogh){
+    // Fandogh plans and ResumeIt subscriptions add starter credit to the Fandogh wallet, once per purchase; a retry of
+    // the same request gives it if an earlier attempt failed after the purchase was saved (the ref keeps it single).
+    if(plan&&this.creditFandogh){
       const key=kind==='assistant'?pid:'subscription',starter=this.assistantSettings?(await this.assistantSettings()).settings.billing?.starter?.[key]:(kind==='assistant'?plan.credit:RI.ASSISTANT_SITE.credit);
       if(starter>0)await this.creditFandogh(id,starter*10,'starter','starter:'+requestId,'اعتبار اولیهٔ '+planLabel);
     }

@@ -45,7 +45,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
   r=(await ask('معرفی‌ام را چطور بنویسم؟')).body.reply;assert.equal(r.source,'ai');assert.equal(calls.length,1);assert(r.text.includes('من فندقم')&&!r.text.includes('ChatGPT'),'identity claims are replaced');
   assert(calls[0].messages[0].content.includes('اسم تو فقط «فندق» است'),'the identity rules go with every request');
   let stats=(await send('/api/admin/assistant')).body.stats;assert.equal(stats.today.aiCalls,1);assert.equal(stats.today.tokens,150);assert.equal(stats.today.messages,1,'only the GPT-6 Luna answer was paid');assert.equal(stats.today.spent,122,'120 read and 30 written Luna tokens ×1.5 at 300,000 a dollar: 12.2 toman');
-  const wallet=(await send('/api/dashboard/assistant',null,'b')).body.wallet;assert.equal(wallet.toman,5000-12.2);assert.equal(wallet.ledger[0].kind,'usage');assert.equal(wallet.ledger[0].tokens,-225,'150 used tokens are 225 charged');assert.equal(stats.top[0].id,target);
+  const wallet=(await send('/api/dashboard/assistant',null,'b')).body.wallet;assert.equal(wallet.toman,5000-12.2);assert(!wallet.ledger.some(x=>x.kind==='usage'));assert.equal(wallet.daily[0].tokens,-225,'150 used tokens are 225 charged');assert.equal(stats.top[0].id,target);
   // Resume edits come back checked against the resume that was sent; the mode reaches the model's instructions.
   const edit=(await send('/api/dashboard/assistant/ask',{question:'عنوانم را درست کن',content,history:[],mode:'auto',model:'luna'},'b')).body.reply;
   assert.deepEqual(edit.edits.map(e=>[e.op,e.field,e.after]),[['set','title','طراح ارشد رابط کاربری']]);assert(calls.at(-1).messages[0].content.includes('حالت ویرایش: خودکار'));
@@ -94,6 +94,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
    assert.equal(await page.locator('[data-b-welcome]').inputValue(),'7000');
    await page.locator('[data-fx-reason]').fill('قیمت تازهٔ دستیار');await page.locator('[data-plan="assistant:arash"] [data-plan-price]').fill('12');await page.locator('[data-plan="assistant:arash"] [data-plan-save]').click();await page.locator('[data-fx-status][data-kind=ok]').waitFor();
    assert.equal(await page.locator('[data-plan="assistant:arash"] [data-plan-price]').inputValue(),'12');
+   for(let i=0;i<50&&(await db.commerceSettings()).prices['assistant:arash']!==24000;i++)await page.waitForTimeout(100);
    assert.equal((await db.commerceSettings()).prices['assistant:arash'],24000);
    await page.screenshot({path:path.join(out,'panel-saved.png')});
    assert.deepEqual(errors,[]);

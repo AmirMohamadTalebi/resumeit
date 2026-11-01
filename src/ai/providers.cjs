@@ -55,11 +55,18 @@ function alternate(messages) {
   return out;
 }
 // One chat turn. Throws with a Persian message the owner panel can show; never includes the key.
+const { publicAddress } = require('../dashboard/remote-image.cjs');
 async function chat(cfg, { system, messages }, fetcher = fetch) {
   const p = PROVIDERS[cfg.provider]; if (!p) throw new Error('سرویس انتخاب‌شده معتبر نیست');
   const base = String(cfg.url || p.url).replace(/\/+$/, ''), model = String(cfg.model || p.model);
   if (!/^https:\/\/[^\s/]+/.test(base)) throw new Error('نشانی سرویس باید با https شروع شود');
   if (!model) throw new Error('نام مدل را بنویس');
+  // An address typed by a site member must lead to the public internet, never this server or its network.
+  // shortcut: checked before fetch resolves the name again; pin the resolved address if DNS rebinding becomes a concern.
+  if (cfg.untrusted) {
+    const found = await require('node:dns').promises.lookup(new URL(base).hostname.replace(/^\[|\]$/g, ''), { all: true, verbatim: true }).catch(() => []);
+    if (!found.length || found.some(a => !publicAddress(a.address))) throw new Error('نشانی سرویس باید یک سرویس عمومی در اینترنت باشد');
+  }
   const controller = new AbortController(), timer = setTimeout(() => controller.abort(), cfg.timeout || 25000);
   try {
     let response, data;

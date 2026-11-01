@@ -34,7 +34,7 @@ const open=sealed=>sealing.open(sealed).key||'';
 function runtime(settings,key){
   const own=settings.own,p=PROVIDERS[own.provider];
   if(!own.enabled||!key||!p)return null;
-  return {provider:own.provider,key,model:own.model||p.model,url:own.url||p.url,temperature:.4,maxTokens:1200,timeout:25000};
+  return {provider:own.provider,key,model:own.model||p.model,url:own.url||p.url,untrusted:own.provider==='custom',temperature:.4,maxTokens:1200,timeout:25000};
 }
 function view(settings,key){
   return {settings,key:{set:!!key,hint:sealing.hint(key)},providers:Object.entries(PROVIDERS).map(([id,p])=>({id,label:p.label,model:p.model,models:p.models||[],needsUrl:id==='custom'}))};
