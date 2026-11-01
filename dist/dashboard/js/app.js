@@ -199,9 +199,11 @@
     try{await RI.loadDashboard(user.id);}catch(e){RI.$('#view').textContent=e.message;const retry=document.createElement('button');retry.className='btn';retry.textContent='تلاش دوباره';retry.addEventListener('click',()=>location.reload());RI.$('#view').appendChild(retry);document.dispatchEvent(new Event('ri:dashboard-ready'));return;}
     RI.applyAccount(user);
     paintAccount();bootstrapping=false;RI.$('#topPreview').disabled=false;
-    if(user.is_admin&&sessionStorage.getItem('ri-panel-choice')!==user.id){
-      const choice=RI.modal({title:'کدام پنل را باز کنیم؟',body:'<p>با این حساب به پنل کاربری و مدیریت دسترسی داری. هر زمان خواستی از منوی پنل می‌توانی جابه‌جا شوی.</p>',size:'sm'});
-      choice.setActions([{label:'پنل کاربری',kind:'ghost',onClick:()=>sessionStorage.setItem('ri-panel-choice',user.id)},{label:'پنل مدیریت',kind:'primary',onClick:()=>{sessionStorage.setItem('ri-panel-choice',user.id);location.assign('/admin/');}}]);
+    if((user.is_admin||user.is_support)&&sessionStorage.getItem('ri-panel-choice')!==user.id){
+      // A notice, not a dialog: the dashboard stays usable and the other panels are one tap away.
+      sessionStorage.setItem('ri-panel-choice',user.id);
+      const panels=[user.is_admin&&{label:'پنل مدیریت',href:'/admin/',primary:true,icon:'panel'},{label:'میز پشتیبانی',href:'/staff/',primary:!user.is_admin},{label:'همین‌جا می‌مانم'}].filter(Boolean);
+      setTimeout(()=>RI.toast('این حساب به '+(user.is_admin?'پنل مدیریت و میز پشتیبانی':'میز پشتیبانی')+' هم دسترسی دارد؛ هر وقت خواستی از پایین منو جابه‌جا شو.',{kind:'info',icon:'panel',title:'خوش آمدی، '+(user.first_name||(user.is_admin?'مدیر':'همکار')),actions:panels,duration:12000}),700);
     }
     fetch('/api/version',{cache:'no-store'}).then(r=>r.json()).then(v=>{RI.$$('[data-site-version]').forEach(el=>el.textContent='نسخهٔ '+(v.displayVersion||v.version));}).catch(()=>{});
     paintSave();
@@ -242,7 +244,7 @@
         { label: 'خروج از حساب', icon: 'logout', danger: true, onClick: () => RI.logout() },
       ], { up: true });
     });
-    const bell=document.createElement('button');bell.type='button';bell.className='btn btn--icon btn--ghost btn--sm topbar__bell';bell.setAttribute('aria-label','اعلان‌ها');bell.innerHTML=RI.icon('bell');bell.addEventListener('click',()=>RI.go('notifications'));RI.$('.topbar__actions').append(bell);
+    const bell=document.createElement('button');bell.type='button';bell.className='btn btn--icon btn--ghost btn--sm topbar__bell';bell.setAttribute('aria-label','اعلان‌ها');bell.innerHTML=RI.icon('bell');RI.$('.topbar__actions').append(bell);RI.mountNoticeCenter(bell);
     RI.on('inbox',()=>{const count=RI.inbox?.unread||0;bell.classList.toggle('has-unread',count>0);bell.setAttribute('aria-label',count?'اعلان‌ها؛ '+RI.fa(count)+' خوانده‌نشده':'اعلان‌ها');bell.title=bell.getAttribute('aria-label');});
     RI.delegate(document, 'click', '[data-copy]', (e, b) => RI.copy(b.dataset.copy));
     RI.delegate(document,'click','a[href="/admin/"]',async e=>{

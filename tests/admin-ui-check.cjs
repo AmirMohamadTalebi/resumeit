@@ -129,12 +129,19 @@ const { createServer } = require("../src/http/server.cjs");
     );
     assert(await page.locator("#content").textContent());
     await page.goto(base + "/dashboard/");
-    await page.getByRole("dialog").waitFor();
-    await page.getByRole("button", { name: "پنل کاربری", exact: true }).click();
+    // Admins get a notice with the other panels, never a blocking dialog.
+    const notice = page.locator("#ri-notifications .ri-note", { hasText: "پنل مدیریت" });
+    await notice.waitFor();
+    assert.equal(await page.getByRole("dialog").count(), 0);
+    assert.equal(await notice.locator('a[href="/admin/"]').count(), 1);
+    assert.equal(await notice.locator('a[href="/staff/"]').count(), 1);
+    await notice.getByRole("button", { name: "همین‌جا می‌مانم" }).click();
+    await notice.waitFor({ state: "detached" });
     assert.equal(await page.locator('#sidebar a[href="/admin/"]').count(), 1);
     await page.reload();
     await page.waitForSelector('#sidebar a[href="/admin/"]');
-    assert.equal(await page.getByRole("dialog").count(), 0);
+    await page.waitForTimeout(900);
+    assert.equal(await page.locator("#ri-notifications .ri-note").count(), 0, "the notice shows once per session");
     assert.deepEqual(errors, []);
     console.log(
       "PASS: " +
