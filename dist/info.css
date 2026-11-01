@@ -303,3 +303,12 @@ body.pub{margin:0;background:#fbf7f1;color:#1c2d38;font-family:Vazirmatn,Tahoma,
 @media (prefers-reduced-motion:reduce){.lg-post,.lg-post *,.lg-post__cover::after{animation:none!important;transition:none!important}}
 .lg-article blockquote[dir=ltr]{padding:16px 16px 16px 20px;border-right:0;border-left:4px solid var(--hue,#e2a03a);text-align:left}
 @media (min-width:901px){.lg-posts--lead>.lg-post:last-child:nth-child(even){grid-column:1/-1;grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr);grid-template-rows:none}.lg-posts--lead>.lg-post:last-child:nth-child(even) .lg-post__body{align-content:center;padding:28px 30px}}
+
+/* Editorial art keeps its complete typography visible at every card width. */
+.ri-editorial-figure{width:min(100% - 32px,1000px);margin:0 auto 40px;overflow:hidden;border-radius:24px;background:#0b141b;box-shadow:0 18px 44px -24px #0b141b80}
+.ri-editorial-image{display:block;width:100%;height:auto;aspect-ratio:3/2;object-fit:contain}
+.lg-post__cover--image{min-height:0;aspect-ratio:3/2;background:#0b141b;align-self:center}
+.lg-post__cover--image::before,.lg-post__cover--image::after{display:none}
+.lg-post__cover--image .ri-editorial-image{transition:filter .35s ease}
+.lg-post:hover .lg-post__cover--image .ri-editorial-image{filter:brightness(1.08)}
+@media(prefers-reduced-motion:reduce){.lg-post__cover--image .ri-editorial-image{transition:none}}

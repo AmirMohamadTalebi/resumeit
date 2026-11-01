@@ -34,6 +34,10 @@ components:
 
 # Design System: ResumeIt
 
+## Editorial pages
+
+The blog index and article routes use a midnight-teal editorial masthead, Persian campaign covers, icy paper surfaces and warm-brown links. The index leads with one featured story followed by image-led rows. Articles pair their headline with the full uncropped cover, then use one continuous reading column beside a sticky contents rail. Phone layouts stack the header and put the contents before the prose. Preserve the public frosted navigation, Vazirmatn, visible focus and reduced-motion behavior. Styles are scoped in `dist/blog/editorial.css`.
+
 ## Overview
 
 The ResumeIt workspace keeps the existing Persian RTL identity, Vazirmatn, icy blue, off-white and warm brown. This record describes the implemented administration workspace and shared navigation; the signature landing hero and the imported resume designs retain their own compositions.
