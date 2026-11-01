@@ -193,3 +193,5 @@ html body .fs-rail__foot a:hover,html body .fs-rail .fs-icon:hover{background:#1
 /* Fandogh's card lights up gold under the pointer, with dark text, like the landing's call to action. */
 html body .dn-item--fandogh:not([aria-current=page]):hover{background:linear-gradient(120deg,#f8e2a8,#f3cf7a);background-color:#f6dc9c;color:#2f1d0c;box-shadow:0 12px 26px -16px rgba(240,189,82,.9)}
 html body .dn-item--fandogh:not([aria-current=page]):hover .dn-item__txt,html body .dn-item--fandogh:not([aria-current=page]):hover .dn-item__txt small{color:#2f1d0c}
+/* On phones every icon button in the top bar is the same 40px square. */
+@media (max-width:760px){html body .topbar :is(#menuBtn,#topPreview,.topbar__bell){width:40px;min-width:40px;height:40px;min-height:40px;padding:0;display:inline-grid;place-items:center;border-radius:12px}html body .topbar :is(#menuBtn,#topPreview,.topbar__bell) svg{width:18px;height:18px}}
