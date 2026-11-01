@@ -1,6 +1,6 @@
 {
   "name": "resumeit",
-  "version": "3.1.8-beta",
+  "version": "3.1.9-beta",
   "private": true,
   "engines": {
     "node": ">=24.15.0"

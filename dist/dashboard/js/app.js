@@ -244,20 +244,13 @@
     RI.$('#topPreview').addEventListener('click', async () => {try{const kind=current==='links'||RI.workspaceSlot===3?'links':'resume';if(kind==='resume')await RI.loadTemplates([RI.C().theme.resume]);RI.openPreview(kind);}catch(e){RI.toast(e.message,{kind:'error'});}});
     RI.$('#undoBtn').addEventListener('click', RI.undo);
     RI.$('#accountBtn').addEventListener('click', (e) => {
-      // دسترسی سریع: who you are, the six places people jump to most, then account rows, other panels and sign-out.
+      // دسترسی سریع: who you are, account rows, other panels and sign-out.
       const acc = RI.state.account, plan = RI.hasSub?.() && RI.PLANS[RI.state.billing.plan.id], unread = RI.inbox?.unread || 0, slug = RI.C().slug;
       const head = '<span class="qa-sky" aria-hidden="true"></span><img class="qa-avatar" src="' + RI.esc(RI.avatarOf(RI.C().profile)) + '" alt="" width="52" height="52"><span class="qa-who"><b>' + RI.esc(acc.name) + '</b><small>' + (plan ? RI.icon('crown') + 'اشتراک ' + RI.esc(plan.name) : 'حساب رایگان') + '</small>' + (slug ? '<bdi class="qa-url" dir="ltr">' + RI.esc(slug) + '.resumeit.ir</bdi>' : '') + '</span>';
       RI.menu(e.currentTarget, [
-        { tile: true, label: 'رزومه', icon: 'file', tone: 'sky', onClick: () => RI.go('resume') },
-        { tile: true, label: 'لینک‌ها', icon: 'link', tone: 'teal', onClick: () => RI.go('links') },
-        { tile: true, label: 'ظاهر', icon: 'palette', tone: 'rose', onClick: () => RI.go('themes') },
-        { tile: true, label: 'انتشار', icon: 'globe', tone: 'gold', onClick: () => RI.go('publish') },
-        { tile: true, label: 'آمار', icon: 'chart', tone: 'sky', onClick: () => RI.go('stats') },
-        { tile: true, label: 'فندق', icon: 'sparkle', tone: 'gold', onClick: () => RI.go('fandogh') },
-        { section: 'حساب' },
-        { label: 'تنظیمات حساب', icon: 'settings', hint: 'مشخصات، ورود و حریم خصوصی', onClick: () => RI.go('settings') },
-        { label: 'کیف پول', icon: 'card', hint: 'موجودی و تراکنش‌ها', onClick: () => RI.go('wallet') },
-        { label: 'اشتراک و خریدها', icon: 'crown', hint: plan ? 'اشتراک ' + plan.name : 'ارتقا به اشتراک', onClick: () => RI.go('billing') },
+        { label: 'تنظیمات حساب', icon: 'settings', onClick: () => RI.go('settings') },
+        { label: 'کیف پول', icon: 'card', onClick: () => RI.go('wallet') },
+        { label: 'اشتراک و خریدها', icon: 'crown', onClick: () => RI.go('billing') },
         { label: 'اعلان‌ها', icon: 'bell', badge: unread ? RI.fa(unread) : '', onClick: () => RI.go('notifications') },
         { label: 'پشتیبانی', icon: 'help', onClick: () => RI.go('support') },
         ...(acc.isAdmin || acc.isSupport ? [{ section: 'پنل‌های دیگر' }, acc.isAdmin && { label: 'پنل مدیریت', icon: 'shield', onClick: () => location.assign('/admin/') }, { label: 'میز پشتیبانی', icon: 'help', onClick: () => location.assign('/staff/') }] : []),

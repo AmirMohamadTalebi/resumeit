@@ -41,3 +41,9 @@ html body .qa-menu.menu[role=menu] button[role=menuitem]>span{display:grid;flex:
 html body .qa-menu.menu[role=menu] button[role=menuitem].menu-tile>span{flex:none}
 html body .qa-menu.menu[role=menu] button[role=menuitem]{min-height:42px;margin:0}
 html body .qa-menu.menu[role=menu]>button+button{margin-top:4px}
+/* Compact: rows only, tighter rhythm */
+html body .menu.qa-menu{display:block;width:min(290px,calc(100vw - 16px))}
+html body .qa-menu.menu[role=menu] button[role=menuitem]{min-height:40px;padding:5px 8px}
+html body .qa-menu.menu[role=menu] .menu-ico{width:30px;height:30px;border-radius:10px}
+html body .qa-menu .menu-head{padding:12px 14px 10px;margin-bottom:6px}
+html body .qa-menu .qa-avatar{width:44px;height:44px;border-radius:15px}

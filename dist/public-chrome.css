@@ -353,4 +353,12 @@ html body .public-account>.public-account__menu.pa-quick:not([hidden]){animation
 @media (max-width:760px){html body .public-account>.public-account__menu.pa-quick{position:fixed;top:66px;right:0;left:0;width:auto;max-width:none;margin:0;max-block-size:calc(100dvh - 90px)}}
 /* The landing heading names the product in plain words above the slogan. */
 .ln-hero h1 .ln-kicker{display:block;margin-bottom:14px;font-size:clamp(15px,1.5vw,19px);font-weight:800;line-height:1.6;color:#f3d9a0;letter-spacing:0;background:none;-webkit-text-fill-color:#f3d9a0}
-@media (min-width:1081px){.ln-foot__cols:has(>div:nth-child(4)){grid-template-columns:repeat(4,minmax(0,1fr))}}
+@media (min-width:1081px){.ln-foot__cols:has(>div:nth-child(4)){grid-template-columns:repeat(4,max-content);justify-content:space-between;column-gap:40px}}
+/* Footer links stay on one line; the hover arrow lives inside the link's own padding, never over the next column. */
+.ln-foot__cols a{white-space:nowrap;padding-left:18px;margin-left:-18px}
+.ln-foot__cols a::before{left:0}
+.ln-foot__cols a::after{left:18px}
+@media (max-width:640px){.ln-foot__cols a{white-space:normal}}
+html body .public-account>.public-account__menu.pa-quick{width:min(280px,calc(100vw - 28px));gap:6px}
+html body .pa-quick>.public-account__person{padding:12px 14px}
+html body .pa-quick>a{min-height:40px;padding:5px 8px}
