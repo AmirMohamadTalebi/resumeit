@@ -132,12 +132,16 @@
       '<button type="button" class="btn btn--ghost btn--sm" data-img-clear>' + RI.icon('trash') + 'حذف</button></div>' +
       '<div class="imgfield__presets" role="group" aria-label="تصویر آماده">' +
       RI.presets.map((p, i) => '<button type="button" data-preset="' + p + '" style="' + esc(RI.bg(p)) + '" aria-label="تصویر آمادهٔ ' + RI.fa(i + 1) + '"></button>').join('') +
-      '</div><div class="field__error" role="alert" hidden></div>' +
+      '</div><div class="field__error" role="alert" hidden></div><p class="imgfield__note" role="status" hidden></p>' +
       '<div class="field__hint">PNG، JPEG یا WebP تا '+RI.fa(Math.floor(RI.imageLimit()/1024))+' کیلوبایت برای هر تصویر؛ عکس‌های بزرگ پیش از ذخیره خودکار کوچک می‌شوند.</div></div></div>';
   };
   // Phone photos arrive as multi-megabyte files although pages show them at a few hundred pixels; every byte is
   // stored inside the document and re-read on each load and autosave, so images are scaled and re-encoded first.
   const imageEdges = { avatar: 640, shimg: 1200 };
+  // Images with a fixed frame: the link-card picture is always 1200×630 (what messengers and search engines show);
+  // anything else is cut to that shape around its centre and scaled down, and the field says what happened.
+  const imageFrames = { shimg: [1200, 630] };
+  RI.imageNote = {};
   RI.prepareImage = function (file, name) {
     return new Promise((resolve, reject) => {
       const fail = m => reject(new Error(m));
@@ -151,17 +155,27 @@
         image.onload = () => {
           const w = image.naturalWidth, h = image.naturalHeight;
           if (w * h > 16000000) return fail('ابعاد تصویر بیش از حد بزرگ است');
-          const edge = imageEdges[name] || 1600, scale = Math.min(1, edge / Math.max(w, h));
+          const frame = imageFrames[name];
+          let sx = 0, sy = 0, sw = w, sh = h;
+          if (frame) {
+            const ratio = frame[0] / frame[1];
+            if (Math.abs(w / h - ratio) > .01) { if (w / h > ratio) { sw = Math.round(h * ratio); sx = Math.round((w - sw) / 2); } else { sh = Math.round(w / ratio); sy = Math.round((h - sh) / 2); } }
+            const fa = n => RI.fa(n).replace(/٬/g, '');
+            RI.imageNote[name] = sw !== w || sh !== h || w > frame[0]
+              ? { kind: 'info', text: 'تصویر ' + fa(w) + '×' + fa(h) + ' بود؛ به اندازهٔ درست کارت، ' + fa(frame[0]) + '×' + fa(frame[1]) + ' پیکسل، ' + (sw !== w || sh !== h ? 'از وسط بریده و ' : '') + 'کوچک شد.' }
+              : w < frame[0] ? { kind: 'warn', text: 'تصویر ' + fa(w) + '×' + fa(h) + ' از اندازهٔ درست کارت (' + fa(frame[0]) + '×' + fa(frame[1]) + ') کوچک‌تر است و ممکن است تار دیده شود.' } : null;
+          }
+          const edge = frame ? frame[0] : imageEdges[name] || 1600, scale = Math.min(1, edge / Math.max(sw, frame ? sw : sh));
           let best = original;
           try {
             const canvas = document.createElement('canvas');
-            canvas.width = Math.max(1, Math.round(w * scale)); canvas.height = Math.max(1, Math.round(h * scale));
-            const ctx = canvas.getContext('2d'); ctx.imageSmoothingQuality = 'high'; ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+            canvas.width = Math.max(1, Math.round(sw * scale)); canvas.height = Math.max(1, Math.round(sh * scale));
+            const ctx = canvas.getContext('2d'); ctx.imageSmoothingQuality = 'high'; ctx.drawImage(image, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
             const webp = canvas.toDataURL('image/webp', .82), jpeg = file.type === 'image/jpeg' && canvas.toDataURL('image/jpeg', .85);
             // Browsers without WebP encoding return PNG; keep PNG only for sources that may carry transparency.
             const candidates = [webp.startsWith('data:image/webp') || file.type !== 'image/jpeg' ? webp : null, jpeg].filter(Boolean);
             const encoded = candidates.sort((a, b) => a.length - b.length)[0];
-            if (encoded && (scale < 1 || encoded.length < original.length)) best = encoded;
+            if (encoded && (scale < 1 || frame && (sw !== w || sh !== h) || encoded.length < original.length)) best = encoded;
           } catch {}
           if (Math.floor((best.length - best.indexOf(',') - 1) * 3 / 4) > RI.imageLimit()) return fail('حتی پس از فشرده‌سازی، تصویر از سقف ' + RI.fa(Math.floor(RI.imageLimit() / 1024)) + ' کیلوبایت حساب تو بزرگ‌تر است؛ تصویر دیگری انتخاب کن');
           resolve(best);
@@ -183,7 +197,8 @@
       if (!f) return;
       err.hidden = true;
       e.target.value = '';
-      RI.prepareImage(f, name).then(v => { io.set(v); show(v); }, error => fail(error.message));
+      RI.imageNote[name] = null;
+      RI.prepareImage(f, name).then(v => { io.set(v); show(v); const n = RI.imageNote[name]; if (n) { RI.toast(n.text, { kind: n.kind === 'warn' ? 'warning' : 'info', title: n.kind === 'warn' ? 'تصویر کوچک است' : 'تصویر بریده شد' }); const box = RI.$('[data-img="' + name + '"] .imgfield__note', root); if (box) { box.textContent = n.text; box.dataset.kind = n.kind; box.hidden = false; } } }, error => fail(error.message));
     });
     RI.$$('[data-preset]', el).forEach((b) => b.addEventListener('click', () => { err.hidden = true; io.set(b.dataset.preset); show(b.dataset.preset); }));
     RI.$('[data-img-clear]', el).addEventListener('click', () => { err.hidden = true; io.set(null); show(null); });

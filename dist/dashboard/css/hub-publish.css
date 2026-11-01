@@ -243,3 +243,55 @@ a.pb-fix:hover{background-color:#eef3f6;translate:-3px 0}
 @media (max-width:900px){.pb-tools__grid{grid-template-columns:minmax(0,1fr)}.pb-tool--wide{grid-column:auto}}
 @media (max-width:420px){.pb-send{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media (prefers-reduced-motion:reduce){.pb-tools *,.pb-tool{animation:none!important;transition:none!important}.pb-health li.is-ok>i svg{stroke-dashoffset:0}}
+.imgfield__note{display:flex;gap:8px;margin:8px 0 0;padding:10px 12px;border-radius:12px;background-color:#eef6f8;color:#24404f;font-size:12.5px;line-height:1.8;animation:pb-tool-in .45s cubic-bezier(.2,.8,.2,1)}
+.imgfield__note::before{content:"";flex:none;width:8px;height:8px;margin-top:8px;border-radius:50%;background:#3d8c9c}
+.imgfield__note[data-kind=warn]{background-color:#fdf1dc;color:#6b4a18}
+.imgfield__note[data-kind=warn]::before{background:#e2a03a}
+.imgfield__note[hidden]{display:none}
+/* Link card tab: four sub-tabs, one pane at a time */
+.pb-subtabs{position:relative;isolation:isolate;display:flex;gap:4px;margin:14px 0 16px;padding:5px;overflow-x:auto;scrollbar-width:none;border-radius:18px;background-color:#11212c;background-image:linear-gradient(160deg,#0f1d27,#1b3242);box-shadow:0 16px 34px -24px rgba(11,20,27,.9)}
+.pb-subtabs::-webkit-scrollbar{display:none}
+.pb-subtabs__ink{position:absolute;top:5px;left:0;z-index:-1;height:calc(100% - 10px);border-radius:13px;background:linear-gradient(135deg,#f6cf72,#e2a03a);box-shadow:0 10px 22px -12px rgba(240,189,82,.9);transition:transform .5s cubic-bezier(.3,1.4,.5,1),width .3s}
+.pb-subtabs button{display:inline-flex;flex:1 0 auto;align-items:center;justify-content:center;gap:7px;min-height:42px;padding:6px 14px;border:0;border-radius:13px;background-color:transparent;color:#d6e3ea;font:inherit;font-size:13.5px;font-weight:800;white-space:nowrap;cursor:pointer;transition:color .3s}
+.pb-subtabs button svg{width:17px;height:17px;transition:transform .45s cubic-bezier(.3,1.4,.5,1)}
+.pb-subtabs button[aria-selected=true]{color:#1b2a33}
+.pb-subtabs button[aria-selected=true] svg{transform:rotate(-10deg) scale(1.1)}
+.pb-subtabs button:focus-visible{outline:2px solid #f0bd52;outline-offset:2px}
+.pb-pane[data-sub=card] .pb-tools,.pb-pane:not([data-sub=card]) [data-subpane=card]{display:none}
+.pb-pane[data-sub=search] .pb-tool:not([data-subpane=search]),.pb-pane[data-sub=send] .pb-tool:not([data-subpane=send]),.pb-pane[data-sub=sign] .pb-tool:not([data-subpane=sign]){display:none}
+.pb-pane:not([data-sub=card]) .pb-tools{margin-top:0;animation:pb-tool-in .5s cubic-bezier(.2,.8,.2,1)}
+.pb-pane[data-sub=card] [data-subpane=card]{animation:pb-tool-in .5s cubic-bezier(.2,.8,.2,1)}
+.pb-guide{display:grid;gap:8px;margin-top:6px;padding:14px;border-radius:16px;background-color:#f6f9fb;box-shadow:inset 0 0 0 1px #e3ecf0}
+.pb-guide__title{display:flex;align-items:center;gap:8px;font-size:14px;color:#1b2a33}
+.pb-guide__title svg{width:17px;height:17px;color:#c7883a}
+.pb-guide details{border-radius:12px;background-color:#ffffff;box-shadow:inset 0 0 0 1px #e3ecf0}
+.pb-guide summary{position:relative;padding:11px 14px 11px 36px;font-size:13.5px;font-weight:800;color:#1b2a33;cursor:pointer;list-style:none}
+.pb-guide summary::-webkit-details-marker{display:none}
+.pb-guide summary::after{content:"";position:absolute;top:50%;left:14px;width:8px;height:8px;border-right:2px solid #c7883a;border-bottom:2px solid #c7883a;transform:translateY(-70%) rotate(45deg);transition:transform .4s cubic-bezier(.3,1.4,.5,1)}
+.pb-guide details[open] summary::after{transform:translateY(-30%) rotate(-135deg)}
+.pb-guide summary:focus-visible{outline:2px solid #e2a03a;outline-offset:2px}
+.pb-guide ol{display:grid;gap:4px;margin:0;padding:0 34px 12px 14px;font-size:13px;line-height:1.9;color:#2c4554;animation:pb-tool-in .4s cubic-bezier(.2,.8,.2,1)}
+@media (max-width:620px){.pb-subtabs button span{font-size:12.5px}.pb-subtabs button{padding:6px 10px}}
+@media (prefers-reduced-motion:reduce){.pb-subtabs__ink,.pb-subtabs button svg,.pb-guide summary::after{transition:none}.pb-pane *{animation:none!important}}
+@media (min-width:1100px){.pb-tool--wide[data-subpane=sign]{grid-template-columns:minmax(0,1fr) minmax(0,1fr);column-gap:18px}.pb-tool--wide[data-subpane=sign]>:is(h3,p){grid-column:1/-1}.pb-tool--wide[data-subpane=sign]>.pb-guide{grid-column:2;grid-row:3/span 2;margin-top:0}.pb-tool--wide[data-subpane=sign]>:is(.pb-sig,.pb-actions){grid-column:1}}
+/* Which page's card: two big cards at the top of the tab */
+html body .pb-kinds.pb-kinds--cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;width:auto;margin:0 0 16px;padding:0;border:0;background:none;box-shadow:none}
+html body .pb-kinds--cards button{display:flex;align-items:center;gap:12px;min-height:66px;padding:10px 14px;border:1px solid #e3ecf0;border-radius:18px;background-color:#ffffff;color:#1b2a33;font:inherit;text-align:start;cursor:pointer;box-shadow:0 10px 24px -22px rgba(28,45,56,.7);transition:border-color .25s,box-shadow .3s,transform .4s cubic-bezier(.3,1.4,.5,1)}
+html body .pb-kinds--cards button:hover{transform:translateY(-2px)}
+html body .pb-kinds--cards button[aria-pressed=true]{border-color:#e2a03a;background-color:#fff9ee;box-shadow:0 0 0 3px rgba(240,189,82,.25),0 14px 28px -20px rgba(226,160,58,.9)}
+html body .pb-kinds--cards button:focus-visible{outline:2px solid #e2a03a;outline-offset:2px}
+.pb-kinds--cards i{display:grid;place-items:center;flex:none;width:42px;height:42px;border-radius:14px;background-color:#eef4f7;color:#2c4554;transition:transform .45s cubic-bezier(.3,1.4,.5,1),background-color .25s}
+.pb-kinds--cards [aria-pressed=true] i{background:linear-gradient(135deg,#f6cf72,#e2a03a);color:#1b2a33;transform:rotate(-8deg)}
+.pb-kinds--cards i svg{width:20px;height:20px}
+.pb-kinds--cards span{display:grid;min-width:0}
+.pb-kinds--cards b{font-size:14.5px}
+.pb-kinds--cards small{overflow:hidden;font-size:12px;color:#56707e;white-space:nowrap;text-overflow:ellipsis;text-align:right}
+/* Sub-tabs: a vertical night rail beside the content on wide screens */
+@media (min-width:1000px){
+  .pb-pane[data-pane=share]{display:grid;grid-template-columns:220px minmax(0,1fr);column-gap:16px;align-items:start}
+  .pb-pane[data-pane=share]>.pb-kinds{grid-column:1/-1}
+  .pb-pane[data-pane=share]>.pb-subtabs{grid-column:1;grid-row:2;position:sticky;top:110px;flex-direction:column;margin:0;padding:6px;overflow:visible}
+  .pb-pane[data-pane=share]>.pb-subtabs button{flex:none;justify-content:flex-start;min-height:46px;padding:8px 12px}
+  .pb-pane[data-pane=share]>.pb-subtabs .pb-subtabs__ink{top:0;height:auto}
+  .pb-pane[data-pane=share]>:is(.pb-two,.pb-tools){grid-column:2;grid-row:2;margin-top:0}
+}

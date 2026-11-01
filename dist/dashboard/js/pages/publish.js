@@ -20,7 +20,7 @@
     mount(root, ctx) {
       let tab = (ctx.opts && ctx.opts.anchor === 'share') ? 'share' : (ctx.opts && ctx.opts.anchor === 'slug') ? 'address' : 'go';
       const body = RI.$('#pbody', root), C = () => RI.C(), calm = matchMedia('(prefers-reduced-motion: reduce)').matches;
-      let slugTimer = 0, typeTimer = 0, shareKind = RI.workspaceSlot === 3 ? 'links' : 'resume';
+      let slugTimer = 0, typeTimer = 0, shareKind = RI.workspaceSlot === 3 ? 'links' : 'resume', sub = ['card', 'search', 'send', 'sign'].includes(ctx.opts?.sub) ? ctx.opts.sub : 'card';
 
       /* ---------- The browser bar in the hero: types the address, then follows every change ---------- */
       function heroAddress(animate) {
@@ -86,14 +86,16 @@
       }
 
       /* ---------- Link card tab ---------- */
+      const SUBS = [['card', 'کارت و پیش‌نمایش', 'eye'], ['search', 'گوگل و سلامت', 'search'], ['send', 'فرستادن', 'external'], ['sign', 'امضای ایمیل', 'mail']];
       function shareTab() {
         const s = C().share, u = RI.urls(), p = C().profile, card = RI.shareCard(C(), shareKind), address = u[shareKind];
         const host = String(address || '').replace(/^https:\/\//, '');
-        return '<div class="pb-kinds segmented" role="group" aria-label="صفحهٔ کارت لینک">' + [['resume', 'رزومه'], ['links', 'صفحهٔ لینک‌ها']].filter(([id]) => RI.workspaceSlot !== 3 || id === 'links').map(([id, label]) => '<button type="button" data-share-kind="' + id + '" aria-pressed="' + (id === shareKind) + '">' + label + '</button>').join('') + '</div>' +
-          '<div class="pb-two"><section class="pb-panel" aria-labelledby="pb-card"><header><h2 id="pb-card">' + RI.icon('edit') + 'وقتی لینکت را می‌فرستند…</h2><p>عنوان، توضیح و تصویری که پیام‌رسان‌ها و جست‌وجو نشان می‌دهند؛ نمایش نهایی به سرویس مقصد بستگی دارد.</p></header>' +
+        return '<div class="pb-kinds pb-kinds--cards" role="group" aria-label="کارت کدام صفحه؟">' + [['resume', 'رزومه', 'file', u.resume], ['links', 'صفحهٔ لینک‌ها', 'link', u.links]].filter(([id]) => RI.workspaceSlot !== 3 || id === 'links').map(([id, label, icon, url]) => '<button type="button" data-share-kind="' + id + '" aria-pressed="' + (id === shareKind) + '"><i>' + RI.icon(icon) + '</i><span><b>' + label + '</b><small dir="ltr">' + esc(String(url || '').replace(/^https:\/\//, '')) + '</small></span></button>').join('') + '</div>' +
+          '<div class="pb-subtabs" role="tablist" aria-label="بخش‌های کارت و جست‌وجو" aria-orientation="vertical"><i class="pb-subtabs__ink" aria-hidden="true"></i>' + SUBS.map(([id, label, icon]) => '<button type="button" role="tab" data-sub="' + id + '" aria-selected="' + (id === sub) + '">' + RI.icon(icon) + '<span>' + label + '</span></button>').join('') + '</div>' +
+          '<div class="pb-two" data-subpane="card"><section class="pb-panel" aria-labelledby="pb-card"><header><h2 id="pb-card">' + RI.icon('edit') + 'وقتی لینکت را می‌فرستند…</h2><p>عنوان، توضیح و تصویری که پیام‌رسان‌ها و جست‌وجو نشان می‌دهند؛ نمایش نهایی به سرویس مقصد بستگی دارد.</p></header>' +
           '<div class="field"><label class="field__label" for="sh_t">عنوان<span class="field__count" id="shc1"></span></label><input class="input" id="sh_t" maxlength="60" value="' + esc(s.title) + '" placeholder="' + esc(p.name || 'نام و عنوان تو') + '"></div>' +
           '<div class="field"><label class="field__label" for="sh_d">توضیح<span class="field__count" id="shc2"></span></label><textarea class="textarea" id="sh_d" rows="3" maxlength="160" placeholder="یک جملهٔ جذاب دربارهٔ خودت">' + esc(s.desc) + '</textarea></div>' +
-          '<div class="field"><div class="field__label">تصویر اشتراک‌گذاری</div>' + RI.imageFieldHtml('shimg', { value: s.image, wide: true, label: 'تصویر اشتراک‌گذاری' }) + '<div class="field__hint">اندازهٔ پیشنهادی ۱۲۰۰×۶۳۰</div></div>' +
+          '<div class="field"><div class="field__label">تصویر اشتراک‌گذاری</div>' + RI.imageFieldHtml('shimg', { value: s.image, wide: true, label: 'تصویر اشتراک‌گذاری' }) + '<div class="field__hint">اندازهٔ کارت ۱۲۰۰×۶۳۰ پیکسل است؛ تصویر بزرگ‌تر یا با نسبت دیگر، خودکار از وسط بریده و کوچک می‌شود.</div></div>' +
           '<div class="pb-switch"><div><b>نمایش در نتایج جست‌وجو</b><p class="pb-hint">خاموش کردن، درخواست noindex می‌فرستد؛ صفحهٔ عمومی را خصوصی نمی‌کند.</p></div>' + RI.switchHtml({ checked: RI.state.account.indexing, label: 'ایندکس در جست‌وجو' }).replace('<input', '<input id="idx"') + '</div></section>' +
           '<section class="pb-panel pb-previews" aria-labelledby="pb-look"><header><h2 id="pb-look">' + RI.icon('eye') + 'این‌طور دیده می‌شود</h2></header>' +
           '<div class="pb-chat"><span class="pb-chat__msg">این صفحهٔ منه 👇</span><div class="sharecard pb-sharecard"><div class="sharecard__img" style="' + esc(RI.bg(card.image) || '') + '"></div><div class="sharecard__body"><small class="ltr">' + esc(host) + '</small><b>' + esc(card.title) + '</b><p>' + esc(card.desc) + '</p></div></div></div>' +
@@ -109,13 +111,22 @@
         const fix = [['گوگل این صفحه را می‌شناسد؟', 'search', 'https://www.google.com/search?q=' + encodeURIComponent('site:' + String(address || '').replace(/^https:\/\//, '')), 'نتیجه‌های ایندکس‌شدهٔ همین آدرس'], ['آزمون نتایج غنی گوگل', 'award', 'https://search.google.com/test/rich-results?url=' + enc, 'داده‌های ساختاریافتهٔ صفحه‌ات را می‌خواند'], ['بازخوانی پیش‌نمایش لینکدین', 'linkedin', 'https://www.linkedin.com/post-inspector/inspect/' + enc, 'کارت قدیمی را از حافظهٔ لینکدین پاک می‌کند'], ['بازخوانی پیش‌نمایش فیسبوک و واتساپ', 'refresh', 'https://developers.facebook.com/tools/debug/?q=' + enc, 'دکمهٔ Scrape Again را بزن'], ['بازخوانی پیش‌نمایش تلگرام', 'telegram', 'https://t.me/WebpageBot', 'آدرس را برای این ربات رسمی بفرست']];
         const ext = (href, inner, cls) => live ? '<a class="' + cls + '" href="' + esc(href) + '" target="_blank" rel="noopener noreferrer">' + inner + '</a>' : '<span class="' + cls + ' is-off" aria-disabled="true">' + inner + '</span>';
         return '<section class="pb-panel pb-tools" aria-labelledby="pb-tools-title"><header><h2 id="pb-tools-title">' + RI.icon('zap') + 'ابزارهای اشتراک و جست‌وجو</h2><p>' + (live ? 'برای «' + esc(address.replace(/^https:\/\//, '')) + '»؛ همه با نسخهٔ منتشرشده کار می‌کنند.' : 'اول این صفحه را منتشر کن تا فرستادن و بررسی‌ها روشن شوند.') + '</p></header><div class="pb-tools__grid">' +
-          '<article class="pb-tool" style="--i:0"><h3>' + RI.icon('search') + 'جا شدن در نتیجهٔ گوگل</h3><p>گوگل عنوان را بعد از حدود ۶۰۰ پیکسل و توضیح را بعد از دو خط می‌بُرد؛ اندازه‌ها با همان قلم گوگل حساب می‌شوند.</p>' +
+          '<article class="pb-tool" data-subpane="search" style="--i:0"><h3>' + RI.icon('search') + 'جا شدن در نتیجهٔ گوگل</h3><p>گوگل عنوان را بعد از حدود ۶۰۰ پیکسل و توضیح را بعد از دو خط می‌بُرد؛ اندازه‌ها با همان قلم گوگل حساب می‌شوند.</p>' +
           '<div class="pb-meter" data-meter="title"><span>عنوان</span><i><b></b></i><small></small></div><div class="pb-meter" data-meter="desc"><span>توضیح</span><i><b></b></i><small></small></div></article>' +
-          '<article class="pb-tool" style="--i:1"><h3>' + RI.icon('check') + 'سلامت کارت منتشرشده<button type="button" class="pb-tool__again" data-health-run aria-label="بررسی دوباره">' + RI.icon('refresh') + '</button></h3><ul class="pb-health" data-health role="status"><li class="is-wait"><i></i>در حال بررسی نسخهٔ منتشرشده…</li></ul></article>' +
-          '<article class="pb-tool" style="--i:2"><h3>' + RI.icon('external') + 'فرستادن مستقیم</h3><p>پیام با عنوان و توضیح کارتت آماده می‌شود؛ فقط گیرنده را انتخاب کن.</p><div class="pb-send">' + send.map(([label, icon, href]) => ext(href, '<i>' + RI.icon(icon) + '</i><span>' + label + '</span>', 'pb-send__btn')).join('') + '</div></article>' +
-          '<article class="pb-tool" style="--i:3"><h3>' + RI.icon('refresh') + 'پیش‌نمایش قدیمی مانده؟</h3><p>پیام‌رسان‌ها کارت را مدتی نگه می‌دارند؛ بعد از تغییر و انتشار، از این‌جا تازه‌اش کن.</p><div class="pb-fixes">' + fix.map(([label, icon, href, hint]) => ext(href, '<i>' + RI.icon(icon) + '</i><span><b>' + label + '</b><small>' + hint + '</small></span>' + RI.icon('external'), 'pb-fix')).join('') + '</div></article>' +
-          '<article class="pb-tool pb-tool--wide" style="--i:4"><h3>' + RI.icon('mail') + 'امضای ایمیل</h3><p>زیر هر ایمیلت نام، عنوان و لینک صفحه‌ات بیاید؛ کپی کن و در تنظیمات امضای جیمیل یا اوت‌لوک بچسبان.</p><div class="pb-sig" data-sig>' + signature(address, true) + '</div><div class="pb-actions"><button type="button" class="btn btn--soft btn--sm" data-sig-copy="rich"' + (live ? '' : ' disabled') + '>' + RI.icon('copy') + 'کپی امضا</button><button type="button" class="btn btn--ghost btn--sm" data-sig-copy="html"' + (live ? '' : ' disabled') + '>' + RI.icon('code') + 'کپی کد HTML</button></div></article>' +
+          '<article class="pb-tool" data-subpane="search" style="--i:1"><h3>' + RI.icon('check') + 'سلامت کارت منتشرشده<button type="button" class="pb-tool__again" data-health-run aria-label="بررسی دوباره">' + RI.icon('refresh') + '</button></h3><ul class="pb-health" data-health role="status"><li class="is-wait"><i></i>در حال بررسی نسخهٔ منتشرشده…</li></ul></article>' +
+          '<article class="pb-tool" data-subpane="send" style="--i:2"><h3>' + RI.icon('external') + 'فرستادن مستقیم</h3><p>پیام با عنوان و توضیح کارتت آماده می‌شود؛ فقط گیرنده را انتخاب کن.</p><div class="pb-send">' + send.map(([label, icon, href]) => ext(href, '<i>' + RI.icon(icon) + '</i><span>' + label + '</span>', 'pb-send__btn')).join('') + '</div></article>' +
+          '<article class="pb-tool" data-subpane="send" style="--i:3"><h3>' + RI.icon('refresh') + 'پیش‌نمایش قدیمی مانده؟</h3><p>پیام‌رسان‌ها کارت را مدتی نگه می‌دارند؛ بعد از تغییر و انتشار، از این‌جا تازه‌اش کن.</p><div class="pb-fixes">' + fix.map(([label, icon, href, hint]) => ext(href, '<i>' + RI.icon(icon) + '</i><span><b>' + label + '</b><small>' + hint + '</small></span>' + RI.icon('external'), 'pb-fix')).join('') + '</div></article>' +
+          '<article class="pb-tool pb-tool--wide" data-subpane="sign" style="--i:0"><h3>' + RI.icon('mail') + 'امضای ایمیل</h3><p>زیر هر ایمیلت نام، عنوان و لینک صفحه‌ات بیاید؛ کپی کن و در تنظیمات امضای جیمیل یا اوت‌لوک بچسبان.</p><div class="pb-sig" data-sig>' + signature(address, true) + '</div><div class="pb-actions"><button type="button" class="btn btn--soft btn--sm" data-sig-copy="rich"' + (live ? '' : ' disabled') + '>' + RI.icon('copy') + 'کپی امضا</button><button type="button" class="btn btn--ghost btn--sm" data-sig-copy="html"' + (live ? '' : ' disabled') + '>' + RI.icon('code') + 'کپی کد HTML</button></div>' + sigGuide() + '</article>' +
           '</div></section>';
+      }
+      function sigGuide() {
+        const steps = [
+          ['Gmail (وب)', 'روی چرخ‌دندهٔ بالا بزن و «See all settings» را باز کن.|در زبانهٔ General پایین بیا تا بخش Signature، «Create new» را بزن و یک نام بده.|در کادر امضا Ctrl+V بزن تا امضای کپی‌شده با قالبش بچسبد.|زیر کادر، امضا را برای «For new emails use» انتخاب کن و پایین صفحه Save Changes را بزن.'],
+          ['Outlook (وب و outlook.com)', 'Settings (چرخ‌دنده) را باز کن و به Mail و سپس Compose and reply برو.|در بخش Email signature امضای تازه بساز و در کادر آن Ctrl+V بزن.|امضا را برای پیام‌های تازه و پاسخ‌ها انتخاب کن و Save را بزن.'],
+          ['Outlook (ویندوز)', 'منوی File و بعد Options را باز کن و Mail را انتخاب کن.|روی Signatures بزن، New را بزن و نامی بده.|در کادر ویرایش Ctrl+V بزن و برای New messages انتخابش کن، بعد OK.'],
+          ['Apple Mail', 'Mail و بعد Settings را باز کن و به Signatures برو.|حساب را انتخاب کن و + را بزن.|گزینهٔ «Always match my default message font» را خاموش کن و امضا را بچسبان.'],
+          ['اپ جیمیل روی گوشی', 'اپ گوشی فقط امضای متنی ساده می‌پذیرد.|در Settings حسابت را انتخاب کن و Mobile Signature را باز کن.|نام، عنوان و آدرس صفحه‌ات را بنویس یا بچسبان.']];
+        return '<div class="pb-guide"><b class="pb-guide__title">' + RI.icon('info') + 'امضا را کجا بچسبانم؟</b>' + steps.map(([app, list], i) => '<details' + (i ? '' : ' open') + '><summary>' + app + '</summary><ol>' + list.split('|').map(x => '<li>' + x + '</li>').join('') + '</ol></details>').join('') + '<p class="pb-hint">اگر بعد از چسباندن قالب به هم ریخت، «کپی کد HTML» را بزن و آن را در بخش HTML امضا (در برنامه‌هایی که دارند) بچسبان.</p></div>';
       }
       function signature(address, preview) {
         const p = C().profile || {}, host = String(address || '').replace(/^https:\/\//, '');
@@ -153,13 +164,15 @@
       }
 
       function paint() {
-        body.innerHTML = '<div class="pb-pane" data-pane="' + tab + '">' + (tab === 'address' ? addressTab() : tab === 'share' ? shareTab() : goTab()) + '</div>';
+        body.innerHTML = '<div class="pb-pane" data-pane="' + tab + '" data-sub="' + sub + '">' + (tab === 'address' ? addressTab() : tab === 'share' ? shareTab() : goTab()) + '</div>';
         RI.$$('#ptabs [data-tab]', root).forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === tab)));
-        moveInk();
+        moveInk(); subInk();
         if (tab === 'share') { RI.bindImageField(body, 'shimg', { set: v => { C().share.image = v; RI.touch('share'); paint(); } }); counts(); meters(); health(); }
         if (tab === 'address') { const i = RI.$('#slug', body); if (ctx.opts && ctx.opts.anchor === 'slug' && i) { i.focus(); ctx.opts = {}; } }
         heroLights();
       }
+      // The ink under the selected sub-tab slides to it.
+      function subInk() { const on = RI.$('.pb-subtabs [aria-selected=true]', body), ink = RI.$('.pb-subtabs__ink', body); if (!on || !ink) return; ink.style.width = on.offsetWidth + 'px'; ink.style.height = on.offsetHeight + 'px'; ink.style.transform = 'translate(' + on.offsetLeft + 'px,' + on.offsetTop + 'px)'; }
       // The gold ink under the selected tab slides to it.
       function moveInk() { const on = RI.$('#ptabs [aria-selected=true]', root), ink = RI.$('.pb-tabs__ink', root); if (!on || !ink) return; ink.style.width = on.offsetWidth + 'px'; ink.style.transform = 'translateX(' + on.offsetLeft + 'px)'; }
       function counts() { const s = C().share, a = RI.$('#shc1', body), b = RI.$('#shc2', body); if (a) a.textContent = RI.fa(s.title.length) + '/۶۰'; if (b) b.textContent = RI.fa(s.desc.length) + '/۱۶۰'; }
@@ -170,6 +183,11 @@
       RI.delegate(root, 'click', '#ptabs [data-tab]', (e, b) => { tab = b.dataset.tab; paint(); });
       RI.delegate(root, 'click', '[data-share-kind]', (e, b) => { shareKind = b.dataset.shareKind; paint(); });
       RI.delegate(root, 'click', '[data-health-run]', () => health());
+      RI.delegate(root, 'click', '.pb-subtabs [data-sub]', (e, b) => {
+        sub = b.dataset.sub; const pane = RI.$('.pb-pane', body); if (pane) pane.dataset.sub = sub;
+        RI.$$('.pb-subtabs [data-sub]', body).forEach(x => x.setAttribute('aria-selected', String(x === b))); subInk();
+        if (sub === 'search') { meters(); health(); }
+      });
       RI.delegate(root, 'click', '[data-tab-go]', (e, b) => { tab = b.dataset.tabGo; paint(); });
       RI.delegate(root, 'click', '[data-sig-copy]', async (e, b) => {
         const html = signature(RI.urls()[shareKind]), p = C().profile || {}, plain = [p.name, p.title, RI.urls()[shareKind]].filter(Boolean).join('\n');
