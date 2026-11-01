@@ -5,6 +5,15 @@ const {serveStatic,publicAssets}=require('../http/static.cjs'),{notFound}=requir
 const pubData=(c,k)=>RI.publicationData(k,c);
 const metrics=require('./metrics.cjs'),mediaCache=require('./media-cache.cjs'),stored=require('./media.cjs');
 const extension=type=>type==='image/jpeg'?'jpg':type.slice(6);
+// schema.org data for a public page: a ProfilePage about a Person (name, job, photo, skills, social profiles), so search
+// engines can show the person properly. "<" is escaped so the JSON can never close its script tag.
+function structured(c,kind,url,image){
+  const p=c.profile||{},sameAs=(c.socials||[]).map(s=>{try{return RI.socialUrl(s)}catch{return null}}).filter(u=>typeof u==='string'&&/^https:\/\//.test(u)).slice(0,10);
+  const person={'@type':'Person',name:String(p.name||'').slice(0,120)||undefined,jobTitle:String(p.title||'').slice(0,160)||undefined,description:String(p.bio||'').slice(0,300)||undefined,url,image:image||undefined,sameAs:sameAs.length?sameAs:undefined,knowsAbout:kind==='resume'&&(c.skills||[]).length?(c.skills||[]).map(x=>String(x?.name||x||'')).filter(Boolean).slice(0,20):undefined};
+  if(!person.name)return '';
+  const data={'@context':'https://schema.org','@type':'ProfilePage',url,inLanguage:'fa-IR',mainEntity:person,isPartOf:{'@type':'WebSite',name:'رزومیت',alternateName:['ResumeIt','رزومه ساز رزومیت'],url:'https://resumeit.ir/'}};
+  return '<script type="application/ld+json">'+JSON.stringify(data).replace(/</g,'\\u003c')+'</script>';
+}
 function dashboardHandler(database,auth,notifications,options){const reset=require('./reset.cjs')(database,options);return async(req,res,pathname,origin)=>{
   if(publicAssets.has(pathname)||pathname.startsWith('/templates/')||pathname.startsWith('/fonts/')){await serveStatic(req,res,pathname,origin);return true;}
   const root=new URL(origin),host=(req.headers.host||'').toLowerCase(),domain=root.hostname.startsWith('127.')||root.hostname==='localhost'?'resumeit.ir':root.hostname;
@@ -69,7 +78,7 @@ function dashboardHandler(database,auth,notifications,options){const reset=requi
     const inline=mediaCache.fill(mediaScope,c),inlined=new Set(inline.values()),refs=[...stored.hashes(c)].filter(h=>!inlined.has(h)),types=await mediaCache.types(page.id,refs,database.dashboardMediaTypes?ids=>database.dashboardMediaTypes(page.id,ids):async()=>new Map());
     mediaCache.allow(mediaScope,page.id,[...types.keys()]);
     // Stored image addresses (the renderer makes them absolute) become public, content-hashed files.
-    const output=html.replace(/(?:https:\/\/resumeit\.ir)?\/api\/dashboard\/media\/([a-f0-9]{32})/g,(value,hash)=>types.has(hash)?base+'/media/'+hash+'.'+extension(types.get(hash)):value).replace(/data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/]+={0,2}/g,(value,type)=>inline.has(value)?base+'/media/'+inline.get(value)+'.'+(type==='jpeg'?'jpg':type):value).replace('<script src="/templates/template-runtime.js">',(imported?'<script src="/templates/vista-runtime.js"></script>':'')+'<script src="/templates/template-runtime.js">').replace('</body>','<script src="/public-assets/projects.js"></script><script src="/public-assets/inbox.js"></script></body>').split('__RI_MAIN__').join(root.origin).replace('</head>','<meta property="og:type" content="website"><meta name="twitter:card" content="'+(ogImage?'summary_large_image':'summary')+'"><meta name="twitter:title" content="'+esc(card.title)+'"><meta name="twitter:description" content="'+esc(card.desc)+'">'+(ogImage?'<meta name="twitter:image" content="'+esc(ogImage)+'">':'')+'</head>');
+    const output=html.replace(/(?:https:\/\/resumeit\.ir)?\/api\/dashboard\/media\/([a-f0-9]{32})/g,(value,hash)=>types.has(hash)?base+'/media/'+hash+'.'+extension(types.get(hash)):value).replace(/data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/]+={0,2}/g,(value,type)=>inline.has(value)?base+'/media/'+inline.get(value)+'.'+(type==='jpeg'?'jpg':type):value).replace('<script src="/templates/template-runtime.js">',(imported?'<script src="/templates/vista-runtime.js"></script>':'')+'<script src="/templates/template-runtime.js">').replace('</body>','<script src="/public-assets/projects.js"></script><script src="/public-assets/inbox.js"></script></body>').split('__RI_MAIN__').join(root.origin).replace('</head>','<meta property="og:type" content="'+(kind==='resume'?'profile':'website')+'"><meta property="og:site_name" content="رزومیت"><meta property="og:locale" content="fa_IR">'+structured(c,kind,canonical,ogImage)+'<meta name="twitter:card" content="'+(ogImage?'summary_large_image':'summary')+'"><meta name="twitter:title" content="'+esc(card.title)+'"><meta name="twitter:description" content="'+esc(card.desc)+'">'+(ogImage?'<meta name="twitter:image" content="'+esc(ogImage)+'">':'')+'</head>');
     securityHeaders(res,origin,output);
     res.setHeader('Cache-Control','private, no-store');
     if(req.method==='GET'){
@@ -83,7 +92,7 @@ function dashboardHandler(database,auth,notifications,options){const reset=requi
   try{
     if(req.headers.host!==root.host)model.fail('مبدأ درخواست معتبر نیست',403);
     const user=await auth.account(req);if(!user)model.fail('دوباره وارد حسابت شو',401);
-    const scoped=['document','save','publish','unpublish','slug','share-qr','advisor'].some(route=>pathname==='/api/dashboard/'+route)||pathname.startsWith('/api/dashboard/media/');
+    const scoped=['document','save','publish','unpublish','slug','share-qr','share-check','advisor'].some(route=>pathname==='/api/dashboard/'+route)||pathname.startsWith('/api/dashboard/media/');
     const workspace=Number(new URL(req.url,origin).searchParams.get('workspace')||1);if(!require('../owner/settings.cjs').validSlot(workspace))model.fail('جایگاه صفحه معتبر نیست');
     activeWorkspace=workspace;
     if(scoped&&workspace>1&&req.method==='POST'&&pathname!=='/api/dashboard/unpublish'){const billing=await database.billing(user.id),owner=database.ownerUserSettings?await database.ownerUserSettings(user.id):{};if(!require('../owner/settings.cjs').workspaceAllowed(workspace,billing,owner))model.fail('این جایگاه به اشتراک فعال یا سهمیهٔ اضافهٔ مالک نیاز دارد',403);}
@@ -131,6 +140,13 @@ function dashboardHandler(database,auth,notifications,options){const reset=requi
       else if(pathname==='/api/dashboard/wallet')reply(200,await database.wallet(user.id));
       else if(pathname==='/api/dashboard/stats')reply(200,{rows:await database.dashboardStats(user.id,90,workspace)});
       else if(pathname==='/api/dashboard/slug'){const slug=new URL(req.url,origin).searchParams.get('value');reply(200,{available:model.slugValid(slug)&&await database.slugAvailable(slug,user.id,workspace)});}
+      else if(pathname==='/api/dashboard/share-check'){
+        // What a messenger or search engine gets from the live page now, beside the draft card, so the person sees what still needs publishing.
+        const kind=new URL(req.url,origin).searchParams.get('kind');if(!['resume','links'].includes(kind))model.fail('صفحه معتبر نیست');
+        const doc=await database.loadDashboard(user.id,workspace),card=x=>({title:x.title||'',desc:x.desc||'',image:!!x.image}),out={kind,published:doc.pub?.[kind]?.status==='published',indexing:doc.preferences?.indexing!==false,draft:card(RI.shareCard(doc.content,kind)),live:null,url:null};
+        if(out.published&&model.slugValid(doc.content.slug)&&!(workspace===3&&kind==='resume')){const page=await database.publicPage(doc.content.slug,kind,workspace===3?'path':'subdomain');if(page){const routes=page.content.routing||{resume:'',links:'link'};out.url=workspace===3?'https://'+domain+'/'+doc.content.slug:'https://'+doc.content.slug+'.'+domain+(kind==='links'?'/'+routes.links:routes.resume?'/'+routes.resume:'');out.live=card(RI.shareCard(model.publicContent(page.content,{}),kind));out.indexing=page.preferences?.indexing!==false;}}
+        reply(200,out);
+      }
       else if(pathname==='/api/dashboard/share-qr'){const kind=new URL(req.url,origin).searchParams.get('kind');if(!['resume','links'].includes(kind))model.fail('صفحه معتبر نیست');const doc=await database.loadDashboard(user.id,workspace);if(doc.pub[kind].status!=='published'||!model.slugValid(doc.content.slug))model.fail('ابتدا این صفحه را منتشر کن',409);if(workspace===3&&kind==='resume')model.fail('جایگاه سوم رزومه ندارد');const page=await database.publicPage(doc.content.slug,kind,workspace===3?'path':'subdomain');if(!page)model.fail('این صفحه در حال حاضر عمومی نیست',409);const routes=page.content.routing||{resume:'',links:'link'},url=workspace===3?'https://'+domain+'/'+doc.content.slug:'https://'+doc.content.slug+'.'+domain+(kind==='links'?'/'+routes.links:routes.resume?'/'+routes.resume:'');reply(200,{url,image:await require('qrcode').toDataURL(url,{errorCorrectionLevel:'Q',margin:4,width:640})});}
       else model.fail('مسیر پیدا نشد',404);return true;
     }

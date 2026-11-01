@@ -99,14 +99,64 @@
           '<div class="pb-chat"><span class="pb-chat__msg">این صفحهٔ منه 👇</span><div class="sharecard pb-sharecard"><div class="sharecard__img" style="' + esc(RI.bg(card.image) || '') + '"></div><div class="sharecard__body"><small class="ltr">' + esc(host) + '</small><b>' + esc(card.title) + '</b><p>' + esc(card.desc) + '</p></div></div></div>' +
           '<div class="pb-serp" aria-label="نتیجهٔ جست‌وجو"><small dir="ltr">' + esc(host) + '</small><b data-serp-title>' + esc(card.title) + '</b><p data-serp-desc>' + esc(card.desc) + '</p></div>' +
           '<div class="pb-actions"><button type="button" class="btn btn--soft" data-native-share>' + RI.icon('external') + 'فرستادن این صفحه</button><button type="button" class="btn btn--ghost" data-copy="' + esc(address) + '">' + RI.icon('copy') + 'کپی آدرس</button><button type="button" class="btn btn--ghost" data-share-qr>' + RI.icon('layers') + 'کد QR</button></div>' +
-          '<p class="pb-hint">متن و تصویر اختصاصی روی هر دو صفحه اعمال می‌شوند؛ بدون آن‌ها، مشخصات همان صفحه استفاده می‌شود. برای عمومی‌شدن تغییرات، همان صفحه را دوباره منتشر کن.</p></section></div>';
+          '<p class="pb-hint">متن و تصویر اختصاصی روی هر دو صفحه اعمال می‌شوند؛ بدون آن‌ها، مشخصات همان صفحه استفاده می‌شود. برای عمومی‌شدن تغییرات، همان صفحه را دوباره منتشر کن.</p></section></div>' + toolsPanel(address, card);
+      }
+
+      /* ---------- Share and search tools: each one does something real ---------- */
+      function toolsPanel(address, card) {
+        const live = RI.state.pub[shareKind].status === 'published', enc = encodeURIComponent(address || ''), text = encodeURIComponent(card.title + (card.desc ? ' — ' + card.desc : ''));
+        const send = [['تلگرام', 'telegram', 'https://t.me/share/url?url=' + enc + '&text=' + text], ['واتساپ', 'phone', 'https://wa.me/?text=' + text + '%0A' + enc], ['لینکدین', 'linkedin', 'https://www.linkedin.com/sharing/share-offsite/?url=' + enc], ['ایکس', 'twitter', 'https://twitter.com/intent/tweet?url=' + enc + '&text=' + text], ['ایمیل', 'mail', 'mailto:?subject=' + encodeURIComponent(card.title) + '&body=' + text + '%0A%0A' + enc]];
+        const fix = [['گوگل این صفحه را می‌شناسد؟', 'search', 'https://www.google.com/search?q=' + encodeURIComponent('site:' + String(address || '').replace(/^https:\/\//, '')), 'نتیجه‌های ایندکس‌شدهٔ همین آدرس'], ['آزمون نتایج غنی گوگل', 'award', 'https://search.google.com/test/rich-results?url=' + enc, 'داده‌های ساختاریافتهٔ صفحه‌ات را می‌خواند'], ['بازخوانی پیش‌نمایش لینکدین', 'linkedin', 'https://www.linkedin.com/post-inspector/inspect/' + enc, 'کارت قدیمی را از حافظهٔ لینکدین پاک می‌کند'], ['بازخوانی پیش‌نمایش فیسبوک و واتساپ', 'refresh', 'https://developers.facebook.com/tools/debug/?q=' + enc, 'دکمهٔ Scrape Again را بزن'], ['بازخوانی پیش‌نمایش تلگرام', 'telegram', 'https://t.me/WebpageBot', 'آدرس را برای این ربات رسمی بفرست']];
+        const ext = (href, inner, cls) => live ? '<a class="' + cls + '" href="' + esc(href) + '" target="_blank" rel="noopener noreferrer">' + inner + '</a>' : '<span class="' + cls + ' is-off" aria-disabled="true">' + inner + '</span>';
+        return '<section class="pb-panel pb-tools" aria-labelledby="pb-tools-title"><header><h2 id="pb-tools-title">' + RI.icon('zap') + 'ابزارهای اشتراک و جست‌وجو</h2><p>' + (live ? 'برای «' + esc(address.replace(/^https:\/\//, '')) + '»؛ همه با نسخهٔ منتشرشده کار می‌کنند.' : 'اول این صفحه را منتشر کن تا فرستادن و بررسی‌ها روشن شوند.') + '</p></header><div class="pb-tools__grid">' +
+          '<article class="pb-tool" style="--i:0"><h3>' + RI.icon('search') + 'جا شدن در نتیجهٔ گوگل</h3><p>گوگل عنوان را بعد از حدود ۶۰۰ پیکسل و توضیح را بعد از دو خط می‌بُرد؛ اندازه‌ها با همان قلم گوگل حساب می‌شوند.</p>' +
+          '<div class="pb-meter" data-meter="title"><span>عنوان</span><i><b></b></i><small></small></div><div class="pb-meter" data-meter="desc"><span>توضیح</span><i><b></b></i><small></small></div></article>' +
+          '<article class="pb-tool" style="--i:1"><h3>' + RI.icon('check') + 'سلامت کارت منتشرشده<button type="button" class="pb-tool__again" data-health-run aria-label="بررسی دوباره">' + RI.icon('refresh') + '</button></h3><ul class="pb-health" data-health role="status"><li class="is-wait"><i></i>در حال بررسی نسخهٔ منتشرشده…</li></ul></article>' +
+          '<article class="pb-tool" style="--i:2"><h3>' + RI.icon('external') + 'فرستادن مستقیم</h3><p>پیام با عنوان و توضیح کارتت آماده می‌شود؛ فقط گیرنده را انتخاب کن.</p><div class="pb-send">' + send.map(([label, icon, href]) => ext(href, '<i>' + RI.icon(icon) + '</i><span>' + label + '</span>', 'pb-send__btn')).join('') + '</div></article>' +
+          '<article class="pb-tool" style="--i:3"><h3>' + RI.icon('refresh') + 'پیش‌نمایش قدیمی مانده؟</h3><p>پیام‌رسان‌ها کارت را مدتی نگه می‌دارند؛ بعد از تغییر و انتشار، از این‌جا تازه‌اش کن.</p><div class="pb-fixes">' + fix.map(([label, icon, href, hint]) => ext(href, '<i>' + RI.icon(icon) + '</i><span><b>' + label + '</b><small>' + hint + '</small></span>' + RI.icon('external'), 'pb-fix')).join('') + '</div></article>' +
+          '<article class="pb-tool pb-tool--wide" style="--i:4"><h3>' + RI.icon('mail') + 'امضای ایمیل</h3><p>زیر هر ایمیلت نام، عنوان و لینک صفحه‌ات بیاید؛ کپی کن و در تنظیمات امضای جیمیل یا اوت‌لوک بچسبان.</p><div class="pb-sig" data-sig>' + signature(address, true) + '</div><div class="pb-actions"><button type="button" class="btn btn--soft btn--sm" data-sig-copy="rich"' + (live ? '' : ' disabled') + '>' + RI.icon('copy') + 'کپی امضا</button><button type="button" class="btn btn--ghost btn--sm" data-sig-copy="html"' + (live ? '' : ' disabled') + '>' + RI.icon('code') + 'کپی کد HTML</button></div></article>' +
+          '</div></section>';
+      }
+      function signature(address, preview) {
+        const p = C().profile || {}, host = String(address || '').replace(/^https:\/\//, '');
+        return '<table cellpadding="0" cellspacing="0" border="0" dir="rtl" style="font-family:Tahoma,Arial,sans-serif;direction:rtl;text-align:right;border-collapse:collapse"><tr><td style="padding:2px 0 2px 12px;border-left:3px solid #e2a03a;vertical-align:top"><b style="font-size:15px;color:#1b2a33">' + esc(p.name || RI.state.account.name || '') + '</b>' + (p.title ? '<br><span style="font-size:12px;color:#56707e">' + esc(p.title) + '</span>' : '') + '<br><a href="' + esc(address || '#') + '" style="font-size:12px;color:#b7772f;text-decoration:none" dir="ltr">' + esc(host) + '</a><br><a href="https://resumeit.ir/" style="font-size:10.5px;color:#8a9aa5;text-decoration:none">ساخته‌شده با رزومیت</a></td></tr></table>';
+      }
+      // Pixel widths with Google's own fonts: titles 20px Arial up to ~600px, descriptions 14px Arial over two ~460px lines.
+      const measure = (() => { const c = document.createElement('canvas').getContext('2d'); return (text, px) => { c.font = px + 'px Arial, sans-serif'; return c.measureText(text || '').width; }; })();
+      function meters() {
+        const v = RI.shareCard(C(), shareKind);
+        [['title', v.title, 20, 600, 280], ['desc', v.desc, 14, 920, 400]].forEach(([id, text, px, max, min]) => {
+          const el = body.querySelector('[data-meter=' + id + ']'); if (!el) return;
+          const w = measure(text, px), ratio = Math.min(1.25, w / max), state = w > max ? 'over' : w < min ? 'short' : 'ok';
+          el.dataset.state = state; el.querySelector('b').style.transform = 'scaleX(' + Math.min(1, ratio).toFixed(3) + ')';
+          el.querySelector('small').textContent = state === 'over' ? 'حدود ' + RI.fa(Math.round((w - max) / w * 100)) + '٪ آخرش بریده می‌شود' : state === 'short' ? 'کوتاه است؛ جای ' + (id === 'title' ? 'عنوان شغلی یا شهرت' : 'یک جملهٔ دیگر') + ' هست' : 'کامل نشان داده می‌شود';
+        });
+      }
+      let healthRun = 0;
+      async function health() {
+        const list = body.querySelector('[data-health]'); if (!list) return;
+        const run = ++healthRun, kind = shareKind; list.innerHTML = '<li class="is-wait"><i></i>در حال بررسی نسخهٔ منتشرشده…</li>';
+        try {
+          const r = await RI.dashboardRequest('share-check?kind=' + kind); if (run !== healthRun || !list.isConnected) return;
+          const row = (ok, text, extra) => '<li class="is-' + (ok === true ? 'ok' : ok === false ? 'bad' : 'warn') + '"><i>' + RI.icon(ok === true ? 'check' : ok === false ? 'x' : 'alert') + '</i><span>' + text + '</span>' + (extra || '') + '</li>';
+          const c = r.live || r.draft, same = r.live && r.live.title === r.draft.title && r.live.desc === r.draft.desc && r.live.image === r.draft.image;
+          list.innerHTML = [
+            row(r.published && !!r.live, r.published && r.live ? 'صفحه منتشر شده و از بیرون دیده می‌شود' : 'این صفحه هنوز عمومی نیست', r.published ? '' : '<button type="button" class="pb-health__go" data-tab-go="go">انتشار</button>'),
+            row(r.indexing, r.indexing ? 'پیدا شدن در جست‌وجو روشن است' : 'صفحه از نتایج جست‌وجو پنهان است (noindex)'),
+            row(c.title.length >= 15 && c.title.length <= 60 ? true : null, 'عنوان کارت ' + RI.fa(c.title.length) + ' نویسه' + (c.title.length > 60 ? '؛ بلند است' : c.title.length < 15 ? '؛ کوتاه است' : '')),
+            row(c.desc.length >= 50 && c.desc.length <= 160 ? true : null, c.desc ? 'توضیح ' + RI.fa(c.desc.length) + ' نویسه' + (c.desc.length < 50 ? '؛ یک جمله اضافه کن' : c.desc.length > 160 ? '؛ کوتاه‌ترش کن' : '') : 'توضیح ندارد؛ پیام‌رسان‌ها چیزی زیر عنوان نشان نمی‌دهند'),
+            row(c.image ? true : null, c.image ? 'تصویر کارت آماده است' : 'تصویر اختصاصی نداری؛ کارت بی‌عکس یا با عکس پیش‌فرض دیده می‌شود'),
+            r.live ? row(same ? true : null, same ? 'کارت منتشرشده با پیش‌نویس یکی است' : 'تغییرهای کارت هنوز منتشر نشده‌اند', same ? '' : '<button type="button" class="pb-health__go" data-pub="' + kind + '">به‌روزرسانی</button>') : '',
+            r.live ? row(true, 'داده‌های ساختاریافته (schema.org) برای گوگل روی صفحه است') : ''
+          ].join('');
+        } catch (e) { if (run === healthRun && list.isConnected) list.innerHTML = '<li class="is-bad"><i>' + RI.icon('x') + '</i><span>' + esc(e.message) + '</span></li>'; }
       }
 
       function paint() {
         body.innerHTML = '<div class="pb-pane" data-pane="' + tab + '">' + (tab === 'address' ? addressTab() : tab === 'share' ? shareTab() : goTab()) + '</div>';
         RI.$$('#ptabs [data-tab]', root).forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === tab)));
         moveInk();
-        if (tab === 'share') { RI.bindImageField(body, 'shimg', { set: v => { C().share.image = v; RI.touch('share'); paint(); } }); counts(); }
+        if (tab === 'share') { RI.bindImageField(body, 'shimg', { set: v => { C().share.image = v; RI.touch('share'); paint(); } }); counts(); meters(); health(); }
         if (tab === 'address') { const i = RI.$('#slug', body); if (ctx.opts && ctx.opts.anchor === 'slug' && i) { i.focus(); ctx.opts = {}; } }
         heroLights();
       }
@@ -114,11 +164,21 @@
       function moveInk() { const on = RI.$('#ptabs [aria-selected=true]', root), ink = RI.$('.pb-tabs__ink', root); if (!on || !ink) return; ink.style.width = on.offsetWidth + 'px'; ink.style.transform = 'translateX(' + on.offsetLeft + 'px)'; }
       function counts() { const s = C().share, a = RI.$('#shc1', body), b = RI.$('#shc2', body); if (a) a.textContent = RI.fa(s.title.length) + '/۶۰'; if (b) b.textContent = RI.fa(s.desc.length) + '/۱۶۰'; }
       function refreshAddresses() { const rows = body.querySelector('[data-address-rows]'); if (rows) rows.innerHTML = addressRows(); const w = body.querySelector('[data-address-warning]'); if (w) w.innerHTML = addressWarning(); heroAddress(false); }
-      function paintCard() { const v = RI.shareCard(C(), shareKind), card = RI.$('.sharecard__body', body); if (!card) return; card.querySelector('b').textContent = v.title; card.querySelector('p').textContent = v.desc; const st = RI.$('[data-serp-title]', body), sd = RI.$('[data-serp-desc]', body); if (st) st.textContent = v.title; if (sd) sd.textContent = v.desc; }
+      function paintCard() { const v = RI.shareCard(C(), shareKind), card = RI.$('.sharecard__body', body); if (!card) return; card.querySelector('b').textContent = v.title; card.querySelector('p').textContent = v.desc; const st = RI.$('[data-serp-title]', body), sd = RI.$('[data-serp-desc]', body); if (st) st.textContent = v.title; if (sd) sd.textContent = v.desc; meters(); const sig = RI.$('[data-sig]', body); if (sig) sig.innerHTML = signature(RI.urls()[shareKind], true); }
 
       /* ---------- Events ---------- */
       RI.delegate(root, 'click', '#ptabs [data-tab]', (e, b) => { tab = b.dataset.tab; paint(); });
       RI.delegate(root, 'click', '[data-share-kind]', (e, b) => { shareKind = b.dataset.shareKind; paint(); });
+      RI.delegate(root, 'click', '[data-health-run]', () => health());
+      RI.delegate(root, 'click', '[data-tab-go]', (e, b) => { tab = b.dataset.tabGo; paint(); });
+      RI.delegate(root, 'click', '[data-sig-copy]', async (e, b) => {
+        const html = signature(RI.urls()[shareKind]), p = C().profile || {}, plain = [p.name, p.title, RI.urls()[shareKind]].filter(Boolean).join('\n');
+        try {
+          if (b.dataset.sigCopy === 'rich' && window.ClipboardItem && navigator.clipboard?.write) await navigator.clipboard.write([new ClipboardItem({ 'text/html': new Blob([html], { type: 'text/html' }), 'text/plain': new Blob([plain], { type: 'text/plain' }) })]);
+          else await navigator.clipboard.writeText(html);
+          b.classList.remove('is-done'); void b.offsetWidth; b.classList.add('is-done'); RI.toast(b.dataset.sigCopy === 'rich' ? 'امضا کپی شد؛ در تنظیمات امضای ایمیل بچسبان' : 'کد HTML امضا کپی شد', { kind: 'success' });
+        } catch { RI.copy(html); }
+      });
       RI.delegate(root, 'click', '[data-share-qr]', async (e, b) => { b.disabled = true; try { const result = await RI.dashboardRequest('share-qr?kind=' + shareKind); await RI.qrPoster({ image: result.image, url: result.url, kind: shareKind }); } catch (error) { RI.toast(error.message, { kind: 'error' }); } finally { b.disabled = false; } });
       RI.delegate(root, 'click', '[data-native-share]', async () => { if (RI.state.pub[shareKind].status !== 'published') { RI.toast('لینک را پس از انتشار بفرست', { kind: 'info' }); return; } const card = RI.shareCard(C(), shareKind), data = { title: card.title, text: card.desc, url: RI.urls()[shareKind] }; try { if (navigator.share) await navigator.share(data); else await RI.copy(data.url); } catch (e) { if (e.name !== 'AbortError') RI.toast('لینک را با دکمهٔ کپی بردار', { kind: 'info' }); } });
       body.addEventListener('input', e => {
