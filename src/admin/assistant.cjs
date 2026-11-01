@@ -5,12 +5,12 @@ const providers=require('../ai/providers.cjs'),catalog=require('../ai/catalog.cj
 
 async function view(database){
   const {settings,keys}=await database.assistantSettings(),policy=database.commerceSettings?await database.commerceSettings():require('../owner/settings.cjs').defaults();
-  const plans=Object.values(RI.ASSISTANT_PLANS).map(p=>{const ref='assistant:'+p.id;return {ref,id:p.id,period:p.period,months:p.months,base:p.price,price:policy.prices?.[ref]??p.price,paused:!!policy.paused?.includes(ref),expected:{price:policy.prices?.[ref]??p.price,paused:!!policy.paused?.includes(ref),metadata:policy.products?.[ref]||null}};});
+  const plans=Object.values(RI.ASSISTANT_PLANS).map(p=>{const ref='assistant:'+p.id;return {ref,id:p.id,name:p.name,level:p.level,period:p.period,months:p.months,base:p.price,price:policy.prices?.[ref]??p.price,paused:!!policy.paused?.includes(ref),expected:{price:policy.prices?.[ref]??p.price,paused:!!policy.paused?.includes(ref),metadata:policy.products?.[ref]||null}};});
   return {
     settings,
     keys:Object.fromEntries(Object.keys(providers.PROVIDERS).map(id=>[id,{set:!!keys[id],hint:ownerSettings.hint(keys[id])}])),
     providers:Object.entries(providers.PROVIDERS).map(([id,p])=>({id,label:p.label,model:p.model,models:p.models,url:p.url,needsUrl:id==='custom'})),
-    models:catalog.models(settings).filter(m=>m.id!=='local').map(m=>({...m,base:catalog.CATALOG.find(x=>x.id===m.id),available:!!catalog.runtime(m,settings,keys)})),
+    models:catalog.models(settings).filter(m=>m.id!=='local').map(m=>({...m,group:Object.fromEntries(catalog.GROUPS)[m.group],perMessage:catalog.perMessage(m),base:catalog.CATALOG.find(x=>x.id===m.id),available:!!catalog.runtime(m,settings,keys)})),
     stats:await database.assistantStats(),
     plans,
     live:!!ownerSettings.runtime(settings,keys),

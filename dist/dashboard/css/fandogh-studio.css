@@ -295,3 +295,49 @@ body[data-page=fandogh] .pet__stage{display:none}
   .fs *,.fs *::before,.fs *::after,.fset-page *,.fset-page *::before,.fset-page *::after{animation:none!important;transition:none!important}
   .fs-empty h2{color:#1c2d38;background:none}
 }
+
+/* ---------- Models grouped by maker, plan locks, two quota windows and the Fandogh plans ---------- */
+.fs-modelgroup{display:grid;gap:2px;margin-bottom:6px}
+.fs-modelgroup__name,.fset-group h3{display:flex;align-items:center;gap:8px;margin:6px 10px 2px;font-size:11.5px;font-weight:800;color:#6b8090;letter-spacing:0}
+.fs-modelgroup__name::after,.fset-group h3::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,#dfe9ee,transparent)}
+.fs-modelcard.is-locked{opacity:.78}
+.fs-modelcard em.is-lock,.fset-tags i.is-lock{display:inline-flex;align-items:center;gap:3px;background:#f3ecfb;color:#5b3a8a}
+.fs-modelcard em.is-lock svg,.fset-tags i.is-lock svg{width:11px;height:11px}
+.fs-modelcard.is-locked:hover em.is-lock svg{animation:fs-wiggle .5s ease}
+.fset-group{display:grid;gap:8px;margin-top:6px}
+.fset-group h3{margin:4px 0 0}
+.fset-model.is-locked{cursor:pointer}
+.fset-model.is-locked .fset-model__body{opacity:.72}
+.fset-quota{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.fset-ring{display:flex;align-items:center;gap:10px;animation:fs-rise .5s calc(.2s + var(--i,0)*.12s) backwards}
+.fset-ring svg{flex:none;width:76px;height:76px;transform:rotate(-90deg)}
+.fset-ring circle{fill:none;stroke-width:9}.fset-ring circle:first-child{stroke:#dbe6f0}
+.fset-ring circle+circle{stroke:#2f6fb3;stroke-linecap:round;stroke-dasharray:var(--v) 100;animation:fs-ring 1.2s calc(.3s + var(--i,0)*.15s) cubic-bezier(.2,.8,.2,1) backwards}
+.fset-ring div{display:grid}.fset-ring b{font-size:24px;font-weight:900;line-height:1.2}.fset-ring span{font-size:12px;color:#4a6070}.fset-ring small{font-size:11px;color:#6b8090}
+.fset-plan-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.fset-plan{--edge:#dfe9ee;position:relative;display:flex;flex-direction:column;gap:10px;padding:20px 18px 18px;border-radius:22px;background:#fff;border:1.5px solid var(--edge);overflow:hidden;isolation:isolate;animation:fs-rise .6s calc(.15s + var(--i,0)*.1s) cubic-bezier(.2,.9,.3,1) backwards;transition:transform .35s cubic-bezier(.3,1.4,.5,1),box-shadow .35s}
+.fset-plan:hover{transform:translateY(-4px);box-shadow:0 22px 40px -26px rgba(28,45,56,.6)}
+.fset-plan::before{content:"";position:absolute;inset:auto -30% -55% auto;z-index:-1;width:220px;height:220px;border-radius:50%;background:radial-gradient(circle,var(--glow,rgba(124,200,246,.22)),transparent 70%);transition:transform .6s}
+.fset-plan:hover::before{transform:scale(1.25)}
+.fset-plan--arash{--glow:rgba(124,200,246,.28)}
+.fset-plan--rostam{--glow:rgba(164,114,72,.22);--edge:#e6d3c0}
+.fset-plan--kourosh{--glow:rgba(240,189,82,.32);border-color:transparent;background:linear-gradient(#fffdf7,#fffdf7) padding-box,conic-gradient(from var(--fset-spin,0deg),#f0bd52,#875a36,#3d8c9c,#f0bd52) border-box;animation:fs-rise .6s .35s cubic-bezier(.2,.9,.3,1) backwards,fset-spin 8s linear infinite}
+.fset-plan.is-current{box-shadow:0 0 0 4px rgba(47,111,179,.12)}
+.fset-plan__crest{display:grid;place-items:center;width:44px;height:44px;border-radius:14px;background:#eaf2fb;color:#2f6fb3;animation:fs-pop .55s calc(.4s + var(--i,0)*.1s) cubic-bezier(.3,1.5,.5,1) backwards}
+.fset-plan--rostam .fset-plan__crest{background:#f5ebe1;color:#875a36}
+.fset-plan--kourosh .fset-plan__crest{background:linear-gradient(135deg,#f0bd52,#e2a03a);color:#4d3320;box-shadow:0 10px 20px -10px rgba(226,160,58,.9)}
+.fset-plan__crest svg{width:22px;height:22px}
+.fset-plan h3{display:grid;margin:0;font-size:20px;font-weight:900}
+.fset-plan h3 small{font-size:12px;font-weight:600;color:#6b8090}
+.fset-plan__price{display:grid;margin:0}.fset-plan__price b{font-size:18px;font-weight:900}.fset-plan__price span{font-size:12px;color:#6b8090}
+.fset-plan ul{display:grid;gap:6px;margin:0;padding:0;list-style:none;font-size:12.5px;line-height:1.8;color:#4a6070}
+.fset-plan li{display:flex;align-items:flex-start;gap:6px}
+.fset-plan li svg{flex:none;width:15px;height:15px;margin-top:4px;color:#2f9e6b}
+.fset-plan .btn{margin-top:auto}
+.fset-plan__badge{display:inline-flex;align-items:center;gap:4px;width:max-content;padding:2px 10px;border-radius:999px;background:#e3f1e8;color:#2f6448;font-size:11.5px;font-weight:800}
+.fset-plan__badge svg{width:13px;height:13px}
+@property --fset-spin{syntax:'<angle>';inherits:false;initial-value:0deg}
+@keyframes fset-spin{to{--fset-spin:360deg}}
+@keyframes fs-wiggle{25%{transform:rotate(-12deg)}75%{transform:rotate(12deg)}}
+@media (max-width:900px){.fset-plan-grid{grid-template-columns:1fr}}
+@media (prefers-reduced-motion:reduce){.fset-plan,.fset-plan__crest,.fset-ring,.fset-ring circle{animation:none!important;transition:none!important}}

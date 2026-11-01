@@ -193,7 +193,7 @@
   function paintName() { const b = root.querySelector('.pet__title b'); if (b && b.firstChild) b.firstChild.textContent = label() + ' '; }
   function upsell(message) {
     const plans = status?.plans || [], log = root.querySelector('[data-pet-log]');
-    log.insertAdjacentHTML('beforeend', '<div class="pet-upsell"><b>' + esc(message || 'پیام‌های رایگان امروز تمام شد') + '</b><p>با هر اشتراک رزومیت، دستیار خودکار فعال است. یا فقط دستیار را بگیر:</p><div class="pet-upsell__plans">' + plans.map((p, i) => '<button type="button" class="pet-plan" data-buy="' + p.id + '" style="--i:' + i + '"' + (p.paused ? ' disabled' : '') + '><b>' + esc(p.period) + '</b><span>' + RI.it(p.price) + '</span>' + (p.months > 1 ? '<small>' + RI.fa(Math.round((1 - p.price / p.months / (plans[0].price || 1)) * 100)) + '٪ ارزان‌تر</small>' : '<small>ماهانه</small>') + '</button>').join('') + '</div><a class="pet__link" href="' + RI.routeUrl('billing') + '" data-go="billing">دیدن اشتراک‌ها</a></div>');
+    log.insertAdjacentHTML('beforeend', '<div class="pet-upsell"><b>' + esc(message || 'پیام‌های رایگان امروز تمام شد') + '</b><p>با هر اشتراک رزومیت، دستیار خودکار فعال است. یا فقط دستیار را بگیر:</p><div class="pet-upsell__plans">' + plans.map((p, i) => '<button type="button" class="pet-plan" data-buy="' + p.id + '" style="--i:' + i + '"' + (p.paused ? ' disabled' : '') + '><b>' + esc(p.name) + '</b><span>' + RI.it(p.price) + '</span><small>' + RI.fa(p.window) + ' پیام در ۵ ساعت</small>' + '</button>').join('') + '</div><a class="pet__link" href="' + RI.routeUrl('billing') + '" data-go="billing">دیدن اشتراک‌ها</a></div>');
     log.scrollTop = log.scrollHeight;
   }
   async function refresh() { try { status = await RI.Fandogh.refresh(); paintUsage(); } catch { root.querySelector('[data-pet-usage]').textContent = 'وضعیت سهمیه دریافت نشد'; } }
@@ -201,7 +201,7 @@
     if (!status) return; const el = root.querySelector('[data-pet-usage]'), bar = root.querySelector('[data-pet-quota]');
     paintName();
     const engine = (status.models || []).find(m => m.id === status.engine);
-    el.textContent = engine && !engine.cost ? (engine.id === 'local' ? 'فندق محلی · رایگان و بی‌سهمیه' : 'با کلید خودت · بدون سهمیه') : status.plan === 'free' ? RI.fa(status.remaining) + ' پیام رایگان از ' + RI.fa(status.limit) + ' برای امروز' : (status.plan === 'subscription' ? 'فعال با اشتراک' : 'دستیار فعال') + ' · ' + RI.fa(status.remaining) + ' پیام باقی امروز';
+    el.textContent = engine && !engine.cost ? (engine.id === 'local' ? 'فندق محلی · رایگان و بی‌سهمیه' : 'با کلید خودت · بدون سهمیه') : (status.plan === 'free' ? 'رایگان' : 'اشتراک ' + (status.planName || '')) + ' · ' + RI.fa(status.remaining) + ' پیام از ' + RI.fa(status.limit) + ' در ۵ ساعت';
     const low = status.plan === 'free' && status.remaining <= 1; el.dataset.low = String(low); bar.dataset.low = String(low);
     bar.style.setProperty('--q', Math.max(0, Math.min(100, Math.round(status.remaining / (status.limit || 1) * 100))) + '%');
   }
@@ -242,7 +242,7 @@
     if (t.dataset.petTab) select(t.dataset.petTab);
     else if (t.dataset.ask) { if (tab !== 'chat') select('chat'); ask(t.dataset.ask); }
     else if (t.dataset.msgAct) { const [id, i] = t.dataset.msgAct.split(':'), a = chat.find(m => m.id === id)?.actions?.[Number(i)]; if (a) act(a); }
-    else if (t.dataset.buy) { const p = status?.plans.find(x => x.id === t.dataset.buy); if (p) RI.walletPurchase('assistant:' + p.id, 'دستیار هوشمند ' + p.period, p.price).then(ok => { if (ok) { refresh(); push('bot', 'دستیار فعال شد! حالا هر چه می‌خواهی بپرس.'); cat?.play('celebrate'); } }); }
+    else if (t.dataset.buy) { const p = status?.plans.find(x => x.id === t.dataset.buy); if (p) RI.walletPurchase('assistant:' + p.id, 'اشتراک فندق «' + p.name + '»', p.price).then(ok => { if (ok) { refresh(); push('bot', 'اشتراک «' + p.name + '» فعال شد! حالا مدل‌های بیشتری در اختیارت است.'); cat?.play('celebrate'); } }); }
   }
   addEventListener('resize', () => { if (open) ink(); }, { passive: true });
 

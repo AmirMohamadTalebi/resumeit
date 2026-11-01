@@ -1,15 +1,17 @@
-// Fandogh's owner settings: whether it answers at all, daily allowances, and the language model it may speak
+// Fandogh's owner settings: whether it answers at all, the 5-hour and weekly allowance of each plan, and the language model it may speak
 // through. Provider keys are kept apart from the settings, sealed with AES-256-GCM under a server secret
 // (ASSISTANT_SECRET, else the database password), so a database dump alone does not reveal them.
 const { createCipheriv, createDecipheriv, createHash, randomBytes } = require('node:crypto');
 const { fail } = require('../dashboard/model.cjs'), { RI } = require('../dashboard/render.cjs'), { PROVIDERS } = require('../ai/providers.cjs');
 
-const positive = (value, fallback) => { const n = Number(value); return Number.isSafeInteger(n) && n > 0 && n <= 10000 ? n : fallback; };
-function defaults(env = process.env) {
+// Who gets how many messages in a rolling 5-hour window and in a rolling week: free accounts, ResumeIt
+// subscribers and the three Fandogh plans.
+const PLAN_KEYS = ['free', 'subscription', ...Object.keys(RI.ASSISTANT_PLANS)];
+const planLimits = () => ({ free: { ...RI.ASSISTANT_FREE }, subscription: { window: RI.ASSISTANT_SITE.window, week: RI.ASSISTANT_SITE.week }, ...Object.fromEntries(Object.values(RI.ASSISTANT_PLANS).map(p => [p.id, { window: p.window, week: p.week }])) });
+function defaults() {
   return {
     enabled: true,
-    freeDaily: positive(env.ASSISTANT_FREE_DAILY, RI.ASSISTANT_FREE_DAILY),
-    paidDaily: positive(env.ASSISTANT_PAID_DAILY, 200),
+    limits: planLimits(),
     ai: { enabled: false, provider: 'openai', temperature: 0.4, maxTokens: 1200, dailyCalls: 2000, smalltalk: false },
     providers: {},
     models: {},
@@ -21,9 +23,16 @@ function validate(input) {
   const out = defaults(), ai = input.ai || {};
   if (typeof input.enabled !== 'boolean') fail('روشن یا خاموش بودن دستیار را مشخص کن');
   out.enabled = input.enabled;
-  out.freeDaily = int(input.freeDaily, 0, 1000, 'سهمیهٔ رایگان روزانه باید عددی بین ۰ تا ۱۰۰۰ باشد');
-  out.paidDaily = int(input.paidDaily, 1, 10000, 'سهمیهٔ مشترکان باید عددی بین ۱ تا ۱۰٬۰۰۰ باشد');
-  if (out.paidDaily < out.freeDaily) fail('سهمیهٔ مشترکان نباید کمتر از سهمیهٔ رایگان باشد');
+  const limits = input.limits;
+  if (!limits || typeof limits !== 'object' || Array.isArray(limits)) fail('سهمیه‌ها معتبر نیست');
+  for (const key of PLAN_KEYS) {
+    const v = limits[key];
+    if (!v || typeof v !== 'object') fail('سهمیهٔ همهٔ اشتراک‌ها را بنویس');
+    const window = int(v.window, key === 'free' ? 0 : 1, 10000, 'سهمیهٔ ۵ ساعته باید عددی بین ۰ تا ۱۰٬۰۰۰ باشد'), week = int(v.week, key === 'free' ? 0 : 1, 100000, 'سهمیهٔ هفتگی باید عددی بین ۰ تا ۱۰۰٬۰۰۰ باشد');
+    if (week < window) fail('سهمیهٔ هفتگی نباید کمتر از سهمیهٔ ۵ ساعته باشد');
+    out.limits[key] = { window, week };
+  }
+  if (Object.keys(RI.ASSISTANT_PLANS).some(id => out.limits[id].week < out.limits.free.week)) fail('سهمیهٔ اشتراک‌های فندق نباید کمتر از سهمیهٔ رایگان باشد');
   if (typeof ai !== 'object' || Array.isArray(ai) || typeof ai.enabled !== 'boolean' || typeof ai.smalltalk !== 'boolean' || !Object.hasOwn(PROVIDERS, ai.provider)) fail('تنظیمات اتصال هوش مصنوعی معتبر نیست');
   if (typeof ai.temperature !== 'number' || !(ai.temperature >= 0 && ai.temperature <= 1)) fail('خلاقیت پاسخ باید بین ۰ تا ۱ باشد');
   out.ai = { enabled: ai.enabled, provider: ai.provider, smalltalk: ai.smalltalk, temperature: Math.round(ai.temperature * 100) / 100,

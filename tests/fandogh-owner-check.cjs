@@ -24,7 +24,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
   await db.saveAccountRole(owner,target,{role:'admin',reason:'ادمین عادی برای آزمون فندق',requestId:randomUUID()});
   assert.equal((await send('/api/admin/assistant',null,'b')).status,403);
   let view=(await send('/api/admin/assistant')).body;
-  assert.equal(view.settings.enabled,true);assert.equal(view.providers.length,9);assert(view.providers.some(p=>p.id==='anthropic')&&view.providers.some(p=>p.id==='custom'&&p.needsUrl));
+  assert.equal(view.settings.enabled,true);assert.equal(view.providers.length,10);assert(view.providers.some(p=>p.id==='moonshot'));assert(view.providers.some(p=>p.id==='anthropic')&&view.providers.some(p=>p.id==='custom'&&p.needsUrl));
   assert.equal(view.keys.openai.set,false);assert.equal(view.live,false);
   // Switching the model on without a key is refused; with a key it saves, and the key never comes back.
   const settings=s=>({...view.settings,...s,ai:{...view.settings.ai,...(s.ai||{})}});
@@ -53,20 +53,25 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
   r=(await ask('یک معرفی برایم بنویس')).body.reply;assert.equal(r.source,'local');assert.equal(calls.length,2);
   // Allowances come from the panel; a paused Fandogh says so instead of answering.
   view=(await send('/api/admin/assistant')).body;
-  assert.equal((await save(settings({freeDaily:2,paidDaily:50,ai:{dailyCalls:100}}))).status,200);
+  const lim=o=>({...view.settings.limits,...o});assert.deepEqual(view.settings.limits.free,{window:3,week:15});assert.deepEqual(view.settings.limits.subscription,{window:10,week:40});
+  assert.equal((await save(settings({limits:lim({free:{window:2,week:15}}),ai:{dailyCalls:100}}))).status,200);
   assert.equal((await send('/api/dashboard/assistant',null,'b')).body.limit,2);
-  const over=await ask('امتیاز رزومه‌ام چنده؟');assert.equal(over.status,429,'two GPT Luna answers already used the new allowance');assert.match(over.body.error,/فندق محلی/);
+  const over=await ask('امتیاز رزومه‌ام چنده؟');assert.equal(over.status,429,'two GPT-6 Luna answers already used the new 5-hour allowance');assert.equal(over.body.scope,'window');assert(over.body.resetAt>Date.now());assert.match(over.body.error,/فندق محلی/);
   assert.equal((await ask('امتیاز رزومه‌ام چنده؟',[],'local')).status,200,'local Fandogh still answers for free');
-  // A heavier model costs its multiple: Opus is ten messages, so it is refused while Luna-sized room remains.
-  assert.equal((await save(settings({freeDaily:5,paidDaily:50,ai:{dailyCalls:100},models:{'claude-opus':{enabled:true,cost:10,model:'',label:''},'gpt-4-1':{enabled:true,cost:4,model:'',label:''}}}))).status,200);
+  // A heavier model costs its multiple, and the owner can open a model to a lower plan: Sol opened to free accounts
+  // costs 4, so it is refused while only 3 are left.
+  assert.equal((await save(settings({limits:lim({free:{window:5,week:15}}),ai:{dailyCalls:100},models:{'claude-opus':{enabled:true,cost:10,tier:0,model:'',label:''},'gpt-6-sol':{enabled:true,cost:4,tier:0,model:'',label:''}}}))).status,200);
   const opus=await ask('کل رزومه‌ام را بازنویسی کن',[],'claude-opus');assert.equal(opus.status,200);assert.equal(opus.body.reply.model.id,'local','no anthropic key: falls back locally, free');
-  const heavy=await ask('تجربه‌هایم را تحلیل کن',[],'gpt-4-1');assert.equal(heavy.status,429,'GPT-4.1 now costs 4 and only 3 are left');assert.match(heavy.body.error,/۴ پیام/);
-  const offered=(await send('/api/dashboard/assistant',null,'b')).body.models;assert.equal(offered.find(m=>m.id==='gpt-4-1').cost,4);assert.equal(offered.find(m=>m.id==='claude-opus').available,false);assert.equal(offered.find(m=>m.id==='luna').available,true);
+  const heavy=await ask('تجربه‌هایم را تحلیل کن',[],'gpt-6-sol');assert.equal(heavy.status,429,'GPT-6 Sol costs 4 and only 3 are left');assert.match(heavy.body.error,/۴ پیام/);
+  const offered=(await send('/api/dashboard/assistant',null,'b')).body.models;assert.equal(offered.find(m=>m.id==='gpt-6-sol').cost,4);assert.equal(offered.find(m=>m.id==='gpt-6-sol').locked,false);assert.equal(offered.find(m=>m.id==='claude-opus').available,false);assert.equal(offered.find(m=>m.id==='luna').available,true);
   assert.equal((await save(settings({enabled:false}))).status,200);
   const paused=await ask('سلام');assert.equal(paused.status,503);assert.equal(paused.body.code,'ASSISTANT_PAUSED');
-  assert.equal((await save(settings({enabled:true,freeDaily:20}))).status,200);
-  // Validation: the paid allowance cannot be below the free one; a custom service needs an https address.
-  assert.equal((await save(settings({freeDaily:30,paidDaily:10}))).status,400);
+  assert.equal((await save(settings({enabled:true,limits:lim({free:{window:20,week:40}})}))).status,200);
+  // Validation: a week below its 5 hours, a Fandogh plan below the free allowance, a model in no plan; a custom
+  // service needs an https address.
+  assert.equal((await save(settings({limits:lim({free:{window:10,week:5}})}))).status,400);
+  assert.equal((await save(settings({limits:lim({arash:{window:2,week:5}})}))).status,400);
+  assert.equal((await save(settings({models:{luna:{enabled:true,cost:1,tier:7,model:'',label:''}}}))).status,400);
   assert.equal((await save(settings({providers:{custom:{model:'x',url:'http://insecure.example'}}}))).status,400);
   console.log('PASS Fandogh owner panel: owner-only, sealed and masked keys, connection test, local identity answers, guarded model replies, usage and daily cap, allowances, pause and validation.');
 
@@ -76,7 +81,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
    const context=await browser.newContext({reducedMotion:'reduce'});await context.addCookies([{name:'ri_session',value:'a'.repeat(64),url:base}]);const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
    for(const width of [1440,390]){
     await page.setViewportSize({width,height:900});await page.goto(base+'/admin/assistant/');await page.locator('[data-fx-root]').waitFor();
-    assert.equal(await page.locator('.fx-provider').count(),9);assert.equal(await page.locator('.fx-model').count(),9);assert.equal(await page.locator('.fx-model[data-model-id=gpt-4-1] [data-m-cost]').inputValue(),'3','the last save went back to the catalog cost');assert.equal(await page.locator('.fx-provider.is-active').getAttribute('data-provider'),'openai');
+    assert.equal(await page.locator('.fx-provider').count(),10);assert.equal(await page.locator('.fx-model').count(),15);assert.equal(await page.locator('.fx-model[data-model-id=gpt-6-sol] [data-m-cost]').inputValue(),'4','the last save went back to the catalog cost');assert.equal(await page.locator('.fx-model[data-model-id=claude-fable] [data-m-tier]').inputValue(),'3');assert.equal(await page.locator('[data-limit]').count(),5);assert.equal(await page.locator('.fx-provider.is-active').getAttribute('data-provider'),'openai');
     assert(await page.locator('.fx-provider.is-active [data-key]').isVisible());assert(!(await page.locator('.fx-provider[data-provider=anthropic] [data-key]').isVisible()));
     assert.equal(await page.locator('#admin-nav a[aria-current=page]').count(),1);
     assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'no sideways scroll at '+width);
@@ -86,12 +91,12 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
    await page.locator('.fx-provider[data-provider=anthropic]').click();assert.equal(await page.locator('.fx-provider.is-active').getAttribute('data-provider'),'anthropic');
    await page.locator('.fx-provider[data-provider=openai]').click();
    await page.locator('.fx-provider.is-active [data-test]').click();await page.locator('.fx-provider.is-active [data-test-result][data-kind=ok]').waitFor();
-   await page.locator('[data-fx-free]').fill('7');await page.locator('[data-fx-save]').click();await page.locator('[data-fx-status][data-kind=error]').waitFor();
+   await page.locator('[data-limit=free] [data-l-window]').fill('7');await page.locator('[data-fx-save]').click();await page.locator('[data-fx-status][data-kind=error]').waitFor();
    await page.locator('[data-fx-reason]').fill('سهمیهٔ رایگان تازه');await page.locator('[data-fx-save]').click();await page.waitForFunction(()=>document.querySelector('[data-fx-status]')?.dataset.kind==='ok'||/[^s]/.test(document.querySelector('[data-fx-status]')?.textContent||'')&&document.querySelector('[data-fx-status]').textContent!=='');assert.equal(await page.locator('[data-fx-status]').getAttribute('data-kind'),'ok',await page.locator('[data-fx-status]').textContent());
-   assert.equal(await page.locator('[data-fx-free]').inputValue(),'7');
-   await page.locator('[data-fx-reason]').fill('قیمت تازهٔ دستیار');await page.locator('[data-plan="assistant:m1"] [data-plan-price]').fill('12');await page.locator('[data-plan="assistant:m1"] [data-plan-save]').click();await page.locator('[data-fx-status][data-kind=ok]').waitFor();
-   assert.equal(await page.locator('[data-plan="assistant:m1"] [data-plan-price]').inputValue(),'12');
-   assert.equal((await db.commerceSettings()).prices['assistant:m1'],24000);
+   assert.equal(await page.locator('[data-limit=free] [data-l-window]').inputValue(),'7');
+   await page.locator('[data-fx-reason]').fill('قیمت تازهٔ دستیار');await page.locator('[data-plan="assistant:arash"] [data-plan-price]').fill('12');await page.locator('[data-plan="assistant:arash"] [data-plan-save]').click();await page.locator('[data-fx-status][data-kind=ok]').waitFor();
+   assert.equal(await page.locator('[data-plan="assistant:arash"] [data-plan-price]').inputValue(),'12');
+   assert.equal((await db.commerceSettings()).prices['assistant:arash'],24000);
    await page.screenshot({path:path.join(out,'panel-saved.png')});
    assert.deepEqual(errors,[]);
    console.log('PASS Fandogh owner panel UI: provider cards, connection test, saving with a reason, plan price, desktop and phone without sideways scroll.');

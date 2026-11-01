@@ -18,7 +18,7 @@ module.exports=({execute,transaction})=>({
   async purchaseWithWallet(id,ref,requestId,expectedPrice){
     if(typeof ref!=='string'||!/^(rt|lt|font|pal|subscription|assistant):[a-z0-9-]+$/.test(ref))fail('خرید معتبر نیست');
     const item=catalog(ref),[kind,pid]=String(ref).split(':'),plan=kind==='subscription'?RI.PLANS[pid]:kind==='assistant'?RI.ASSISTANT_PLANS[pid]:null;
-    const planLabel=plan&&(kind==='assistant'?'دستیار هوشمند '+plan.period:'اشتراک '+plan.name);
+    const planLabel=plan&&(kind==='assistant'?'اشتراک فندق «'+plan.name+'» '+plan.period:'اشتراک '+plan.name);
     if((!plan&&(!item||item.access!=='buy'))||!/^[a-z0-9_-]{16,64}$/i.test(requestId||''))fail('خرید معتبر نیست');
     const policy=this.commerceSettings?await this.commerceSettings():require('../owner/settings.cjs').defaults();if(policy.paused.includes(ref))fail('فروش این محصول فعلاً متوقف است',409);
     const price=policy.prices[ref]??(plan?plan.price:item.price);if(!Number.isSafeInteger(price)||price<=0||price%RI.IT_RATE!==0)fail('قیمت معتبر نیست');if(expectedPrice!==undefined&&expectedPrice!==price||expectedPrice===undefined&&Object.hasOwn(policy.prices,ref))fail('قیمت تغییر کرده؛ صفحهٔ خرید را تازه کن',409);

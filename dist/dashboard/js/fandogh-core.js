@@ -26,6 +26,10 @@
   };
   F.model = id => (F.status?.models || []).find(m => m.id === id);
   F.cost = m => !m ? '' : m.cost ? RI.fa(m.cost) + ' پیام' : 'رایگان';
+  // Models in their maker's group (فندق، OpenAI، Anthropic، Google، Moonshot، …), in catalog order.
+  F.groups = list => { const out = []; for (const m of list) { let g = out.find(x => x[0] === (m.groupLabel || '')); if (!g) out.push(g = [m.groupLabel || '', []]); g[1].push(m); } return out; };
+  F.tier = level => (F.status?.tiers || ['رایگان', 'آرش', 'رستم', 'کوروش'])[level] || '';
+  F.reset = at => !at ? '' : new Date(at).toLocaleString('fa-IR', { hour: '2-digit', minute: '2-digit', ...(at - Date.now() > 20 * 3600000 ? { weekday: 'long' } : {}) });
 
   // A tiny formatter for answers: paragraphs, «-» and «۱.» lists, **bold** and `code`; everything escaped first.
   F.format = text => {

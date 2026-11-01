@@ -22,7 +22,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
   assert.equal(await input.inputValue(),'درباره @مهارت‌ها ');await input.fill('');
   // The model picker lists every model with its cost; Luna is one message, Opus ten.
   await page.locator('[data-fs-model]').click();const picker=page.locator('[data-fs-models]');await picker.waitFor();
-  assert.match(await picker.locator('[data-fs-pick=luna] em').innerText(),/در دسترس نیست|^۱ پیام$/);assert(await picker.locator('[data-fs-pick=claude-opus]').count());
+  assert.match(await picker.locator('[data-fs-pick=luna] em').innerText(),/در دسترس نیست|^۱ پیام$/);assert(await picker.locator('[data-fs-pick=claude-opus]').count());assert.equal(await picker.locator('.fs-modelgroup').count(),6,'grouped by maker');assert(await picker.locator('[data-fs-pick=claude-fable].is-locked').count());assert.match(await picker.locator('[data-fs-pick=claude-fable] em').innerText(),/کوروش/);
   await page.screenshot({path:path.join(out,'models.png')});await page.locator('.fs-title').click();assert(await picker.isHidden());
   // Ask with Enter: the question and a local answer with its badge; the allowance is untouched.
   await input.fill('امتیاز رزومه‌ام چند است؟');await input.press('Enter');

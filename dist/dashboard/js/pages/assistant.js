@@ -1,5 +1,6 @@
-/* تنظیمات فندق: the default model (with what each question costs), the assistant's name, tone and answer length,
-   how resume edits land, the person's own model key (free) and today's allowance. */
+/* تنظیمات فندق: the default model (grouped by maker, with what each question costs and the plan that opens it), the
+   assistant's name, tone and answer length, how resume edits land, the 5-hour and weekly allowance, the three Fandogh
+   plans («آرش»، «رستم»، «کوروش») and the person's own model key (free). */
 (() => {
   'use strict';
   const RI = window.RI, esc = RI.esc, F = RI.Fandogh;
@@ -10,17 +11,21 @@
   function body() {
     if (!data) return '<div class="fset-wait"><span class="loading loading-dots"></span><p>در حال آوردن تنظیمات فندق…</p></div>';
     const s = data.settings, own = s.own, st = F.status || {}, provider = id => data.providers.find(p => p.id === id);
-    const models = (data.models || []).map((m, i) => '<label class="fset-model' + (m.available ? '' : ' is-off') + '" style="--i:' + i + '"><input type="radio" name="engine" value="' + m.id + '"' + (s.engine === m.id ? ' checked' : '') + (m.available ? '' : ' disabled') + '><span class="fset-model__body"><b>' + esc(m.label) + costBadge(m) + '</b><small>' + esc(m.note || '') + '</small><span class="fset-tags">' + (m.tags || []).map(t => '<i>' + esc(t) + '</i>').join('') + (m.available ? '' : '<i class="is-off">الان در دسترس نیست</i>') + '</span></span></label>').join('');
-    const used = st.used || 0, limit = st.limit || 0, pct = limit ? Math.min(100, Math.round(used / limit * 100)) : 0;
+    let n = 0;
+    const models = F.groups(data.models || []).map(([group, items]) => '<div class="fset-group"><h3>' + esc(group) + '</h3><div class="fset-models">' + items.map(m => { const off = !m.available || m.locked; return '<label class="fset-model' + (off ? ' is-off' : '') + (m.locked ? ' is-locked' : '') + '" style="--i:' + (n++) + '"><input type="radio" name="engine" value="' + m.id + '"' + (s.engine === m.id ? ' checked' : '') + (off ? ' disabled' : '') + '><span class="fset-model__body"><b>' + esc(m.label) + costBadge(m) + '</b><small>' + esc(m.note || '') + '</small><span class="fset-tags">' + (m.tags || []).map(t => '<i>' + esc(t) + '</i>').join('') + (m.locked ? '<i class="is-lock">' + RI.icon('lock') + 'اشتراک ' + esc(F.tier(m.tier)) + '</i>' : m.available ? '' : '<i class="is-off">الان در دسترس نیست</i>') + '</span></span></label>'; }).join('') + '</div></div>').join('');
+    const ring = (w, label, i) => { const left = Math.max(0, w.limit - w.used), pct = w.limit ? Math.min(100, Math.round(left / w.limit * 100)) : 0; return '<div class="fset-ring" style="--i:' + i + '"><svg viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="42"/><circle cx="50" cy="50" r="42" pathLength="100" style="--v:' + pct + '"/></svg><div><b>' + RI.fa(left) + '</b><span>از ' + RI.fa(w.limit) + ' · ' + label + '</span>' + (w.resetAt && w.used ? '<small>جا باز می‌شود ' + esc(F.reset(w.resetAt)) + '</small>' : '') + '</div></div>'; };
+    const win = st.window || { used: st.used || 0, limit: st.limit || 0 }, week = st.week || win;
+    const plans = (st.plans || []).map((p, i) => '<article class="fset-plan fset-plan--' + p.id + (st.plan === p.id ? ' is-current' : '') + '" style="--i:' + i + '"><span class="fset-plan__crest" aria-hidden="true">' + RI.icon(['zap', 'award', 'crown'][i] || 'crown') + '</span><h3>' + esc(p.name) + '<small>' + esc(p.title || '') + '</small></h3><p class="fset-plan__price"><b>' + esc(RI.priceToman(p.price)) + '</b><span>' + esc(p.period) + ' · ' + esc(RI.it(p.price)) + '</span></p><ul><li>' + RI.icon('check') + RI.fa(p.window) + ' پیام در هر ۵ ساعت</li><li>' + RI.icon('check') + RI.fa(p.week) + ' پیام در هفته</li><li>' + RI.icon('check') + esc(p.desc || '') + '</li></ul>' + (st.plan === p.id ? '<span class="fset-plan__badge">' + RI.icon('check') + 'اشتراک فعلی تو</span>' : '') + '<button type="button" class="btn ' + (i === 2 ? 'btn--primary' : 'btn--soft') + '" data-set-buy="' + p.id + '"' + (p.paused ? ' disabled' : '') + '>' + (p.paused ? 'فروش متوقف است' : st.plan === p.id ? 'تمدید یک ماه' : 'فعال کردن') + '</button></article>').join('');
     return '<form class="fset" data-fset novalidate>' +
-      '<section class="fset-card fset-card--wide" style="--i:0"><header><h2>' + RI.icon('sparkle') + 'مدل پیش‌فرض</h2><p>فندق محلی رایگان است و از سهمیه کم نمی‌کند. بقیهٔ مدل‌ها برای هر پیام به اندازهٔ برچسبشان از سهمیهٔ روزانه برمی‌دارند؛ «GPT Luna» برابر یک پیام است. در صفحهٔ گفت‌وگو هم برای هر پیام می‌توانی مدل را عوض کنی.</p></header><div class="fset-models">' + models + '</div></section>' +
+      '<section class="fset-card fset-card--wide" style="--i:0"><header><h2>' + RI.icon('sparkle') + 'مدل پیش‌فرض</h2><p>فندق محلی رایگان است و از سهمیه کم نمی‌کند. بقیهٔ مدل‌ها برای هر پیام به اندازهٔ برچسبشان از سهمیه برمی‌دارند؛ «GPT-6 Luna» برابر یک پیام است و بقیه از دو پیام شروع می‌شوند. مدل‌های قفل‌دار با اشتراک فندق یا اشتراک رزومیت باز می‌شوند. در صفحهٔ گفت‌وگو هم برای هر پیام می‌توانی مدل را عوض کنی.</p></header>' + models + '</section>' +
       '<section class="fset-card" style="--i:1"><header><h2>' + RI.icon('user') + 'شخصیت دستیار</h2></header>' +
       '<label class="fset-field"><span>اسمی که صدایش می‌کنی</span><input class="input" name="name" maxlength="20" value="' + esc(s.name) + '" autocomplete="off"></label>' +
       '<div class="fset-field"><span>لحن</span>' + seg('tone', s.tone, [['friendly', 'صمیمی'], ['formal', 'رسمی']]) + '</div>' +
       '<div class="fset-field"><span>طول جواب</span>' + seg('answer', s.length, [['short', 'کوتاه'], ['detailed', 'مفصل']]) + '</div>' +
       '<div class="fset-field"><span>وقتی فندق رزومه را تغییر می‌دهد</span>' + seg('edits', F.editMode(), [['ask', 'اول نشانم بده', 'eye'], ['auto', 'خودش انجام بدهد', 'zap']]) + '</div></section>' +
-      '<section class="fset-card" style="--i:2"><header><h2>' + RI.icon('chart') + 'سهمیهٔ امروز</h2></header><div class="fset-quota"><svg viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="42"/><circle cx="50" cy="50" r="42" pathLength="100" style="--v:' + pct + '"/></svg><div><b>' + RI.fa(Math.max(0, limit - used)) + '</b><span>پیام از ' + RI.fa(limit) + ' باقی مانده</span></div></div><p class="fset-note">' + (st.plan === 'free' ? 'حساب رایگان؛ با اشتراک یا خرید دستیار، سهمیهٔ روزانه بیشتر می‌شود.' : 'سهمیهٔ مشترک‌ها؛ هر روز نیمه‌شب به وقت تهران تازه می‌شود.') + ' فندق محلی و کلید خودت هیچ‌وقت از سهمیه کم نمی‌کنند.</p><a class="btn btn--soft btn--sm" href="' + RI.routeUrl('billing') + '" data-go="billing">' + RI.icon('crown') + 'اشتراک و دستیار</a></section>' +
-      '<section class="fset-card fset-card--wide" style="--i:3"><header><h2>' + RI.icon('key') + 'هوش مصنوعی خودت <em class="fset-cost is-free">رایگان</em></h2><p>با کلید خودت، پیام‌ها از سهمیهٔ روزانه کم نمی‌شوند و دستیار از حساب خودت جواب می‌دهد؛ هزینهٔ سرویس با خودت است. کلید رمزگذاری‌شده نگه داشته می‌شود و دوباره نمایش داده نمی‌شود.</p></header>' +
+      '<section class="fset-card" style="--i:2"><header><h2>' + RI.icon('chart') + 'سهمیهٔ پیام</h2><p>اشتراک تو: <b>' + esc(st.planName || 'رایگان') + '</b>' + (st.until ? ' تا ' + esc(new Date(st.until).toLocaleDateString('fa-IR')) : '') + '</p></header><div class="fset-quota">' + ring(win, '۵ ساعت اخیر', 0) + ring(week, 'هفتهٔ اخیر', 1) + '</div><p class="fset-note">هر پیام به اندازهٔ هزینهٔ مدلش از هر دو بازه کم می‌شود و ۵ ساعت یا ۷ روز بعد دوباره جا باز می‌کند. فندق محلی و کلید خودت هیچ‌وقت از سهمیه کم نمی‌کنند.' + (st.plan === 'free' ? ' اشتراک رزومیت ' + RI.fa(st.site?.window || 10) + ' پیام در ۵ ساعت و ' + RI.fa(st.site?.week || 40) + ' پیام در هفته با همهٔ مدل‌ها می‌دهد.' : '') + '</p></section>' +
+      '<section class="fset-card fset-card--wide fset-plans" id="fset-plans" style="--i:3"><header><h2>' + RI.icon('crown') + 'اشتراک‌های فندق</h2><p>فرق اشتراک‌ها در حجم پیام و مدل‌هایی است که باز می‌کنند؛ قوی‌ترین مدل‌ها (Claude Fable و Opus، GPT-6 Astra و Sol، Gemini 4 Argon) فقط در «کوروش» و اشتراک رزومیت هستند. پرداخت از کیف پول It است.</p></header><div class="fset-plan-grid">' + plans + '</div></section>' +
+      '<section class="fset-card fset-card--wide" style="--i:4"><header><h2>' + RI.icon('key') + 'هوش مصنوعی خودت <em class="fset-cost is-free">رایگان</em></h2><p>با کلید خودت، پیام‌ها از سهمیهٔ روزانه کم نمی‌شوند و دستیار از حساب خودت جواب می‌دهد؛ هزینهٔ سرویس با خودت است. کلید رمزگذاری‌شده نگه داشته می‌شود و دوباره نمایش داده نمی‌شود.</p></header>' +
       '<label class="fset-switch"><input type="checkbox" name="own"' + (own.enabled ? ' checked' : '') + '><span></span>از کلید خودم استفاده کن</label>' +
       '<div class="fset-own"' + (own.enabled ? '' : ' hidden') + '>' +
       '<label class="fset-field"><span>سرویس</span><select class="input" name="provider">' + data.providers.map(p => '<option value="' + p.id + '"' + (p.id === own.provider ? ' selected' : '') + '>' + esc(p.label) + '</option>').join('') + '</select></label>' +
@@ -40,7 +45,7 @@
       const host = view.querySelector('[data-fset-host]');
       let alive = true;
       const paint = () => { if (!alive) return; host.innerHTML = body(); wire(); };
-      Promise.all([RI.dashboardRequest('assistant/me'), F.refresh()]).then(([me]) => { data = me; paint(); }).catch(e => { host.innerHTML = '<p class="fset-wait">' + esc(e.message || 'تنظیمات دریافت نشد') + '</p>'; });
+      Promise.all([RI.dashboardRequest('assistant/me'), F.refresh()]).then(([me]) => { data = me; paint(); if ((RI.routeOpts?.tab || new URL(location.href).searchParams.get('tab')) === 'plans') host.querySelector('#fset-plans')?.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' }); }).catch(e => { host.innerHTML = '<p class="fset-wait">' + esc(e.message || 'تنظیمات دریافت نشد') + '</p>'; });
       function wire() {
         const form = host.querySelector('[data-fset]'); if (!form) return;
         const field = n => form.elements[n], key = () => field('key').value.trim();
@@ -62,6 +67,12 @@
           try { const r = await RI.dashboardRequest('assistant/me/test', { own: draft().own, ...(key() ? { key: key() } : {}) }); note('[data-set-test-status]', r.ok ? 'وصل شد: «' + r.reply + '»' : r.error, r.ok ? 'ok' : 'error'); }
           catch (err) { note('[data-set-test-status]', err.message, 'error'); }
         });
+        form.querySelectorAll('[data-set-buy]').forEach(b => b.addEventListener('click', async () => {
+          const p = (F.status?.plans || []).find(x => x.id === b.dataset.setBuy); if (!p) return;
+          b.disabled = true;
+          try { if (await RI.walletPurchase('assistant:' + p.id, 'اشتراک فندق «' + p.name + '»', p.price)) { await F.refresh(); data = await RI.dashboardRequest('assistant/me'); paint(); RI.toast('اشتراک «' + p.name + '» فعال شد', { kind: 'success' }); RI.pet?.cat?.play('celebrate'); } }
+          finally { b.disabled = false; }
+        }));
         form.querySelector('[data-set-forget]')?.addEventListener('click', async () => {
           try { const d = draft(); d.own.enabled = false; if (d.engine === 'own') d.engine = 'local'; data = await RI.dashboardRequest('assistant/me', { settings: d, key: null }); await F.refresh(); paint(); RI.toast('کلیدت حذف شد', { kind: 'info' }); }
           catch (err) { note('[data-set-test-status]', err.message, 'error'); }

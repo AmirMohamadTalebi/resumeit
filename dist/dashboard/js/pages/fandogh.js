@@ -141,11 +141,14 @@
       }
       function paintModels() {
         const box = $('[data-fs-models]'), list = F.status?.models || [];
-        box.innerHTML = '<header><b>کدام مدل جواب بدهد؟</b><small>هزینه برای هر پیام است؛ GPT Luna برابر یک پیام.</small></header>' + list.map((m, i) => '<button type="button" class="fs-modelcard' + (m.id === current().model ? ' is-on' : '') + '" data-fs-pick="' + m.id + '" style="--i:' + i + '"' + (m.available ? '' : ' disabled') + '><span><b>' + esc(m.label) + '</b><small>' + esc(m.note || '') + '</small><span class="fset-tags">' + (m.tags || []).map(t => '<i>' + esc(t) + '</i>').join('') + '</span></span><em class="' + (m.cost ? '' : 'is-free') + '">' + (m.available ? F.cost(m) : 'در دسترس نیست') + '</em></button>').join('') + '<a href="' + RI.routeUrl('assistant') + '" data-go="assistant">' + RI.icon('sliders') + 'مدل پیش‌فرض و کلید خودت</a>';
+        // Grouped by maker; a model above the person's plan shows the plan that opens it and leads to the plans.
+        let i = 0;
+        box.innerHTML = '<header><b>کدام مدل جواب بدهد؟</b><small>هزینه برای هر پیام است؛ GPT-6 Luna برابر یک پیام. اشتراک تو: ' + esc(F.status?.planName || 'رایگان') + '</small></header>' + F.groups(list).map(([group, items]) => '<div class="fs-modelgroup"><b class="fs-modelgroup__name">' + esc(group) + '</b>' + items.map(m => '<button type="button" class="fs-modelcard' + (m.id === current().model ? ' is-on' : '') + (m.locked ? ' is-locked' : '') + '" data-fs-pick="' + m.id + '" style="--i:' + (i++) + '"' + (m.available || m.locked ? '' : ' disabled') + '><span><b>' + esc(m.label) + '</b><small>' + esc(m.note || '') + '</small><span class="fset-tags">' + (m.tags || []).map(t => '<i>' + esc(t) + '</i>').join('') + '</span></span><em class="' + (m.cost ? '' : 'is-free') + (m.locked ? ' is-lock' : '') + '">' + (m.locked ? RI.icon('lock') + F.tier(m.tier) : m.available ? F.cost(m) : 'در دسترس نیست') + '</em></button>').join('') + '</div>').join('') + '<a href="' + RI.routeUrl('assistant') + '" data-go="assistant">' + RI.icon('sliders') + 'اشتراک‌ها، مدل پیش‌فرض و کلید خودت</a>';
       }
       function paintQuota() {
-        const s = F.status; if (!s) return; const m = modelOf(current().model);
-        $('[data-fs-quota]').innerHTML = '<i style="--q:' + Math.round(Math.max(0, s.limit - s.used) / (s.limit || 1) * 100) + '%"></i><span>' + RI.fa(Math.max(0, s.limit - s.used)) + ' پیام مانده</span><small>' + (m.cost ? 'این پیام ' + F.cost(m) : 'این مدل رایگان است') + '</small>';
+        const s = F.status; if (!s) return; const m = modelOf(current().model), w = s.window || { used: s.used, limit: s.limit }, k = s.week || w;
+        $('[data-fs-quota]').innerHTML = '<i style="--q:' + Math.round(Math.max(0, w.limit - w.used) / (w.limit || 1) * 100) + '%"></i><span>' + RI.fa(s.remaining) + ' پیام مانده</span><small>' + (m.cost ? 'این پیام ' + F.cost(m) + ' · هفته ' + RI.fa(Math.max(0, k.limit - k.used)) : 'این مدل رایگان است') + '</small>';
+        $('[data-fs-quota]').title = '۵ ساعت: ' + RI.fa(w.used) + ' از ' + RI.fa(w.limit) + (w.resetAt ? ' (جا باز می‌شود ' + F.reset(w.resetAt) + ')' : '') + ' — هفته: ' + RI.fa(k.used) + ' از ' + RI.fa(k.limit);
       }
       function paintSend() {
         const b = $('[data-fs-send]'); b.classList.toggle('is-stop', !!busy); b.innerHTML = busy ? RI.icon('x') : RI.icon('chevL'); b.setAttribute('aria-label', busy ? 'توقف جواب' : 'فرستادن');
@@ -202,6 +205,7 @@
         else if (t.dataset.fsPin) { const c = chats.find(x => x.id === t.dataset.fsPin); if (c) { c.pinned = !c.pinned; save(); paintRail(); } }
         else if (t.dataset.fsSuggest) { if (/آگهی/.test(t.dataset.fsSuggest)) { input.value = COMMANDS.find(c => c[0] === 'آگهی')[2]; grow(); input.focus(); } else send(t.dataset.fsSuggest); }
         else if (t.matches('[data-fs-model]')) { paintModels(); const box = $('[data-fs-models]'); box.hidden = !box.hidden; }
+        else if (t.dataset.fsPick && modelOf(t.dataset.fsPick).locked) { const m = modelOf(t.dataset.fsPick); RI.toast('«' + m.label + '» با اشتراک «' + F.tier(m.tier) + '» فندق یا اشتراک رزومیت باز می‌شود', { kind: 'info' }); RI.go('assistant', { tab: 'plans' }); }
         else if (t.dataset.fsPick) { current().model = t.dataset.fsPick; save(); $('[data-fs-models]').hidden = true; paintModel(); paintQuota(); paintRail(); RI.toast('از این به بعد در این گفت‌وگو «' + modelOf(t.dataset.fsPick).label + '» جواب می‌دهد', { kind: 'info' }); }
         else if (t.dataset.fsMode) { F.setEditMode(t.dataset.fsMode); paintModel(); RI.toast(t.dataset.fsMode === 'auto' ? 'فندق تغییرها را خودش انجام می‌دهد و می‌توانی برگردانی' : 'فندق اول تغییرها را نشانت می‌دهد', { kind: 'info' }); }
         else if (t.dataset.fsPal) pick(Number(t.dataset.fsPal));
