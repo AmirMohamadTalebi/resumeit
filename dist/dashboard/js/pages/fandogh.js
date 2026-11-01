@@ -265,7 +265,11 @@
       paint(); grow(); paintFolds();
       const onResize = () => { paintFolds(); paintInspector(); };
       const sizes = [matchMedia('(min-width: 900px)'), matchMedia('(min-width: 1280px)')]; sizes.forEach(q => q.addEventListener('change', onResize));
-      F.refresh().then(() => { if (!alive) return; const c = current(); if (!c.messages.length && !chats.includes(c)) c.model = F.status.engine || 'local'; paint(); }).catch(() => {});
+      F.refresh().then(() => { if (!alive) return; const c = current(); if (!c.messages.length && !chats.includes(c)) c.model = F.status.engine || 'local'; paint();
+        // A question asked from the home page starts a fresh conversation here.
+        let pending = ''; try { pending = sessionStorage.getItem('ri-fandogh-pending') || ''; sessionStorage.removeItem('ri-fandogh-pending'); } catch {}
+        if (pending) { if (current().messages.length) { chat = fresh(); paint(); } send(pending); }
+      }).catch(() => {});
       return () => { alive = false; busy?.abort(); document.removeEventListener('keydown', keys); document.removeEventListener('ri:fandogh-status', onStatus); sizes.forEach(q => q.removeEventListener('change', onResize)); clearTimeout(saveTimer); F.store(key(), JSON.stringify(chats.slice(0, 40))); };
     }
   });
