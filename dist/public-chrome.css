@@ -191,7 +191,7 @@
 /* Signed-in header: «ورود» and «شروع رایگان» give way to one glass capsule — the avatar with a live dot, a greeting
    and the way back to the dashboard — that arrives with a soft pop. */
 .ln-head.is-signed .ln-head__actions>.ln-head__cta,.ln-head.is-signed .ln-head__sheet-cta{display:none}
-.ln-head .public-account{gap:0;padding:4px;border-radius:999px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);box-shadow:inset 0 1px 0 rgba(255,255,255,.18);animation:pc-capsule .7s var(--pc-spring) both}
+.ln-head .public-account{gap:0;padding:4px;border-radius:999px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);box-shadow:inset 0 1px 0 rgba(255,255,255,.18);animation:pc-capsule .7s var(--pc-spring) backwards}
 .ln-head.is-light .public-account{background:rgba(255,255,255,.72);border-color:rgba(15,40,60,.1);box-shadow:0 8px 22px rgba(15,40,60,.08)}
 .ln-head .public-account>[data-session-link]{display:inline-flex;align-items:center;gap:10px;min-height:40px;padding:4px 14px 4px 10px;margin:0;border:0;border-radius:999px;background:transparent;color:inherit;box-shadow:none;text-decoration:none;transition:background .3s}
 .ln-head .public-account>[data-session-link]:is(:hover,:focus-visible){background:#f0bd52;color:#2b1a05;border:0;transform:none}
@@ -311,3 +311,43 @@
 @keyframes sc-cat-hero{from{opacity:0;translate:-30% 40%;rotate:-12deg}}
 @media (max-width:1023px){.lg-hero__cat{display:none}}
 @media (prefers-reduced-motion:reduce){.lg-hero__cat{animation:none}}
+
+/* ---------- دسترسی سریع (public header): night-sky card with tiles and rows ---------- */
+html body .public-account>.public-account__menu.pa-quick{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;width:min(340px,calc(100vw - 28px));max-block-size:calc(100dvh - 100px);padding:0 10px 10px;overflow-y:auto;overscroll-behavior:contain;border:1px solid rgba(240,189,82,.24);border-radius:24px;background-color:#11212c;background-image:radial-gradient(120% 50% at 100% 0,rgba(240,189,82,.16),transparent 60%),linear-gradient(170deg,#0f1d27,#1b3242);color:#eaf2f6;box-shadow:0 34px 70px -30px rgba(5,12,18,.9),inset 0 1px 0 rgba(255,255,255,.06);-webkit-backdrop-filter:none;backdrop-filter:none;scrollbar-width:thin;scrollbar-color:rgba(240,189,82,.35) transparent;transform-origin:20% 0}
+html body .public-account>.public-account__menu.pa-quick[hidden]{display:none}
+html body .pa-quick>.public-account__person{position:relative;isolation:isolate;grid-column:1/-1;display:flex;align-items:center;gap:12px;margin:0 -10px 4px;padding:16px;overflow:hidden;border:0;border-bottom:1px solid rgba(255,255,255,.08);border-radius:0;background:transparent}
+html body .pa-quick .pa-sky{position:absolute;inset:0;z-index:-1;background-image:radial-gradient(1px 1px at 14% 30%,#fff 50%,transparent),radial-gradient(1px 1px at 58% 72%,#fff 50%,transparent),radial-gradient(1.4px 1.4px at 82% 24%,#f0bd52 50%,transparent),radial-gradient(1px 1px at 36% 12%,#8ec5d6 50%,transparent);opacity:.6;animation:pa-twinkle 4s ease-in-out infinite alternate}
+html body .pa-quick>.public-account__person img{width:50px;height:50px;border-radius:17px;object-fit:cover;background-color:#1f3646;box-shadow:0 0 0 2px #f0bd52,0 12px 24px -12px rgba(240,189,82,.8)}
+html body .pa-quick>.public-account__person strong{display:block;font-size:15px;font-weight:800;color:#fff}
+html body .pa-quick>.public-account__person small{font-size:12px;font-weight:700;color:#f3d9a0}
+html body .pa-quick>a{position:relative;display:flex;align-items:center;gap:10px;min-height:42px;margin:0;padding:7px 9px;border:0;border-radius:14px;background-color:transparent;color:#eaf2f6;font-size:13.5px;font-weight:700;text-decoration:none;box-shadow:none;animation:pa-row .45s calc(.06s + var(--i,0)*.03s) cubic-bezier(.2,.8,.2,1) backwards;transition:background-color .2s,translate .35s cubic-bezier(.3,1.4,.5,1)}
+html body .pa-quick>a+a{margin-block-start:0}
+html body .pa-quick>a.pa-row{grid-column:1/-1}
+html body .pa-quick>a.pa-row+a.pa-row{margin-block-start:0}
+html body .pa-quick>a.pa-tile{flex-direction:column;justify-content:center;gap:6px;min-height:76px;padding:10px 4px;border-radius:16px;background-color:rgba(255,255,255,.05);box-shadow:inset 0 0 0 1px rgba(255,255,255,.07);font-size:12.5px;text-align:center;animation:pa-tile .5s calc(.05s + var(--i,0)*.04s) cubic-bezier(.3,1.4,.5,1) backwards}
+html body .public-account>.pa-quick>a:is(:hover,:focus-visible){background-color:#2c4555;color:#fff;translate:-3px 0}
+html body .public-account>.pa-quick>a.pa-tile:is(:hover,:focus-visible){translate:0 -3px}
+html body .public-account>.pa-quick>:is(a,button):focus-visible{outline:2px solid #f0bd52;outline-offset:1px}
+html body .pa-quick .pa-ico{display:grid;place-items:center;flex:none;width:32px;height:32px;border-radius:11px;background-color:rgba(255,255,255,.08);color:#8ec5d6;font-style:normal;transition:transform .45s cubic-bezier(.3,1.4,.5,1)}
+html body .pa-quick .pa-ico svg,html body .public-account>.pa-quick>a:is(:hover,:focus-visible) .pa-ico svg{width:16px;height:16px;color:inherit;background:none}
+html body .public-account>.pa-quick>a:is(:hover,:focus-visible) .pa-ico{transform:rotate(-8deg) scale(1.08);background-color:rgba(255,255,255,.12);color:inherit}
+html body .pa-quick .pa-tile .pa-ico{width:36px;height:36px;border-radius:12px}
+html body .pa-quick .pa-tile.is-sky .pa-ico{background-color:rgba(142,197,214,.16);color:#8ec5d6}
+html body .pa-quick .pa-tile.is-teal .pa-ico{background-color:rgba(95,195,154,.16);color:#7fd6b2}
+html body .pa-quick .pa-tile.is-rose .pa-ico{background-color:rgba(240,138,108,.16);color:#f4a48c}
+html body .pa-quick .pa-tile.is-gold .pa-ico{background-color:rgba(240,189,82,.18);color:#f0bd52}
+html body .pa-quick .public-account__label{position:static;display:block;color:inherit;text-decoration:none}
+html body .pa-quick .public-account__label::after{display:none}
+html body .pa-quick .pa-text{display:grid;min-width:0;line-height:1.5}
+html body .pa-quick .pa-text small{overflow:hidden;font-size:11.5px;font-weight:500;color:#a9bfcc;white-space:nowrap;text-overflow:ellipsis}
+html body .pa-quick .pa-sec{grid-column:1/-1;margin:8px 8px 0;font-size:11.5px;font-weight:800;color:#8fa8b6}
+html body .public-account>.pa-quick>.public-account__logout{grid-column:1/-1;display:flex;align-items:center;gap:10px;min-height:42px;margin:6px 0 0;padding:7px 9px;border:0;border-top:1px solid rgba(255,255,255,.1);border-radius:0 0 14px 14px;background-color:transparent;color:#ffb4a0;font:inherit;font-size:13.5px;font-weight:700;text-align:start;cursor:pointer;animation:pa-row .45s calc(.06s + var(--i,0)*.03s) cubic-bezier(.2,.8,.2,1) backwards}
+html body .public-account>.pa-quick>.public-account__logout .pa-ico{background-color:rgba(240,138,108,.14);color:#ffb4a0}
+html body .public-account>.pa-quick>.public-account__logout:is(:hover,:focus-visible){background-color:#803b4b;color:#fff;border-radius:14px}
+html body .public-account>.public-account__menu.pa-quick:not([hidden]){animation:pa-in .5s cubic-bezier(.3,1.4,.5,1) both}
+@keyframes pa-in{from{opacity:0;transform:translateY(-10px) scale(.9);filter:blur(6px)}}
+@keyframes pa-row{from{opacity:0;transform:translateX(14px)}}
+@keyframes pa-tile{from{opacity:0;transform:translateY(12px) scale(.85)}}
+@keyframes pa-twinkle{to{opacity:1}}
+@media (prefers-reduced-motion:reduce){html body .public-account>.public-account__menu.pa-quick,html body .pa-quick *{animation:none!important;transition:none!important}}
+@media (max-width:760px){html body .public-account>.public-account__menu.pa-quick{position:fixed;top:66px;right:0;left:0;width:auto;max-width:none;margin:0;max-block-size:calc(100dvh - 90px)}}

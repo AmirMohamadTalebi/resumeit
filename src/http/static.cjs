@@ -30,7 +30,7 @@ const assetRevision=version+'-'+assetHash.digest('hex').slice(0,16);
 const bundles=new Map();
 for(const [url,files] of [
   ['/dashboard/js/workspace.js',['icons','core','ui','data','imported-templates','resume-templates','state','api','account','projects','support-files','preview','template-shabtab','commerce','workspace-tools','reset-ui','notification-channels','charts','advisor-brain','notice-center','app','fandogh','assistant-edits','fandogh-core','assistant-pet','coral','toolbar','liquid'].map(n=>'dashboard/js/'+n+'.js').concat('templates/vista-runtime.js')],
-  ['/dashboard/css/workspace.css',['tokens','base','shell','components','preview','pages','charts','abgoon','performance','resume-studio','liquid','nova','fandogh','pet','fandogh-studio','night','hub','hub-publish','notice-center'].map(n=>'dashboard/css/'+n+'.css')]
+  ['/dashboard/css/workspace.css',['tokens','base','shell','components','preview','pages','charts','abgoon','performance','resume-studio','liquid','nova','fandogh','pet','fandogh-studio','night','hub','hub-publish','notice-center','quick-access'].map(n=>'dashboard/css/'+n+'.css')]
 ])bundles.set(url,Buffer.from(files.map(file=>{
   let source=localFiles.readFileSync(path.join(root,file),'utf8');
   if(file.endsWith('.css'))source=source.replace(/url\((["']?)(?!data:|https?:|\/\/)([^)"'?#]+)\1\)/g,(_,quote,url)=>`url(${quote}${path.posix.resolve('/',path.posix.dirname(file),url)}${quote})`);

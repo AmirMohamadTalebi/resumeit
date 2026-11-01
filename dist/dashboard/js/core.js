@@ -178,17 +178,24 @@
     opts = opts || {};
     activeMenu?.close();
     const m = document.createElement('div');
-    m.className = 'menu';
+    m.className = 'menu' + (opts.className ? ' ' + opts.className : '');
     m.setAttribute('role', 'menu');
     m.id='menu-'+RI.uid();anchor.setAttribute('aria-expanded','true');anchor.setAttribute('aria-controls',m.id);
+    if (opts.label) m.setAttribute('aria-label', opts.label);
+    if (opts.head) { const h = document.createElement('div'); h.className = 'menu-head'; h.setAttribute('role', 'presentation'); h.innerHTML = opts.head; m.appendChild(h); }
+    // Items: 'hr', { section }, or a button; { tile: true } ones gather in a grid, { hint, badge } add a second line and a count.
+    let tiles = null, n = 0;
     items.forEach((it) => {
-      if (it === 'hr') { m.appendChild(document.createElement('hr')); return; }
+      if (!it) return;
+      if (it === 'hr') { tiles = null; m.appendChild(document.createElement('hr')); return; }
+      if (it.section) { tiles = null; const t = document.createElement('p'); t.className = 'menu-sec'; t.setAttribute('role', 'presentation'); t.textContent = it.section; m.appendChild(t); return; }
       const b = document.createElement('button');
-      b.type = 'button'; b.setAttribute('role', 'menuitem');
-      if (it.danger) b.className = 'is-danger';
-      b.innerHTML = (it.icon ? RI.icon(it.icon) : '') + '<span>' + RI.esc(it.label) + '</span>';
+      b.type = 'button'; b.setAttribute('role', 'menuitem'); b.style.setProperty('--i', n++);
+      b.className = [it.danger && 'is-danger', it.tile && 'menu-tile', it.tone && 'is-' + it.tone].filter(Boolean).join(' ');
+      b.innerHTML = (it.icon ? '<i class="menu-ico">' + RI.icon(it.icon) + '</i>' : '') + '<span>' + RI.esc(it.label) + (it.hint ? '<small>' + RI.esc(it.hint) + '</small>' : '') + '</span>' + (it.badge ? '<em class="menu-badge">' + RI.esc(it.badge) + '</em>' : '');
       b.addEventListener('click', () => { close(); it.onClick && it.onClick(); });
-      m.appendChild(b);
+      if (it.tile) { if (!tiles) { tiles = document.createElement('div'); tiles.className = 'menu-tiles'; tiles.setAttribute('role', 'presentation'); m.appendChild(tiles); } tiles.appendChild(b); }
+      else { tiles = null; m.appendChild(b); }
     });
     document.body.appendChild(m);
     const r = anchor.getBoundingClientRect();

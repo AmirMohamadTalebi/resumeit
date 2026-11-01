@@ -1,0 +1,43 @@
+/* ---------- دسترسی سریع: the account button's night-sky panel ---------- */
+html body .menu.qa-menu{--qa-gold:#f0bd52;width:min(340px,calc(100vw - 16px));max-height:calc(100dvh - 16px);padding:0 10px 10px;overflow:auto;overscroll-behavior:contain;border:1px solid rgba(240,189,82,.22);border-radius:24px;background-color:#11212c;background-image:radial-gradient(120% 50% at 100% 0,rgba(240,189,82,.15),transparent 60%),linear-gradient(170deg,#0f1d27,#1b3242);color:#eaf2f6;box-shadow:0 34px 70px -30px rgba(5,12,18,.9),inset 0 1px 0 rgba(255,255,255,.06);scrollbar-width:thin;scrollbar-color:rgba(240,189,82,.35) transparent;transform-origin:30% 100%;animation:qa-in .5s cubic-bezier(.3,1.4,.5,1) both}
+.qa-menu .menu-head{position:relative;isolation:isolate;display:flex;align-items:center;gap:12px;margin:0 -10px 10px;padding:16px 16px 14px;overflow:hidden;border-bottom:1px solid rgba(255,255,255,.08)}
+.qa-sky{position:absolute;inset:0;z-index:-1;background-image:radial-gradient(1px 1px at 14% 30%,#fff 50%,transparent),radial-gradient(1px 1px at 58% 72%,#fff 50%,transparent),radial-gradient(1.4px 1.4px at 82% 24%,#f0bd52 50%,transparent),radial-gradient(1px 1px at 36% 12%,#8ec5d6 50%,transparent);opacity:.6;animation:qa-twinkle 4s ease-in-out infinite alternate}
+.qa-avatar{flex:none;width:52px;height:52px;border-radius:18px;object-fit:cover;background-color:#1f3646;box-shadow:0 0 0 2px var(--qa-gold),0 12px 24px -12px rgba(240,189,82,.8);animation:qa-pop .6s .1s cubic-bezier(.3,1.4,.5,1) backwards}
+.qa-who{display:grid;gap:1px;min-width:0}
+.qa-who b{overflow:hidden;font-size:15px;font-weight:800;color:#fff;white-space:nowrap;text-overflow:ellipsis}
+.qa-who small{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:700;color:#f3d9a0}
+.qa-who small svg{width:13px;height:13px}
+.qa-url{overflow:hidden;font-size:11.5px;color:#9fb6c3;white-space:nowrap;text-overflow:ellipsis;text-align:right}
+.qa-menu .menu-tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-bottom:4px}
+html body .qa-menu button[role=menuitem]{position:relative;display:flex;align-items:center;gap:10px;width:100%;min-height:44px;padding:7px 9px;border:0;border-radius:14px;background-color:transparent;color:#eaf2f6;font:inherit;font-size:13.5px;font-weight:700;text-align:start;cursor:pointer;animation:qa-row .45s calc(.08s + var(--i,0)*.03s) cubic-bezier(.2,.8,.2,1) backwards;transition:background-color .2s,translate .35s cubic-bezier(.3,1.4,.5,1)}
+html body .qa-menu button[role=menuitem]:hover,html body .qa-menu button[role=menuitem]:focus-visible{background-color:#2c4555;translate:-3px 0}
+html body .qa-menu button[role=menuitem]:focus-visible{outline:2px solid var(--qa-gold);outline-offset:1px}
+.qa-menu button>span{display:grid;flex:1;min-width:0}
+.qa-menu button small{overflow:hidden;font-size:11.5px;font-weight:500;color:#a9bfcc;white-space:nowrap;text-overflow:ellipsis}
+.qa-menu .menu-ico{display:grid;place-items:center;flex:none;width:32px;height:32px;border-radius:11px;background-color:rgba(255,255,255,.08);color:#8ec5d6;transition:transform .45s cubic-bezier(.3,1.4,.5,1),background-color .25s}
+html body .qa-menu .menu-ico svg{width:16px;height:16px;color:inherit}
+.qa-menu button:hover .menu-ico{transform:rotate(-8deg) scale(1.08)}
+html body .qa-menu .menu-tile{flex-direction:column;justify-content:center;gap:6px;min-height:76px;padding:10px 4px;border-radius:16px;background-color:rgba(255,255,255,.05);box-shadow:inset 0 0 0 1px rgba(255,255,255,.07);font-size:12.5px;text-align:center;animation:qa-tile .5s calc(.06s + var(--i,0)*.04s) cubic-bezier(.3,1.4,.5,1) backwards}
+html body .qa-menu .menu-tile:hover,html body .qa-menu .menu-tile:focus-visible{background-color:#2c4555;translate:0 -3px}
+.qa-menu .menu-tile .menu-ico{width:36px;height:36px;border-radius:12px}
+.qa-menu .menu-tile.is-sky .menu-ico{background-color:rgba(142,197,214,.16);color:#8ec5d6}
+.qa-menu .menu-tile.is-teal .menu-ico{background-color:rgba(95,195,154,.16);color:#7fd6b2}
+.qa-menu .menu-tile.is-rose .menu-ico{background-color:rgba(240,138,108,.16);color:#f4a48c}
+.qa-menu .menu-tile.is-gold .menu-ico{background-color:rgba(240,189,82,.18);color:var(--qa-gold)}
+.qa-menu .menu-tile:hover .menu-ico{transform:translateY(-2px) scale(1.1)}
+.qa-menu .menu-sec{margin:10px 8px 4px;font-size:11.5px;font-weight:800;letter-spacing:.02em;color:#8fa8b6}
+.qa-menu .menu-badge{display:grid;place-items:center;min-width:22px;height:22px;padding:0 6px;border-radius:99px;background-color:var(--qa-gold);color:#1b2a33;font-size:11.5px;font-style:normal;font-weight:800;animation:qa-pop .5s .3s cubic-bezier(.3,1.4,.5,1) backwards}
+.qa-menu hr{margin:8px 4px;border:0;border-top:1px solid rgba(255,255,255,.1)}
+html body .qa-menu button.is-danger{color:#ffb4a0}
+html body .qa-menu button.is-danger .menu-ico{background-color:rgba(240,138,108,.14);color:#ffb4a0}
+html body .qa-menu button.is-danger:hover{background-color:#4a2f2a}
+@keyframes qa-in{from{opacity:0;transform:translateY(14px) scale(.9);filter:blur(6px)}}
+@keyframes qa-row{from{opacity:0;transform:translateX(14px)}}
+@keyframes qa-tile{from{opacity:0;transform:translateY(12px) scale(.85)}}
+@keyframes qa-pop{from{transform:scale(.3);opacity:0}}
+@keyframes qa-twinkle{to{opacity:1}}
+@media (prefers-reduced-motion:reduce){html body .menu.qa-menu,html body .qa-menu *{animation:none!important;transition:none!important}}
+html body .qa-menu.menu[role=menu] button[role=menuitem]>span{display:grid;flex:1;min-width:0;line-height:1.5;text-decoration:none}
+html body .qa-menu.menu[role=menu] button[role=menuitem].menu-tile>span{flex:none}
+html body .qa-menu.menu[role=menu] button[role=menuitem]{min-height:42px;margin:0}
+html body .qa-menu.menu[role=menu]>button+button{margin-top:4px}
