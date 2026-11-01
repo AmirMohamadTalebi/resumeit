@@ -42,7 +42,7 @@ async function status(database,userId,config,me){
   const toman=rial=>Math.round(rial)/10;
   return {plan:access.plan,planName:RI.ASSISTANT_PLANS[access.plan]?.name||(access.plan==='subscription'?'اشتراک رزومیت':'رایگان'),level:access.level,subscription:access.subscription,until:access.until,
     wallet:{toman:toman(wallet.balance),tokens:Math.floor(wallet.balance/token),tokenToman:Math.round(token/10*1e6)/1e6,ledger:wallet.ledger.map(x=>({...x,toman:toman(x.delta),tokens:x.kind==='usage'?-Math.round((x.input+x.output)*(1+bill.markup/100)):Math.round(x.delta/token)}))},
-    billing:{markup:bill.markup,dollar:bill.dollar,welcome:bill.welcome,site:bill.starter?.subscription??RI.ASSISTANT_SITE.credit,topups:RI.FANDOGH_TOPUPS},tiers:RI.ASSISTANT_TIERS,plans,enabled:settings.enabled,ai:models.some(m=>m.id!=='local'&&m.available),smalltalk:!!settings.ai.smalltalk,name:me.settings.name,own:!!userAssistant.runtime(me.settings,me.key),models,engine};
+    billing:{markup:bill.markup,dollar:bill.dollar,welcome:bill.welcome,site:bill.starter?.subscription??RI.ASSISTANT_SITE.credit,topups:RI.FANDOGH_TOPUPS},tiers:RI.ASSISTANT_TIERS,plans,enabled:settings.enabled,ai:models.some(m=>m.id!=='local'&&m.available),smalltalk:!!settings.ai.smalltalk,name:me.settings.name,suggest:me.settings.suggest!==false,own:!!userAssistant.runtime(me.settings,me.key),models,engine};
 }
 // The brain and the model get the story only: contact values become "filled or not", images become a flag.
 function content(raw){

@@ -30,6 +30,8 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
   assert.match(await page.locator('.fs-msg--bot .fs-badge').first().innerText(),/فندق محلی/);
   assert.match(await page.locator('[data-fs-quota]').innerText(),/۵٬?۰۰۰ تومان[\s\S]*توکن/,'the pill shows the Fandogh wallet');
   assert.equal(await page.locator('.fs-chat').count(),1);assert.match(await page.locator('.fs-chat.is-on').innerText(),/امتیاز رزومه/);
+  // Suggested next questions sit above the input box, not under the answer.
+  assert.equal(await page.locator('.fs-msg--bot .fs-follow').count(),0);assert(await page.locator('.fs-composer [data-fs-chips] [data-fs-suggest]').count()>=1,'suggestions above the input');
   await page.waitForTimeout(500);await page.screenshot({path:path.join(out,'answer.png')});
   // Inspector: switching a section off is reflected; conversations survive a reload; Ctrl+K starts a new one.
   await page.locator('[data-fs-only=projects]').uncheck();assert.equal(await page.evaluate(()=>RI.Fandogh.content(new Set(['skills'])).projects.length),0);

@@ -141,7 +141,7 @@
     const log = root.querySelector('[data-pet-log]'), words = esc(text).split(/(\s+)/);
     const body = who === 'bot' && !calm.matches ? words.map((w, i) => /^\s+$/.test(w) ? w.replace(/\n/g, '<br>') : '<span class="pet-w" style="--i:' + Math.min(i >> 1, 60) + '">' + w + '</span>').join('') : esc(text).replace(/\n/g, '<br>');
     log.insertAdjacentHTML('beforeend', '<div class="pet-msg pet-msg--' + who + '" data-msg="' + m.id + '">' + (who === 'bot' ? '<span class="pet-msg__av">' + AVATAR + '</span>' : '') + '<div class="pet-msg__body"><p>' + body + '</p>' + (actions.length ? '<div class="pet__acts">' + actions.map((a, i) => '<button type="button" class="pet__act pet__act--' + a.kind + '" data-msg-act="' + m.id + ':' + i + '" style="--i:' + i + '">' + esc(a.label) + '</button>').join('') + '</div>' : '') + '</div></div>');
-    root.querySelector('[data-pet-chips]').innerHTML = (follow || []).map((f, i) => '<button type="button" class="pet__chip" data-ask="' + esc(f) + '" style="--i:' + i + '">' + esc(f) + '</button>').join('');
+    root.querySelector('[data-pet-chips]').innerHTML = (status?.suggest === false ? [] : follow || []).map((f, i) => '<button type="button" class="pet__chip" data-ask="' + esc(f) + '" style="--i:' + i + '">' + esc(f) + '</button>').join('');
     log.scrollTo({ top: log.scrollHeight, behavior: calm.matches ? 'auto' : 'smooth' });
     history.push({ role: who === 'me' ? 'user' : 'assistant', text });
     if (history.length > 12) history.splice(0, history.length - 12);

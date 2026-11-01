@@ -24,7 +24,8 @@
       '<label class="fset-field"><span>اسمی که صدایش می‌کنی</span><input class="input" name="name" maxlength="20" value="' + esc(s.name) + '" autocomplete="off"></label>' +
       '<div class="fset-field"><span>لحن</span>' + seg('tone', s.tone, [['friendly', 'صمیمی'], ['formal', 'رسمی']]) + '</div>' +
       '<div class="fset-field"><span>طول جواب</span>' + seg('answer', s.length, [['short', 'کوتاه'], ['detailed', 'مفصل']]) + '</div>' +
-      '<div class="fset-field"><span>وقتی فندق رزومه را تغییر می‌دهد</span>' + seg('edits', F.editMode(), [['ask', 'اول نشانم بده', 'eye'], ['auto', 'خودش انجام بدهد', 'zap']]) + '</div></section>' +
+      '<div class="fset-field"><span>وقتی فندق رزومه را تغییر می‌دهد</span>' + seg('edits', F.editMode(), [['ask', 'اول نشانم بده', 'eye'], ['auto', 'خودش انجام بدهد', 'zap']]) + '</div>' +
+      '<label class="fset-switch"><input type="checkbox" name="suggest"' + (s.suggest !== false ? ' checked' : '') + '><span></span>پیشنهادهای بعدی بالای جعبهٔ پیام</label></section>' +
       '<section class="fset-card fset-wallet" id="fset-wallet" style="--i:2"><header><h2>' + RI.icon('card') + 'کیف پول فندق</h2><p>اشتراک تو: <b>' + esc(st.planName || 'رایگان') + '</b>' + (st.until ? ' تا ' + esc(new Date(st.until).toLocaleDateString('fa-IR')) : '') + '</p></header>' +
       '<div class="fset-balance"><span class="fset-balance__orb" aria-hidden="true">' + RI.icon('card') + '</span><div><b data-count="' + Math.floor(w.toman) + '">' + F.money(w.toman) + '</b><span>' + F.tokens(w.tokens) + '</span></div></div>' +
       '<p class="fset-note">هر جواب به اندازهٔ توکن‌هایی که واقعاً مصرف کرده با قیمت همان مدل' + (b.markup ? ' (به‌اضافهٔ ' + RI.fa(b.markup) + '٪ هزینهٔ خدمات)' : '') + ' از این کیف پول کم می‌شود: هر ۱٬۰۰۰ توکن مصرفی ' + RI.fa(1000 * (1 + (b.markup || 0) / 100)) + ' توکن حساب می‌شود و هر توکن به قیمت همان مدل است. موجودی بالا به توکن GPT-6 Luna است. فندق محلی و کلید خودت رایگان‌اند.</p>' +
@@ -56,7 +57,7 @@
       function wire() {
         const form = host.querySelector('[data-fset]'); if (!form) return;
         const field = n => form.elements[n], key = () => field('key').value.trim();
-        const draft = () => ({ name: field('name').value.trim(), tone: field('tone').value, length: field('answer').value, engine: field('engine').value || 'local', own: { enabled: field('own').checked, provider: field('provider').value, model: field('model').value.trim(), url: field('url').value.trim() } });
+        const draft = () => ({ name: field('name').value.trim(), tone: field('tone').value, length: field('answer').value, suggest: field('suggest').checked, engine: field('engine').value || 'local', own: { enabled: field('own').checked, provider: field('provider').value, model: field('model').value.trim(), url: field('url').value.trim() } });
         const note = (sel, text, kind) => { const el = form.querySelector(sel); el.textContent = text; el.dataset.kind = kind || ''; };
         form.addEventListener('change', e => {
           if (e.target.name === 'own') { form.querySelector('.fset-own').hidden = !e.target.checked; }

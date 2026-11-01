@@ -36,6 +36,11 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
   // Forgetting the key goes back to local Fandogh, which is free too.
   view=(await send('/api/dashboard/assistant/me',{settings:settings({name:'پشمک',engine:'local',own:{enabled:false}}),key:null})).body;assert.equal(view.key.set,false);
   const back=(await send('/api/dashboard/assistant/ask',{question:'معرفی‌ام را چطور بنویسم؟',content,history:[]})).body;assert.equal(back.reply.source,'local');assert.equal((await db.fandoghWallet(target)).balance,before);
+  // Suggestions above the input can be switched off, and the status says so.
+  assert.equal((await send('/api/dashboard/assistant')).body.suggest,true);
+  view=(await send('/api/dashboard/assistant/me',{settings:settings({name:'پشمک',engine:'local',suggest:false,own:{enabled:false}})})).body;assert.equal(view.settings.suggest,false);assert.equal((await send('/api/dashboard/assistant')).body.suggest,false);
+  assert.equal((await send('/api/dashboard/assistant/me',{settings:settings({suggest:'no'})})).status,400);
+  view=(await send('/api/dashboard/assistant/me',{settings:settings({name:'پشمک',engine:'local',suggest:true,own:{enabled:false}})})).body;
   console.log('PASS Fandogh user settings API: validation, sealed masked key, safe connection test, free own-key questions with persona, forget key back to free local Fandogh.');
 
   const {chromium}=require('playwright'),browser=await chromium.launch({channel:process.platform==='win32'?'msedge':undefined,headless:true}),out=path.resolve('artifacts/fandogh-user-settings');fs.mkdirSync(out,{recursive:true});
@@ -52,7 +57,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
    page.once('dialog',d=>d.accept());await form.locator('[data-set-topup="10"]').click();
    await page.waitForFunction(()=>/۲۵٬?۰۰۰ تومان/.test(document.querySelector('.fset-balance')?.innerText||''));assert.equal(await page.locator('.fset-ledger__row.is-topup').count(),1);
    await page.locator('.fset-rates summary').click();assert(await page.locator('.fset-rates tbody tr').count()>=10);
-   await form.locator('input[name=name]').fill('نارگیل');await form.locator('.fset-switch').click();assert(await form.locator('input[name=own]').isChecked());await form.locator('input[name=key]').fill('sk-mine-abcd1234');
+   await form.locator('input[name=name]').fill('نارگیل');await form.locator('.fset-switch:has(input[name=own])').click();assert(await form.locator('input[name=own]').isChecked());await form.locator('input[name=key]').fill('sk-mine-abcd1234');
    await form.locator('[data-set-test]').click();await page.locator('[data-set-test-status][data-kind=ok]').waitFor();
    await form.locator('button[type=submit]').click();await page.waitForFunction(()=>document.querySelector('[data-fset] input[name=name]')?.value==='نارگیل'&&document.querySelector('[data-fset] input[name=engine][value=own]')||document.querySelector('[data-set-status][data-kind=error]'));assert.equal(await page.locator('[data-set-status][data-kind=error]').count(),0,await page.locator('[data-set-status]').textContent().catch(()=>''));
    assert.equal(await page.locator('[data-fset] input[name=engine]:checked').inputValue(),'own','saving a key makes it the default');

@@ -44,7 +44,7 @@
         '<header class="fs-bar"><button type="button" class="fs-icon fs-pane-btn" data-fs-open="rail" aria-label="گفت‌وگوها" title="گفت‌وگوها (Ctrl+B)">' + RI.icon('menu') + '</button><input class="fs-title" data-fs-title maxlength="60" aria-label="نام گفت‌وگو"><a class="fs-quota" data-fs-quota href="' + RI.routeUrl('assistant', { tab: 'wallet' }) + '" data-go="assistant"></a><button type="button" class="fs-icon" data-fs-export title="خروجی متنی گفت‌وگو">' + RI.icon('download') + '</button><button type="button" class="fs-icon" data-fs-delete title="حذف گفت‌وگو">' + RI.icon('trash') + '</button><button type="button" class="fs-icon fs-pane-btn" data-fs-open="inspector" aria-label="زمینه و تغییرها" title="زمینه و تغییرها (Ctrl+Shift+B)">' + RI.icon('layers') + '</button></header>' +
         '<div class="fs-thread" data-fs-thread aria-live="polite"></div>' +
         '<form class="fs-composer" data-fs-form novalidate><div class="fs-pop fs-palette" data-fs-palette role="listbox" hidden></div><div class="fs-pop fs-models" data-fs-models hidden></div>' +
-        '<div class="fs-composer__box"><label class="sr-only" for="fs-input">پیامت به فندق</label><textarea id="fs-input" data-fs-input rows="1" maxlength="4000" placeholder="از فندق بپرس… «/» برای دستورها، «@» برای بخش‌های رزومه"></textarea>' +
+        '<div class="fs-chips" data-fs-chips role="group" aria-label="پیشنهادهای بعدی" hidden></div><div class="fs-composer__box"><label class="sr-only" for="fs-input">پیامت به فندق</label><textarea id="fs-input" data-fs-input rows="1" maxlength="4000" placeholder="از فندق بپرس… «/» برای دستورها، «@» برای بخش‌های رزومه"></textarea>' +
         '<div class="fs-composer__bar"><button type="button" class="fs-model-btn" data-fs-model aria-haspopup="listbox"></button><div class="fs-mode" role="group" aria-label="تغییرهای رزومه"><button type="button" data-fs-mode="ask" title="اول نشانم بده">' + RI.icon('eye') + '</button><button type="button" data-fs-mode="auto" title="خودش انجام بدهد">' + RI.icon('zap') + '</button></div><span class="fs-count" data-fs-count>۰</span><button type="submit" class="fs-send" data-fs-send aria-label="فرستادن">' + RI.icon('chevL') + '</button></div></div></form></section>' +
         '<aside class="fs-inspector" data-fs-inspector aria-label="زمینه و تغییرها"></aside><div class="fs-scrim" data-fs-scrim hidden></div></div>';
     },
@@ -72,7 +72,7 @@
         $('[data-fs-title]').value = c.title;
         thread.innerHTML = c.messages.length ? c.messages.map(m => message(m)).join('') : empty();
         for (const m of c.messages) if (m.edits?.length) mountEdits(m, false);
-        paintRail(); paintModel(); paintInspector(); paintQuota();
+        paintRail(); paintModel(); paintInspector(); paintQuota(); paintChips();
         thread.scrollTop = thread.scrollHeight;
       }
       function empty() {
@@ -84,7 +84,7 @@
         return '<article class="fs-msg fs-msg--bot' + (m.error ? ' is-error' : '') + '" data-fs-msg="' + m.id + '"><span class="fs-msg__av">' + AVATAR + '</span><div class="fs-msg__main"><header><b>' + esc(name()) + '</b><span class="fs-badge">' + esc(mm.label) + '</span>' + (mm.cost ? '<span class="fs-badge fs-badge--paid" title="' + RI.fa(mm.used || 0) + ' توکن مصرف شد">' + F.paid(mm) + '</span>' : '') + '<time>' + clock(m.time) + '</time></header><div class="fs-msg__body fs-prose">' + (m.stopped ? '<p class="fs-muted">متوقف شد.</p>' : F.format(m.text)) + '</div>' +
           ((m.actions || []).length ? '<div class="fs-acts">' + m.actions.map((a, i) => '<button type="button" class="pet__act" data-fs-act="' + i + '">' + esc(a.label) + '</button>').join('') + '</div>' : '') +
           '<div class="fs-edits" data-fs-edits></div>' +
-          ((m.follow || []).length ? '<div class="fs-follow">' + m.follow.map(f => '<button type="button" data-fs-suggest="' + esc(f) + '">' + esc(f) + '</button>').join('') + '</div>' : '') +
+          
           '<div class="fs-tools"><button type="button" data-fs-tool="copy" title="کپی">' + RI.icon('copy') + '</button><button type="button" data-fs-tool="retry" title="جواب دوباره با مدل انتخاب‌شده">' + RI.icon('refresh') + '</button><button type="button" data-fs-tool="up" aria-pressed="' + (m.vote === 1) + '" title="خوب بود">' + RI.icon('up') + '</button><button type="button" data-fs-tool="down" aria-pressed="' + (m.vote === -1) + '" title="خوب نبود">' + RI.icon('down') + '</button></div></div></article>';
       }
       function mountEdits(m, live) {
@@ -114,7 +114,7 @@
         const m = modelOf(model);
         thread.insertAdjacentHTML('beforeend', '<div class="fs-typing" data-fs-typing><span class="fs-msg__av">' + AVATAR + '</span><div><b>' + esc(name()) + ' دارد فکر می‌کند</b><small>' + esc(m.label) + (m.cost ? ' · ' + F.cost(m) : '') + '</small></div><span class="fs-orbit" aria-hidden="true"><i></i><i></i><i></i></span></div>');
         thread.scrollTo({ top: thread.scrollHeight, behavior: calm.matches ? 'auto' : 'smooth' });
-        busy = new AbortController(); root.classList.add('is-busy'); paintSend(); paintRail();
+        busy = new AbortController(); root.classList.add('is-busy'); paintChips(); paintSend(); paintRail();
         const history = c.messages.filter(x => !x.error && !x.stopped).slice(-11, -1).map(x => ({ role: x.role === 'user' ? 'user' : 'assistant', text: x.text }));
         let reply = null, error = null;
         try { reply = await F.ask(text, { model, history, only, signal: busy.signal }); } catch (e) { error = e; }
@@ -129,7 +129,7 @@
         const article = thread.querySelector('[data-fs-msg="' + out.id + '"]'); reveal(article);
         if (out.edits?.length) mountEdits(out, true);
         thread.scrollTo({ top: thread.scrollHeight, behavior: calm.matches ? 'auto' : 'smooth' });
-        paintRail(); paintQuota(); paintInspector();
+        paintRail(); paintQuota(); paintInspector(); paintChips();
       }
       function stop() { busy?.abort(); }
       function lastUserText(before) { const list = current().messages, i = before ? list.findIndex(x => x.id === before) : list.length; for (let j = i - 1; j >= 0; j--) if (list[j].role === 'user') return list[j].text; return ''; }
@@ -145,6 +145,13 @@
         // Grouped by maker; a model above the person's plan shows the plan that opens it and leads to the plans.
         let i = 0;
         box.innerHTML = '<header><b>کدام مدل جواب بدهد؟</b><small>قیمت برای یک پیام معمولی (۱۰٬۰۰۰ توکن) است و دقیقش بعد از جواب از کیف پول فندق کم می‌شود. اشتراک تو: ' + esc(F.status?.planName || 'رایگان') + '</small></header>' + F.groups(list).map(([group, items]) => '<div class="fs-modelgroup"><b class="fs-modelgroup__name">' + esc(group) + '</b>' + items.map(m => '<button type="button" class="fs-modelcard' + (m.id === current().model ? ' is-on' : '') + (m.locked ? ' is-locked' : '') + '" data-fs-pick="' + m.id + '" style="--i:' + (i++) + '"' + (m.available || m.locked ? '' : ' disabled') + '><span><b>' + esc(m.label) + '</b><small>' + esc(m.note || '') + (m.million ? ' · ' + F.rate(m) : '') + '</small><span class="fset-tags">' + (m.tags || []).map(t => '<i>' + esc(t) + '</i>').join('') + '</span></span><em class="' + (m.cost ? '' : 'is-free') + (m.locked ? ' is-lock' : '') + '">' + (m.locked ? RI.icon('lock') + F.tier(m.tier) : m.available ? F.cost(m) : 'در دسترس نیست') + '</em></button>').join('') + '</div>').join('') + '<a href="' + RI.routeUrl('assistant') + '" data-go="assistant">' + RI.icon('sliders') + 'اشتراک‌ها، مدل پیش‌فرض و کلید خودت</a>';
+      }
+      // The next questions Fandogh suggests sit above the input box (unless switched off in the settings): those of the
+      // latest answer, hidden while an answer is on its way.
+      function paintChips() {
+        const box = $('[data-fs-chips]'), last = [...current().messages].reverse().find(x => x.role === 'assistant'), list = !busy && F.status?.suggest !== false && last && !last.error ? (last.follow || []).slice(0, 4) : [];
+        box.hidden = !list.length;
+        box.innerHTML = list.length ? '<span class="fs-chips__label">' + RI.icon('sparkle') + 'بعدش بپرس</span>' + list.map((f, i) => '<button type="button" data-fs-suggest="' + esc(f) + '" style="--i:' + i + '">' + esc(f) + '</button>').join('') + '<button type="button" class="fs-chips__off" data-fs-chips-off title="پنهان کردن پیشنهادها" aria-label="پنهان کردن پیشنهادها">' + RI.icon('x') + '</button>' : '';
       }
       function paintQuota() {
         const s = F.status; if (!s?.wallet) return; const m = modelOf(current().model), w = s.wallet;
@@ -221,6 +228,7 @@
         if (t.matches('[data-fs-new]')) newChat();
         else if (t.dataset.fsChat) open(t.dataset.fsChat);
         else if (t.dataset.fsPin) { const c = chats.find(x => x.id === t.dataset.fsPin); if (c) { c.pinned = !c.pinned; save(); paintRail(); } }
+        else if (t.matches('[data-fs-chips-off]')) { $('[data-fs-chips]').hidden = true; RI.toast('پیشنهادها را می‌توانی از «تنظیمات فندق» برای همیشه خاموش یا روشن کنی', { kind: 'info' }); }
         else if (t.dataset.fsSuggest) { if (/آگهی/.test(t.dataset.fsSuggest)) { input.value = COMMANDS.find(c => c[0] === 'آگهی')[2]; grow(); input.focus(); } else send(t.dataset.fsSuggest); }
         else if (t.matches('[data-fs-model]')) { paintModels(); const box = $('[data-fs-models]'); box.hidden = !box.hidden; }
         else if (t.dataset.fsPick && modelOf(t.dataset.fsPick).locked) { const m = modelOf(t.dataset.fsPick); RI.toast('«' + m.label + '» با اشتراک «' + F.tier(m.tier) + '» فندق یا اشتراک رزومیت باز می‌شود', { kind: 'info' }); RI.go('assistant', { tab: 'plans' }); }
@@ -252,7 +260,7 @@
         else if (e.key === 'Escape' && busy) stop();
       };
       document.addEventListener('keydown', keys);
-      const onStatus = () => { paintModel(); paintQuota(); };
+      const onStatus = () => { paintModel(); paintQuota(); paintChips(); };
       document.addEventListener('ri:fandogh-status', onStatus);
       paint(); grow(); paintFolds();
       const onResize = () => { paintFolds(); paintInspector(); };

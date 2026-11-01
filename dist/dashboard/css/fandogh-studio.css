@@ -435,3 +435,16 @@ body[data-page=fandogh] .pet__stage{display:none}
 @keyframes fset-sheen{60%,100%{transform:translateX(100%)}}
 @keyframes fset-coin{30%{transform:rotateY(180deg) scale(1.15)}60%{transform:rotateY(360deg) scale(1)}}
 @media (prefers-reduced-motion:reduce){.fset-balance,.fset-balance::before,.fset-balance::after,.fset-balance__orb,.fset-topup,.fset-ledger__row,.fset-rates tbody tr,.fs-badge--paid,.fs-quota.is-low .fs-coin{animation:none!important;transition:none!important}.fset-balance::after{display:none}}
+
+/* ---------- Suggested next questions above the input box ---------- */
+.fs-chips{display:flex;align-items:center;flex-wrap:wrap;gap:6px;max-width:800px;margin:0 auto 8px}
+.fs-chips[hidden]{display:none}
+.fs-chips__label{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;font-weight:800;color:#6b8090}
+.fs-chips__label svg{width:13px;height:13px;color:#e2a03a;animation:fs-spin 6s linear infinite}
+.fs-chips button{min-height:30px;padding:2px 12px;border:1px solid #d3e1ec;border-radius:999px;background:rgba(255,255,255,.92);color:#2c5d93;font:inherit;font-size:12px;font-weight:700;cursor:pointer;box-shadow:0 6px 14px -12px rgba(28,45,56,.6);animation:fs-chip-in .45s calc(var(--i,0)*.06s) cubic-bezier(.3,1.4,.5,1) backwards;transition:transform .25s cubic-bezier(.3,1.5,.5,1),background .2s,border-color .2s}
+.fs-chips button:hover{transform:translateY(-2px);background:#eaf2fb;border-color:#9fc0e2}
+.fs-chips .fs-chips__off{display:grid;place-items:center;width:28px;min-height:28px;padding:0;color:#6b8090;margin-inline-start:auto}
+.fs-chips .fs-chips__off svg{width:13px;height:13px}
+.fset-card>.fset-switch{margin-top:2px}
+@keyframes fs-chip-in{from{opacity:0;transform:translateY(10px) scale(.92)}}
+@media (prefers-reduced-motion:reduce){.fs-chips button,.fs-chips__label svg{animation:none!important}}

@@ -4,7 +4,7 @@
 // characters.
 const {fail}=require('./model.cjs'),{PROVIDERS}=require('../ai/providers.cjs'),sealing=require('../owner/assistant-settings.cjs');
 const TONES=['friendly','formal'],LENGTHS=['short','detailed'];
-const defaults=()=>({name:'فندق',tone:'friendly',length:'short',engine:'local',own:{enabled:false,provider:'openai',model:'',url:''}});
+const defaults=()=>({name:'فندق',tone:'friendly',length:'short',engine:'local',suggest:true,own:{enabled:false,provider:'openai',model:'',url:''}});
 const merge=saved=>{const d=defaults(),s=saved&&typeof saved==='object'?saved:{};return {...d,...s,own:{...d.own,...(s.own||{})}};};
 function validate(input){
   if(!input||typeof input!=='object'||Array.isArray(input))fail('تنظیمات فندق معتبر نیست');
@@ -19,7 +19,8 @@ function validate(input){
   if(own.provider==='custom'&&!url&&own.enabled)fail('برای سرویس سازگار با OpenAI نشانی لازم است');
   const engine=input.engine===undefined?'local':input.engine;
   if(typeof engine!=='string'||!/^[a-z0-9.-]{1,32}$/.test(engine))fail('مدل پیش‌فرض معتبر نیست');
-  return {name,tone:input.tone,length:input.length,engine,own:{enabled:own.enabled,provider:own.provider,model,url:own.provider==='custom'?url:''}};
+  if(input.suggest!==undefined&&typeof input.suggest!=='boolean')fail('نمایش پیشنهادها معتبر نیست');
+  return {name,tone:input.tone,length:input.length,engine,suggest:input.suggest!==false,own:{enabled:own.enabled,provider:own.provider,model,url:own.provider==='custom'?url:''}};
 }
 // A new key: a string to set, null to remove, undefined to keep the stored one.
 function validateKey(key){
