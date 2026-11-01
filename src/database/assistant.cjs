@@ -40,11 +40,14 @@ module.exports=({execute,transaction})=>({
     if(best)return {plan:best.plan.id,level:sub?RI.ASSISTANT_SITE.level:best.plan.level,until:best.until,subscription:!!sub};
     return sub?{plan:'subscription',level:RI.ASSISTANT_SITE.level,until:sub,subscription:true}:{plan:'free',level:0,until:null,subscription:false};
   },
-  // The Fandogh wallet: its balance in rial and the latest ledger rows.
+  // The Fandogh wallet: its balance in rial, the latest credits (top-ups, gifts, plan credit) and, instead of one row
+  // per answer, what was spent each day (Tehran time) over the last two weeks.
   async fandoghWallet(userId,limit=20){
     const [w]=await execute('SELECT balance FROM fandogh_wallets WHERE user_id=?',[userId]);
-    const rows=await execute('SELECT id,at,delta,balance,kind,model,input_tokens,output_tokens,label FROM fandogh_ledger WHERE user_id=? ORDER BY at DESC LIMIT '+Math.max(1,Math.min(100,limit|0)),[userId]);
-    return {balance:Number(w?.balance||0),ledger:rows.map(x=>({id:x.id,at:Number(x.at),delta:Number(x.delta),balance:Number(x.balance),kind:x.kind,model:x.model,input:Number(x.input_tokens),output:Number(x.output_tokens),label:x.label}))};
+    const rows=await execute("SELECT id,at,delta,balance,kind,model,input_tokens,output_tokens,label FROM fandogh_ledger WHERE user_id=? AND kind<>'usage' ORDER BY at DESC LIMIT "+Math.max(1,Math.min(100,limit|0)),[userId]);
+    const since=Date.now()-14*86400000,usage=await execute("SELECT at,delta,input_tokens,output_tokens FROM fandogh_ledger WHERE user_id=? AND kind='usage' AND at>?",[userId,since]),days=new Map();
+    for(const u of usage){const key=new Date(Number(u.at)+12600000).toISOString().slice(0,10),d=days.get(key)||{day:key,at:Date.parse(key+'T00:00:00Z')-12600000,delta:0,input:0,output:0,count:0};d.delta+=Number(u.delta);d.input+=Number(u.input_tokens);d.output+=Number(u.output_tokens);d.count++;days.set(key,d);}
+    return {balance:Number(w?.balance||0),ledger:rows.map(x=>({id:x.id,at:Number(x.at),delta:Number(x.delta),balance:Number(x.balance),kind:x.kind,model:x.model,input:Number(x.input_tokens),output:Number(x.output_tokens),label:x.label})),daily:[...days.values()].sort((a,b)=>b.at-a.at)};
   },
   // Credit (welcome, starter, a gift from the owner); with a ref it happens once.
   async creditFandogh(userId,rial,kind,ref,label,now=Date.now()){

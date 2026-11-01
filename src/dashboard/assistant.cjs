@@ -35,13 +35,13 @@ async function status(database,userId,config,me){
   const {settings,keys}=config||await load(database),access=await database.assistantAccess(userId),bill=catalog.billingOf(settings);
   // A new account starts with a little credit to try the advanced models, once.
   if(bill.welcome>0&&database.creditFandogh)try{await database.creditFandogh(userId,bill.welcome*10,'welcome','welcome:'+userId,'هدیهٔ شروع فندق');}catch{}
-  const wallet=database.fandoghWallet?await database.fandoghWallet(userId,12):{balance:0,ledger:[]},token=catalog.tokenRial(settings);
+  const wallet=database.fandoghWallet?await database.fandoghWallet(userId,12):{balance:0,ledger:[],daily:[]},token=catalog.tokenRial(settings);
   const policy=database.commerceSettings?await database.commerceSettings():{prices:{},paused:[]};
   const plans=Object.values(RI.ASSISTANT_PLANS).map(p=>({id:p.id,name:policy.products?.['assistant:'+p.id]?.name||p.name,title:p.title,period:p.period,months:p.months,level:p.level,credit:bill.starter?.[p.id]??p.credit,desc:policy.products?.['assistant:'+p.id]?.desc||p.desc,price:policy.prices?.['assistant:'+p.id]??p.price,paused:!!policy.paused?.includes('assistant:'+p.id)}));
   const models=offer(settings,keys||{},me,access.level),engine=models.some(m=>m.id===me.settings.engine&&m.available&&!m.locked)?me.settings.engine:'local';
   const toman=rial=>Math.round(rial)/10;
   return {plan:access.plan,planName:RI.ASSISTANT_PLANS[access.plan]?.name||(access.plan==='subscription'?'اشتراک رزومیت':'رایگان'),level:access.level,subscription:access.subscription,until:access.until,
-    wallet:{toman:toman(wallet.balance),tokens:Math.floor(wallet.balance/token),tokenToman:Math.round(token/10*1e6)/1e6,ledger:wallet.ledger.map(x=>({...x,toman:toman(x.delta),tokens:x.kind==='usage'?-Math.round((x.input+x.output)*(1+bill.markup/100)):Math.round(x.delta/token)}))},
+    wallet:{toman:toman(wallet.balance),tokens:Math.floor(wallet.balance/token),tokenToman:Math.round(token/10*1e6)/1e6,ledger:wallet.ledger.map(x=>({...x,toman:toman(x.delta),tokens:x.kind==='usage'?-Math.round((x.input+x.output)*(1+bill.markup/100)):Math.round(x.delta/token)})),daily:(wallet.daily||[]).map(d=>({at:d.at,day:d.day,count:d.count,toman:toman(d.delta),tokens:-Math.round((d.input+d.output)*(1+bill.markup/100))}))},
     billing:{markup:bill.markup,dollar:bill.dollar,welcome:bill.welcome,site:bill.starter?.subscription??RI.ASSISTANT_SITE.credit,topups:RI.FANDOGH_TOPUPS},tiers:RI.ASSISTANT_TIERS,plans,enabled:settings.enabled,ai:models.some(m=>m.id!=='local'&&m.available),smalltalk:!!settings.ai.smalltalk,name:me.settings.name,suggest:me.settings.suggest!==false,own:!!userAssistant.runtime(me.settings,me.key),models,engine};
 }
 // The brain and the model get the story only: contact values become "filled or not", images become a flag.
