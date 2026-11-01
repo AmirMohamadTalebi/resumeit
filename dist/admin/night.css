@@ -125,3 +125,31 @@ html body #content .detail-actions .detail-act:focus-visible{outline:2px solid #
 @media (min-width:900px){html body #content .staff-role-form{grid-template-columns:repeat(2,minmax(0,1fr));column-gap:16px}html body #content .staff-role-form>:is(h3,p,.btn,button,.field-note,small){grid-column:1/-1}}
 @keyframes adm-tile{from{opacity:0;transform:translateY(8px)}}
 @media (prefers-reduced-motion:reduce){html body #content .summary-list>div,html body #content .detail-actions .detail-act{animation:none;transition:none}}
+/* ---------- Top of the page: user-panel pill, underline sub-navigation, night segmented tabs, chip tabs ---------- */
+html body .admin-head #user-panel{display:inline-flex;align-items:center;gap:8px;min-height:40px;padding:7px 16px;border:1px solid rgba(240,189,82,.55);border-radius:13px;background:rgba(240,189,82,.1);color:#f3d9a0;font-weight:800;box-shadow:none;transition:background-color .25s,color .25s,transform .35s cubic-bezier(.3,1.4,.5,1)}
+html body .admin-head #user-panel svg{width:17px;height:17px;transition:transform .4s cubic-bezier(.3,1.4,.5,1)}
+html body .admin-head #user-panel:is(:hover,:focus-visible){background:#f0bd52;color:#1b2a33;transform:translateY(-1px)}
+html body .admin-head #user-panel:hover svg{transform:translate(-2px,-2px) rotate(-8deg)}
+html body .admin-head #user-panel:focus-visible{outline:2px solid #f0bd52;outline-offset:2px}
+html body .admin-topnav{display:flex;align-items:center;gap:4px;margin-block:4px 6px;padding:4px 0;border:0;border-bottom:1px solid rgba(28,45,56,.1);border-radius:0;background:transparent;box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none}
+html body .admin-topnav>a{position:relative;display:inline-flex;align-items:center;gap:8px;min-height:42px;padding:8px 14px;border:0;border-radius:12px 12px 0 0;background-color:transparent;color:#2c4554;font-size:13.5px;font-weight:700;text-decoration:none;box-shadow:none;transition:background-color .2s,color .2s}
+html body .admin-topnav>a svg{width:17px;height:17px}
+html body .admin-topnav>a::after{content:"";position:absolute;right:12px;left:12px;bottom:-5px;height:3px;border-radius:3px;background:linear-gradient(90deg,#e2a03a,#f6cf72);transform:scaleX(0);transition:transform .45s cubic-bezier(.3,1.4,.5,1)}
+html body .admin-topnav>a[aria-current=page]{background-color:transparent;color:#1b2a33;font-weight:800}
+html body .admin-topnav>a[aria-current=page]::after{transform:scaleX(1)}
+html body .admin-topnav>a:is(:hover,:focus-visible):not([aria-current=page]){background-color:#1b3242;color:#ffffff}
+html body .admin-topnav>a:focus-visible{outline:2px solid #e2a03a;outline-offset:2px}
+html body .admin-topnav #admin-menu{display:inline-grid;place-items:center;width:42px;height:42px;margin-inline-end:6px;padding:0;border:0;border-radius:50%;background:#1b3242;color:#fff;box-shadow:0 10px 20px -14px rgba(11,20,27,.9);transition:transform .4s cubic-bezier(.3,1.4,.5,1)}
+html body .admin-topnav #admin-menu:hover{transform:rotate(-90deg)}
+html body #content .detail-tabs{display:inline-flex;flex-wrap:wrap;gap:4px;margin-bottom:16px;padding:5px;border:0;border-radius:18px;background-color:#11212c;background-image:linear-gradient(160deg,#0f1d27,#1b3242);box-shadow:0 16px 30px -22px rgba(11,20,27,.9)}
+html body #content .detail-tabs .tab{min-height:40px;padding:8px 18px;border:0;border-radius:13px;background:transparent;color:#d6e3ea;font-weight:800;box-shadow:none;transition:background-color .25s,color .25s}
+html body #content .detail-tabs .tab:hover{background-color:rgba(255,255,255,.08);color:#fff}
+html body #content .detail-tabs .tab[aria-selected=true]{background:linear-gradient(135deg,#f6cf72,#e2a03a);color:#1b2a33;box-shadow:0 8px 18px -10px rgba(240,189,82,.9);animation:adm-pop .45s cubic-bezier(.3,1.4,.5,1)}
+html body #content .detail-tabs .tab:focus-visible{outline:2px solid #f0bd52;outline-offset:2px}
+html body #content .owner-workspace .tabs{display:flex;flex-wrap:wrap;gap:6px;padding:0;border:0;background:none;box-shadow:none}
+html body #content .owner-workspace .tabs .tab{min-height:36px;padding:6px 14px;border:1px solid #d3e3eb;border-radius:99px;background:#ffffff;color:#2c4554;font-size:13px;font-weight:700;box-shadow:none}
+html body #content .owner-workspace .tabs .tab[aria-selected=true]{border-color:#1b3242;background:#1b3242;color:#fff}
+html body #content .owner-workspace{margin-top:20px;padding:20px;border:1px solid #e3ecf0;border-radius:22px;background:#ffffff}
+@keyframes adm-pop{from{transform:scale(.9)}}
+@media (prefers-reduced-motion:reduce){html body .admin-topnav>a::after,html body .admin-head #user-panel,html body #content .detail-tabs .tab{transition:none;animation:none}}
+html body #content .owner-workspace h2{display:flex;align-items:center;justify-content:flex-start;gap:8px}html body #content .owner-workspace h2 svg{width:20px;height:20px;color:#c7883a}

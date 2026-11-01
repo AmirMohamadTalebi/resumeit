@@ -287,10 +287,17 @@
   }
   function detailTabs(){
     const content=$('#content'),grid=content.querySelector('.admin-grid'),owner=content.querySelector('.owner-workspace');if(!grid)return;
-    const panels=[...grid.children].map((node,i)=>({node,key:i?'pages':'account',label:i?'صفحه‌ها و محصولات':'حساب و دسترسی'}));if(owner)panels.push({node:owner,key:'owner',label:'کنترل پیشرفتهٔ مالک'});
+    const panels=[...grid.children].map((node,i)=>({node,key:i?'pages':'account',label:i?'صفحه‌ها و محصولات':'حساب و دسترسی'}));
+    // The owner's controls are not a tab of their own: each operation sits in the tab it concerns.
+    if(owner){const groups={account:['subscription','password','profile','wallet'],pages:['access','page-quota']},titles={account:'اشتراک، رمز، مشخصات و اعتبار',pages:'دسترسی محصولات و سهمیهٔ صفحه'};
+      for(const p of panels){const ids=groups[p.key];if(!ids)continue;const part=owner.cloneNode(true);part.classList.add('owner-workspace--'+p.key);
+        part.querySelectorAll('[data-owner-tab]').forEach(t=>{if(!ids.includes(t.dataset.ownerTab))t.remove();else t.setAttribute('aria-selected',String(t.dataset.ownerTab===ids[0]));});
+        part.querySelectorAll('[data-owner-operation]').forEach(f=>{if(!ids.includes(f.dataset.ownerOperation))f.remove();else f.hidden=f.dataset.ownerOperation!==ids[0];});
+        const h=part.querySelector('h2');if(h)h.lastChild.textContent=titles[p.key];p.node.append(part);}
+      owner.remove();}
     const tabs=document.createElement('div');tabs.className='tabs detail-tabs';tabs.setAttribute('role','tablist');tabs.setAttribute('aria-label','بخش‌های حساب');content.prepend(tabs);
     for(const {node,key,label}of panels){node.id='detail-'+key;node.setAttribute('role','tabpanel');node.setAttribute('aria-labelledby','detail-tab-'+key);tabs.insertAdjacentHTML('beforeend','<button class="tab" role="tab" id="detail-tab-'+key+'" aria-controls="detail-'+key+'" data-detail-tab="'+key+'">'+label+'</button>');content.append(node);}grid.remove();const notice=content.querySelector(':scope>.notice');if(notice)content.append(notice);
-    const choose=(key,focus=false)=>{if(!panels.some(x=>x.key===key))key='account';for(const x of panels){const button=tabs.querySelector('[data-detail-tab='+x.key+']');x.node.hidden=x.key!==key;button.setAttribute('aria-selected',String(x.key===key));button.tabIndex=x.key===key?0:-1;if(focus&&x.key===key)button.focus();}const url=new URL(location.href);url.searchParams.set('detailTab',key);history.replaceState(null,'',url);};
+    const choose=(key,focus=false)=>{if(key==='owner')key='account';if(!panels.some(x=>x.key===key))key='account';for(const x of panels){const button=tabs.querySelector('[data-detail-tab='+x.key+']');x.node.hidden=x.key!==key;button.setAttribute('aria-selected',String(x.key===key));button.tabIndex=x.key===key?0:-1;if(focus&&x.key===key)button.focus();}const url=new URL(location.href);url.searchParams.set('detailTab',key);history.replaceState(null,'',url);};
     choose(new URL(location.href).searchParams.get('detailTab'));tabs.addEventListener('click',e=>{const b=e.target.closest('[data-detail-tab]');if(b)choose(b.dataset.detailTab);});tabs.addEventListener('keydown',e=>{if(!['Home','End','ArrowLeft','ArrowRight'].includes(e.key))return;e.preventDefault();const buttons=[...tabs.children],index=buttons.indexOf(document.activeElement),next=e.key==='Home'?0:e.key==='End'?buttons.length-1:(index+(e.key==='ArrowLeft'?1:-1)+buttons.length)%buttons.length;choose(buttons[next].dataset.detailTab,true);});
   }
   function publication(v) {
@@ -762,6 +769,7 @@
     for(const id of active[2]){const a=document.createElement('a');a.href=href(id);a.innerHTML=icon(sections[id][1])+'<span>'+sections[id][0]+'</span>';if(id===section)a.setAttribute('aria-current','page');topnav.append(a);}
     $('.admin-head').after(topnav);$('#admin-menu').setAttribute('aria-controls','admin-side');$('#admin-menu').title='باز و بسته کردن منوی مدیریت';
     $('#admin-close').innerHTML=icon('x');
+    $('#user-panel').innerHTML=icon('home')+'<span>پنل کاربری</span>';
     $('.admin-payment').remove();$('#refresh').remove();
     const footer=$('.admin-side footer'),name=$('#admin-name'),logout=$('#logout'),profile=document.createElement('details');profile.className='admin-profile';
     profile.innerHTML='<summary title="پروفایل و دسترسی سریع"><img src="/brand/resumeit-mark-v1.png" alt="" width="42" height="42"><span><strong></strong><small>مدیر · دسترسی سریع</small></span>'+icon('chevD')+'</summary><div class="admin-profile-menu"><div class="apm-head"><span class="apm-sky" aria-hidden="true"></span><img src="/brand/resumeit-mark-v1.png" alt="" width="44" height="44"><span><b data-apm-name></b><small data-apm-role></small></span></div>'+
