@@ -177,11 +177,21 @@
     RI.$('.main').inert=open&&mobile.matches;RI.$('#bottomNav').inert=open&&mobile.matches;
     RI.$('#sidebar').inert=!open&&mobile.matches;
     if(open)RI.$('#drawerClose').focus();
+    drawerScroll();
   }
   let drawerOpener;
   function openDrawer(event){drawerOpener=event?.target?.closest('button')||document.activeElement;setDrawer(true);}
   function restoreDrawerFocus(){(drawerOpener?.isConnected?drawerOpener:RI.$('#menuBtn')).focus();}
   function closeDrawer(){setDrawer(false);}
+  // The menu list scrolls without a native bar: soft fades at the edges and a slim gold thumb that shows while it moves.
+  function drawerScroll(){
+    const nav=RI.$('#sidebar .dn-nav');if(!nav||nav.dataset.thumb)return;nav.dataset.thumb='1';
+    const thumb=document.createElement('i');thumb.className='dn-thumb';thumb.setAttribute('aria-hidden','true');nav.parentElement.append(thumb);let idle,frame=0;
+    const paint=()=>{frame=0;const max=nav.scrollHeight-nav.clientHeight;nav.classList.toggle('is-scrollable',max>2);nav.classList.toggle('at-top',nav.scrollTop<4);nav.classList.toggle('at-end',nav.scrollTop>max-4);thumb.hidden=max<=2;if(max<=2)return;const h=Math.max(28,nav.clientHeight*nav.clientHeight/nav.scrollHeight);thumb.style.height=h+'px';thumb.style.transform='translateY('+(nav.offsetTop+(nav.clientHeight-h)*nav.scrollTop/max)+'px)';thumb.classList.add('is-on');clearTimeout(idle);idle=setTimeout(()=>thumb.classList.remove('is-on'),900);};
+    const queue=()=>{if(!frame)frame=requestAnimationFrame(paint);};
+    nav.addEventListener('scroll',queue,{passive:true});addEventListener('resize',queue,{passive:true});if(window.ResizeObserver)new ResizeObserver(queue).observe(nav);queue();
+    RI.$('#sidebar').addEventListener('transitionend',queue);
+  }
 
   /* ---------- راه‌اندازی ---------- */
   async function boot() {

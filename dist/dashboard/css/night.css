@@ -195,3 +195,22 @@ html body .dn-item--fandogh:not([aria-current=page]):hover{background:linear-gra
 html body .dn-item--fandogh:not([aria-current=page]):hover .dn-item__txt,html body .dn-item--fandogh:not([aria-current=page]):hover .dn-item__txt small{color:#2f1d0c}
 /* On phones every icon button in the top bar is the same 40px square. */
 @media (max-width:760px){html body .topbar :is(#menuBtn,#topPreview,.topbar__bell){width:40px;min-width:40px;height:40px;min-height:40px;padding:0;display:inline-grid;place-items:center;border-radius:12px}html body .topbar :is(#menuBtn,#topPreview,.topbar__bell) svg{width:18px;height:18px}}
+/* Phone drawer: the bottom bar steps aside, the list scrolls with fades and a gold thumb instead of a native bar, and the close button is a night-glass disc. */
+html body .bottom-nav{transition:transform .45s cubic-bezier(.2,.8,.2,1),opacity .3s}
+@media (max-width:960px){html body:has(#sidebar[data-open=true]) .bottom-nav{transform:translateY(115%);opacity:0;pointer-events:none}}
+html body #sidebar .dn-nav{scrollbar-width:none}
+html body #sidebar .dn-nav::-webkit-scrollbar{display:none}
+html body #sidebar .dn-nav.is-scrollable:not(.at-top):not(.at-end){-webkit-mask-image:linear-gradient(to bottom,transparent 0,#000 22px,#000 calc(100% - 30px),transparent 100%);mask-image:linear-gradient(to bottom,transparent 0,#000 22px,#000 calc(100% - 30px),transparent 100%)}
+html body #sidebar .dn-nav.is-scrollable.at-top:not(.at-end){-webkit-mask-image:linear-gradient(to bottom,#000 calc(100% - 34px),transparent 100%);mask-image:linear-gradient(to bottom,#000 calc(100% - 34px),transparent 100%)}
+html body #sidebar .dn-nav.is-scrollable.at-end:not(.at-top){-webkit-mask-image:linear-gradient(to bottom,transparent 0,#000 22px);mask-image:linear-gradient(to bottom,transparent 0,#000 22px)}
+.dn-thumb{position:absolute;top:0;left:4px;z-index:3;width:3px;border-radius:3px;background:linear-gradient(#f6cf72,#e2a03a);box-shadow:0 0 10px rgba(240,189,82,.6);opacity:0;pointer-events:none;transition:opacity .45s}
+.dn-thumb.is-on{opacity:.9;transition:opacity .15s}
+.dn-thumb[hidden]{display:none}
+html body .sidebar .drawer-close{display:inline-grid;place-items:center;width:40px;height:40px;padding:0;border:1px solid rgba(255,255,255,.16);border-radius:50%;background:rgba(255,255,255,.08);color:#e7eef2;box-shadow:none;transition:transform .45s cubic-bezier(.3,1.4,.5,1),background-color .25s,color .25s,border-color .25s}
+html body .sidebar .drawer-close svg{width:18px;height:18px}
+html body .sidebar .drawer-close:is(:hover,:focus-visible){background:#f0bd52;border-color:#f0bd52;color:#1b2a33;transform:rotate(90deg)}
+html body .sidebar .drawer-close:focus-visible{outline:2px solid #f0bd52;outline-offset:3px}
+html body .sidebar .drawer-close:active{transform:rotate(90deg) scale(.9)}
+@media (max-width:960px){html body #sidebar[data-open=true] .drawer-close{animation:dn-x-in .55s .12s cubic-bezier(.3,1.4,.5,1) backwards}}
+@keyframes dn-x-in{from{opacity:0;transform:rotate(-120deg) scale(.4)}}
+@media (prefers-reduced-motion:reduce){html body .bottom-nav,html body .sidebar .drawer-close,.dn-thumb{transition:none;animation:none!important}}
