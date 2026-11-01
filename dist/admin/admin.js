@@ -475,13 +475,12 @@
       ]
         .map(
           ([action, label]) =>
-            '<button class="btn ' +
-            (action === "credit" ? "btn-primary" : "") +
+            '<button class="btn detail-act detail-act--' + ({credit:'go','revoke-sessions':'soft','edit-profile':'soft',restore:'ok','unblock-publication':'ok'}[action] || 'risk') + (action === "credit" ? " btn-primary" : "") +
             '" data-action="' +
             action +
             '" data-user="' +
             esc(u.id) +
-            '">' +
+            '">' + icon({credit:'plus','revoke-sessions':'logout','edit-profile':'edit','delete-account':'trash',suspend:'lock',restore:'check','block-publication':'eye',  'unblock-publication':'globe'}[action] || 'info') +
             label +
             "</button>",
         )
@@ -765,9 +764,12 @@
     $('#admin-close').innerHTML=icon('x');
     $('.admin-payment').remove();$('#refresh').remove();
     const footer=$('.admin-side footer'),name=$('#admin-name'),logout=$('#logout'),profile=document.createElement('details');profile.className='admin-profile';
-    profile.innerHTML='<summary title="پروفایل و دسترسی سریع"><img src="/brand/resumeit-mark-v1.png" alt="" width="42" height="42"><span><strong></strong><small>مدیر · دسترسی سریع</small></span>'+icon('chevD')+'</summary><div class="admin-profile-menu"><a href="/dashboard/settings/">'+icon('user')+'تنظیمات حساب</a><a href="/staff/">'+icon('help')+'میز پشتیبانی</a></div>';
+    profile.innerHTML='<summary title="پروفایل و دسترسی سریع"><img src="/brand/resumeit-mark-v1.png" alt="" width="42" height="42"><span><strong></strong><small>مدیر · دسترسی سریع</small></span>'+icon('chevD')+'</summary><div class="admin-profile-menu"><div class="apm-head"><span class="apm-sky" aria-hidden="true"></span><img src="/brand/resumeit-mark-v1.png" alt="" width="44" height="44"><span><b data-apm-name></b><small data-apm-role></small></span></div>'+
+      '<div class="apm-tiles">'+[['/admin/','chart','دید کلی'],['/admin/users/','user','کاربران'],['/admin/transactions/','card','امور مالی'],['/admin/health/','shield','سرویس‌ها']].map(([h,i,l],n)=>'<a class="apm-tile" href="'+h+'" style="--i:'+n+'"><i>'+icon(i)+'</i><span>'+l+'</span></a>').join('')+'</div>'+
+      '<p class="apm-sec">رفتن به</p><a class="apm-row" href="/dashboard/">'+icon('home')+'<span>پنل کاربری</span></a><a class="apm-row" href="/staff/">'+icon('help')+'<span>میز پشتیبانی</span></a><a class="apm-row" href="/dashboard/settings/">'+icon('user')+'<span>تنظیمات حساب</span></a><a class="apm-row" href="/">'+icon('globe')+'<span>صفحهٔ اصلی سایت</span></a></div>';
     profile.querySelector('strong').replaceWith(name);logout.innerHTML=icon('logout')+'<span>خروج از حساب</span>';profile.querySelector('.admin-profile-menu').append(logout);footer.prepend(profile);
     profile.querySelector('summary small').textContent=(fullAdmin?'مالک / فول ادمین':'ادمین')+' · دسترسی سریع';
+    profile.querySelector('[data-apm-role]').textContent=fullAdmin?'مالک / فول ادمین':'ادمین';profile.addEventListener('toggle',()=>{if(profile.open)profile.querySelector('[data-apm-name]').textContent=name.textContent.trim()||'مدیر';});
     document.addEventListener('click',e=>{if(!profile.contains(e.target))profile.open=false;});document.addEventListener('keydown',e=>{if(e.key==='Escape'&&profile.open){profile.open=false;profile.querySelector('summary').focus();}});
     $("#search-wrap").hidden = ![
       "users",

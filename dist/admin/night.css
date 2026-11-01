@@ -71,3 +71,57 @@ html body .admin-side .btn:hover{background:#2c4555}
 html body .admin-side .admin-profile summary{background:#1a2f3d}
 html body .admin-head .btn{background:#1f3646}
 html body .admin-head .btn:hover{background:#2c4555}
+/* ---------- Admin quick access: a night-sky card above the profile ---------- */
+html body .admin-side .admin-profile summary #admin-name,html body .admin-side .admin-profile summary strong{color:#ffffff}
+html body .admin-side .admin-profile summary small{color:#c3d3dc}
+html body .admin-side .admin-profile summary svg{transition:transform .4s cubic-bezier(.3,1.4,.5,1)}
+html body .admin-side .admin-profile[open] summary svg{transform:rotate(180deg)}
+html body .admin-side .admin-profile[open] summary{border-color:rgba(240,189,82,.5)}
+html body .admin-side .admin-profile-menu{width:300px;max-height:calc(100dvh - 140px);padding:0 10px 10px;overflow:auto;border:1px solid rgba(240,189,82,.22);border-radius:24px;background-color:#11212c;background-image:radial-gradient(120% 50% at 100% 0,rgba(240,189,82,.15),transparent 60%),linear-gradient(170deg,#0f1d27,#1b3242);color:#eaf2f6;box-shadow:0 34px 70px -30px rgba(5,12,18,.9),inset 0 1px 0 rgba(255,255,255,.06);-webkit-backdrop-filter:none;backdrop-filter:none;scrollbar-width:none;transform-origin:50% 100%;animation:apm-in .5s cubic-bezier(.3,1.4,.5,1) both}
+.apm-head{position:relative;isolation:isolate;display:flex;align-items:center;gap:12px;margin:0 -10px 10px;padding:16px;overflow:hidden;border-bottom:1px solid rgba(255,255,255,.08)}
+.apm-sky{position:absolute;inset:0;z-index:-1;background-image:radial-gradient(1px 1px at 14% 30%,#fff 50%,transparent),radial-gradient(1px 1px at 58% 72%,#fff 50%,transparent),radial-gradient(1.4px 1.4px at 82% 24%,#f0bd52 50%,transparent);opacity:.6}
+.apm-head img{width:44px;height:44px;padding:6px;border-radius:15px;background:#fff;object-fit:contain;box-shadow:0 0 0 2px #f0bd52}
+.apm-head span{display:grid;min-width:0}
+html body .admin-side .apm-head b{overflow:hidden;font-size:14.5px;color:#fff;white-space:nowrap;text-overflow:ellipsis}
+html body .admin-side .apm-head small{font-size:12px;font-weight:700;color:#f3d9a0}
+.apm-tiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+html body .admin-side .admin-profile-menu a{display:flex;align-items:center;gap:10px;margin:0;border-radius:14px;color:#eaf2f6;text-decoration:none;transition:background-color .2s,translate .35s cubic-bezier(.3,1.4,.5,1)}
+html body .admin-side .admin-profile-menu a.apm-tile{flex-direction:column;justify-content:center;gap:6px;min-height:72px;padding:8px 4px;background-color:rgba(255,255,255,.05);box-shadow:inset 0 0 0 1px rgba(255,255,255,.07);font-size:12.5px;font-weight:700;animation:apm-tile .5s calc(.05s + var(--i,0)*.05s) cubic-bezier(.3,1.4,.5,1) backwards}
+.apm-tile i{display:grid;place-items:center;width:34px;height:34px;border-radius:12px;background-color:rgba(240,189,82,.16);color:#f0bd52;transition:transform .45s cubic-bezier(.3,1.4,.5,1)}
+html body .admin-side .admin-profile-menu .apm-tile svg{width:17px;height:17px}
+.apm-tile:hover i{transform:translateY(-2px) rotate(-8deg) scale(1.08)}
+.apm-sec{margin:10px 8px 4px;font-size:11.5px;font-weight:800;color:#8fa8b6}
+html body .admin-side .admin-profile-menu a.apm-row,html body .admin-side .admin-profile-menu #logout{min-height:42px;padding:8px 10px;font-size:13.5px;font-weight:700}
+html body .admin-side .admin-profile-menu a.apm-row svg,html body .admin-side .admin-profile-menu #logout svg{width:17px;height:17px;color:#8ec5d6}
+html body .admin-side .admin-profile-menu a:is(:hover,:focus-visible){background-color:#2c4555;color:#fff}
+html body .admin-side .admin-profile-menu a.apm-row:is(:hover,:focus-visible){translate:-3px 0}
+html body .admin-side .admin-profile-menu a:focus-visible,html body .admin-side .admin-profile-menu #logout:focus-visible{outline:2px solid #f0bd52;outline-offset:1px}
+html body .admin-side .admin-profile-menu #logout{display:flex;align-items:center;gap:10px;width:100%;margin-top:8px;border:0;border-top:1px solid rgba(255,255,255,.1);border-radius:0 0 14px 14px;background-color:transparent;color:#ffb4a0;font:inherit;font-weight:700;cursor:pointer}
+html body .admin-side .admin-profile-menu #logout svg{color:#ffb4a0}
+html body .admin-side .admin-profile-menu #logout:hover{background-color:#803b4b;color:#fff;border-radius:14px}
+@keyframes apm-in{from{opacity:0;transform:translateY(12px) scale(.92);filter:blur(5px)}}
+@keyframes apm-tile{from{opacity:0;transform:translateY(10px) scale(.86)}}
+@media (prefers-reduced-motion:reduce){html body .admin-side .admin-profile-menu,html body .admin-side .admin-profile-menu *{animation:none!important;transition:none!important}}
+html body .admin-side .admin-profile-menu{right:0;left:0;width:auto;min-width:0}
+/* Panels never touch: one rhythm between stacked cards */
+html body #content :is(.panel,.admin-grid,.owner-workspace)+:is(.panel,.admin-grid,.owner-workspace){margin-top:20px}
+html body #content .admin-grid{gap:20px}
+/* User detail: facts as tiles, actions as a coloured toolbar, forms in two columns */
+html body #content .summary-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;margin:14px 0 0}
+html body #content .summary-list>div{display:grid;align-content:start;gap:4px;margin:0;padding:12px 14px;border:1px solid #e3ecf0;border-radius:16px;background:#ffffff;animation:adm-tile .45s calc(var(--n,0)*.03s) cubic-bezier(.2,.8,.2,1) backwards;transition:border-color .25s,transform .35s cubic-bezier(.3,1.4,.5,1)}
+html body #content .summary-list>div:hover{padding:12px 14px;border-color:#e2a03a;background:#ffffff;transform:translateY(-2px)}
+html body #content .summary-list dt{font-size:12px;color:#56707e}
+html body #content .summary-list dd{margin:0;font-size:14px;overflow-wrap:anywhere}
+html body #content .detail-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px;padding:12px;border-radius:18px;background:#f4f8fa;box-shadow:inset 0 0 0 1px #e3ecf0}
+html body #content .detail-actions .detail-act{display:inline-flex;align-items:center;gap:7px;min-height:42px;padding:8px 14px;border-radius:13px;font-weight:700;transition:transform .35s cubic-bezier(.3,1.4,.5,1),background-color .2s,border-color .2s}
+html body #content .detail-actions .detail-act svg{width:16px;height:16px;flex:none}
+html body #content .detail-actions .detail-act:hover{transform:translateY(-2px)}
+html body #content .detail-actions .detail-act--soft{border:1px solid #d3e3eb;background:#ffffff;color:#1c2d38}
+html body #content .detail-actions .detail-act--ok{border:1px solid #a9d8c0;background:#ecf8f1;color:#1d6b47}
+html body #content .detail-actions .detail-act--risk{border:1px solid #f0c7bd;background:#fff6f3;color:#9b3b2a}
+html body #content .detail-actions .detail-act--risk:hover{border-color:#c4553d;background:#fbe5df}
+html body #content .detail-actions .detail-act--risk:first-of-type{margin-inline-start:auto}
+html body #content .detail-actions .detail-act:focus-visible{outline:2px solid #e2a03a;outline-offset:2px}
+@media (min-width:900px){html body #content .staff-role-form{grid-template-columns:repeat(2,minmax(0,1fr));column-gap:16px}html body #content .staff-role-form>:is(h3,p,.btn,button,.field-note,small){grid-column:1/-1}}
+@keyframes adm-tile{from{opacity:0;transform:translateY(8px)}}
+@media (prefers-reduced-motion:reduce){html body #content .summary-list>div,html body #content .detail-actions .detail-act{animation:none;transition:none}}
