@@ -1,0 +1,64 @@
+/* The admin panel in the landing page's language, matching the dashboard: a cream canvas with gold and teal glows
+   and a faint grid, a night-sky sidebar and header, gold primary buttons and warm paper cards. Loaded last. Motion:
+   the glows drift, stars twinkle, the active item's gold edge grows in; reduced motion keeps the still frame. */
+html body{--night:#0b141b;--night-2:#1b3242;--gold:#f0bd52;--gold-2:#e2a03a;--teal:#3d8c9c;--cream:#fbf7f1;
+  --lq-glass:rgba(255,255,255,.74);--lq-glass-strong:rgba(255,255,255,.92);--lq-edge:#efe6da;
+  --lq-shadow:0 1px 2px rgba(43,30,15,.05),0 18px 40px -28px rgba(43,30,15,.45);--lq-shadow-hover:0 2px 4px rgba(43,30,15,.06),0 28px 56px -30px rgba(43,30,15,.55);
+  background:var(--cream)}
+html body::before{background:radial-gradient(circle at 40% 40%,rgba(240,189,82,.38),rgba(240,189,82,.12) 40%,transparent 68%)!important;animation:an-drift 26s ease-in-out infinite alternate}
+html body::after{background:radial-gradient(circle at 60% 50%,rgba(61,140,156,.3),rgba(142,197,214,.14) 40%,transparent 66%)!important;animation:an-drift 32s ease-in-out infinite alternate-reverse}
+html body .admin-shell::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;background-image:linear-gradient(rgba(135,90,54,.06) 1px,transparent 1px),linear-gradient(90deg,rgba(135,90,54,.06) 1px,transparent 1px);background-size:44px 44px;-webkit-mask:linear-gradient(180deg,#000,transparent 75%);mask:linear-gradient(180deg,#000,transparent 75%)}
+
+/* Night sidebar */
+html body .admin-side{background:linear-gradient(180deg,var(--night),var(--night-2))!important;border-color:rgba(255,255,255,.08);color:#dfe9ef;box-shadow:0 30px 60px -36px rgba(11,20,27,.9);isolation:isolate;overflow:hidden}
+html body .admin-side::before{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;border-radius:inherit;background:radial-gradient(1px 1px at 20% 14%,rgba(255,255,255,.8),transparent),radial-gradient(1.5px 1.5px at 74% 32%,rgba(240,189,82,.7),transparent),radial-gradient(1px 1px at 30% 58%,rgba(255,255,255,.5),transparent),radial-gradient(1.5px 1.5px at 64% 84%,rgba(142,197,214,.7),transparent);animation:an-twinkle 7s ease-in-out infinite alternate}
+html body .admin-brand img,html body .admin-side .ri-logo img{filter:brightness(0) invert(1)}
+html body .admin-nav a{color:#c9d8e1}
+html body .admin-nav a svg{color:#8fa7b5}
+html body .admin-nav a:hover,html body .admin-nav a:focus-visible{background:rgba(255,255,255,.07);color:#fff}
+html body .admin-nav a:hover svg{color:var(--gold)}
+html body .admin-nav a::before{background:linear-gradient(110deg,transparent 15%,rgba(240,189,82,.14) 45%,transparent 80%)}
+html body .admin-nav a[aria-current=page]{background:linear-gradient(90deg,rgba(240,189,82,.06),rgba(240,189,82,.18));color:#fff;box-shadow:inset 0 0 0 1px rgba(240,189,82,.28)}
+html body .admin-nav a[aria-current=page] svg{color:var(--gold)}
+html body .admin-nav a[aria-current=page]::after{background:linear-gradient(180deg,var(--gold),var(--gold-2));box-shadow:0 0 12px rgba(240,189,82,.8)}
+html body .admin-nav a[aria-current=page]::before{background:linear-gradient(110deg,transparent 30%,rgba(240,189,82,.22) 48%,transparent 66%)}
+html body .admin-side :is(.admin-account,.admin-user,footer>div,.admin-profile){background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.1);color:#fff}
+html body .admin-side :is(small,.muted,p){color:#9fb5c2}
+html body .admin-side strong,html body .admin-side b{color:#fff}
+html body .admin-side .btn{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.14);color:#e7eef2}
+html body .admin-side .btn:hover{background:rgba(240,189,82,.16);color:var(--gold)}
+html body .admin-side :focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+
+/* Night header pill */
+html body .admin-head{background:linear-gradient(150deg,rgba(11,20,27,.92),rgba(27,50,66,.86))!important;background-color:rgba(11,20,27,.9)!important;border:1px solid rgba(255,255,255,.1)!important;color:#fff;box-shadow:0 22px 48px -28px rgba(11,20,27,.8)!important}
+html body .admin-head::after{display:none}
+html body .admin-head,html body .admin-head strong,html body .admin-head #section-title{color:#fff}
+html body .admin-head :is(span,small){color:#a9c4d3}
+html body .admin-head .btn{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.16);color:#e7eef2;box-shadow:none}
+html body .admin-head .btn:hover{background:rgba(255,255,255,.16);color:#fff}
+
+/* Section tabs under the header: paper with a gold active tab */
+html body .tabs{background:rgba(255,255,255,.8);border-color:#efe6da}
+html body .tabs .tab[aria-selected=true],html body .tabs .tab[aria-current=page],html body .tabs .tab.is-active{background:linear-gradient(135deg,var(--gold),var(--gold-2));color:#2f1d0c;box-shadow:0 10px 22px -14px rgba(226,160,58,.9)}
+html body .tabs .tab[aria-selected=true] svg,html body .tabs .tab[aria-current=page] svg{color:#2f1d0c}
+
+/* Cards, headings, buttons */
+html body :is(.panel,.kpi,.catalog-item){background:rgba(255,255,255,.9);border-color:#efe6da}
+html body .page-intro h1,html body .admin-view>h1{color:var(--night)}
+html body .page-intro h1::after{content:"";display:block;width:56px;height:4px;margin-top:6px;border-radius:4px;background:linear-gradient(90deg,var(--gold),var(--gold-2));transform-origin:100% 50%;animation:an-underline .8s .2s cubic-bezier(.2,.8,.2,1) backwards}
+html body .kpi strong{color:var(--night)}
+html body :is(.btn-primary,.btn.btn-primary){position:relative;overflow:hidden;color:#2f1d0c;border-color:transparent;background:linear-gradient(135deg,var(--gold),var(--gold-2) 55%,#c7883a);box-shadow:0 14px 30px -16px rgba(226,160,58,.85),inset 0 1px 0 rgba(255,255,255,.5);transition:translate .4s cubic-bezier(.3,1.4,.5,1),box-shadow .3s}
+html body :is(.btn-primary,.btn.btn-primary):hover{translate:0 -2px;color:#2f1d0c;background:linear-gradient(135deg,#f4c766,#e8a944 55%,#c7883a)}
+html body :is(.input,.textarea,select):focus{outline:2px solid var(--gold);outline-offset:1px;border-color:var(--gold-2)}
+@keyframes an-drift{to{translate:-4vmax 3vmax;scale:1.08}}
+@keyframes an-twinkle{0%{opacity:.55}100%{opacity:1}}
+@keyframes an-underline{from{transform:scaleX(0)}}
+@media (prefers-reduced-motion:reduce){html body::before,html body::after,html body .admin-side::before,html body .page-intro h1::after{animation:none!important}html body .btn-primary{transition:none!important}}
+/* The account card at the foot of the sidebar; its menu stays on paper. */
+html body .admin-side .admin-profile summary{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);color:#fff}
+html body .admin-side .admin-profile summary:hover{border-color:rgba(240,189,82,.4)}
+html body .admin-side .admin-profile summary small{color:#9fb5c2}
+html body .admin-side .admin-profile summary img{background:#fff;padding:5px;object-fit:contain}
+html body .admin-side .admin-profile-menu :is(small,p){color:#435867}
+html body .admin-side .admin-profile-menu strong{color:#1c2d38}
+html body .admin-side .admin-profile-menu .btn{background:#fff;border-color:#e8e0d6;color:#1c2d38}

@@ -1,0 +1,51 @@
+/* The support desk in the landing page's language, matching the dashboard and the admin panel: a cream canvas with
+   gold and teal glows and a faint grid, a night-sky sidebar and desk bar, gold primary buttons and the active menu
+   item, warm paper cards. Loaded last. Motion: the glows drift, stars twinkle, the active edge grows in; reduced
+   motion keeps the still frame. */
+:root{--night:#0b141b;--night-2:#1b3242;--gold:#f0bd52;--gold-2:#e2a03a;--line:#ece4d9;--soft:#f7f2ea;--accent:#875a36;--accent-2:#a87414}
+body{background:#fbf7f1}
+body::before{content:"";position:fixed;inset:0;z-index:-2;pointer-events:none;background:radial-gradient(60vmax 60vmax at 10% -10%,rgba(240,189,82,.22),transparent 60%),radial-gradient(50vmax 50vmax at 100% 110%,rgba(61,140,156,.18),transparent 60%);animation:sd-drift 28s ease-in-out infinite alternate}
+body::after{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;background-image:linear-gradient(rgba(135,90,54,.06) 1px,transparent 1px),linear-gradient(90deg,rgba(135,90,54,.06) 1px,transparent 1px);background-size:44px 44px;-webkit-mask:linear-gradient(180deg,#000,transparent 75%);mask:linear-gradient(180deg,#000,transparent 75%)}
+.desk-aura{opacity:.4}
+
+/* Night sidebar */
+.staff-side{background:linear-gradient(180deg,var(--night),var(--night-2));border-inline-start:1px solid rgba(255,255,255,.06);color:#dfe9ef;isolation:isolate;overflow:hidden;position:sticky}
+.staff-side::before{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;background:radial-gradient(1px 1px at 20% 14%,rgba(255,255,255,.8),transparent),radial-gradient(1.5px 1.5px at 74% 30%,rgba(240,189,82,.7),transparent),radial-gradient(1px 1px at 32% 62%,rgba(255,255,255,.5),transparent),radial-gradient(1.5px 1.5px at 66% 88%,rgba(142,197,214,.7),transparent);animation:sd-twinkle 7s ease-in-out infinite alternate}
+.staff-side .brand img,.staff-side .brand .ri-logo img{filter:brightness(0) invert(1)}
+.staff-side .brand,.staff-side .brand span,.staff-side .brand small{color:#a9c4d3}
+.menu a{color:#c9d8e1}
+.menu a svg{color:#8fa7b5}
+.menu a:not([aria-current]):hover{background:rgba(255,255,255,.08);color:#fff;box-shadow:none}
+.menu a:not([aria-current]):hover svg{color:var(--gold)}
+.menu a[aria-current]{position:relative;background:linear-gradient(135deg,var(--gold),var(--gold-2) 55%,#c7883a);color:#2f1d0c;box-shadow:0 14px 28px -14px rgba(240,189,82,.8)}
+.menu a[aria-current] svg{color:#2f1d0c}
+.menu a[aria-current]::after{content:"";position:absolute;inset-block:10px;inset-inline-start:-6px;width:3px;border-radius:3px;background:var(--gold);box-shadow:0 0 12px rgba(240,189,82,.8);animation:sd-edge .5s cubic-bezier(.3,1.4,.5,1)}
+.menu-count{background:rgba(47,29,12,.16);color:#2f1d0c}
+.side-note,.staff-profile{background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.1);color:#dfe9ef;box-shadow:none}
+.side-note :is(h2,h3,b,strong),.staff-profile strong{color:#fff}
+.side-note :is(li,p,small),.staff-profile :is(small,span){color:#a9c4d3}
+.staff-side .btn-ghost,.staff-side footer .btn{color:#c9d8e1}
+.staff-side .btn-ghost:hover{color:var(--gold);background:rgba(255,255,255,.06)}
+.staff-side :focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+
+/* Night desk bar */
+.desk-bar{background:linear-gradient(150deg,rgba(11,20,27,.92),rgba(27,50,66,.86));border-color:rgba(255,255,255,.1);color:#fff;box-shadow:0 22px 48px -28px rgba(11,20,27,.8);-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px)}
+.desk-crumb{color:#a9c4d3}.desk-crumb b,.desk-crumb strong{color:#fff}
+.role-badge{background:rgba(240,189,82,.16);color:var(--gold);border-color:rgba(240,189,82,.3)}
+.desk-bar .btn{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.16);color:#e7eef2}
+.desk-bar .btn:hover{background:rgba(255,255,255,.16);color:#fff}
+
+/* Headings, buttons, focus */
+.intro h1{color:var(--night)}
+.intro h1::after{content:"";display:block;width:56px;height:4px;margin-top:6px;border-radius:4px;background:linear-gradient(90deg,var(--gold),var(--gold-2));transform-origin:100% 50%;animation:sd-underline .8s .2s cubic-bezier(.2,.8,.2,1) backwards}
+.eyebrow{color:#a87414}
+.btn-primary{position:relative;overflow:hidden;background:linear-gradient(135deg,var(--gold),var(--gold-2) 55%,#c7883a);color:#2f1d0c;border-color:transparent;box-shadow:0 14px 30px -16px rgba(226,160,58,.85),inset 0 1px 0 rgba(255,255,255,.5);transition:translate .4s cubic-bezier(.3,1.4,.5,1),box-shadow .3s}
+.btn-primary:hover:not(:disabled){translate:0 -2px;background:linear-gradient(135deg,#f4c766,#e8a944 55%,#c7883a);border-color:transparent;color:#2f1d0c}
+.ticket-row[aria-current]{border-color:var(--gold-2);box-shadow:0 0 0 3px rgba(240,189,82,.2)}
+:is(input,select,textarea):focus-visible{outline:2px solid var(--gold);outline-offset:1px}
+@keyframes sd-drift{to{transform:translate(-3vmax,2vmax) scale(1.06)}}
+@keyframes sd-twinkle{0%{opacity:.55}100%{opacity:1}}
+@keyframes sd-edge{from{transform:scaleY(0)}}
+@keyframes sd-underline{from{transform:scaleX(0)}}
+@media (prefers-reduced-motion:reduce){body::before,.staff-side::before,.menu a[aria-current]::after,.intro h1::after{animation:none!important}.btn-primary{transition:none!important}}
+.staff-profile img{background:#fff;border-radius:50%;padding:5px;object-fit:contain}
