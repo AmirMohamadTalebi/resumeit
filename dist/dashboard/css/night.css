@@ -1,0 +1,178 @@
+/* The dashboard in the landing page's language: a warm cream canvas with gold and teal glows and a faint grid (the
+   landing's light sections), a night-sky sidebar, top bar and phone tab bar (its dark sections and header), gold pill
+   buttons with a sheen and a leaning arrow, warm white cards with a soft line, and gold focus. Loaded after every other
+   dashboard style. The person's own pages in the preview keep their template's colors. Motion: the sky drifts, stars
+   twinkle, the active menu item's gold edge slides in, cards rise, buttons sheen and lift; reduced motion keeps the
+   still frame. */
+html body{
+  --night:#0b141b;--night-2:#1b3242;--cream:#fbf7f1;--paper:#fff;--line:#e8e0d6;--gold:#f0bd52;--gold-2:#e2a03a;--teal:#3d8c9c;--sky:#8ec5d6;
+  --lq-glass:rgba(255,255,255,.72);--lq-glass-strong:rgba(255,255,255,.9);--lq-edge:#efe6da;
+  --lq-shadow:0 1px 2px rgba(43,30,15,.05),0 18px 40px -28px rgba(43,30,15,.45);
+  --lq-shadow-hover:0 2px 4px rgba(43,30,15,.06),0 28px 56px -30px rgba(43,30,15,.55);
+  --nv-card:#fff;--nv-line:#ece4d9;--nv-line-2:#f4eee6;--nv-bg-soft:#f7f2ea;
+  background:var(--cream);
+}
+html body::before{background:radial-gradient(circle at 40% 40%,rgba(240,189,82,.42) 0,rgba(240,189,82,.14) 38%,transparent 68%);opacity:.75;animation:nt-drift 26s ease-in-out infinite alternate}
+html body::after{background:radial-gradient(circle at 60% 50%,rgba(61,140,156,.32) 0,rgba(142,197,214,.16) 38%,transparent 66%);opacity:.8;animation:nt-drift 32s ease-in-out infinite alternate-reverse}
+/* The landing's faint grid, fading out towards the bottom. */
+html body .app::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;background-image:linear-gradient(rgba(135,90,54,.06) 1px,transparent 1px),linear-gradient(90deg,rgba(135,90,54,.06) 1px,transparent 1px);background-size:44px 44px;-webkit-mask:linear-gradient(180deg,#000,transparent 75%);mask:linear-gradient(180deg,#000,transparent 75%)}
+
+/* ---------- Night sidebar ---------- */
+html body .dn{position:relative;overflow:hidden;isolation:isolate;background:linear-gradient(180deg,var(--night),var(--night-2));border-inline-start:1px solid rgba(255,255,255,.06);color:#dfe9ef;-webkit-backdrop-filter:none;backdrop-filter:none}
+html body .dn::before{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;background:
+  radial-gradient(1px 1px at 18% 12%,rgba(255,255,255,.8),transparent),radial-gradient(1px 1px at 72% 22%,rgba(255,255,255,.55),transparent),
+  radial-gradient(1.5px 1.5px at 40% 46%,rgba(240,189,82,.7),transparent),radial-gradient(1px 1px at 84% 64%,rgba(255,255,255,.6),transparent),
+  radial-gradient(1px 1px at 26% 78%,rgba(255,255,255,.5),transparent),radial-gradient(1.5px 1.5px at 62% 90%,rgba(142,197,214,.7),transparent);
+  animation:nt-twinkle 7s ease-in-out infinite alternate}
+html body .dn::after{content:"";position:absolute;inset:auto -40% -30% -40%;z-index:-1;height:55%;pointer-events:none;background:radial-gradient(ellipse at 50% 100%,rgba(240,189,82,.16),transparent 65%)}
+html body .dn .ri-logo img{filter:brightness(0) invert(1)}
+html body .dn-fold{background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.12);color:#c9d8e1}
+html body .dn-fold:hover{background:rgba(240,189,82,.16);color:var(--gold)}
+html body .dn-group__label{color:#7f97a6}
+html body .dn-item{color:#c9d8e1}
+html body .dn-item__ico{color:#8fa7b5}
+html body .dn-item:hover{background:rgba(255,255,255,.06);color:#fff}
+html body .dn-item:hover .dn-item__ico{color:var(--gold)}
+html body .dn-item[aria-current=page]{background:linear-gradient(90deg,rgba(240,189,82,.05),rgba(240,189,82,.16));color:#fff;box-shadow:inset 0 0 0 1px rgba(240,189,82,.22)}
+html body .dn-item[aria-current=page]::before{content:"";position:absolute;inset-block:9px;inset-inline-start:-2px;width:3px;border-radius:3px;background:linear-gradient(180deg,var(--gold),var(--gold-2));box-shadow:0 0 12px rgba(240,189,82,.8);animation:nt-edge .5s cubic-bezier(.3,1.4,.5,1)}
+html body .dn-item[aria-current=page] .dn-item__ico{background:linear-gradient(135deg,var(--gold),var(--gold-2));color:#2f1d0c;box-shadow:0 8px 18px -8px rgba(240,189,82,.8)}
+html body .dn-item__badge{background:var(--gold);color:#2f1d0c}
+html body .dn-item:focus-visible,html body .dn-fold:focus-visible,html body .dn-account:focus-visible,html body .dn-plan:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+html body .dn-foot{border-top-color:rgba(255,255,255,.08)}
+html body .dn-plan{background:linear-gradient(135deg,var(--gold),var(--gold-2) 55%,#875a36);color:#2f1d0c;box-shadow:0 14px 30px -16px rgba(240,189,82,.8);position:relative;overflow:hidden}
+html body .dn-plan::after{content:"";position:absolute;inset:0;background:linear-gradient(110deg,transparent 35%,rgba(255,255,255,.45) 50%,transparent 65%);transform:translateX(-120%);animation:nt-sheen 6s 2s ease-in-out infinite}
+html body .dn-plan svg{color:#4d3320}
+html body .dn-plan span,html body .dn-plan small,html body .dn-plan b{color:#2f1d0c}
+html body .dn-switch a{background:rgba(255,255,255,.07);color:#dfe9ef}
+html body .dn-switch a:hover{background:rgba(240,189,82,.16);color:var(--gold)}
+html body .dn-account{background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.1);color:#fff}
+html body .dn-account:hover{border-color:rgba(240,189,82,.4);box-shadow:0 10px 24px -16px rgba(0,0,0,.6)}
+html body .dn-account__sub,html body .dn-account>svg{color:#9fb5c2}
+html body .dn-version{color:#7f97a6}html body .dn-version:hover{color:var(--gold)}
+html body .dn-folded .dn-group{border-bottom-color:rgba(255,255,255,.08)}
+/* Fandogh's card in the menu, on the night sky. */
+html body .dn-item--fandogh{background:linear-gradient(120deg,rgba(255,255,255,.08),rgba(240,189,82,.12));box-shadow:inset 0 0 0 1px rgba(255,255,255,.1)}
+html body .dn-item--fandogh .dn-item__txt{color:#fff}
+html body .dn-item--fandogh .dn-item__txt small{color:#a9c4d3}
+html body .dn-item--fandogh .dn-item__ico{background:#fff}
+html body .dn-item--fandogh[aria-current=page]{background:linear-gradient(120deg,rgba(240,189,82,.14),rgba(240,189,82,.26));box-shadow:inset 0 0 0 1px rgba(240,189,82,.35)}
+html body .dn-item--fandogh[aria-current=page] .dn-item__ico{background:#fff;box-shadow:0 0 0 2px var(--gold),0 6px 14px -6px rgba(240,189,82,.9)}
+html body .dn-folded .dn-item--fandogh{background:none;box-shadow:none}
+
+/* ---------- Top bar: the landing header's dark glass pill ---------- */
+html body .topbar{background:linear-gradient(150deg,rgba(11,20,27,.92),rgba(27,50,66,.86));border:1px solid rgba(255,255,255,.1);box-shadow:0 22px 48px -28px rgba(11,20,27,.8),inset 0 1px 0 rgba(255,255,255,.08);color:#fff}
+html body .topbar__title,html body .dn-app .topbar__title{color:#fff}
+html body .topbar__crumb,html body .dn-app .topbar__crumb{color:#9fb5c2}
+html body .topbar .save-state{color:#a9c4d3}
+html body .dn-app .topbar__bell,html body .topbar .btn:not(#topPublish){background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.14);color:#e7eef2}
+html body .topbar .btn:not(#topPublish):hover,html body .dn-app .topbar__bell:hover{background:rgba(255,255,255,.16);color:#fff}
+html body .topbar .topbar__actions #topPublish{color:#2f1d0c;border:0;background:linear-gradient(135deg,var(--gold),var(--gold-2) 55%,#c7883a);box-shadow:0 14px 30px -14px rgba(240,189,82,.75),inset 0 1px 0 rgba(255,255,255,.5)}
+html body .topbar .topbar__actions #topPublish:hover{background:linear-gradient(135deg,#f4c766,#e8a944 55%,#c7883a)}
+html body .topbar .topbar__menu{color:#fff}
+html body .dn-app .topbar__bell.has-unread::after{background:var(--gold);box-shadow:0 0 0 2px var(--night)}
+
+/* ---------- Phone tab bar ---------- */
+html body .bottom-nav{background:linear-gradient(180deg,rgba(11,20,27,.94),rgba(27,50,66,.96));border-top:1px solid rgba(255,255,255,.08)}
+html body .bottom-nav a,html body .bottom-nav button{color:#9fb5c2}
+html body .bottom-nav [aria-current=page],html body .bottom-nav a[aria-current=page]{color:var(--gold);background:rgba(240,189,82,.14);box-shadow:inset 0 0 0 1px rgba(240,189,82,.3);border-radius:14px}
+
+/* ---------- Buttons: gold pills like the landing's call to action ---------- */
+html body .btn--primary,html body .btn.btn-primary{--b-bg:var(--gold);--b-hover:var(--gold-2);position:relative;overflow:hidden;isolation:isolate;color:#2f1d0c;border-color:transparent;background:linear-gradient(135deg,var(--gold),var(--gold-2) 55%,#c7883a);box-shadow:0 14px 30px -16px rgba(226,160,58,.85),inset 0 1px 0 rgba(255,255,255,.5);transition:translate .4s cubic-bezier(.3,1.4,.5,1),box-shadow .3s,background .3s}
+html body .btn--primary::before,html body .btn.btn-primary::before{content:"";position:absolute;inset:0;z-index:-1;background:linear-gradient(110deg,transparent 30%,rgba(255,255,255,.55) 50%,transparent 70%);transform:translateX(-120%);transition:transform .8s cubic-bezier(.2,.8,.2,1)}
+html body .btn--primary:hover,html body .btn.btn-primary:hover{translate:0 -2px;color:#2f1d0c;background:linear-gradient(135deg,#f4c766,#e8a944 55%,#c7883a);box-shadow:0 18px 36px -16px rgba(226,160,58,.95),inset 0 1px 0 rgba(255,255,255,.55)}
+html body .btn--primary:hover::before,html body .btn.btn-primary:hover::before{transform:translateX(120%)}
+html body .btn--primary svg,html body .btn.btn-primary svg{color:#2f1d0c;transition:translate .35s cubic-bezier(.3,1.4,.5,1)}
+html body .btn--primary:hover svg:last-child{translate:-3px 0}
+html body .btn--primary:focus-visible{outline:2px solid #6b4629;outline-offset:3px}
+html body .btn--primary:disabled,html body .btn--primary[aria-disabled=true]{opacity:.55;translate:none}
+
+/* ---------- Cards and panels: warm paper with a soft line ---------- */
+html body :is(.nv-card,.panel,.card):not(.pv *):not(.pvhost__stage *){background:#fff;border-color:#efe6da}
+html body .nv-head h1,html body #page-title{color:var(--night)}
+html body .nv-head h1::after{content:"";display:block;width:56px;height:4px;margin-top:6px;border-radius:4px;background:linear-gradient(90deg,var(--gold),var(--gold-2));transform-origin:100% 50%;animation:nt-underline .8s .2s cubic-bezier(.2,.8,.2,1) backwards}
+html body :is(.input,input.input,select.input,textarea.input):is(:focus,:focus-within){outline:2px solid var(--gold);outline-offset:1px;border-color:var(--gold-2);box-shadow:0 0 0 4px rgba(240,189,82,.18)}
+
+@keyframes nt-drift{to{translate:-4vmax 3vmax;scale:1.08}}
+@keyframes nt-twinkle{0%{opacity:.55}100%{opacity:1}}
+@keyframes nt-sheen{0%,70%{transform:translateX(-120%)}100%{transform:translateX(120%)}}
+@keyframes nt-edge{from{transform:scaleY(0)}}
+@keyframes nt-underline{from{transform:scaleX(0)}}
+@media (prefers-reduced-motion:reduce){
+  html body::before,html body::after,html body .dn::before,html body .dn-plan::after,html body .dn-item[aria-current=page]::before,html body .nv-head h1::after{animation:none!important}
+  html body .btn--primary,html body .btn--primary::before{transition:none!important}
+}
+html body .topbar #topPreview{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);color:#e7eef2}
+html body .topbar #topPreview:hover{background:rgba(255,255,255,.16);color:#fff}
+html body .topbar .save-state[data-state=error]{color:#ffb4a8}
+
+/* ---------- Fandogh's page in the landing's language ---------- */
+/* The conversations rail is a slice of night sky, like the sidebar. */
+html body .fs-rail{background:linear-gradient(180deg,var(--night),var(--night-2));border-color:rgba(255,255,255,.08);color:#dfe9ef;isolation:isolate}
+html body .fs-rail::before{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;border-radius:inherit;background:radial-gradient(1px 1px at 22% 18%,rgba(255,255,255,.7),transparent),radial-gradient(1.5px 1.5px at 70% 40%,rgba(240,189,82,.7),transparent),radial-gradient(1px 1px at 35% 82%,rgba(142,197,214,.7),transparent);animation:nt-twinkle 6s ease-in-out infinite alternate}
+html body .fs-new{background:linear-gradient(135deg,var(--gold),var(--gold-2) 55%,#c7883a);color:#2f1d0c;box-shadow:0 14px 28px -14px rgba(240,189,82,.8)}
+html body .fs-new kbd{background:rgba(47,29,12,.14);color:#2f1d0c}
+html body .fs-search{background:rgba(255,255,255,.07);border-color:rgba(255,255,255,.12);color:#9fb5c2}
+html body .fs-search:focus-within{background:rgba(255,255,255,.12);border-color:rgba(240,189,82,.5)}
+html body .fs-search input{color:#fff}html body .fs-search input::placeholder{color:#8fa7b5}
+html body .fs-chats__group>b,html body .fs-chats__empty,html body .fs-rail__foot small{color:#7f97a6}
+html body .fs-chat:hover{background:rgba(255,255,255,.06)}
+html body .fs-chat.is-on{background:rgba(240,189,82,.14);box-shadow:inset 0 0 0 1px rgba(240,189,82,.25)}
+html body .fs-chat.is-on::before{background:var(--gold);box-shadow:0 0 10px rgba(240,189,82,.8)}
+html body .fs-chat__open{color:#e7eef2}html body .fs-chat__open small{color:#8fa7b5}
+html body .fs-chat__pin{color:#8fa7b5}html body .fs-chat__pin:hover{background:rgba(255,255,255,.1)}html body .fs-chat__pin[aria-pressed=true]{color:var(--gold)}
+html body .fs-rail__foot{border-top-color:rgba(255,255,255,.08)}
+html body .fs-rail__foot a{color:#c9d8e1}html body .fs-rail__foot a:hover{background:rgba(255,255,255,.06);color:var(--gold)}
+html body .fs-rail .fs-icon{color:#c9d8e1}html body .fs-rail .fs-icon:hover{background:rgba(255,255,255,.08);color:var(--gold)}
+html body :is(.fs-main,.fs-inspector){background:rgba(255,255,255,.86);border-color:#efe6da}
+html body .fs-main::before{background:linear-gradient(90deg,transparent,var(--gold),var(--teal),var(--gold-2),transparent);background-size:200% 100%}
+html body .fs-bar{border-bottom-color:#f1e9de}
+html body .fs-title{color:var(--night)}
+html body .fs-pane-btn[aria-pressed=true]{background:#fff4dc;color:#a87414}
+
+/* Messages: the person's in night blue with a gold rim, Fandogh's on paper with a gold thread down the side. */
+html body .fs-msg--me .fs-msg__body{position:relative;background:linear-gradient(135deg,var(--night-2),var(--night));color:#f4f7f9;border:1px solid rgba(240,189,82,.35);border-radius:20px 20px 20px 6px;box-shadow:0 16px 30px -20px rgba(11,20,27,.9),inset 0 1px 0 rgba(255,255,255,.08)}
+html body .fs-msg--me .fs-msg__body::after{content:"";position:absolute;inset:-1px;border-radius:inherit;pointer-events:none;background:linear-gradient(110deg,transparent 40%,rgba(240,189,82,.25) 50%,transparent 60%);background-size:250% 100%;animation:nt-rim 1.2s .1s ease-out backwards}
+html body .fs-msg--bot .fs-msg__main{position:relative;padding:14px 16px 10px;border-radius:6px 20px 20px 20px;background:#fff;border:1px solid #efe6da;box-shadow:0 18px 36px -28px rgba(43,30,15,.5)}
+html body .fs-msg--bot .fs-msg__main::before{content:"";position:absolute;inset-block:14px;inset-inline-start:-1px;width:3px;border-radius:3px;background:linear-gradient(180deg,var(--gold),var(--teal));transform-origin:50% 0;animation:nt-thread .7s .15s cubic-bezier(.2,.8,.2,1) backwards}
+html body .fs-msg--bot.is-error .fs-msg__main{background:#fff7f5;border-color:#f3d2cb}
+html body .fs-msg--bot.is-error .fs-msg__main::before{background:#d1453b}
+html body .fs-msg--bot.is-error .fs-msg__body{background:none;padding:0;color:#7d2d25}
+html body .fs-msg__av{box-shadow:0 0 0 2px #fff,0 0 0 4px rgba(240,189,82,.55),0 10px 18px -10px rgba(226,160,58,.9)}
+html body .fs-msg__main>header b{color:var(--night)}
+html body .fs-badge{background:#f4efe7;color:#6b4629}
+html body .fs-badge--paid{background:#fff4dc;color:#8a5a12}
+html body .fs-prose b{color:var(--night)}
+html body .fs-prose li::marker{color:var(--gold-2)}
+html body .fs-prose code{background:#f6efe4;color:#6b4629}
+html body .fs-prose :is(ul,ol){padding:8px 22px 8px 12px;border-radius:12px;background:#fbf8f3}
+html body .fs-tools button:hover{background:#fff4dc;color:#a87414}
+html body .fs-tools button[aria-pressed=true]{background:#fff4dc;color:#a87414}
+html body .fs-acts .pet__act{background:#fff;border-color:#ead9c2;color:#6b4629}
+html body .fs-acts .pet__act:hover{background:linear-gradient(135deg,var(--gold),var(--gold-2));border-color:transparent;color:#2f1d0c}
+html body .fs-typing .fs-orbit i{background:var(--gold-2)}
+html body .fs-chips button{border-color:#ead9c2;color:#6b4629}
+html body .fs-chips button:hover{background:#fff4dc;border-color:var(--gold)}
+
+/* Composer: paper with a gold focus edge and a gold send button. */
+html body .fs-composer__box{border-color:#e8dccb;box-shadow:0 18px 40px -30px rgba(43,30,15,.6)}
+html body .fs-composer__box:focus-within{border-color:var(--gold);box-shadow:0 0 0 4px rgba(240,189,82,.18),0 20px 44px -28px rgba(43,30,15,.6)}
+html body .fs-send{background:linear-gradient(135deg,var(--gold),var(--gold-2) 55%,#c7883a);color:#2f1d0c;box-shadow:0 12px 22px -12px rgba(226,160,58,.95)}
+html body .fs-model-btn{background:#fbf7f1;border-color:#ece1d2}
+html body .fs-model-btn:hover{background:#fff4dc;border-color:var(--gold)}
+html body .fs-model-btn svg{color:var(--gold-2)}
+html body .fs-mode button[aria-pressed=true]{color:#a87414}
+html body .fs-empty h2{background:linear-gradient(90deg,var(--night),#875a36,var(--gold-2),var(--night));background-size:300% 100%;-webkit-background-clip:text;background-clip:text}
+html body .fs-kicker{background:#fff4dc;color:#8a5a12}
+html body .fs-suggest button{border-color:#efe6da}
+html body .fs-suggest button:hover{border-color:var(--gold);box-shadow:0 18px 32px -22px rgba(226,160,58,.8)}
+html body .fs-suggest i{background:#fff4dc;color:#a87414}
+html body .fs-card{border-color:#efe6da}
+html body .fs-score{background:linear-gradient(135deg,var(--night),var(--night-2));color:#fff;border-color:transparent}
+html body .fs-score small,html body .fs-score span{color:#a9c4d3}
+html body .fs-score circle:first-child{stroke:rgba(255,255,255,.12)}html body .fs-score circle+circle{stroke:var(--gold)}
+@keyframes nt-rim{from{background-position:120% 0}to{background-position:-30% 0}}
+@keyframes nt-thread{from{transform:scaleY(0)}}
+@media (prefers-reduced-motion:reduce){html body .fs-rail::before,html body .fs-msg--me .fs-msg__body::after,html body .fs-msg--bot .fs-msg__main::before{animation:none!important}}
+html body .fs-quota .fs-coin{-webkit-mask:none;mask:none;width:28px;height:28px;background:linear-gradient(135deg,var(--gold),var(--gold-2));color:#2f1d0c}
+html body .fs-quota{background:#fbf7f1}html body .fs-quota:hover{background:#fff4dc}
+html body .topbar{background-color:rgba(11,20,27,.9);-webkit-backdrop-filter:blur(18px) saturate(1.4);backdrop-filter:blur(18px) saturate(1.4)}
