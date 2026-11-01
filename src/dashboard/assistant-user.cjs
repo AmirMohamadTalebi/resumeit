@@ -15,7 +15,7 @@ function validate(input){
   if(typeof own!=='object'||Array.isArray(own)||typeof own.enabled!=='boolean'||!Object.hasOwn(PROVIDERS,own.provider))fail('سرویس هوش مصنوعی معتبر نیست');
   const model=String(own.model||'').trim(),url=String(own.url||'').trim().replace(/\/+$/,'');
   if(model&&(model.length>80||!/^[\w.:/@-]+$/.test(model)))fail('نام مدل معتبر نیست');
-  if(url&&(url.length>200||!/^https:\/\/[a-z0-9.-]+(?::\d+)?(?:\/[\w.~%/-]*)?$/i.test(url)))fail('نشانی سرویس باید با https شروع شود');
+  if(own.provider==='custom'&&url&&(url.length>200||!/^https:\/\/[a-z0-9.-]+(?::\d+)?(?:\/[\w.~%/-]*)?$/i.test(url)))fail('نشانی سرویس باید با https شروع شود');
   if(own.provider==='custom'&&!url&&own.enabled)fail('برای سرویس سازگار با OpenAI نشانی لازم است');
   const engine=input.engine===undefined?'local':input.engine;
   if(typeof engine!=='string'||!/^[a-z0-9.-]{1,32}$/.test(engine))fail('مدل پیش‌فرض معتبر نیست');

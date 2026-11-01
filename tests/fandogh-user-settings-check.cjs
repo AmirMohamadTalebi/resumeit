@@ -22,6 +22,8 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
   const settings=s=>({...view.settings,...s,own:{...view.settings.own,...(s.own||{})}});
   assert.equal((await send('/api/dashboard/assistant/me',{settings:settings({own:{enabled:true}})})).status,400,'own model needs a key');
   assert.equal((await send('/api/dashboard/assistant/me',{settings:settings({name:'یک اسم خیلی خیلی طولانی برای گربه'})})).status,400);
+  // A browser autofilling the hidden service address (a username, say) must not block saving for a non-custom service.
+  assert.equal((await send('/api/dashboard/assistant/me',{settings:settings({own:{provider:'openai',url:'amir@example'}})})).status,200);assert.equal((await send('/api/dashboard/assistant/me',{settings:settings({own:{provider:'custom',url:'amir@example'}})})).status,400);
   view=(await send('/api/dashboard/assistant/me',{settings:settings({name:'پشمک',tone:'formal',length:'detailed',engine:'own',own:{enabled:true,provider:'openai',model:'gpt-4o-mini'}}),key:'sk-mine-abcd1234'})).body;
   assert.equal(view.key.hint,'…1234');assert(!JSON.stringify(view).includes('sk-mine'),'the key never comes back');assert.equal(view.models[1].id,'own');assert.equal(view.models[1].cost,0);
   const [row]=await execute('SELECT secret FROM assistant_user_settings WHERE user_id=?',[target]);assert(row.secret.startsWith('v1.')&&!row.secret.includes('sk-mine'),'sealed at rest');
