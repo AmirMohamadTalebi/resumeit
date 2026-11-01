@@ -176,3 +176,20 @@ html body .fs-score circle:first-child{stroke:rgba(255,255,255,.12)}html body .f
 html body .fs-quota .fs-coin{-webkit-mask:none;mask:none;width:28px;height:28px;background:linear-gradient(135deg,var(--gold),var(--gold-2));color:#2f1d0c}
 html body .fs-quota{background:#fbf7f1}html body .fs-quota:hover{background:#fff4dc}
 html body .topbar{background-color:rgba(11,20,27,.9);-webkit-backdrop-filter:blur(18px) saturate(1.4);backdrop-filter:blur(18px) saturate(1.4)}
+/* Solid colors under the translucent layers, so contrast reads true on the night sky. */
+html body .dn-item:hover{background:#4f6d7e}
+html body .dn-item[aria-current=page]{background-color:#2a3a3f}
+html body .dn-fold{background:#1a2f3d}html body .dn-fold:hover{background:#2a3a3f}
+html body .dn-switch a{background:#1a2f3d}html body .dn-switch a:hover{background:#2a3a3f}
+html body .dn-account{background:#1a2f3d}
+html body .dn-item--fandogh{background-color:#1a2f3d}
+html body .dn-item--fandogh[aria-current=page]{background-color:#2a3a3f}
+html body .dn-app .topbar__bell,html body .topbar .btn:not(#topPublish),html body .topbar #topPreview{background:#1f3646}
+html body .topbar .btn:not(#topPublish):hover,html body .dn-app .topbar__bell:hover,html body .topbar #topPreview:hover{background:#2c4555}
+html body .bottom-nav [aria-current=page],html body .bottom-nav a[aria-current=page]{background-color:#2a3a3f}
+html body .fs-chat:hover{background:#1f3646}html body .fs-chat.is-on{background-color:#2a3a3f}
+html body .fs-search{background:#1a2f3d}
+html body .fs-rail__foot a:hover,html body .fs-rail .fs-icon:hover{background:#1f3646}
+/* Fandogh's card lights up gold under the pointer, with dark text, like the landing's call to action. */
+html body .dn-item--fandogh:not([aria-current=page]):hover{background:linear-gradient(120deg,#f8e2a8,#f3cf7a);background-color:#f6dc9c;color:#2f1d0c;box-shadow:0 12px 26px -16px rgba(240,189,82,.9)}
+html body .dn-item--fandogh:not([aria-current=page]):hover .dn-item__txt,html body .dn-item--fandogh:not([aria-current=page]):hover .dn-item__txt small{color:#2f1d0c}

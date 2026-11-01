@@ -49,3 +49,8 @@ body::after{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;bac
 @keyframes sd-underline{from{transform:scaleX(0)}}
 @media (prefers-reduced-motion:reduce){body::before,.staff-side::before,.menu a[aria-current]::after,.intro h1::after{animation:none!important}.btn-primary{transition:none!important}}
 .staff-profile img{background:#fff;border-radius:50%;padding:5px;object-fit:contain}
+.menu a:not([aria-current]):hover{background:#4f6d7e}
+.menu a[aria-current]{background-color:#e8ad46}
+.side-note,.staff-profile{background:#16293a}
+.desk-bar .btn{background:#1f3646}.desk-bar .btn:hover{background:#2c4555}
+.staff-side .btn-ghost:hover{background:#1f3646}

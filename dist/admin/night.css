@@ -62,3 +62,12 @@ html body .admin-side .admin-profile summary img{background:#fff;padding:5px;obj
 html body .admin-side .admin-profile-menu :is(small,p){color:#435867}
 html body .admin-side .admin-profile-menu strong{color:#1c2d38}
 html body .admin-side .admin-profile-menu .btn{background:#fff;border-color:#e8e0d6;color:#1c2d38}
+/* Solid colors under the translucent layers, so contrast reads true on the night sky. */
+html body .admin-nav a{background-color:transparent}
+html body .admin-nav a:hover,html body .admin-nav a:focus-visible{background:#4f6d7e}
+html body .admin-nav a[aria-current=page]{background-color:#2a3a3f}
+html body .admin-side .btn{background:#1f3646}
+html body .admin-side .btn:hover{background:#2c4555}
+html body .admin-side .admin-profile summary{background:#1a2f3d}
+html body .admin-head .btn{background:#1f3646}
+html body .admin-head .btn:hover{background:#2c4555}
