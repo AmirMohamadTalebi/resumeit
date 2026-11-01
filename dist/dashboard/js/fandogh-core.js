@@ -25,11 +25,19 @@
     return r.reply;
   };
   F.model = id => (F.status?.models || []).find(m => m.id === id);
-  F.cost = m => !m ? '' : m.cost ? RI.fa(m.cost) + ' پیام' : 'رایگان';
+  // A model's typical price (toman for a 10,000-token message) or, on an answer, what it really cost.
+  F.cost = m => !m ? '' : m.cost ? '≈ ' + RI.fa(Math.round(m.cost)) + ' تومان' : 'رایگان';
+  F.paid = m => !m?.cost ? '' : RI.fa(Math.round(m.cost * 10) / 10) + ' تومان' + (m.tokens ? ' · ' + RI.fa(m.tokens) + ' توکن' : '');
+  // The Fandogh wallet: toman is what counts; tokens (GPT-6 Luna tokens) are there to read it by.
+  F.money = t => RI.fa(Math.floor(t || 0)) + ' تومان';
+  // A model's own rate: toman per 1,000 charged tokens (input), and how many of its tokens an amount buys.
+  F.rate = m => !m?.million?.[0] ? '' : RI.fa(Math.round(m.million[0] / 100) / 10) + ' تومان برای هر ۱۰۰۰ توکن';
+  F.buys = (m, toman) => !m?.million?.[0] ? 0 : Math.floor(toman / (m.million[0] / 1e6));
+  F.tokens = n => { n = Math.max(0, n || 0); return n >= 1e6 ? RI.fa(Math.round(n / 1e5) / 10) + ' میلیون توکن' : n >= 1e3 ? RI.fa(Math.round(n / 100) / 10) + ' هزار توکن' : RI.fa(n) + ' توکن'; };
+  F.topup = async its => { const r = await RI.dashboardRequest('assistant/topup', { its, requestId: (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(16) + Math.random().toString(16).slice(2)).replace(/-/g, '') }); F.status = r.usage; document.dispatchEvent(new CustomEvent('ri:fandogh-status', { detail: F.status })); return r; };
   // Models in their maker's group (فندق، OpenAI، Anthropic، Google، Moonshot، …), in catalog order.
   F.groups = list => { const out = []; for (const m of list) { let g = out.find(x => x[0] === (m.groupLabel || '')); if (!g) out.push(g = [m.groupLabel || '', []]); g[1].push(m); } return out; };
   F.tier = level => (F.status?.tiers || ['رایگان', 'آرش', 'رستم', 'کوروش'])[level] || '';
-  F.reset = at => !at ? '' : new Date(at).toLocaleString('fa-IR', { hour: '2-digit', minute: '2-digit', ...(at - Date.now() > 20 * 3600000 ? { weekday: 'long' } : {}) });
 
   // A tiny formatter for answers: paragraphs, «-» and «۱.» lists, **bold** and `code`; everything escaped first.
   F.format = text => {

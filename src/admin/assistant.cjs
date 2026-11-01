@@ -10,7 +10,7 @@ async function view(database){
     settings,
     keys:Object.fromEntries(Object.keys(providers.PROVIDERS).map(id=>[id,{set:!!keys[id],hint:ownerSettings.hint(keys[id])}])),
     providers:Object.entries(providers.PROVIDERS).map(([id,p])=>({id,label:p.label,model:p.model,models:p.models,url:p.url,needsUrl:id==='custom'})),
-    models:catalog.models(settings).filter(m=>m.id!=='local').map(m=>({...m,group:Object.fromEntries(catalog.GROUPS)[m.group],perMessage:catalog.perMessage(m),base:catalog.CATALOG.find(x=>x.id===m.id),available:!!catalog.runtime(m,settings,keys)})),
+    models:catalog.models(settings).filter(m=>m.id!=='local').map(m=>({...m,group:Object.fromEntries(catalog.GROUPS)[m.group],typical:Math.round(catalog.typical(m,settings))/10,base:catalog.CATALOG.find(x=>x.id===m.id),available:!!catalog.runtime(m,settings,keys)})),
     stats:await database.assistantStats(),
     plans,
     live:!!ownerSettings.runtime(settings,keys),

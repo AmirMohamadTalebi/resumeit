@@ -1,17 +1,18 @@
-// Fandogh's owner settings: whether it answers at all, the 5-hour and weekly allowance of each plan, and the language model it may speak
+// Fandogh's owner settings: whether it answers at all, how answers are billed (dollar rate, margin, welcome and
+// starter credit), and the language model it may speak
 // through. Provider keys are kept apart from the settings, sealed with AES-256-GCM under a server secret
 // (ASSISTANT_SECRET, else the database password), so a database dump alone does not reveal them.
 const { createCipheriv, createDecipheriv, createHash, randomBytes } = require('node:crypto');
 const { fail } = require('../dashboard/model.cjs'), { RI } = require('../dashboard/render.cjs'), { PROVIDERS } = require('../ai/providers.cjs');
 
-// Who gets how many messages in a rolling 5-hour window and in a rolling week: free accounts, ResumeIt
-// subscribers and the three Fandogh plans.
-const PLAN_KEYS = ['free', 'subscription', ...Object.keys(RI.ASSISTANT_PLANS)];
-const planLimits = () => ({ free: { ...RI.ASSISTANT_FREE }, subscription: { window: RI.ASSISTANT_SITE.window, week: RI.ASSISTANT_SITE.week }, ...Object.fromEntries(Object.values(RI.ASSISTANT_PLANS).map(p => [p.id, { window: p.window, week: p.week }])) });
+// Billing: the dollar rate (toman), the margin on the API price (%), credit for a new account and the starter credit
+// each plan adds to the Fandogh wallet (toman).
+const STARTER_KEYS = ['subscription', ...Object.keys(RI.ASSISTANT_PLANS)];
+const billing = () => ({ dollar: 300000, markup: 50, welcome: RI.ASSISTANT_WELCOME, starter: { subscription: RI.ASSISTANT_SITE.credit, ...Object.fromEntries(Object.values(RI.ASSISTANT_PLANS).map(p => [p.id, p.credit])) } });
 function defaults() {
   return {
     enabled: true,
-    limits: planLimits(),
+    billing: billing(),
     ai: { enabled: false, provider: 'openai', temperature: 0.4, maxTokens: 1200, dailyCalls: 2000, smalltalk: false },
     providers: {},
     models: {},
@@ -23,16 +24,10 @@ function validate(input) {
   const out = defaults(), ai = input.ai || {};
   if (typeof input.enabled !== 'boolean') fail('روشن یا خاموش بودن دستیار را مشخص کن');
   out.enabled = input.enabled;
-  const limits = input.limits;
-  if (!limits || typeof limits !== 'object' || Array.isArray(limits)) fail('سهمیه‌ها معتبر نیست');
-  for (const key of PLAN_KEYS) {
-    const v = limits[key];
-    if (!v || typeof v !== 'object') fail('سهمیهٔ همهٔ اشتراک‌ها را بنویس');
-    const window = int(v.window, key === 'free' ? 0 : 1, 10000, 'سهمیهٔ ۵ ساعته باید عددی بین ۰ تا ۱۰٬۰۰۰ باشد'), week = int(v.week, key === 'free' ? 0 : 1, 100000, 'سهمیهٔ هفتگی باید عددی بین ۰ تا ۱۰۰٬۰۰۰ باشد');
-    if (week < window) fail('سهمیهٔ هفتگی نباید کمتر از سهمیهٔ ۵ ساعته باشد');
-    out.limits[key] = { window, week };
-  }
-  if (Object.keys(RI.ASSISTANT_PLANS).some(id => out.limits[id].week < out.limits.free.week)) fail('سهمیهٔ اشتراک‌های فندق نباید کمتر از سهمیهٔ رایگان باشد');
+  const bill = input.billing;
+  if (!bill || typeof bill !== 'object' || Array.isArray(bill) || !bill.starter || typeof bill.starter !== 'object') fail('تنظیمات هزینه معتبر نیست');
+  out.billing = { dollar: int(bill.dollar, 1000, 100000000, 'نرخ دلار باید عددی مثبت (تومان) باشد'), markup: int(bill.markup, 0, 1000, 'سود روی قیمت باید بین ۰ تا ۱۰۰۰ درصد باشد'), welcome: int(bill.welcome, 0, 10000000, 'اعتبار هدیهٔ حساب تازه باید عددی بین ۰ تا ۱۰ میلیون تومان باشد'), starter: {} };
+  for (const key of STARTER_KEYS) out.billing.starter[key] = int(bill.starter[key], 0, 100000000, 'اعتبار اولیهٔ هر اشتراک باید عددی نامنفی (تومان) باشد');
   if (typeof ai !== 'object' || Array.isArray(ai) || typeof ai.enabled !== 'boolean' || typeof ai.smalltalk !== 'boolean' || !Object.hasOwn(PROVIDERS, ai.provider)) fail('تنظیمات اتصال هوش مصنوعی معتبر نیست');
   if (typeof ai.temperature !== 'number' || !(ai.temperature >= 0 && ai.temperature <= 1)) fail('خلاقیت پاسخ باید بین ۰ تا ۱ باشد');
   out.ai = { enabled: ai.enabled, provider: ai.provider, smalltalk: ai.smalltalk, temperature: Math.round(ai.temperature * 100) / 100,

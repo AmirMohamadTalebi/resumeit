@@ -22,7 +22,7 @@ module.exports=({execute,transaction})=>({
     if((!plan&&(!item||item.access!=='buy'))||!/^[a-z0-9_-]{16,64}$/i.test(requestId||''))fail('خرید معتبر نیست');
     const policy=this.commerceSettings?await this.commerceSettings():require('../owner/settings.cjs').defaults();if(policy.paused.includes(ref))fail('فروش این محصول فعلاً متوقف است',409);
     const price=policy.prices[ref]??(plan?plan.price:item.price);if(!Number.isSafeInteger(price)||price<=0||price%RI.IT_RATE!==0)fail('قیمت معتبر نیست');if(expectedPrice!==undefined&&expectedPrice!==price||expectedPrice===undefined&&Object.hasOwn(policy.prices,ref))fail('قیمت تغییر کرده؛ صفحهٔ خرید را تازه کن',409);
-    return transaction(async con=>{const [[user]]=await con.execute('SELECT id FROM users WHERE id=? FOR UPDATE',[id]);if(!user)fail('حساب پیدا نشد',404);
+    const done=await transaction(async con=>{const [[user]]=await con.execute('SELECT id FROM users WHERE id=? FOR UPDATE',[id]);if(!user)fail('حساب پیدا نشد',404);
       const [[prior]]=await con.execute('SELECT user_id,delta_units,label FROM wallet_transactions WHERE reference=?',['purchase:'+requestId]);if(prior){if(prior.user_id!==id||Number(prior.delta_units)!==-price||prior.label!==(plan?planLabel:'خرید '+item.name))fail('شناسهٔ درخواست تکراری است',409);return false;}
       const [[owned]]=await con.execute('SELECT expires_at FROM account_access WHERE user_id=? AND ref=?',[id,ref]);if(owned&&!plan)return false;
       const [[row]]=await con.execute('SELECT balance_units FROM wallets WHERE user_id=? FOR UPDATE',[id]);const balance=Number(row?.balance_units||0)-price;if(balance<0)fail('موجودی It کافی نیست؛ کیف پول را شارژ کن',409);
@@ -31,5 +31,11 @@ module.exports=({execute,transaction})=>({
       await con.execute('INSERT INTO account_access(user_id,ref,price_units,expires_at,created_at) VALUES(?,?,?,?,?) ON DUPLICATE KEY UPDATE price_units=VALUES(price_units),expires_at=VALUES(expires_at),created_at=VALUES(created_at)',[id,ref,price,end,now]);
       await con.execute('INSERT INTO wallet_transactions(id,user_id,delta_units,balance_units,label,reference,created_at,product_ref) VALUES(?,?,?,?,?,?,?,?)',[randomUUID(),id,-price,balance,plan?planLabel:'خرید '+item.name,'purchase:'+requestId,now,ref]);return true;
     });
+    // Fandogh plans and ResumeIt subscriptions add starter credit to the Fandogh wallet, once per purchase.
+    if(done&&plan&&this.creditFandogh){
+      const key=kind==='assistant'?pid:'subscription',starter=this.assistantSettings?(await this.assistantSettings()).settings.billing?.starter?.[key]:(kind==='assistant'?plan.credit:RI.ASSISTANT_SITE.credit);
+      if(starter>0)await this.creditFandogh(id,starter*10,'starter','starter:'+requestId,'اعتبار اولیهٔ '+planLabel);
+    }
+    return done;
   },
 });

@@ -391,3 +391,47 @@ body[data-page=fandogh] .pet__stage{display:none}
 @keyframes dn-fandogh-breathe{50%{transform:scale(1.03,.98)}}
 @media (prefers-reduced-motion:reduce){.dn-item--fandogh,.dn-fandogh__body{animation:none!important;transition:none!important}}
 @media (min-width:961px) and (max-height:860px){.dn-item--fandogh{min-height:40px;margin-block:0 2px}.dn-fandogh__body{width:48px;bottom:-46px}}
+
+/* ---------- Fandogh wallet: balance, It top-ups, model rates and the ledger ---------- */
+.fset-balance{position:relative;display:flex;align-items:center;gap:14px;padding:16px;border-radius:20px;background:linear-gradient(135deg,#0b141b,#1b3242);color:#fff;overflow:hidden;isolation:isolate;animation:fs-rise .6s .2s cubic-bezier(.2,.9,.3,1) backwards}
+.fset-balance::before{content:"";position:absolute;inset:-60% -20% auto auto;z-index:-1;width:240px;height:240px;border-radius:50%;background:radial-gradient(circle,rgba(240,189,82,.35),transparent 70%);animation:fs-breathe 6s ease-in-out infinite}
+.fset-balance::after{content:"";position:absolute;inset:0;z-index:-1;background:linear-gradient(110deg,transparent 35%,rgba(255,255,255,.12) 50%,transparent 65%);transform:translateX(-100%);animation:fset-sheen 5s 1s ease-in-out infinite}
+.fset-balance__orb{display:grid;place-items:center;flex:none;width:52px;height:52px;border-radius:16px;background:linear-gradient(135deg,#f0bd52,#e2a03a);color:#4d3320;box-shadow:0 12px 24px -12px rgba(226,160,58,.9);animation:fs-pop .6s .35s cubic-bezier(.3,1.5,.5,1) backwards}
+.fset-balance__orb svg{width:24px;height:24px}
+.fset-balance div{display:grid}.fset-balance b{font-size:26px;font-weight:900;line-height:1.3}.fset-balance span{font-size:12.5px;color:#a9c4d3}
+.fset-balance.is-filled .fset-balance__orb{animation:fset-coin .9s cubic-bezier(.3,1.4,.5,1)}
+.fset-topups{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px}
+.fset-topup{display:grid;gap:2px;padding:10px 12px;border:1.5px solid #dfe9ee;border-radius:14px;background:#fff;font:inherit;text-align:start;color:inherit;cursor:pointer;animation:fs-rise .45s calc(.3s + var(--i,0)*.05s) backwards;transition:transform .3s cubic-bezier(.3,1.5,.5,1),border-color .2s,box-shadow .3s}
+.fset-topup:hover{transform:translateY(-3px);border-color:#f0bd52;box-shadow:0 14px 26px -18px rgba(226,160,58,.9)}
+.fset-topup:active{transform:scale(.96)}
+.fset-topup:disabled{opacity:.5;cursor:wait}
+.fset-topup b{font-size:15px;font-weight:900}.fset-topup small{font-size:11px;line-height:1.7;color:#6b8090}
+.fset-rates{border:1px solid #dfe9ee;border-radius:14px;background:#fbfdfe}
+.fset-rates summary{display:flex;align-items:center;gap:6px;padding:10px 12px;font-size:12.5px;font-weight:800;cursor:pointer;list-style:none}
+.fset-rates summary::-webkit-details-marker{display:none}
+.fset-rates summary svg{width:15px;height:15px;color:#2f6fb3}
+.fset-rates[open] summary{border-bottom:1px solid #dfe9ee}
+.fset-rates table{width:100%;border-collapse:collapse;font-size:12px}
+.fset-rates th{padding:6px 12px;font-weight:700;color:#6b8090;text-align:start}
+.fset-rates td{padding:6px 12px;border-top:1px solid #eef3f6}
+.fset-rates tr.is-locked td{color:#97a8b4}
+.fset-rates[open] tbody tr{animation:fs-rise .35s backwards}
+.fset-rate{color:#2f6fb3;font-weight:700}
+.fset-sub{margin:4px 0 0;font-size:13px;font-weight:800}
+.fset-ledger{display:grid;gap:6px;margin:0;padding:0;list-style:none}
+.fset-ledger__row{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:12px;background:#f6f9fb;animation:fs-rise .4s calc(var(--i,0)*.04s) backwards}
+.fset-ledger__row>i{display:grid;place-items:center;flex:none;width:30px;height:30px;border-radius:10px;background:#eaf2fb;color:#2f6fb3}
+.fset-ledger__row.is-topup>i,.fset-ledger__row.is-starter>i,.fset-ledger__row.is-welcome>i{background:#fff4dc;color:#a87414}
+.fset-ledger__row>i svg{width:15px;height:15px}
+.fset-ledger__row>span{flex:1;display:grid;min-width:0}.fset-ledger__row b{font-size:12.5px}.fset-ledger__row small{font-size:11px;color:#6b8090}
+.fset-ledger__row em{display:grid;justify-items:end;font-style:normal;font-size:12.5px;font-weight:800;white-space:nowrap}
+.fset-ledger__row em small{font-weight:500}
+.fset-ledger__row em.is-minus{color:#a33a30}.fset-ledger__row em.is-plus{color:#2f6448}
+.fs-quota{text-decoration:none;color:inherit;transition:background .2s,transform .2s}.fs-quota:hover{background:#eaf2fb}
+.fs-coin{display:grid;place-items:center;grid-row:span 2;width:28px;height:28px;border-radius:9px;background:linear-gradient(135deg,#f0bd52,#e2a03a);color:#4d3320}
+.fs-coin svg{width:15px;height:15px}
+.fs-quota.is-low .fs-coin{background:#f6d6d1;color:#a33a30;animation:fs-pulse 1.6s ease-in-out infinite}
+.fs-badge--paid{background:#fff4dc;color:#8a5a12;animation:fs-pop .45s .2s cubic-bezier(.3,1.5,.5,1) backwards}
+@keyframes fset-sheen{60%,100%{transform:translateX(100%)}}
+@keyframes fset-coin{30%{transform:rotateY(180deg) scale(1.15)}60%{transform:rotateY(360deg) scale(1)}}
+@media (prefers-reduced-motion:reduce){.fset-balance,.fset-balance::before,.fset-balance::after,.fset-balance__orb,.fset-topup,.fset-ledger__row,.fset-rates tbody tr,.fs-badge--paid,.fs-quota.is-low .fs-coin{animation:none!important;transition:none!important}.fset-balance::after{display:none}}

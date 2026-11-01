@@ -171,7 +171,8 @@
       if (reply.edits?.length) edits(reply.edits, mode);
     } catch (e) {
       log.querySelector('.pet-msg--typing')?.remove();
-      if (e.code === 'ASSISTANT_LIMIT') { if (e.data?.usage) { status = RI.Fandogh.status = e.data.usage; paintUsage(); } upsell(e.message); }
+      if (e.code === 'FANDOGH_BALANCE') { if (e.data?.usage) { status = RI.Fandogh.status = e.data.usage; paintUsage(); } push('bot', e.message, [{ kind: 'route', route: 'assistant', tab: 'wallet', label: 'شارژ کیف پول فندق' }, { kind: 'model', label: 'بپرس از فندق محلی (رایگان)', value: 'local' }]); }
+      else if (e.code === 'ASSISTANT_LIMIT') { if (e.data?.usage) { status = RI.Fandogh.status = e.data.usage; paintUsage(); } upsell(e.message); }
       else push('bot', e.message || 'الان نتوانستم جواب بدهم؛ کمی بعد دوباره بپرس.');
       cat?.mood('sad', 1600);
     } finally { busy = false; root.classList.remove('is-busy'); }
@@ -201,9 +202,10 @@
     if (!status) return; const el = root.querySelector('[data-pet-usage]'), bar = root.querySelector('[data-pet-quota]');
     paintName();
     const engine = (status.models || []).find(m => m.id === status.engine);
-    el.textContent = engine && !engine.cost ? (engine.id === 'local' ? 'فندق محلی · رایگان و بی‌سهمیه' : 'با کلید خودت · بدون سهمیه') : (status.plan === 'free' ? 'رایگان' : 'اشتراک ' + (status.planName || '')) + ' · ' + RI.fa(status.remaining) + ' پیام از ' + RI.fa(status.limit) + ' در ۵ ساعت';
-    const low = status.plan === 'free' && status.remaining <= 1; el.dataset.low = String(low); bar.dataset.low = String(low);
-    bar.style.setProperty('--q', Math.max(0, Math.min(100, Math.round(status.remaining / (status.limit || 1) * 100))) + '%');
+    el.textContent = engine && !engine.cost ? (engine.id === 'local' ? 'فندق محلی · رایگان و بی‌سهمیه' : 'با کلید خودت · بدون سهمیه') : 'کیف پول فندق: ' + RI.Fandogh.money(status.wallet?.toman) + ' · ' + RI.Fandogh.cost(engine) + ' برای هر پیام';
+    const low = !!engine?.cost && (status.wallet?.toman || 0) < engine.cost * 3; el.dataset.low = String(low); bar.dataset.low = String(low);
+    // The bar fills with the balance against a 50,000-toman reference.
+    bar.style.setProperty('--q', Math.max(0, Math.min(100, Math.round((status.wallet?.toman || 0) / 500))) + '%');
   }
   function paintScore() {
     const B = brain(), host = root.querySelector('[data-pet-view=score]'); if (!B) return;

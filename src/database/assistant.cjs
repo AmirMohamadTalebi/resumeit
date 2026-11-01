@@ -1,19 +1,29 @@
-// Resume assistant usage: who may ask how many questions. Every message is logged with its cost (heavier models
-// cost more), and the allowance is two rolling windows: the last five hours and the last seven days. A ResumeIt
-// subscription includes Fandogh with every model; the Fandogh plans («آرش»، «رستم»، «کوروش», account_access ref
-// "assistant:<id>") add volume and open more models. Older "assistant:m1|m3|m6" purchases count as «آرش».
+// Resume assistant: who may use which models and what they pay. The Fandogh plans («آرش»، «رستم»، «کوروش»,
+// account_access ref "assistant:<id>") and a ResumeIt subscription open models; using them is paid from the
+// person's Fandogh wallet (rial, so fractions of a toman are kept), topped up with It from the main wallet. Every
+// change is a ledger row: a top-up, welcome or starter credit, or an answer with its model and tokens. Older
+// "assistant:m1|m3|m6" purchases count as «آرش».
 
 // Owner settings live in one row; provider keys sit sealed in their own column. AI usage is counted per day and
 // provider so the panel can show calls, failures and tokens without storing any conversation.
 const userSettings=require('../dashboard/assistant-user.cjs'),settings=require('../owner/assistant-settings.cjs'),{requireOwner}=require('../admin/access.cjs'),{fail}=require('../dashboard/model.cjs'),{randomUUID,createHash}=require('node:crypto');
 async function initialize(execute){
   await execute('CREATE TABLE IF NOT EXISTS assistant_usage(user_id CHAR(36) NOT NULL,day INT NOT NULL,used INT NOT NULL DEFAULT 0,PRIMARY KEY(user_id,day),FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE) ENGINE=InnoDB');
-  await execute('CREATE TABLE IF NOT EXISTS assistant_events(id CHAR(36) PRIMARY KEY,user_id CHAR(36) NOT NULL,at BIGINT NOT NULL,amount INT NOT NULL,INDEX assistant_events_user(user_id,at),INDEX assistant_events_at(at),FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE) ENGINE=InnoDB');
+  await execute('CREATE TABLE IF NOT EXISTS fandogh_wallets(user_id CHAR(36) PRIMARY KEY,balance BIGINT NOT NULL DEFAULT 0,updated_at BIGINT NOT NULL,FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE) ENGINE=InnoDB');
+  await execute('CREATE TABLE IF NOT EXISTS fandogh_ledger(id CHAR(36) PRIMARY KEY,user_id CHAR(36) NOT NULL,at BIGINT NOT NULL,delta BIGINT NOT NULL,balance BIGINT NOT NULL,kind VARCHAR(12) NOT NULL,model VARCHAR(40) NULL,input_tokens INT NOT NULL DEFAULT 0,output_tokens INT NOT NULL DEFAULT 0,label VARCHAR(160) NOT NULL,ref VARCHAR(80) NULL,UNIQUE KEY fandogh_ledger_ref(ref),INDEX fandogh_ledger_user(user_id,at),INDEX fandogh_ledger_at(at),FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE) ENGINE=InnoDB');
   await execute('CREATE TABLE IF NOT EXISTS assistant_settings(id INT PRIMARY KEY,settings JSON NOT NULL,secrets TEXT NULL) ENGINE=InnoDB');
   await execute('CREATE TABLE IF NOT EXISTS assistant_user_settings(user_id CHAR(36) PRIMARY KEY,settings JSON NOT NULL,secret TEXT NULL,FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE) ENGINE=InnoDB');
   await execute('CREATE TABLE IF NOT EXISTS assistant_ai_usage(day INT NOT NULL,provider VARCHAR(24) NOT NULL,calls INT NOT NULL DEFAULT 0,failures INT NOT NULL DEFAULT 0,input_tokens BIGINT NOT NULL DEFAULT 0,output_tokens BIGINT NOT NULL DEFAULT 0,PRIMARY KEY(day,provider)) ENGINE=InnoDB');
 }
-const HOUR=3600000,WINDOW=5*HOUR,WEEK=7*24*HOUR,KEEP=15*24*HOUR;
+const HOUR=3600000;
+// One ledger row and the new balance, inside a transaction that holds the wallet row.
+async function move(con,userId,delta,row,now=Date.now()){
+  await con.execute('INSERT IGNORE INTO fandogh_wallets(user_id,balance,updated_at) VALUES(?,0,?)',[userId,now]);
+  const [[w]]=await con.execute('SELECT balance FROM fandogh_wallets WHERE user_id=? FOR UPDATE',[userId]),balance=Number(w?.balance||0)+delta;
+  await con.execute('UPDATE fandogh_wallets SET balance=?,updated_at=? WHERE user_id=?',[balance,now,userId]);
+  await con.execute('INSERT INTO fandogh_ledger(id,user_id,at,delta,balance,kind,model,input_tokens,output_tokens,label,ref) VALUES(?,?,?,?,?,?,?,?,?,?,?)',[randomUUID(),userId,now,delta,balance,row.kind,row.model||null,Math.max(0,Math.round(row.input||0)),Math.max(0,Math.round(row.output||0)),String(row.label||'').slice(0,160),row.ref||null]);
+  return balance;
+}
 const {RI}=require('../dashboard/render.cjs');
 const parse=x=>typeof x==='string'?JSON.parse(x):x;
 // 20261030 for the calendar day in Tehran, so the allowance renews at local midnight.
@@ -30,41 +40,45 @@ module.exports=({execute,transaction})=>({
     if(best)return {plan:best.plan.id,level:sub?RI.ASSISTANT_SITE.level:best.plan.level,until:best.until,subscription:!!sub};
     return sub?{plan:'subscription',level:RI.ASSISTANT_SITE.level,until:sub,subscription:true}:{plan:'free',level:0,until:null,subscription:false};
   },
-  // Messages used in the last five hours and the last week, and when each window frees its oldest message.
-  async assistantUsage(userId,now=Date.now()){
-    const rows=await execute('SELECT at,amount FROM assistant_events WHERE user_id=? AND at>? ORDER BY at',[userId,now-WEEK]);
-    const span=size=>{const list=rows.filter(r=>Number(r.at)>now-size);return {used:list.reduce((t,r)=>t+Number(r.amount),0),resetAt:list.length?Number(list[0].at)+size:null};};
-    return {window:span(WINDOW),week:span(WEEK)};
+  // The Fandogh wallet: its balance in rial and the latest ledger rows.
+  async fandoghWallet(userId,limit=20){
+    const [w]=await execute('SELECT balance FROM fandogh_wallets WHERE user_id=?',[userId]);
+    const rows=await execute('SELECT id,at,delta,balance,kind,model,input_tokens,output_tokens,label FROM fandogh_ledger WHERE user_id=? ORDER BY at DESC LIMIT '+Math.max(1,Math.min(100,limit|0)),[userId]);
+    return {balance:Number(w?.balance||0),ledger:rows.map(x=>({id:x.id,at:Number(x.at),delta:Number(x.delta),balance:Number(x.balance),kind:x.kind,model:x.model,input:Number(x.input_tokens),output:Number(x.output_tokens),label:x.label}))};
   },
-  async assistantUsed(userId,now=Date.now()){return (await this.assistantUsage(userId,now)).week.used;},
-  // Takes a message's cost from both windows, or refuses with ASSISTANT_LIMIT naming the window that is full and
-  // when it frees up. Returns the event id so a failed answer can be given back.
-  async useAssistant(userId,limits,now=Date.now(),amount=1){
+  // Credit (welcome, starter, a gift from the owner); with a ref it happens once.
+  async creditFandogh(userId,rial,kind,ref,label,now=Date.now()){
+    if(!Number.isSafeInteger(rial)||rial<=0)return false;
     return transaction(async con=>{
-      await con.execute('SELECT id FROM users WHERE id=? FOR UPDATE',[userId]);
-      const [rows]=await con.execute('SELECT at,amount FROM assistant_events WHERE user_id=? AND at>? ORDER BY at',[userId,now-WEEK]);
-      for(const [scope,size] of [['window',WINDOW],['week',WEEK]]){
-        const list=rows.filter(r=>Number(r.at)>now-size),used=list.reduce((t,r)=>t+Number(r.amount),0);
-        if(used+amount>limits[scope]){
-          // The window frees enough room once its oldest messages age out.
-          let room=limits[scope]-used,resetAt=null;for(const r of list){room+=Number(r.amount);if(room>=amount){resetAt=Number(r.at)+size;break;}}
-          throw Object.assign(new Error('سهمیهٔ فندق تمام شد'),{status:429,code:'ASSISTANT_LIMIT',scope,resetAt});
-        }
-      }
-      const id=randomUUID();
-      await con.execute('INSERT INTO assistant_events(id,user_id,at,amount) VALUES(?,?,?,?)',[id,userId,now,amount]);
-      await con.execute('DELETE FROM assistant_events WHERE user_id=? AND at<?',[userId,now-KEEP]);
-      return id;
+      if(ref){const [[prior]]=await con.execute('SELECT id FROM fandogh_ledger WHERE ref=?',[ref]);if(prior)return false;}
+      await move(con,userId,rial,{kind,label,ref},now);return true;
     });
   },
-  // Gives a message back when no answer could be produced at all.
-  async refundAssistant(userId,eventId){
-    if(eventId)await execute('DELETE FROM assistant_events WHERE id=? AND user_id=?',[eventId,userId]);
+  // An answer's price, taken after it arrived; the balance may dip below zero by one answer at most.
+  async chargeFandogh(userId,rial,row,now=Date.now()){
+    if(!Number.isSafeInteger(rial)||rial<=0)return null;
+    return transaction(con=>move(con,userId,-rial,{kind:'usage',...row},now));
+  },
+  // A top-up: It from the main wallet becomes toman in the Fandogh wallet at the shop's rate. Repeating the same
+  // request id does nothing.
+  async topUpFandogh(userId,its,requestId,now=Date.now()){
+    if(!Number.isSafeInteger(its)||its<1||its>10000)fail('مبلغ شارژ باید بین ۱ تا ۱۰٬۰۰۰ It باشد');
+    if(!/^[a-z0-9_-]{16,64}$/i.test(requestId||''))fail('شناسهٔ درخواست معتبر نیست');
+    const policy=this.commerceSettings?await this.commerceSettings():{rate:2000},units=its*RI.IT_RATE,rial=Math.round(units*(policy.rate||2000)/2000)*10;
+    return transaction(async con=>{
+      const [[prior]]=await con.execute('SELECT id FROM fandogh_ledger WHERE ref=?',['topup:'+requestId]);if(prior)return {ok:true,repeated:true};
+      const [[row]]=await con.execute('SELECT balance_units FROM wallets WHERE user_id=? FOR UPDATE',[userId]),left=Number(row?.balance_units||0)-units;
+      if(!row||left<0)fail('موجودی It کیف پول کافی نیست؛ اول کیف پول را شارژ کن',409);
+      await con.execute('UPDATE wallets SET balance_units=? WHERE user_id=?',[left,userId]);
+      await con.execute('INSERT INTO wallet_transactions(id,user_id,delta_units,balance_units,label,reference,created_at) VALUES(?,?,?,?,?,?,?)',[randomUUID(),userId,-units,left,'شارژ کیف پول فندق','fandogh:'+requestId,now]);
+      const balance=await move(con,userId,rial,{kind:'topup',label:'شارژ با '+its+' It',ref:'topup:'+requestId},now);
+      return {ok:true,balance,its:left/RI.IT_RATE};
+    });
   },
   // Server-side view: settings merged over defaults and the opened provider keys. Never sent to a browser.
   async assistantSettings(){
     const [row]=await execute('SELECT settings,secrets FROM assistant_settings WHERE id=1'),base=settings.defaults(),saved=row?parse(row.settings):{};
-    return {settings:{...base,...saved,limits:{...base.limits,...(saved.limits||{})},ai:{...base.ai,...(saved.ai||{})},providers:{...(saved.providers||{})}},keys:settings.open(row?.secrets)};
+    return {settings:{...base,...saved,billing:{...base.billing,...(saved.billing||{}),starter:{...base.billing.starter,...(saved.billing?.starter||{})}},ai:{...base.ai,...(saved.ai||{})},providers:{...(saved.providers||{})}},keys:settings.open(row?.secrets)};
   },
   // Saves the owner's settings and any changed keys, with the reason in the admin audit (key values never are).
   async saveAssistantSettings(actor,input){
@@ -111,14 +125,14 @@ module.exports=({execute,transaction})=>({
   // The owner panel's numbers: today, the last 14 Tehran days, the heaviest users today and who pays for Fandogh.
   async assistantStats(now=Date.now()){
     const days=Array.from({length:14},(_,i)=>tehranDay(now-(13-i)*86400000)),today=days[13];
-    const events=await execute('SELECT user_id,at,amount FROM assistant_events WHERE at>?',[now-15*24*HOUR]),byDay=new Map(),todayUsers=new Map();
-    for(const e of events){const day=tehranDay(Number(e.at)),d=byDay.get(day)||{messages:0,users:new Set()};d.messages+=Number(e.amount);d.users.add(e.user_id);byDay.set(day,d);}
-    const usage=[...byDay].map(([day,d])=>({day,messages:d.messages,users:d.users.size}));
+    const events=await execute("SELECT user_id,at,delta FROM fandogh_ledger WHERE kind='usage' AND at>?",[now-15*24*HOUR]),byDay=new Map(),todayUsers=new Map();
+    for(const e of events){const day=tehranDay(Number(e.at)),d=byDay.get(day)||{messages:0,spent:0,users:new Set()};d.messages+=1;d.spent-=Number(e.delta);d.users.add(e.user_id);byDay.set(day,d);}
+    const usage=[...byDay].map(([day,d])=>({day,messages:d.messages,spent:d.spent,users:d.users.size}));
     const ai=await execute('SELECT day,provider,calls,failures,input_tokens,output_tokens FROM assistant_ai_usage WHERE day>=?',[days[0]]);
-    for(const e of events)if(tehranDay(Number(e.at))===today)todayUsers.set(e.user_id,(todayUsers.get(e.user_id)||0)+Number(e.amount));
+    for(const e of events)if(tehranDay(Number(e.at))===today)todayUsers.set(e.user_id,(todayUsers.get(e.user_id)||0)-Number(e.delta));
     const top=[...todayUsers].sort((x,y)=>y[1]-x[1]).slice(0,8).map(([user_id,used])=>({user_id,used}));
     const [plans]=await execute("SELECT COUNT(DISTINCT CASE WHEN ref LIKE 'assistant:%' THEN user_id END) AS assistant,COUNT(DISTINCT CASE WHEN ref LIKE 'subscription:%' THEN user_id END) AS subscription FROM account_access WHERE expires_at>?",[now]);
-    const series=days.map(day=>{const u=usage.find(r=>Number(r.day)===day),a=ai.filter(r=>Number(r.day)===day);return {day,messages:Number(u?.messages||0),users:Number(u?.users||0),aiCalls:a.reduce((s,r)=>s+Number(r.calls),0),aiFailures:a.reduce((s,r)=>s+Number(r.failures),0),tokens:a.reduce((s,r)=>s+Number(r.input_tokens)+Number(r.output_tokens),0)};});
+    const series=days.map(day=>{const u=usage.find(r=>Number(r.day)===day),a=ai.filter(r=>Number(r.day)===day);return {day,messages:Number(u?.messages||0),spent:Number(u?.spent||0),users:Number(u?.users||0),aiCalls:a.reduce((s,r)=>s+Number(r.calls),0),aiFailures:a.reduce((s,r)=>s+Number(r.failures),0),tokens:a.reduce((s,r)=>s+Number(r.input_tokens)+Number(r.output_tokens),0)};});
     const providers={};for(const r of ai){const p=providers[r.provider]||(providers[r.provider]={calls:0,failures:0,input:0,output:0});p.calls+=Number(r.calls);p.failures+=Number(r.failures);p.input+=Number(r.input_tokens);p.output+=Number(r.output_tokens);}
     return {today:series[13],series,top:top.map(r=>({id:r.user_id,used:Number(r.used)})),providers,buyers:{assistant:Number(plans?.assistant||0),subscription:Number(plans?.subscription||0)}};
   },

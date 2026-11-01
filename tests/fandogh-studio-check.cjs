@@ -28,7 +28,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
   await input.fill('امتیاز رزومه‌ام چند است؟');await input.press('Enter');
   await page.locator('.fs-msg--bot').first().waitFor();assert.equal(await page.locator('.fs-msg--me').count(),1);
   assert.match(await page.locator('.fs-msg--bot .fs-badge').first().innerText(),/فندق محلی/);
-  assert.match(await page.locator('[data-fs-quota]').innerText(),/رایگان/);
+  assert.match(await page.locator('[data-fs-quota]').innerText(),/۵٬?۰۰۰ تومان[\s\S]*توکن/,'the pill shows the Fandogh wallet');
   assert.equal(await page.locator('.fs-chat').count(),1);assert.match(await page.locator('.fs-chat.is-on').innerText(),/امتیاز رزومه/);
   await page.waitForTimeout(500);await page.screenshot({path:path.join(out,'answer.png')});
   // Inspector: switching a section off is reflected; conversations survive a reload; Ctrl+K starts a new one.

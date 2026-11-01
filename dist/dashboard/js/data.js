@@ -173,21 +173,24 @@
   };
 
   /* ---------- پلن‌ها (خرید با It، شارژ آنلاین غیرفعال) ---------- */
-  /* Fandogh plans. Messages are counted in two rolling windows, five hours and seven days; a model costs its
-     catalog price in messages (GPT-6 Luna = 1). Plans differ in volume and in which models they open: level 0 is
-     free, «آرش» opens the fast models, «رستم» the strong ones and «کوروش» everything, Fable, Opus, Astra and Sol
-     included. Monthly prices: 210,000, 360,000 and 510,000 toman. */
+  /* Fandogh. Using a model is paid from the person's Fandogh wallet, topped up with It: each answer costs the tokens
+     it really used at the model's API price, plus the owner's margin (75% by default), kept and shown in toman (and,
+     for reading, in GPT-6 Luna tokens). The plans open models and come with starter credit: level 0 is free, «آرش»
+     opens the fast models, «رستم» the strong ones and «کوروش» everything, Fable, Opus, Astra and Sol included; a
+     ResumeIt subscription opens every model too. Local Fandogh and a person's own key stay free. */
   RI.ASSISTANT_TIERS = ['رایگان', 'آرش', 'رستم', 'کوروش'];
   RI.ASSISTANT_PLANS = {
-    arash: { id: 'arash', name: 'آرش', title: 'آرش کمانگیر', period: 'یک‌ماهه', months: 1, level: 1, window: 15, week: 50, price: 210000, desc: 'مدل‌های سریع گوگل و Moonshot کنار مدل‌های سبک، با ۱۵ پیام در هر ۵ ساعت.' },
-    rostam: { id: 'rostam', name: 'رستم', title: 'رستم دستان', period: 'یک‌ماهه', months: 1, level: 2, window: 25, week: 80, price: 360000, desc: 'مدل‌های قوی مثل Claude Sonnet، Gemini Pro و Kimi K3، با حجم بیشتر.' },
-    kourosh: { id: 'kourosh', name: 'کوروش', title: 'کوروش بزرگ', period: 'یک‌ماهه', months: 1, level: 3, window: 40, week: 120, price: 510000, desc: 'همهٔ مدل‌ها، از جمله Claude Fable و Opus و GPT-6 Astra و Sol، با بیشترین حجم.' },
+    arash: { id: 'arash', name: 'آرش', title: 'آرش کمانگیر', period: 'یک‌ماهه', months: 1, level: 1, credit: 30000, price: 210000, desc: 'مدل‌های سریع گوگل و Moonshot کنار مدل‌های سبک.' },
+    rostam: { id: 'rostam', name: 'رستم', title: 'رستم دستان', period: 'یک‌ماهه', months: 1, level: 2, credit: 60000, price: 360000, desc: 'مدل‌های قوی مثل Claude Sonnet، Gemini Pro و Kimi K3.' },
+    kourosh: { id: 'kourosh', name: 'کوروش', title: 'کوروش بزرگ', period: 'یک‌ماهه', months: 1, level: 3, credit: 100000, price: 510000, desc: 'همهٔ مدل‌ها، از جمله Claude Fable و Opus و GPT-6 Astra و Sol.' },
   };
   // Earlier monthly assistant purchases keep working at the first level.
   RI.ASSISTANT_LEGACY = { m1: 'arash', m3: 'arash', m6: 'arash' };
-  RI.ASSISTANT_FREE = { window: 3, week: 15 };
-  // A ResumeIt subscription includes Fandogh with every model, at a lighter volume than the Fandogh plans.
-  RI.ASSISTANT_SITE = { window: 10, week: 40, level: 3 };
+  // A ResumeIt subscription opens every model and adds starter credit; new accounts get a little to try with.
+  RI.ASSISTANT_SITE = { level: 3, credit: 20000 };
+  RI.ASSISTANT_WELCOME = 5000;
+  // Top-up amounts offered in It.
+  RI.FANDOGH_TOPUPS = [5, 10, 25, 50, 100];
   RI.PLANS = {
     q: { id: 'q', name: 'رخش', period: 'سه‌ماهه', months: 3, price: 288000 },
     h: { id: 'h', name: 'سیمرغ', period: 'شش‌ماهه', months: 6, price: 510000 },

@@ -44,34 +44,32 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
   r=(await ask('سلام چطوری خوبی')).body.reply;assert.equal(r.source,'local');assert(r.topics.includes('howareyou')&&r.text.startsWith('سلام'));assert.equal(calls.length,0,'small talk stays local by default');
   r=(await ask('معرفی‌ام را چطور بنویسم؟')).body.reply;assert.equal(r.source,'ai');assert.equal(calls.length,1);assert(r.text.includes('من فندقم')&&!r.text.includes('ChatGPT'),'identity claims are replaced');
   assert(calls[0].messages[0].content.includes('اسم تو فقط «فندق» است'),'the identity rules go with every request');
-  let stats=(await send('/api/admin/assistant')).body.stats;assert.equal(stats.today.aiCalls,1);assert.equal(stats.today.tokens,150);assert.equal(stats.today.messages,1,'only the GPT Luna answer used the allowance');assert.equal(stats.top[0].id,target);
+  let stats=(await send('/api/admin/assistant')).body.stats;assert.equal(stats.today.aiCalls,1);assert.equal(stats.today.tokens,150);assert.equal(stats.today.messages,1,'only the GPT-6 Luna answer was paid');assert.equal(stats.today.spent,122,'120 read and 30 written Luna tokens ×1.5 at 300,000 a dollar: 12.2 toman');
+  const wallet=(await send('/api/dashboard/assistant',null,'b')).body.wallet;assert.equal(wallet.toman,5000-12.2);assert.equal(wallet.ledger[0].kind,'usage');assert.equal(wallet.ledger[0].tokens,-225,'150 used tokens are 225 charged');assert.equal(stats.top[0].id,target);
   // Resume edits come back checked against the resume that was sent; the mode reaches the model's instructions.
   const edit=(await send('/api/dashboard/assistant/ask',{question:'عنوانم را درست کن',content,history:[],mode:'auto',model:'luna'},'b')).body.reply;
   assert.deepEqual(edit.edits.map(e=>[e.op,e.field,e.after]),[['set','title','طراح ارشد رابط کاربری']]);assert(calls.at(-1).messages[0].content.includes('حالت ویرایش: خودکار'));
   // Daily cap on model calls: past it, answers come from the local brain.
   assert.equal((await save(settings({ai:{enabled:true,provider:'openai',dailyCalls:1},providers:{openai:{model:'gpt-4o-mini',url:''}}}))).status,200);
   r=(await ask('یک معرفی برایم بنویس')).body.reply;assert.equal(r.source,'local');assert.equal(calls.length,2);
-  // Allowances come from the panel; a paused Fandogh says so instead of answering.
+  // Billing comes from the panel. A model the wallet cannot pay a typical message for is refused before it is
+  // asked, local Fandogh still answers for free, and the owner can open a model to a lower plan and price it.
   view=(await send('/api/admin/assistant')).body;
-  const lim=o=>({...view.settings.limits,...o});assert.deepEqual(view.settings.limits.free,{window:3,week:15});assert.deepEqual(view.settings.limits.subscription,{window:10,week:40});
-  assert.equal((await save(settings({limits:lim({free:{window:2,week:15}}),ai:{dailyCalls:100}}))).status,200);
-  assert.equal((await send('/api/dashboard/assistant',null,'b')).body.limit,2);
-  const over=await ask('امتیاز رزومه‌ام چنده؟');assert.equal(over.status,429,'two GPT-6 Luna answers already used the new 5-hour allowance');assert.equal(over.body.scope,'window');assert(over.body.resetAt>Date.now());assert.match(over.body.error,/فندق محلی/);
+  const bill=o=>({...view.settings.billing,...o});assert.deepEqual(view.settings.billing,{dollar:300000,markup:50,welcome:5000,starter:{subscription:20000,arash:30000,rostam:60000,kourosh:100000}});
+  assert.equal((await save(settings({billing:bill({markup:60}),ai:{dailyCalls:100},models:{'gpt-6-sol':{enabled:true,usd:[400,400],tier:0,model:'',label:''},'claude-opus':{enabled:true,usd:[4,20],tier:0,model:'',label:''}}}))).status,200);
+  const pricey=await ask('تجربه‌هایم را تحلیل کن',[],'gpt-6-sol');assert.equal(pricey.status,402,'a typical Sol message at $400 a million is more than the wallet holds');assert.equal(pricey.body.code,'FANDOGH_BALANCE');assert.match(pricey.body.error,/شارژ/);
   assert.equal((await ask('امتیاز رزومه‌ام چنده؟',[],'local')).status,200,'local Fandogh still answers for free');
-  // A heavier model costs its multiple, and the owner can open a model to a lower plan: Sol opened to free accounts
-  // costs 4, so it is refused while only 3 are left.
-  assert.equal((await save(settings({limits:lim({free:{window:5,week:15}}),ai:{dailyCalls:100},models:{'claude-opus':{enabled:true,cost:10,tier:0,model:'',label:''},'gpt-6-sol':{enabled:true,cost:4,tier:0,model:'',label:''}}}))).status,200);
   const opus=await ask('کل رزومه‌ام را بازنویسی کن',[],'claude-opus');assert.equal(opus.status,200);assert.equal(opus.body.reply.model.id,'local','no anthropic key: falls back locally, free');
-  const heavy=await ask('تجربه‌هایم را تحلیل کن',[],'gpt-6-sol');assert.equal(heavy.status,429,'GPT-6 Sol costs 4 and only 3 are left');assert.match(heavy.body.error,/۴ پیام/);
-  const offered=(await send('/api/dashboard/assistant',null,'b')).body.models;assert.equal(offered.find(m=>m.id==='gpt-6-sol').cost,4);assert.equal(offered.find(m=>m.id==='gpt-6-sol').locked,false);assert.equal(offered.find(m=>m.id==='claude-opus').available,false);assert.equal(offered.find(m=>m.id==='luna').available,true);
+  const offered=(await send('/api/dashboard/assistant',null,'b')).body;assert.equal(offered.billing.markup,60);assert.equal(offered.models.find(m=>m.id==='gpt-6-sol').locked,false);assert.deepEqual(offered.models.find(m=>m.id==='gpt-6-sol').million,[120000000,120000000]);assert.equal(offered.models.find(m=>m.id==='claude-opus').available,false);assert.equal(offered.models.find(m=>m.id==='luna').available,true);
   assert.equal((await save(settings({enabled:false}))).status,200);
   const paused=await ask('سلام');assert.equal(paused.status,503);assert.equal(paused.body.code,'ASSISTANT_PAUSED');
-  assert.equal((await save(settings({enabled:true,limits:lim({free:{window:20,week:40}})}))).status,200);
-  // Validation: a week below its 5 hours, a Fandogh plan below the free allowance, a model in no plan; a custom
+  assert.equal((await save(settings({enabled:true}))).status,200);
+  // Validation: a margin out of range, a negative starter credit, a model in no plan or without a price; a custom
   // service needs an https address.
-  assert.equal((await save(settings({limits:lim({free:{window:10,week:5}})}))).status,400);
-  assert.equal((await save(settings({limits:lim({arash:{window:2,week:5}})}))).status,400);
-  assert.equal((await save(settings({models:{luna:{enabled:true,cost:1,tier:7,model:'',label:''}}}))).status,400);
+  assert.equal((await save(settings({billing:bill({markup:5000})}))).status,400);
+  assert.equal((await save(settings({billing:bill({starter:{...view.settings.billing.starter,arash:-1}})}))).status,400);
+  assert.equal((await save(settings({models:{luna:{enabled:true,usd:[.1,.5],tier:7,model:'',label:''}}}))).status,400);
+  assert.equal((await save(settings({models:{luna:{enabled:true,usd:[0,.5],tier:0,model:'',label:''}}}))).status,400);
   assert.equal((await save(settings({providers:{custom:{model:'x',url:'http://insecure.example'}}}))).status,400);
   console.log('PASS Fandogh owner panel: owner-only, sealed and masked keys, connection test, local identity answers, guarded model replies, usage and daily cap, allowances, pause and validation.');
 
@@ -81,7 +79,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
    const context=await browser.newContext({reducedMotion:'reduce'});await context.addCookies([{name:'ri_session',value:'a'.repeat(64),url:base}]);const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
    for(const width of [1440,390]){
     await page.setViewportSize({width,height:900});await page.goto(base+'/admin/assistant/');await page.locator('[data-fx-root]').waitFor();
-    assert.equal(await page.locator('.fx-provider').count(),10);assert.equal(await page.locator('.fx-model').count(),15);assert.equal(await page.locator('.fx-model[data-model-id=gpt-6-sol] [data-m-cost]').inputValue(),'4','the last save went back to the catalog cost');assert.equal(await page.locator('.fx-model[data-model-id=claude-fable] [data-m-tier]').inputValue(),'3');assert.equal(await page.locator('[data-limit]').count(),5);assert.equal(await page.locator('.fx-provider.is-active').getAttribute('data-provider'),'openai');
+    assert.equal(await page.locator('.fx-provider').count(),10);assert.equal(await page.locator('.fx-model').count(),15);assert.equal(await page.locator('.fx-model[data-model-id=gpt-6-sol] [data-m-in]').inputValue(),'2','the last save went back to the catalog price');assert.equal(await page.locator('.fx-model[data-model-id=claude-fable] [data-m-tier]').inputValue(),'3');assert.equal(await page.locator('[data-starter]').count(),4);assert.equal(await page.locator('[data-b-markup]').inputValue(),'50');assert.equal(await page.locator('.fx-provider.is-active').getAttribute('data-provider'),'openai');
     assert(await page.locator('.fx-provider.is-active [data-key]').isVisible());assert(!(await page.locator('.fx-provider[data-provider=anthropic] [data-key]').isVisible()));
     assert.equal(await page.locator('#admin-nav a[aria-current=page]').count(),1);
     assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'no sideways scroll at '+width);
@@ -91,9 +89,9 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
    await page.locator('.fx-provider[data-provider=anthropic]').click();assert.equal(await page.locator('.fx-provider.is-active').getAttribute('data-provider'),'anthropic');
    await page.locator('.fx-provider[data-provider=openai]').click();
    await page.locator('.fx-provider.is-active [data-test]').click();await page.locator('.fx-provider.is-active [data-test-result][data-kind=ok]').waitFor();
-   await page.locator('[data-limit=free] [data-l-window]').fill('7');await page.locator('[data-fx-save]').click();await page.locator('[data-fx-status][data-kind=error]').waitFor();
+   await page.locator('[data-b-welcome]').fill('7000');await page.locator('[data-fx-save]').click();await page.locator('[data-fx-status][data-kind=error]').waitFor();
    await page.locator('[data-fx-reason]').fill('سهمیهٔ رایگان تازه');await page.locator('[data-fx-save]').click();await page.waitForFunction(()=>document.querySelector('[data-fx-status]')?.dataset.kind==='ok'||/[^s]/.test(document.querySelector('[data-fx-status]')?.textContent||'')&&document.querySelector('[data-fx-status]').textContent!=='');assert.equal(await page.locator('[data-fx-status]').getAttribute('data-kind'),'ok',await page.locator('[data-fx-status]').textContent());
-   assert.equal(await page.locator('[data-limit=free] [data-l-window]').inputValue(),'7');
+   assert.equal(await page.locator('[data-b-welcome]').inputValue(),'7000');
    await page.locator('[data-fx-reason]').fill('قیمت تازهٔ دستیار');await page.locator('[data-plan="assistant:arash"] [data-plan-price]').fill('12');await page.locator('[data-plan="assistant:arash"] [data-plan-save]').click();await page.locator('[data-fx-status][data-kind=ok]').waitFor();
    assert.equal(await page.locator('[data-plan="assistant:arash"] [data-plan-price]').inputValue(),'12');
    assert.equal((await db.commerceSettings()).prices['assistant:arash'],24000);

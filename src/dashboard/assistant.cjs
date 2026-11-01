@@ -1,23 +1,19 @@
-// Resume assistant API. GET returns the 5-hour and weekly allowance, the models on offer (grouped by maker, with
-// what the person's plan opens) and the Fandogh plans; POST /ask answers one question with the model the person
-// picked. «فندق محلی» (the local brain) is the default and free; the other models cost their catalog price in
-// messages from both windows (GPT-6 Luna = 1), a model above the person's plan is not used, and their own key is free. Who Fandogh is always stays local, and so does small talk unless the owner allows it. When the
+// Resume assistant API. GET returns the Fandogh wallet (toman and Luna tokens, latest charges), the models on offer
+// (grouped by maker, with what the person's plan opens and what a typical message costs) and the Fandogh plans;
+// POST /topup turns It into wallet credit; POST /ask answers one question with the model the person picked and
+// charges the tokens it really used at the model's price plus the owner's margin. «فندق محلی» (the local brain) is
+// the default and free, a model above the person's plan is not used, and their own key is free. Who Fandogh is always stays local, and so does small talk unless the owner allows it. When the
 // local brain cannot answer, it says where the advanced assistant is. Resume edits the model proposes are checked
 // against the resume the user sent and returned as `edits`; the dashboard applies them.
 const {readJson}=require('../http/security.cjs'),{fail}=require('./model.cjs'),{RI}=require('./render.cjs');
 const brain=require('../../dist/dashboard/js/advisor-brain.js'),llm=require('../ai/assistant-llm.cjs'),ownerSettings=require('../owner/assistant-settings.cjs'),Edits=require('../../dist/dashboard/js/assistant-edits.js'),userAssistant=require('./assistant-user.cjs'),providers=require('../ai/providers.cjs'),catalog=require('../ai/catalog.cjs');
-// The allowance of a plan: the owner's numbers per plan; a Fandogh plan held with a subscription gets the larger.
-function allowance(settings,access){
-  const L=settings.limits||ownerSettings.defaults().limits,own=L[access.plan]||L.free,site=access.subscription?L.subscription:null;
-  return site?{window:Math.max(own.window,site.window),week:Math.max(own.week,site.week)}:{...own};
-}
 // The owner's settings when the database keeps them; tests and older stores fall back to the environment.
 async function load(database){
   if(database.assistantSettings)return database.assistantSettings();
   return {settings:ownerSettings.defaults(),keys:{}};
 }
 const IDENTITY=new Set(['name','model','bot','maker']);
-const ROUTES=['/api/dashboard/assistant','/api/dashboard/assistant/ask','/api/dashboard/assistant/me','/api/dashboard/assistant/me/test'];
+const ROUTES=['/api/dashboard/assistant','/api/dashboard/assistant/ask','/api/dashboard/assistant/me','/api/dashboard/assistant/me/test','/api/dashboard/assistant/topup'];
 
 // The person's own settings; stores without the table (older tests) behave as if nothing was saved.
 async function mine(database,userId){
@@ -36,14 +32,17 @@ function offer(settings,keys,me,level=0){
 }
 async function status(database,userId,config,me){
   me=me||await mine(database,userId);
-  const {settings,keys}=config||await load(database),access=await database.assistantAccess(userId),usage=await database.assistantUsage(userId),limits=allowance(settings,access);
+  const {settings,keys}=config||await load(database),access=await database.assistantAccess(userId),bill=catalog.billingOf(settings);
+  // A new account starts with a little credit to try the advanced models, once.
+  if(bill.welcome>0&&database.creditFandogh)try{await database.creditFandogh(userId,bill.welcome*10,'welcome','welcome:'+userId,'هدیهٔ شروع فندق');}catch{}
+  const wallet=database.fandoghWallet?await database.fandoghWallet(userId,12):{balance:0,ledger:[]},token=catalog.tokenRial(settings);
   const policy=database.commerceSettings?await database.commerceSettings():{prices:{},paused:[]};
-  const L=settings.limits||ownerSettings.defaults().limits;
-  const plans=Object.values(RI.ASSISTANT_PLANS).map(p=>({id:p.id,name:policy.products?.['assistant:'+p.id]?.name||p.name,title:p.title,period:p.period,months:p.months,level:p.level,window:L[p.id]?.window??p.window,week:L[p.id]?.week??p.week,desc:policy.products?.['assistant:'+p.id]?.desc||p.desc,price:policy.prices?.['assistant:'+p.id]??p.price,paused:!!policy.paused?.includes('assistant:'+p.id)}));
+  const plans=Object.values(RI.ASSISTANT_PLANS).map(p=>({id:p.id,name:policy.products?.['assistant:'+p.id]?.name||p.name,title:p.title,period:p.period,months:p.months,level:p.level,credit:bill.starter?.[p.id]??p.credit,desc:policy.products?.['assistant:'+p.id]?.desc||p.desc,price:policy.prices?.['assistant:'+p.id]??p.price,paused:!!policy.paused?.includes('assistant:'+p.id)}));
   const models=offer(settings,keys||{},me,access.level),engine=models.some(m=>m.id===me.settings.engine&&m.available&&!m.locked)?me.settings.engine:'local';
-  const window={used:usage.window.used,limit:limits.window,resetAt:usage.window.resetAt},week={used:usage.week.used,limit:limits.week,resetAt:usage.week.resetAt};
-  const remaining=Math.max(0,Math.min(window.limit-window.used,week.limit-week.used));
-  return {plan:access.plan,planName:RI.ASSISTANT_PLANS[access.plan]?.name||(access.plan==='subscription'?'اشتراک رزومیت':'رایگان'),level:access.level,subscription:access.subscription,until:access.until,window,week,used:window.used,limit:window.limit,remaining,tiers:RI.ASSISTANT_TIERS,site:{window:L.subscription.window,week:L.subscription.week},free:{window:L.free.window,week:L.free.week},plans,enabled:settings.enabled,ai:models.some(m=>m.id!=='local'&&m.available),smalltalk:!!settings.ai.smalltalk,name:me.settings.name,own:!!userAssistant.runtime(me.settings,me.key),models,engine};
+  const toman=rial=>Math.round(rial)/10;
+  return {plan:access.plan,planName:RI.ASSISTANT_PLANS[access.plan]?.name||(access.plan==='subscription'?'اشتراک رزومیت':'رایگان'),level:access.level,subscription:access.subscription,until:access.until,
+    wallet:{toman:toman(wallet.balance),tokens:Math.floor(wallet.balance/token),tokenToman:Math.round(token/10*1e6)/1e6,ledger:wallet.ledger.map(x=>({...x,toman:toman(x.delta),tokens:x.kind==='usage'?-Math.round((x.input+x.output)*(1+bill.markup/100)):Math.round(x.delta/token)}))},
+    billing:{markup:bill.markup,dollar:bill.dollar,welcome:bill.welcome,site:bill.starter?.subscription??RI.ASSISTANT_SITE.credit,topups:RI.FANDOGH_TOPUPS},tiers:RI.ASSISTANT_TIERS,plans,enabled:settings.enabled,ai:models.some(m=>m.id!=='local'&&m.available),smalltalk:!!settings.ai.smalltalk,name:me.settings.name,own:!!userAssistant.runtime(me.settings,me.key),models,engine};
 }
 // The brain and the model get the story only: contact values become "filled or not", images become a flag.
 function content(raw){
@@ -75,6 +74,12 @@ module.exports=async(database,req,path,origin,user,reply)=>{
   if(path==='/api/dashboard/assistant'){if(req.method!=='GET')fail('روش درخواست معتبر نیست',405);reply(200,await status(database,user.id,config));return true;}
   if(req.method!=='POST')fail('روش درخواست معتبر نیست',405);
   if(req.headers.origin!==origin||req.headers['content-type']?.split(';')[0]!=='application/json')fail('مبدأ درخواست معتبر نیست',403);
+  if(path==='/api/dashboard/assistant/topup'){
+    if(!database.topUpFandogh)fail('شارژ کیف پول فندق فعلاً در دسترس نیست',503);
+    const body=await readJson(req,4*1024);
+    const out=await database.topUpFandogh(user.id,body.its,body.requestId);
+    reply(200,{ok:true,repeated:!!out.repeated,usage:await status(database,user.id,config)});return true;
+  }
   const me=await mine(database,user.id),own=userAssistant.runtime(me.settings,me.key);
   const input=await readJson(req,128*1024);
   const question=typeof input.question==='string'?input.question.trim():'',goal=typeof input.goal==='string'?input.goal.trim().slice(0,160):'';
@@ -92,14 +97,11 @@ module.exports=async(database,req,path,origin,user,reply)=>{
   const talk=local.intent==='smalltalk',identity=talk&&(local.topics||[local.topic]).some(t=>IDENTITY.has(t));
   const useModel=!!cfg&&!identity&&(!talk||settings.ai.smalltalk||pick.id==='own');
   const shared=useModel&&pick.id!=='own',capped=shared&&database.assistantAICalls?await database.assistantAICalls()>=settings.ai.dailyCalls:false;
-  const cost=useModel&&!capped?pick.cost:0;let charge=null;
-  if(cost)try{charge=await database.useAssistant(user.id,allowance(settings,access),Date.now(),cost);}
-  catch(error){
-    if(error.code!=='ASSISTANT_LIMIT')throw error;
-    // Says which window is full and when it has room again (with the weekday when that is not today).
-    const at=error.resetAt&&new Date(error.resetAt),when=at?' از ساعت '+at.toLocaleTimeString('fa-IR',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Tehran'})+(error.resetAt-Date.now()>20*3600000?' '+at.toLocaleDateString('fa-IR',{weekday:'long',timeZone:'Asia/Tehran'}):'')+' دوباره جا باز می‌شود':'';
-    const scope=error.scope==='week'?'سهمیهٔ این هفته':'سهمیهٔ ۵ ساعتهٔ فعلی';
-    reply(429,{error:(cost>1?'«'+pick.label+'» برای هر پیام '+RI.fa(cost)+' پیام می‌خواهد و '+scope+' کافی نیست':scope+' تمام شد')+when+'. فندق محلی همچنان رایگان جواب می‌دهد'+(access.level<3?'، یا با اشتراک فندق حجم بیشتری بگیر.':'.'),code:'ASSISTANT_LIMIT',scope:error.scope,resetAt:error.resetAt,usage:await status(database,user.id,config,me)});return true;
+  // A paid model needs enough credit for a typical message; the real price is taken once the answer is here.
+  const paid=useModel&&!capped&&pick.id!=='own',estimate=paid?catalog.typical(pick,settings):0;
+  if(paid&&database.fandoghWallet){
+    const {balance}=await database.fandoghWallet(user.id,1);
+    if(balance<estimate){reply(402,{error:'اعتبار کیف پول فندق برای «'+pick.label+'» کافی نیست (هر پیام حدود '+RI.fa(Math.ceil(estimate/10))+' تومان). کیف پول فندق را با It شارژ کن؛ فندق محلی همچنان رایگان جواب می‌دهد.',code:'FANDOGH_BALANCE',usage:await status(database,user.id,config,me)});return true;}
   }
   let ai=null;
   if(useModel&&!capped){
@@ -107,8 +109,13 @@ module.exports=async(database,req,path,origin,user,reply)=>{
     try{ai=await llm.answer({question,content:resume,goal,history,analysis,mode,page,persona:userAssistant.persona(me.settings)},cfg,fetch,true);}catch{ai=null;}
     if(shared&&cfg.provider&&database.recordAssistantAI){try{await database.recordAssistantAI(cfg.provider,!!ai&&!ai.error,ai?.usage?.input,ai?.usage?.output);}catch{}}
     if(ai?.error)ai=null;
-    // No answer from the model: give the messages back and let the local brain answer for free.
-    if(!ai&&charge)try{await database.refundAssistant(user.id,charge);}catch{}
+    // Charged only for an answer that came: the tokens the provider reported (a typical message when it reported
+    // none) at the model's price plus the margin. No answer, nothing to pay; the local brain answers for free.
+    if(ai&&paid&&database.chargeFandogh){
+      const input=ai.usage?.input||0,output=ai.usage?.output||0,rial=input||output?catalog.charge(pick,input,output,settings):estimate;
+      await database.chargeFandogh(user.id,rial,{model:pick.id,input:input||8000,output:output||2000,label:pick.label});
+      ai.bill={rial,input:input||8000,output:output||2000};
+    }
   }
   const keep=local.actions.filter(a=>['go','route','tab','goal'].includes(a.kind));
   // Edits are checked against the resume as the user sent it (real ids and fields), never the trimmed copy.
@@ -123,12 +130,13 @@ module.exports=async(database,req,path,origin,user,reply)=>{
       // A model above the person's plan: name the plan that opens it.
       const need=locked&&Object.values(RI.ASSISTANT_PLANS).find(p=>p.level>=pick.tier);
       const why=locked?'«'+pick.label+'» در اشتراک «'+(need?.name||'کوروش')+'» فندق یا اشتراک رزومیت باز است. ':pick.id!=='local'&&!cfg?'«'+pick.label+'» الان در دسترس نیست. ':'';
-      answer.text=(answer.text?answer.text+'\n\n':'')+why+(better?'برای این‌جور سؤال‌ها دستیار پیشرفته بهتر کمک می‌کند: «'+better.label+'» را از انتخاب مدل در صفحهٔ فندق بزن ('+(better.cost?RI.fa(better.cost)+' پیام از سهمیه':'رایگان')+')، یا در «تنظیمات فندق» پیش‌فرضش کن.':'برای جواب‌های پیشرفته‌تر، در «تنظیمات فندق» کلید هوش مصنوعی خودت را وصل کن؛ رایگان است و از سهمیه کم نمی‌شود.');
+      answer.text=(answer.text?answer.text+'\n\n':'')+why+(better?'برای این‌جور سؤال‌ها دستیار پیشرفته بهتر کمک می‌کند: «'+better.label+'» را از انتخاب مدل در صفحهٔ فندق بزن ('+(better.cost?'هر پیام حدود '+RI.fa(better.cost)+' تومان از کیف پول فندق':'رایگان')+')، یا در «تنظیمات فندق» پیش‌فرضش کن.':'برای جواب‌های پیشرفته‌تر، در «تنظیمات فندق» کلید هوش مصنوعی خودت را وصل کن؛ رایگان است و از سهمیه کم نمی‌شود.');
       answer.actions=[...(locked?[{kind:'route',route:'assistant',label:'اشتراک‌های فندق'}]:[]),...(better?[{kind:'model',label:'بپرس از '+better.label,value:better.id}]:[]),...(locked?[]:[{kind:'route',route:'assistant',label:'تنظیمات فندق'}]),...(answer.actions||[])].slice(0,6);
     }
   }
-  answer.model={id:ai?pick.id:'local',label:ai?pick.label:'فندق محلی',cost:ai?cost:0};
+  const token=catalog.tokenRial(settings);
+  answer.model={id:ai?pick.id:'local',label:ai?pick.label:'فندق محلی',cost:ai?.bill?Math.round(ai.bill.rial)/10:0,tokens:ai?.bill?Math.round((ai.bill.input+ai.bill.output)*(1+catalog.billingOf(settings).markup/100)):0,used:ai?.bill?ai.bill.input+ai.bill.output:0};
   reply(200,{reply:answer,usage:await status(database,user.id,config,me)});
   return true;
 };
-module.exports.allowance=allowance;
+

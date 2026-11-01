@@ -4,6 +4,7 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),{createServer}=require('../src/http/server.cjs');
 (async()=>{
  const {db,owner,target}=await require('./admin-fixture.cjs')(),store=require('./workspace-test-store.cjs')(db,[owner,target],{workspaces:true}),{execute,sql}=store;
+ sql.exec('CREATE TABLE IF NOT EXISTS wallets(user_id TEXT PRIMARY KEY,balance_units INTEGER NOT NULL DEFAULT 0);');
  sql.exec('CREATE TABLE IF NOT EXISTS account_access(user_id TEXT,ref TEXT,price_units INTEGER,expires_at INTEGER,created_at INTEGER,PRIMARY KEY(user_id,ref));');
  const real=globalThis.fetch,calls=[];
  globalThis.fetch=async(url,init)=>{
@@ -27,14 +28,14 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
   let test=(await send('/api/dashboard/assistant/me/test',{own:{provider:'openai'}})).body;assert.equal(test.ok,true);
   test=(await send('/api/dashboard/assistant/me/test',{own:{provider:'openai'},key:'sk-wrong-key-999'})).body;assert.equal(test.ok,false);assert(!test.error.includes('sk-wrong-key-999'));
   // Questions through the person's own key: free, and the persona goes with them.
-  const before=await db.assistantUsed(target);calls.length=0;
+  await send('/api/dashboard/assistant');const before=(await db.fandoghWallet(target)).balance;calls.length=0;
   const r=(await send('/api/dashboard/assistant/ask',{question:'معرفی‌ام را چطور بنویسم؟',content,history:[]})).body;
-  assert.equal(r.reply.source,'ai');assert.equal(await db.assistantUsed(target),before,'no allowance used');assert.equal(r.usage.own,true);assert.equal(r.usage.name,'پشمک');
+  assert.equal(r.reply.source,'ai');assert.equal((await db.fandoghWallet(target)).balance,before,'the wallet is untouched');assert.equal(r.usage.own,true);assert.equal(r.usage.name,'پشمک');
   assert(calls[0].messages[0].content.includes('«پشمک»')&&calls[0].messages[0].content.includes('رسمی'),'persona reaches the model');
   // Forgetting the key returns to the shared allowance.
   // Forgetting the key goes back to local Fandogh, which is free too.
   view=(await send('/api/dashboard/assistant/me',{settings:settings({name:'پشمک',engine:'local',own:{enabled:false}}),key:null})).body;assert.equal(view.key.set,false);
-  const back=(await send('/api/dashboard/assistant/ask',{question:'معرفی‌ام را چطور بنویسم؟',content,history:[]})).body;assert.equal(back.reply.source,'local');assert.equal(await db.assistantUsed(target),before);
+  const back=(await send('/api/dashboard/assistant/ask',{question:'معرفی‌ام را چطور بنویسم؟',content,history:[]})).body;assert.equal(back.reply.source,'local');assert.equal((await db.fandoghWallet(target)).balance,before);
   console.log('PASS Fandogh user settings API: validation, sealed masked key, safe connection test, free own-key questions with persona, forget key back to free local Fandogh.');
 
   const {chromium}=require('playwright'),browser=await chromium.launch({channel:process.platform==='win32'?'msedge':undefined,headless:true}),out=path.resolve('artifacts/fandogh-user-settings');fs.mkdirSync(out,{recursive:true});
@@ -44,8 +45,13 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
    await page.goto(base+'/dashboard/assistant/');const form=page.locator('[data-fset]');await form.waitFor();
    assert.equal(await page.locator('#page-title').innerText(),'تنظیمات فندق');assert(await page.locator('.dn-item[aria-current=page]').count()>=1);
    assert.equal(await form.locator('input[name=engine]:checked').inputValue(),'local');assert.match(await form.locator('.fset-model:has(input[value=local]) .fset-cost').innerText(),/رایگان/);
-   assert.match(await form.locator('.fset-model:has(input[value=claude-opus]) .fset-cost').innerText(),/۶/);assert.match(await form.locator('.fset-model:has(input[value=claude-opus])').innerText(),/کوروش/,'a locked model names its plan');assert(await form.locator('input[value=claude-opus]').isDisabled());
-   assert.deepEqual(await form.locator('.fset-group h3').allInnerTexts(),['فندق','OpenAI','Anthropic','Google','Moonshot','DeepSeek']);assert.equal(await form.locator('.fset-plan').count(),3);assert.deepEqual(await form.locator('.fset-plan h3').evaluateAll(n=>n.map(x=>x.firstChild.textContent)),['آرش','رستم','کوروش']);assert.equal(await form.locator('.fset-ring').count(),2);
+   assert.match(await form.locator('.fset-model:has(input[value=claude-opus]) .fset-cost').innerText(),/تومان/);assert.match(await form.locator('.fset-model:has(input[value=luna])').innerText(),/۳۰ تومان برای هر ۱۰۰۰ توکن/);assert.match(await form.locator('.fset-model:has(input[value=claude-opus])').innerText(),/کوروش/,'a locked model names its plan');assert(await form.locator('input[value=claude-opus]').isDisabled());
+   assert.deepEqual(await form.locator('.fset-group h3').allInnerTexts(),['فندق','OpenAI','Anthropic','Google','Moonshot','DeepSeek']);assert.equal(await form.locator('.fset-plan').count(),3);assert.deepEqual(await form.locator('.fset-plan h3').evaluateAll(n=>n.map(x=>x.firstChild.textContent)),['آرش','رستم','کوروش']);assert.match(await form.locator('.fset-balance').innerText(),/۵٬?۰۰۰ تومان/);assert.equal(await form.locator('.fset-topup').count(),5);
+   // Top-up with It from the main wallet: confirm, and the Fandogh wallet grows by 10 It = 20,000 toman.
+   await execute('INSERT OR IGNORE INTO wallets(user_id,balance_units) VALUES(?,?)',[owner,0]);await execute('UPDATE wallets SET balance_units=? WHERE user_id=?',[100000,owner]);
+   page.once('dialog',d=>d.accept());await form.locator('[data-set-topup="10"]').click();
+   await page.waitForFunction(()=>/۲۵٬?۰۰۰ تومان/.test(document.querySelector('.fset-balance')?.innerText||''));assert.equal(await page.locator('.fset-ledger__row.is-topup').count(),1);
+   await page.locator('.fset-rates summary').click();assert(await page.locator('.fset-rates tbody tr').count()>=10);
    await form.locator('input[name=name]').fill('نارگیل');await form.locator('.fset-switch').click();assert(await form.locator('input[name=own]').isChecked());await form.locator('input[name=key]').fill('sk-mine-abcd1234');
    await form.locator('[data-set-test]').click();await page.locator('[data-set-test-status][data-kind=ok]').waitFor();
    await form.locator('button[type=submit]').click();await page.waitForFunction(()=>document.querySelector('[data-fset] input[name=name]')?.value==='نارگیل'&&document.querySelector('[data-fset] input[name=engine][value=own]')||document.querySelector('[data-set-status][data-kind=error]'));assert.equal(await page.locator('[data-set-status][data-kind=error]').count(),0,await page.locator('[data-set-status]').textContent().catch(()=>''));
