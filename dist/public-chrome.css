@@ -362,3 +362,5 @@ html body .public-account>.public-account__menu.pa-quick:not([hidden]){animation
 html body .public-account>.public-account__menu.pa-quick{width:min(280px,calc(100vw - 28px));gap:6px}
 html body .pa-quick>.public-account__person{padding:12px 14px}
 html body .pa-quick>a{min-height:40px;padding:5px 8px}
+/* frozen.css gives the old .header a 76px frosted slab; the landing-style bar carries its own glass, so the slab goes. */
+.header.public-header.ln-head{height:auto;-webkit-backdrop-filter:none;backdrop-filter:none}
