@@ -448,3 +448,53 @@ body[data-page=fandogh] .pet__stage{display:none}
 .fset-card>.fset-switch{margin-top:2px}
 @keyframes fs-chip-in{from{opacity:0;transform:translateY(10px) scale(.92)}}
 @media (prefers-reduced-motion:reduce){.fs-chips button,.fs-chips__label svg{animation:none!important}}
+
+/* ---------- Settings tabs: a night-sky rail of sections, one panel at a time ---------- */
+.fset-head{min-height:120px}
+.fset{grid-template-columns:236px minmax(0,1fr);gap:16px;align-items:start}
+.fset-tabs{position:sticky;top:96px;isolation:isolate;display:grid;gap:4px;padding:10px;border-radius:22px;background-color:#11212c;background-image:radial-gradient(120% 70% at 100% 0,rgba(240,189,82,.18),transparent 60%),linear-gradient(170deg,#0b141b,#1b3242);box-shadow:0 22px 48px -30px rgba(11,20,27,.9);overflow:hidden;animation:fs-rise .55s cubic-bezier(.2,.8,.2,1) backwards}
+.fset-tabs::before{content:"";position:absolute;inset:0;z-index:-2;background-image:radial-gradient(1px 1px at 20% 30%,#fff 50%,transparent),radial-gradient(1px 1px at 70% 60%,#fff 50%,transparent),radial-gradient(1.4px 1.4px at 85% 15%,#f0bd52 50%,transparent),radial-gradient(1px 1px at 35% 85%,#8ec5d6 50%,transparent);opacity:.55;animation:fset-twinkle 5s ease-in-out infinite alternate}
+.fset-tabs__ink{position:absolute;top:0;left:0;z-index:-1;width:0;border-radius:16px;background:linear-gradient(135deg,rgba(240,189,82,.24),rgba(240,189,82,.07));box-shadow:inset 0 0 0 1px rgba(240,189,82,.5),0 12px 26px -16px rgba(240,189,82,.8);transition:transform .55s cubic-bezier(.3,1.4,.5,1)}
+.fset-tabs button{position:relative;display:flex;align-items:center;gap:10px;width:100%;padding:10px;border:0;border-radius:16px;background-color:transparent;color:#e6eef3;font:inherit;text-align:start;cursor:pointer;animation:fset-tab-in .5s calc(.1s + var(--i,0)*.06s) cubic-bezier(.2,.8,.2,1) backwards;transition:background-color .25s}
+.fset-tabs button:hover{background-color:rgba(255,255,255,.07)}
+.fset-tabs button:focus-visible{outline:2px solid #f0bd52;outline-offset:2px}
+.fset-tabs__ico{display:grid;place-items:center;flex:none;width:36px;height:36px;border-radius:12px;background-color:rgba(255,255,255,.09);color:#8ec5d6;transition:background-color .3s,color .3s,transform .5s cubic-bezier(.3,1.4,.5,1)}
+.fset-tabs__ico svg{width:18px;height:18px}
+.fset-tabs__txt{display:grid;min-width:0}
+.fset-tabs b{font-size:13.5px;color:#fff}
+.fset-tabs small{overflow:hidden;font-size:11.5px;color:#a9bfcc;white-space:nowrap;text-overflow:ellipsis}
+.fset-tabs [aria-selected=true] .fset-tabs__ico{background-color:#f0bd52;color:#1b2a33;transform:rotate(-8deg) scale(1.07)}
+.fset-tabs [aria-selected=true] small{color:#f3d9a0}
+.fset:not(.is-ready) .fset-tabs [aria-selected=true]{background-color:rgba(240,189,82,.16)}
+.fset:not(.is-ready) :is(.fset-tabs__ink,.fset-makers__ink){transition:none}
+.fset-panels{display:grid;gap:14px;min-width:0}
+.fset-panel{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;min-width:0;animation:fset-panel-in .5s cubic-bezier(.2,.8,.2,1)}
+.fset-panel[hidden],.fset-save[hidden],.fset-group[hidden]{display:none}
+.fset-persona{grid-template-columns:repeat(2,minmax(0,1fr));column-gap:16px}
+.fset-persona>header,.fset-persona>.fset-switch{grid-column:1/-1}
+.fset-empty{display:flex;align-items:center;gap:8px;margin:0;padding:14px;border:1px dashed #cfdde5;border-radius:14px;color:#4a6070;font-size:13px}
+.fset-empty svg{width:16px;height:16px;color:#e2a03a}
+.fset-makers{position:relative;isolation:isolate;display:flex;flex-wrap:wrap;gap:4px;padding:5px;border:1px solid #dfe9ee;border-radius:16px;background-color:#f1f6f8}
+.fset-makers__ink{position:absolute;top:0;left:0;z-index:-1;width:0;border-radius:12px;background-color:#1b3242;box-shadow:0 10px 22px -12px rgba(11,20,27,.8);transition:transform .5s cubic-bezier(.3,1.4,.5,1)}
+.fset-makers button{position:relative;display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:6px 12px;border:0;border-radius:12px;background-color:transparent;color:#24404f;font:inherit;font-size:13px;font-weight:700;cursor:pointer;transition:color .3s}
+.fset-makers button:focus-visible{outline:2px solid #e2a03a;outline-offset:2px}
+.fset-makers button[aria-selected=true]{color:#fff}
+.fset:not(.is-ready) .fset-makers button[aria-selected=true]{background-color:#1b3242}
+.fset-makers small{min-width:20px;padding:1px 6px;border-radius:99px;background-color:rgba(27,50,66,.08);font-size:11px;text-align:center}
+.fset-makers [aria-selected=true] small{background-color:rgba(255,255,255,.18)}
+.fset-makers__dot{width:7px;height:7px;border-radius:50%;background:#f0bd52;box-shadow:0 0 0 3px rgba(240,189,82,.25);animation:fset-dot 2.4s ease-in-out infinite}
+.fset-group:not([hidden]){animation:fset-panel-in .45s cubic-bezier(.2,.8,.2,1)}
+.fset-group:not([hidden]) .fset-model{animation:fs-rise .45s calc(var(--i,0)*.05s) cubic-bezier(.2,.9,.3,1) backwards}
+@keyframes fset-panel-in{from{opacity:0;transform:translateY(12px);filter:blur(6px)}}
+@keyframes fset-tab-in{from{opacity:0;transform:translateX(18px)}}
+@keyframes fset-twinkle{to{opacity:.95}}
+@keyframes fset-dot{50%{box-shadow:0 0 0 6px rgba(240,189,82,0)}}
+@media (max-width:900px){
+  .fset{grid-template-columns:minmax(0,1fr)}
+  .fset-tabs{position:relative;top:auto;display:flex;gap:4px;overflow-x:auto;scrollbar-width:none;padding:6px}
+  .fset-tabs::-webkit-scrollbar{display:none}
+  .fset-tabs button{flex:none;width:auto;padding:7px 12px 7px 8px}
+  .fset-tabs small{display:none}
+  .fset-tabs__ico{width:30px;height:30px;border-radius:10px}
+}
+@media (max-width:760px){.fset-panel,.fset-persona{grid-template-columns:minmax(0,1fr)}}
