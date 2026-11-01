@@ -351,3 +351,6 @@ html body .public-account>.public-account__menu.pa-quick:not([hidden]){animation
 @keyframes pa-twinkle{to{opacity:1}}
 @media (prefers-reduced-motion:reduce){html body .public-account>.public-account__menu.pa-quick,html body .pa-quick *{animation:none!important;transition:none!important}}
 @media (max-width:760px){html body .public-account>.public-account__menu.pa-quick{position:fixed;top:66px;right:0;left:0;width:auto;max-width:none;margin:0;max-block-size:calc(100dvh - 90px)}}
+/* The landing heading names the product in plain words above the slogan. */
+.ln-hero h1 .ln-kicker{display:block;margin-bottom:14px;font-size:clamp(15px,1.5vw,19px);font-weight:800;line-height:1.6;color:#f3d9a0;letter-spacing:0;background:none;-webkit-text-fill-color:#f3d9a0}
+@media (min-width:1081px){.ln-foot__cols:has(>div:nth-child(4)){grid-template-columns:repeat(4,minmax(0,1fr))}}
