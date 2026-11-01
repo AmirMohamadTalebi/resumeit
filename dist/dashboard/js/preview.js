@@ -49,7 +49,7 @@
     const value=c.branding?.[kind];
     if(value?.mode==='hidden')return '';
     if(value?.mode==='custom')return '<footer class="pv-foot">'+esc(value.text)+'</footer>';
-    return '<footer class="pv-foot"><span>ساخته‌شده با</span> <span class="ri-logo"><img src="/brand/resumeit-logo-v1.png" alt="ResumeIt" width="2172" height="724"></span></footer>';
+    return '<footer class="pv-foot"><a class="pv-foot__brand" href="https://resumeit.ir/" title="رزومه ساز آنلاین رزومیت"><span>ساخته‌شده با</span> <span class="ri-logo"><img src="/brand/resumeit-logo-v1.png" alt="رزومیت؛ رزومه ساز آنلاین" width="2172" height="724"></span></a></footer>';
   }
   RI.brandFoot=brandFoot;
   RI.resumeNav=(c,active,base)=>nav(c,active,base);

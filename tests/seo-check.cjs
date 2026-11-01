@@ -21,7 +21,10 @@ const assert=require('node:assert/strict'),{createServer}=require('../src/http/s
    assert(text(html).split(/\s+/).length>500,'a guide page carries real content: '+path);assert(home.includes('href="'+path+'"'),'the landing footer links '+path);
   }
   for(const p of ['/about/','/contact/','/privacy/','/terms/','/changes/']){const html=await get(p);assert(html.includes('href="/resume-builder/"'),p);assert(/\| رزومیت<\/title>|رزومیت \(ResumeIt\)/.test(html),p);}
-  const map=await get('/sitemap.xml');for(const p of ['','resume-builder/','resume-website/','demo/'])assert(map.includes('<loc>https://resumeit.ir/'+p+'</loc>'),p);
+  // Articles: an index that lists every article, each with Article data, breadcrumbs, a contents list and links onward.
+  const blog=await get('/blog/'),slugs=[...blog.matchAll(/href="\/blog\/([a-z-]+)\/"/g)].map(m=>m[1]),posts=[...new Set(slugs)];assert(posts.length>=6,'six articles at least');assert(home.includes('href="/blog/"'));
+  for(const slug of posts){const html=await get('/blog/'+slug+'/'),data=lds(html)[0]['@graph'],art=data.find(x=>x['@type']==='Article');assert(art&&art.headline&&art.datePublished,slug);assert.equal(data.find(x=>x['@type']==='BreadcrumbList').itemListElement.length,3);assert(html.includes('class="info-nav lg-toc"'),slug);assert((html.match(/class="lg-sec"/g)||[]).length>=5,slug);assert([...html.matchAll(/href="\/blog\/([a-z-]+)\/"/g)].some(m=>m[1]!==slug),'links to other articles: '+slug);assert(!/<img(?![^>]*\balt=)[^>]*>/.test(html),'every image has alt: '+slug);}
+  const map=await get('/sitemap.xml');for(const p of ['','resume-builder/','resume-website/','demo/','blog/','blog/resume-for-immigration/'])assert(map.includes('<loc>https://resumeit.ir/'+p+'</loc>'),p);
   const robots=await get('/robots.txt');assert(robots.includes('Sitemap: https://resumeit.ir/sitemap.xml'));assert(!/Disallow: \/resume-/.test(robots));
  }finally{server.close();}
  console.log('PASS SEO: brand-first titles, keyword heading, Organization/WebSite/FAQ data, two guide pages with breadcrumbs and FAQ, footer links and sitemap.');
