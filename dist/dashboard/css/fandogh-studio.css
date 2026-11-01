@@ -341,3 +341,53 @@ body[data-page=fandogh] .pet__stage{display:none}
 @keyframes fs-wiggle{25%{transform:rotate(-12deg)}75%{transform:rotate(12deg)}}
 @media (max-width:900px){.fset-plan-grid{grid-template-columns:1fr}}
 @media (prefers-reduced-motion:reduce){.fset-plan,.fset-plan__crest,.fset-ring,.fset-ring circle{animation:none!important;transition:none!important}}
+
+/* ---------- Folding the side panes: the rail and the inspector step aside so the conversation gets the width ---------- */
+.fs-rail__row{display:flex;align-items:center;gap:6px}.fs-rail__row .fs-new{flex:1}
+.fs-inspector__head{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:2px 4px 0}
+.fs-inspector__head b{font-size:13px;font-weight:800;color:#4a6070}
+.fs-pane-btn[aria-pressed=true]{background:#eaf2fb;color:#2f6fb3}
+.fs-pane-btn.is-folded{position:relative}
+.fs-pane-btn.is-folded::after{content:"";position:absolute;top:6px;inset-inline-end:6px;width:7px;height:7px;border-radius:50%;background:#f0bd52;box-shadow:0 0 0 2px #fff;animation:fs-pop .4s cubic-bezier(.3,1.5,.5,1)}
+.fs-fold svg{transition:transform .35s cubic-bezier(.3,1.4,.5,1)}.fs-fold:hover svg{transform:translateX(3px)}
+.fs-close svg{transition:transform .35s cubic-bezier(.3,1.4,.5,1)}.fs-close:hover svg{transform:translateX(-3px)}
+@media (min-width:900px){
+  .fs.is-rail-folded{grid-template-columns:minmax(0,1fr) 288px}
+  .fs.is-rail-folded .fs-rail{display:none}
+}
+@media (min-width:900px) and (max-width:1279.98px){.fs.is-rail-folded{grid-template-columns:minmax(0,1fr)}.fs-rail .fs-fold{display:inline-grid}}
+@media (min-width:1280px){
+  .fs.is-inspector-folded{grid-template-columns:262px minmax(0,1fr)}
+  .fs.is-inspector-folded .fs-inspector{display:none}
+  .fs.is-rail-folded.is-inspector-folded{grid-template-columns:minmax(0,1fr)}
+  .fs.is-rail-folded.is-inspector-folded .fs-thread>*,.fs.is-rail-folded.is-inspector-folded .fs-composer__box{max-width:900px}
+}
+@media (max-width:899.98px){.fs-rail .fs-fold{display:none}.fs-bar [data-fs-open=rail]{display:inline-grid}}
+.fs-rail.fs-pane-in{animation:fs-pane-r .5s cubic-bezier(.2,.9,.3,1)}
+.fs-inspector.fs-pane-in{animation:fs-pane-l .5s cubic-bezier(.2,.9,.3,1)}
+.fs-main.fs-widen{animation:fs-widen .55s cubic-bezier(.2,.9,.3,1)}
+@keyframes fs-pane-r{from{opacity:0;transform:translateX(40px);filter:blur(6px)}}
+@keyframes fs-pane-l{from{opacity:0;transform:translateX(-40px);filter:blur(6px)}}
+@keyframes fs-widen{from{opacity:.6;transform:scale(.985)}}
+@media (prefers-reduced-motion:reduce){.fs-pane-in,.fs-widen{animation:none!important}}
+
+/* ---------- Fandogh's menu entry: a little card with her face as the icon and her full body peeking from the corner ---------- */
+.dn-item--fandogh{min-height:54px;margin-block:2px 4px;overflow:hidden;isolation:isolate;background:linear-gradient(120deg,#eef5fd,#fbf3e8);box-shadow:inset 0 0 0 1px #dfe9f3;animation:dn-fandogh-in .7s .15s cubic-bezier(.2,.9,.3,1) backwards}
+.dn-item--fandogh::before{content:"";position:absolute;inset:0;z-index:-1;background:radial-gradient(90px circle at 22% 80%,rgba(240,189,82,.32),transparent 70%);opacity:.7;transition:opacity .4s}
+.dn-item--fandogh .dn-item__ico{overflow:hidden;border-radius:50%;background:#fff;box-shadow:0 0 0 2px #fff,0 6px 12px -6px rgba(47,111,179,.9)}
+.dn-item--fandogh .dn-item__ico img{width:100%;height:100%;object-fit:cover}
+.dn-item--fandogh .dn-item__txt{display:grid;line-height:1.35;font-weight:800;color:#1f3550}
+.dn-item--fandogh .dn-item__txt small{font-size:11px;font-weight:600;color:#6b8090}
+.dn-fandogh__body{position:absolute;bottom:-58px;inset-inline-end:2px;z-index:-1;width:62px;height:auto;pointer-events:none;transform-origin:50% 100%;filter:drop-shadow(0 6px 8px rgba(28,45,56,.18));transition:translate .45s cubic-bezier(.3,1.4,.5,1),rotate .45s cubic-bezier(.3,1.4,.5,1);animation:dn-fandogh-peek .9s .45s cubic-bezier(.3,1.4,.5,1) backwards,dn-fandogh-breathe 5s 1.4s ease-in-out infinite}
+.dn-item--fandogh:hover .dn-fandogh__body,.dn-item--fandogh:focus-visible .dn-fandogh__body{translate:0 -10px;rotate:-6deg}
+.dn-item--fandogh:hover::before{opacity:1}
+.dn-item--fandogh[aria-current=page]{background:linear-gradient(120deg,#e3eefb,#f8e9d2);box-shadow:inset 0 0 0 1.5px #c7d9ee}
+.dn-item--fandogh[aria-current=page] .dn-item__ico{background:#fff;box-shadow:0 0 0 2px #f0bd52,0 6px 14px -6px rgba(226,160,58,.9)}
+.dn-item--fandogh[aria-current=page] .dn-fandogh__body{translate:0 -6px}
+.dn-folded .dn-item--fandogh{min-height:44px;background:none;box-shadow:none}
+.dn-folded .dn-fandogh__body{display:none}
+@keyframes dn-fandogh-in{from{opacity:0;transform:translateY(8px)}}
+@keyframes dn-fandogh-peek{from{transform:translateY(60px)}}
+@keyframes dn-fandogh-breathe{50%{transform:scale(1.03,.98)}}
+@media (prefers-reduced-motion:reduce){.dn-item--fandogh,.dn-fandogh__body{animation:none!important;transition:none!important}}
+@media (min-width:961px) and (max-height:860px){.dn-item--fandogh{min-height:40px;margin-block:0 2px}.dn-fandogh__body{width:48px;bottom:-46px}}

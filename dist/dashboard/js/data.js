@@ -176,13 +176,12 @@
   /* Fandogh plans. Messages are counted in two rolling windows, five hours and seven days; a model costs its
      catalog price in messages (GPT-6 Luna = 1). Plans differ in volume and in which models they open: level 0 is
      free, «آرش» opens the fast models, «رستم» the strong ones and «کوروش» everything, Fable, Opus, Astra and Sol
-     included. Prices cover a month of the plan's weekly volume (×4) at 10,000 tokens a message, priced at the
-     plan's most expensive model per message (October 2026 API prices, $1 = 270,000 toman). */
+     included. Monthly prices: 210,000, 360,000 and 510,000 toman. */
   RI.ASSISTANT_TIERS = ['رایگان', 'آرش', 'رستم', 'کوروش'];
   RI.ASSISTANT_PLANS = {
-    arash: { id: 'arash', name: 'آرش', title: 'آرش کمانگیر', period: 'یک‌ماهه', months: 1, level: 1, window: 15, week: 50, price: 290000, desc: 'مدل‌های سریع گوگل و Moonshot کنار مدل‌های سبک، با ۱۵ پیام در هر ۵ ساعت.' },
-    rostam: { id: 'rostam', name: 'رستم', title: 'رستم دستان', period: 'یک‌ماهه', months: 1, level: 2, window: 25, week: 80, price: 940000, desc: 'مدل‌های قوی مثل Claude Sonnet، Gemini Pro و Kimi K3، با حجم بیشتر.' },
-    kourosh: { id: 'kourosh', name: 'کوروش', title: 'کوروش بزرگ', period: 'یک‌ماهه', months: 1, level: 3, window: 40, week: 120, price: 2920000, desc: 'همهٔ مدل‌ها، از جمله Claude Fable و Opus و GPT-6 Astra و Sol، با بیشترین حجم.' },
+    arash: { id: 'arash', name: 'آرش', title: 'آرش کمانگیر', period: 'یک‌ماهه', months: 1, level: 1, window: 15, week: 50, price: 210000, desc: 'مدل‌های سریع گوگل و Moonshot کنار مدل‌های سبک، با ۱۵ پیام در هر ۵ ساعت.' },
+    rostam: { id: 'rostam', name: 'رستم', title: 'رستم دستان', period: 'یک‌ماهه', months: 1, level: 2, window: 25, week: 80, price: 360000, desc: 'مدل‌های قوی مثل Claude Sonnet، Gemini Pro و Kimi K3، با حجم بیشتر.' },
+    kourosh: { id: 'kourosh', name: 'کوروش', title: 'کوروش بزرگ', period: 'یک‌ماهه', months: 1, level: 3, window: 40, week: 120, price: 510000, desc: 'همهٔ مدل‌ها، از جمله Claude Fable و Opus و GPT-6 Astra و Sol، با بیشترین حجم.' },
   };
   // Earlier monthly assistant purchases keep working at the first level.
   RI.ASSISTANT_LEGACY = { m1: 'arash', m3: 'arash', m6: 'arash' };

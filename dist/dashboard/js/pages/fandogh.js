@@ -2,7 +2,8 @@
    on this device (a rail with search, pins and rename); every message can go to a different model with its cost
    shown before sending; «/» opens commands and «@» points at resume sections; the inspector shows the score, which
    sections Fandogh can see and every change made in this conversation, each with undo. Answers can be stopped,
-   retried with another model, copied or exported. */
+   retried with another model, copied or exported. On wide screens the rail and the inspector fold away (and come
+   back) so the conversation can take the whole width; the choice is remembered. On narrow screens they are drawers. */
 (() => {
   'use strict';
   const RI = window.RI, esc = RI.esc, F = RI.Fandogh;
@@ -38,9 +39,9 @@
     title: 'فندق، دستیار رزومه',
     render() {
       return '<div class="fs" data-fs>' +
-        '<aside class="fs-rail" data-fs-rail aria-label="گفت‌وگوها"><div class="fs-rail__top"><button type="button" class="fs-new" data-fs-new>' + RI.icon('plus') + '<span>گفت‌وگوی تازه</span><kbd>Ctrl K</kbd></button><label class="fs-search"><span class="sr-only">جست‌وجو در گفت‌وگوها</span>' + RI.icon('search') + '<input type="search" data-fs-search placeholder="جست‌وجو در گفت‌وگوها"></label></div><nav class="fs-chats" data-fs-chats></nav><div class="fs-rail__foot"><a href="' + RI.routeUrl('assistant') + '" data-go="assistant">' + RI.icon('sliders') + 'تنظیمات فندق</a><small>گفت‌وگوها فقط روی همین دستگاه می‌مانند.</small></div></aside>' +
+        '<aside class="fs-rail" data-fs-rail aria-label="گفت‌وگوها"><div class="fs-rail__top"><div class="fs-rail__row"><button type="button" class="fs-new" data-fs-new>' + RI.icon('plus') + '<span>گفت‌وگوی تازه</span><kbd>Ctrl K</kbd></button><button type="button" class="fs-icon fs-fold" data-fs-hide="rail" title="جمع کردن گفت‌وگوها (Ctrl+B)" aria-label="جمع کردن گفت‌وگوها">' + RI.icon('chevR') + '</button></div><label class="fs-search"><span class="sr-only">جست‌وجو در گفت‌وگوها</span>' + RI.icon('search') + '<input type="search" data-fs-search placeholder="جست‌وجو در گفت‌وگوها"></label></div><nav class="fs-chats" data-fs-chats></nav><div class="fs-rail__foot"><a href="' + RI.routeUrl('assistant') + '" data-go="assistant">' + RI.icon('sliders') + 'تنظیمات فندق</a><small>گفت‌وگوها فقط روی همین دستگاه می‌مانند.</small></div></aside>' +
         '<section class="fs-main" aria-labelledby="page-title"><h1 id="page-title" tabindex="-1" class="sr-only">فندق، دستیار رزومه</h1>' +
-        '<header class="fs-bar"><button type="button" class="fs-icon fs-only-narrow" data-fs-open="rail" aria-label="گفت‌وگوها">' + RI.icon('menu') + '</button><input class="fs-title" data-fs-title maxlength="60" aria-label="نام گفت‌وگو"><span class="fs-quota" data-fs-quota></span><button type="button" class="fs-icon" data-fs-export title="خروجی متنی گفت‌وگو">' + RI.icon('download') + '</button><button type="button" class="fs-icon" data-fs-delete title="حذف گفت‌وگو">' + RI.icon('trash') + '</button><button type="button" class="fs-icon" data-fs-open="inspector" title="زمینه و تغییرها">' + RI.icon('layers') + '</button></header>' +
+        '<header class="fs-bar"><button type="button" class="fs-icon fs-pane-btn" data-fs-open="rail" aria-label="گفت‌وگوها" title="گفت‌وگوها (Ctrl+B)">' + RI.icon('menu') + '</button><input class="fs-title" data-fs-title maxlength="60" aria-label="نام گفت‌وگو"><span class="fs-quota" data-fs-quota></span><button type="button" class="fs-icon" data-fs-export title="خروجی متنی گفت‌وگو">' + RI.icon('download') + '</button><button type="button" class="fs-icon" data-fs-delete title="حذف گفت‌وگو">' + RI.icon('trash') + '</button><button type="button" class="fs-icon fs-pane-btn" data-fs-open="inspector" aria-label="زمینه و تغییرها" title="زمینه و تغییرها (Ctrl+Shift+B)">' + RI.icon('layers') + '</button></header>' +
         '<div class="fs-thread" data-fs-thread aria-live="polite"></div>' +
         '<form class="fs-composer" data-fs-form novalidate><div class="fs-pop fs-palette" data-fs-palette role="listbox" hidden></div><div class="fs-pop fs-models" data-fs-models hidden></div>' +
         '<div class="fs-composer__box"><label class="sr-only" for="fs-input">پیامت به فندق</label><textarea id="fs-input" data-fs-input rows="1" maxlength="4000" placeholder="از فندق بپرس… «/» برای دستورها، «@» برای بخش‌های رزومه"></textarea>' +
@@ -159,7 +160,7 @@
       function paintInspector() {
         const B = window.ResumeBrain, sc = B ? B.score(RI.C(), { goal: F.goal() }) : null, c = RI.C();
         const applied = current().messages.filter(m => m.editState === 'applied' && m.applied).flatMap(m => m.applied.map(t => [m.id, t]));
-        $('[data-fs-inspector]').innerHTML = '<button type="button" class="fs-icon fs-only-narrow fs-close" data-fs-close aria-label="بستن">' + RI.icon('x') + '</button>' +
+        $('[data-fs-inspector]').innerHTML = '<div class="fs-inspector__head"><b>زمینه و تغییرها</b><button type="button" class="fs-icon fs-close" data-fs-hide="inspector" aria-label="جمع کردن زمینه و تغییرها" title="جمع کردن (Ctrl+Shift+B)">' + RI.icon(wide('inspector') ? 'chevL' : 'x') + '</button></div>' +
           (sc ? '<section class="fs-card fs-score"><svg viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="42"/><circle cx="50" cy="50" r="42" pathLength="100" style="--v:' + sc.total + '"/></svg><div><b>' + RI.fa(sc.total) + '</b><span>' + esc(sc.label) + '</span>' + (sc.role ? '<small>نقش: ' + esc(sc.role.label) + '</small>' : '') + '</div></section>' : '') +
           '<section class="fs-card"><h3>' + RI.icon('eye') + 'فندق چه چیزهایی را می‌بیند</h3><div class="fs-sections">' + F.SECTIONS.map(([k, label]) => { const n = k === 'profile' ? [c.profile.title, c.profile.bio].filter(Boolean).length : (c[k] || []).length; return '<label><input type="checkbox" data-fs-only="' + k + '"' + (only.has(k) ? ' checked' : '') + '><span>' + esc(label) + '<small>' + RI.fa(n) + '</small></span></label>'; }).join('') + '</div><p class="fs-muted">راه‌های تماس هیچ‌وقت فرستاده نمی‌شوند.</p></section>' +
           '<section class="fs-card"><h3>' + RI.icon('edit') + 'تغییرهای این گفت‌وگو</h3>' + (applied.length ? '<ol class="fs-changes">' + applied.map(([id, t], i) => '<li style="--i:' + i + '"><span>' + esc(t) + '</span><button type="button" data-fs-jump="' + id + '">' + RI.icon('eye') + '</button></li>').join('') + '</ol>' : '<p class="fs-muted">هنوز تغییری نداده‌ایم. بگو «بازنویسی کن» یا «درستش کن».</p>') + '</section>' +
@@ -183,6 +184,22 @@
         palette = []; $('[data-fs-palette]').hidden = true; grow(); input.focus();
       }
       function closeDrawers() { root.classList.remove('is-rail', 'is-inspector'); $('[data-fs-scrim]').hidden = true; }
+      // Wide screens fold a pane into the grid; narrow ones open or close it as a drawer.
+      function wide(pane) { return matchMedia(pane === 'rail' ? '(min-width: 900px)' : '(min-width: 1280px)').matches; }
+      function paintFolds() {
+        for (const pane of ['rail', 'inspector']) { const folded = root.classList.contains('is-' + pane + '-folded'), btn = $('.fs-bar [data-fs-open=' + pane + ']'); btn.setAttribute('aria-pressed', String(wide(pane) && !folded)); btn.classList.toggle('is-folded', wide(pane) && folded); }
+      }
+      function fold(pane, hide) {
+        if (!wide(pane)) { if (hide) closeDrawers(); else { root.classList.add('is-' + pane); $('[data-fs-scrim]').hidden = false; } return; }
+        const on = hide ?? !root.classList.contains('is-' + pane + '-folded');
+        root.classList.toggle('is-' + pane + '-folded', on);
+        // The pane that comes back slides in; the conversation settles into its new width.
+        if (!calm.matches) { const el = $(pane === 'rail' ? '[data-fs-rail]' : '[data-fs-inspector]'), main = $('.fs-main'); if (!on) { el.classList.remove('fs-pane-in'); void el.offsetWidth; el.classList.add('fs-pane-in'); } main.classList.remove('fs-widen'); void main.offsetWidth; main.classList.add('fs-widen'); }
+        F.store(foldKey(), JSON.stringify({ rail: root.classList.contains('is-rail-folded'), inspector: root.classList.contains('is-inspector-folded') }));
+        paintFolds();
+      }
+      const foldKey = () => 'ri-fandogh-folds-' + RI.ownerId;
+      try { const saved = JSON.parse(F.store(foldKey()) || '{}'); root.classList.toggle('is-rail-folded', !!saved.rail); root.classList.toggle('is-inspector-folded', !!saved.inspector); } catch {}
 
       /* ---------- Events ---------- */
       input.addEventListener('input', () => { grow(); paintPalette(); });
@@ -222,22 +239,25 @@
         else if (t.dataset.fsJump) { const el = thread.querySelector('[data-fs-msg="' + t.dataset.fsJump + '"]'); el?.scrollIntoView({ behavior: calm.matches ? 'auto' : 'smooth', block: 'center' }); el?.classList.add('fs-flash'); setTimeout(() => el?.classList.remove('fs-flash'), 1400); closeDrawers(); }
         else if (t.matches('[data-fs-export]')) { const c = current(), md = '# ' + c.title + '\n\n' + c.messages.map(m => (m.role === 'user' ? '**تو:** ' : '**' + name() + (m.model ? ' (' + m.model.label + ')' : '') + ':** ') + (m.text || '(متوقف شد)')).join('\n\n'); const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([md], { type: 'text/markdown;charset=utf-8' })); a.download = (c.title || 'fandogh').replace(/[\\/:*?"<>|]/g, '') + '.md'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000); }
         else if (t.matches('[data-fs-delete]')) { const c = current(); if (!c.messages.length || confirm('این گفت‌وگو حذف شود؟')) { chats = chats.filter(x => x !== c); chat = null; save(); paint(); } }
-        else if (t.dataset.fsOpen) { root.classList.add(t.dataset.fsOpen === 'rail' ? 'is-rail' : 'is-inspector'); $('[data-fs-scrim]').hidden = false; }
-        else if (t.matches('[data-fs-close]')) closeDrawers();
+        else if (t.dataset.fsOpen) fold(t.dataset.fsOpen, wide(t.dataset.fsOpen) ? undefined : false);
+        else if (t.dataset.fsHide) fold(t.dataset.fsHide, true);
       });
       root.addEventListener('change', e => { if (e.target.dataset.fsOnly) { if (e.target.checked) only.add(e.target.dataset.fsOnly); else only.delete(e.target.dataset.fsOnly); } });
       $('[data-fs-scrim]').addEventListener('click', closeDrawers);
       const keys = e => {
         if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); newChat(); }
         else if ((e.ctrlKey || e.metaKey) && e.key === '/') { e.preventDefault(); input.focus(); }
+        else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'b') { e.preventDefault(); fold(e.shiftKey ? 'inspector' : 'rail', wide(e.shiftKey ? 'inspector' : 'rail') ? undefined : !root.classList.contains('is-' + (e.shiftKey ? 'inspector' : 'rail'))); }
         else if (e.key === 'Escape' && busy) stop();
       };
       document.addEventListener('keydown', keys);
       const onStatus = () => { paintModel(); paintQuota(); };
       document.addEventListener('ri:fandogh-status', onStatus);
-      paint(); grow();
+      paint(); grow(); paintFolds();
+      const onResize = () => { paintFolds(); paintInspector(); };
+      const sizes = [matchMedia('(min-width: 900px)'), matchMedia('(min-width: 1280px)')]; sizes.forEach(q => q.addEventListener('change', onResize));
       F.refresh().then(() => { if (!alive) return; const c = current(); if (!c.messages.length && !chats.includes(c)) c.model = F.status.engine || 'local'; paint(); }).catch(() => {});
-      return () => { alive = false; busy?.abort(); document.removeEventListener('keydown', keys); document.removeEventListener('ri:fandogh-status', onStatus); clearTimeout(saveTimer); F.store(key(), JSON.stringify(chats.slice(0, 40))); };
+      return () => { alive = false; busy?.abort(); document.removeEventListener('keydown', keys); document.removeEventListener('ri:fandogh-status', onStatus); sizes.forEach(q => q.removeEventListener('change', onResize)); clearTimeout(saveTimer); F.store(key(), JSON.stringify(chats.slice(0, 40))); };
     }
   });
 })();

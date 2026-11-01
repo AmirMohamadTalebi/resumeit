@@ -7,7 +7,7 @@ const assert=require('node:assert/strict'),{randomUUID}=require('node:crypto'),l
   const content={profile:{name:'امیرمحمد طالبی',title:'دانشجوری کامپیوتر',bio:'Code Lover',avatar:'data:image/png;base64,AAAA'},skills:[{name:'Figma'}],experience:[],education:[],projects:[{title:'ResumeIt'}],contacts:[{type:'phone',value:'09120000000',public:true}],socials:[]};
   // Free accounts: 3 messages in any 5 hours and 15 a week. Local Fandogh is free and never touches either.
   let s=await call('/api/dashboard/assistant');assert.equal(s.status,200);assert.equal(s.data.plan,'free');assert.equal(s.data.level,0);assert.deepEqual([s.data.window.limit,s.data.week.limit],[3,15]);assert.equal(s.data.plans.length,3);assert.equal(s.data.ai,false);
-  assert.deepEqual(s.data.plans.map(p=>[p.id,p.name,p.window,p.week,p.price]),[['arash','آرش',15,50,290000],['rostam','رستم',25,80,940000],['kourosh','کوروش',40,120,2920000]]);
+  assert.deepEqual(s.data.plans.map(p=>[p.id,p.name,p.window,p.week,p.price]),[['arash','آرش',15,50,210000],['rostam','رستم',25,80,360000],['kourosh','کوروش',40,120,510000]]);
   assert.equal(s.data.engine,'local');assert.equal(s.data.models[0].id,'local');assert.equal(s.data.models[0].cost,0);assert.equal(s.data.models.find(m=>m.id==='luna').cost,1);
   // Only GPT-6 Luna costs one message; the rest start at two. Models are grouped by maker and the strongest need «کوروش».
   assert(s.data.models.filter(m=>!['local','luna'].includes(m.id)).every(m=>m.cost>=2));
@@ -35,14 +35,14 @@ const assert=require('node:assert/strict'),{randomUUID}=require('node:crypto'),l
   const local=require('../dist/dashboard/js/advisor-brain.js').reply('من فول استک دولوپر هستم',content);assert.equal(local.intent,'statement');assert(local.actions.some(a=>a.kind==='title'&&a.value==='توسعه‌دهندهٔ فول‌استک'));
   // Buying a Fandogh plan: «آرش» opens the fast models and lifts the allowance; another month stacks.
   await store.execute('INSERT OR IGNORE INTO wallets(user_id,balance_units) VALUES(?,?)',[target,10000000]);await store.execute('UPDATE wallets SET balance_units=10000000 WHERE user_id=?',[target]);
-  assert.equal(await db.purchaseWithWallet(target,'assistant:arash',randomUUID(),290000),true);
+  assert.equal(await db.purchaseWithWallet(target,'assistant:arash',randomUUID(),210000),true);
   s=await call('/api/dashboard/assistant');assert.equal(s.data.plan,'arash');assert.equal(s.data.level,1);assert.deepEqual([s.data.window.limit,s.data.week.limit],[15,50]);assert.equal(s.data.remaining,15);
   assert(!s.data.models.find(m=>m.id==='gemini-flash').locked&&s.data.models.find(m=>m.id==='claude-sonnet').locked);
-  const first=s.data.until;assert.equal(await db.purchaseWithWallet(target,'assistant:arash',randomUUID(),290000),true);
+  const first=s.data.until;assert.equal(await db.purchaseWithWallet(target,'assistant:arash',randomUUID(),210000),true);
   assert.equal((await call('/api/dashboard/assistant')).data.until>first,true,'periods stack');
   const [tx]=await store.execute("SELECT label FROM wallet_transactions WHERE user_id=? AND product_ref='assistant:arash'",[target]);assert.equal(tx.label,'اشتراک فندق «آرش» یک‌ماهه');
   // «کوروش» opens everything; the better plan wins when someone holds two.
-  assert.equal(await db.purchaseWithWallet(target,'assistant:kourosh',randomUUID(),2920000),true);
+  assert.equal(await db.purchaseWithWallet(target,'assistant:kourosh',randomUUID(),510000),true);
   s=await call('/api/dashboard/assistant');assert.equal(s.data.plan,'kourosh');assert.equal(s.data.level,3);assert.deepEqual([s.data.window.limit,s.data.week.limit],[40,120]);assert(s.data.models.every(m=>!m.locked));
   await assert.rejects(()=>db.purchaseWithWallet(target,'assistant:m9',randomUUID(),20000));
   await assert.rejects(()=>db.purchaseWithWallet(target,'assistant:m1',randomUUID(),20000),'the old monthly plans are no longer sold');

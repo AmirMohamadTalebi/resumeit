@@ -38,6 +38,20 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
   await input.fill('غلط‌های رزومه‌ام را بگیر');await page.locator('[data-fs-send]').click();await page.locator('.fs-msg--bot').first().waitFor();
   assert.equal(await page.locator('.fs-chat').count(),2);
   await page.locator('.fs-chat__open').nth(1).click();assert.match(await page.locator('.fs-msg--me').first().innerText(),/امتیاز/);
+  // Wide screens: both side panes fold away and the conversation takes the width; the choice survives a reload,
+  // Ctrl+B and Ctrl+Shift+B bring them back.
+  const width=()=>page.locator('.fs-main').evaluate(e=>e.getBoundingClientRect().width),before=await width();
+  await page.locator('[data-fs-hide=rail]').click();assert(await page.locator('[data-fs-rail]').isHidden());
+  await page.locator('[data-fs-hide=inspector]').click();assert(await page.locator('[data-fs-inspector]').isHidden());
+  assert(await width()>before+400,'the conversation takes the freed width');assert.equal(await page.locator('.fs-bar [data-fs-open=rail]').getAttribute('aria-pressed'),'false');
+  await page.waitForTimeout(600);await page.screenshot({path:path.join(out,'folded.png')});
+  await page.reload();await page.locator('[data-fs]').waitFor();assert(await page.locator('[data-fs-rail]').isHidden(),'folds are remembered');
+  await page.keyboard.press('Control+b');assert(await page.locator('[data-fs-rail]').isVisible());
+  await page.keyboard.press('Control+Shift+B');assert(await page.locator('[data-fs-inspector]').isVisible());
+  await page.locator('.fs-bar [data-fs-open=rail]').click();assert(await page.locator('[data-fs-rail]').isHidden());await page.locator('.fs-bar [data-fs-open=rail]').click();assert(await page.locator('[data-fs-rail]').isVisible());
+  // Fandogh's menu entry shows her full body.
+  assert(await page.locator('.dn-item--fandogh[aria-current=page] .dn-fandogh__body').isVisible());
+  await page.locator('.dn-item--fandogh').screenshot({path:path.join(out,'menu-item.png')});
   // Phone: one column, the rail opens as a drawer, no sideways scroll.
   await page.setViewportSize({width:390,height:844});await page.waitForTimeout(300);
   assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'no sideways scroll on phones');

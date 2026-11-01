@@ -18,7 +18,8 @@
   let current = null, cleanup = null, bootstrapping = true;
   function navGroup(g){
     if(g.hidden)return '';
-    const links=g.items.map(([id,label,glyph])=>'<li><a class="dn-item" href="'+RI.routeUrl(id)+'" data-route="'+id+'" title="'+label+'"><span class="dn-item__ico">'+RI.icon(glyph)+'</span><span class="dn-item__txt">'+label+'</span><span class="dn-item__badge" data-nav-badge="'+id+'" hidden></span></a></li>').join('');
+    // Fandogh's own entry is a small card: her face as the icon and her full body peeking up from its corner.
+    const links=g.items.map(([id,label,glyph])=>id==='fandogh'?'<li><a class="dn-item dn-item--fandogh" href="'+RI.routeUrl(id)+'" data-route="'+id+'" title="'+label+'"><span class="dn-item__ico"><img src="/brand/fandogh/avatar.webp" alt="" width="28" height="28" decoding="async"></span><span class="dn-item__txt">فندق<small>دستیار رزومه‌ات</small></span><img class="dn-fandogh__body" src="/brand/fandogh/full.webp" alt="" width="518" height="900" decoding="async"><span class="dn-item__badge" data-nav-badge="'+id+'" hidden></span></a></li>':'<li><a class="dn-item" href="'+RI.routeUrl(id)+'" data-route="'+id+'" title="'+label+'"><span class="dn-item__ico">'+RI.icon(glyph)+'</span><span class="dn-item__txt">'+label+'</span><span class="dn-item__badge" data-nav-badge="'+id+'" hidden></span></a></li>').join('');
     return '<div class="dn-group">'+(g.group?'<p class="dn-group__label">'+g.group+'</p>':'')+'<ul>'+links+'</ul></div>';
   }
   function preference(key,value){try{if(value===undefined)return localStorage.getItem(key);localStorage.setItem(key,String(value));}catch{}return null;}
