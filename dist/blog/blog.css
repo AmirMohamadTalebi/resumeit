@@ -141,3 +141,12 @@
 .bl-layout.info-layout{display:grid;align-items:start}
 .bl-prose .bl-ad b{color:#fff}.bl-prose .bl-ad p{font-size:14px;line-height:1.95;color:#c7d6df}
 @media (max-width:999px){.bl-layout.info-layout{display:block}.bl-toc.lg-toc{margin-bottom:24px}}
+/* Lists keep their markers (info pages reset them); checklists draw their own. */
+.bl-prose ul:not(.lg-check){list-style:disc}.bl-prose ol{list-style:decimal}
+@media (max-width:760px){
+  .bl-ad img{display:none} /* Fandogh is desktop-only */
+  .bl-ad{padding:22px 20px 0}
+  .bl-chips{flex-wrap:nowrap;width:calc(100% + 32px);margin-inline:-16px;padding:2px 16px 6px;overflow-x:auto;scrollbar-width:none}
+  .bl-chips::-webkit-scrollbar{display:none}
+  .bl-chips button{flex:none}
+}
