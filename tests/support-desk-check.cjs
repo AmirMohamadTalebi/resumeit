@@ -27,6 +27,8 @@ const assert=require('node:assert/strict'),{randomUUID}=require('node:crypto');
   await assert.rejects(()=>db.escalateTicket(agent,ticket.id,{note:'کم',requestId:randomUUID()}),'escalation needs a reason');
   await db.escalateTicket(agent,ticket.id,{note:'نیاز به بررسی تراکنش در پنل بانک',requestId:randomUUID()});
   await assert.rejects(()=>db.escalateTicket(agent,ticket.id,{note:'دوباره ارجاع می‌دهم',requestId:randomUUID()}),e=>e.status===409);
+  // Escalation is for staff: the customer's ticket list and detail never show it.
+  assert((await db.tickets(target,{})).rows.every(row=>!('escalated_at' in row)),'customer list hides escalation');assert(!('escalated_at' in await db.ticket(target,ticket.id)));assert((await db.tickets(null,{})).rows.some(row=>row.escalated_at));
   assert.equal((await db.tickets(null,{escalated:true})).total,1);assert.equal((await db.tickets(null,{})).summary.escalated,1);
   const [alert]=await store.execute("SELECT url FROM user_notifications WHERE user_id=? AND title='ارجاع تیکت به مدیر'",[owner]);assert.equal(alert.url,'/staff/?ticket='+ticket.id);
   assert.equal((await db.ticket(target,ticket.id)).escalation_note,undefined,'customer does not see the escalation');
