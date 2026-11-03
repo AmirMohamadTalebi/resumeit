@@ -16,8 +16,12 @@ async function initialize(execute){
   await execute('CREATE TABLE IF NOT EXISTS assistant_ai_usage(day INT NOT NULL,provider VARCHAR(24) NOT NULL,calls INT NOT NULL DEFAULT 0,failures INT NOT NULL DEFAULT 0,input_tokens BIGINT NOT NULL DEFAULT 0,output_tokens BIGINT NOT NULL DEFAULT 0,PRIMARY KEY(day,provider)) ENGINE=InnoDB');
 }
 const HOUR=3600000;
+// Every Fandogh change locks the person's users row first, like the main wallet does: concurrent changes queue there
+// instead of deadlocking on the wallet row (INSERT IGNORE takes a shared lock that FOR UPDATE then cannot upgrade).
+const lockPerson=(con,userId)=>con.execute('SELECT id FROM users WHERE id=? FOR UPDATE',[userId]);
 // One ledger row and the new balance, inside a transaction that holds the wallet row.
 async function move(con,userId,delta,row,now=Date.now()){
+  await lockPerson(con,userId);
   await con.execute('INSERT IGNORE INTO fandogh_wallets(user_id,balance,updated_at) VALUES(?,0,?)',[userId,now]);
   const [[w]]=await con.execute('SELECT balance FROM fandogh_wallets WHERE user_id=? FOR UPDATE',[userId]),balance=Number(w?.balance||0)+delta;
   await con.execute('UPDATE fandogh_wallets SET balance=?,updated_at=? WHERE user_id=?',[balance,now,userId]);
@@ -53,6 +57,7 @@ module.exports=({execute,transaction})=>({
   async creditFandogh(userId,rial,kind,ref,label,now=Date.now()){
     if(!Number.isSafeInteger(rial)||rial<=0)return false;
     return transaction(async con=>{
+      await lockPerson(con,userId);
       if(ref){const [[prior]]=await con.execute('SELECT id FROM fandogh_ledger WHERE ref=?',[ref]);if(prior)return false;}
       await move(con,userId,rial,{kind,label,ref},now);return true;
     });
@@ -62,6 +67,7 @@ module.exports=({execute,transaction})=>({
   async holdFandogh(userId,rial,row,now=Date.now()){
     if(!Number.isSafeInteger(rial)||rial<=0)return null;
     return transaction(async con=>{
+      await lockPerson(con,userId);
       await con.execute('INSERT IGNORE INTO fandogh_wallets(user_id,balance,updated_at) VALUES(?,0,?)',[userId,now]);
       const [[w]]=await con.execute('SELECT balance FROM fandogh_wallets WHERE user_id=? FOR UPDATE',[userId]);if(Number(w?.balance||0)<rial)return null;
       const id=randomUUID(),balance=Number(w.balance)-rial;
@@ -73,6 +79,7 @@ module.exports=({execute,transaction})=>({
   // Turns a hold into the real price (actual tokens), or returns it all when no answer came (rial 0).
   async settleFandogh(userId,id,rial,row={},now=Date.now()){
     return transaction(async con=>{
+      await lockPerson(con,userId);
       const [[held]]=await con.execute("SELECT delta FROM fandogh_ledger WHERE id=? AND user_id=? AND kind='usage'",[id,userId]);if(!held)return null;
       const [[w]]=await con.execute('SELECT balance FROM fandogh_wallets WHERE user_id=? FOR UPDATE',[userId]),balance=Number(w?.balance||0)-Number(held.delta)-Math.max(0,rial);
       await con.execute('UPDATE fandogh_wallets SET balance=?,updated_at=? WHERE user_id=?',[balance,now,userId]);
@@ -88,6 +95,7 @@ module.exports=({execute,transaction})=>({
     if(!/^[a-z0-9_-]{16,64}$/i.test(requestId||''))fail('شناسهٔ درخواست معتبر نیست');
     const policy=this.commerceSettings?await this.commerceSettings():{rate:2000},units=its*RI.IT_RATE,rial=Math.round(units*(policy.rate||2000)/2000)*10;
     return transaction(async con=>{
+      await lockPerson(con,userId);
       const [[prior]]=await con.execute('SELECT id FROM fandogh_ledger WHERE ref=?',['topup:'+requestId]);if(prior)return {ok:true,repeated:true};
       const [[row]]=await con.execute('SELECT balance_units FROM wallets WHERE user_id=? FOR UPDATE',[userId]),left=Number(row?.balance_units||0)-units;
       if(!row||left<0)fail('موجودی It کیف پول کافی نیست؛ اول کیف پول را شارژ کن',409);
