@@ -66,7 +66,7 @@ module.exports=({execute,transaction})=>({
       const [[w]]=await con.execute('SELECT balance FROM fandogh_wallets WHERE user_id=? FOR UPDATE',[userId]);if(Number(w?.balance||0)<rial)return null;
       const id=randomUUID(),balance=Number(w.balance)-rial;
       await con.execute('UPDATE fandogh_wallets SET balance=?,updated_at=? WHERE user_id=?',[balance,now,userId]);
-      await con.execute('INSERT INTO fandogh_ledger(id,user_id,at,delta,balance,kind,model,input_tokens,output_tokens,label,ref) VALUES(?,?,?,?,?,?,?,0,0,?,NULL)',[id,userId,now,-rial,balance,'usage',row.model||null,String(row.label||'').slice(0,160)]);
+      await con.execute('INSERT INTO fandogh_ledger(id,user_id,at,delta,balance,kind,model,input_tokens,output_tokens,label,ref) VALUES(?,?,?,?,?,?,?,?,?,?,NULL)',[id,userId,now,-rial,balance,'usage',row.model||null,Math.max(0,Math.round(row.input||0)),Math.max(0,Math.round(row.output||0)),String(row.label||'').slice(0,160)]);
       return id;
     });
   },

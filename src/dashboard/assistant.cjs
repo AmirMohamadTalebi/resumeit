@@ -109,7 +109,7 @@ module.exports=async(database,req,path,origin,user,reply)=>{
   // A paid model needs credit for a typical message; the real price replaces it once the answer is here.
   const paid=useModel&&!capped&&pick.id!=='own',estimate=paid?catalog.typical(pick,settings):0;
   // The typical price is held up front, so parallel messages cannot spend the same credit twice.
-  const hold=paid&&database.holdFandogh?await database.holdFandogh(user.id,estimate,{model:pick.id,label:pick.label}):null;
+  const hold=paid&&database.holdFandogh?await database.holdFandogh(user.id,estimate,{model:pick.id,label:pick.label,input:8000,output:2000}):null;
   if(paid&&database.holdFandogh){
     if(!hold){reply(402,{error:'اعتبار کیف پول فندق برای «'+pick.label+'» کافی نیست (هر پیام حدود '+RI.fa(Math.ceil(estimate/10))+' تومان). کیف پول فندق را با It شارژ کن؛ فندق محلی همچنان رایگان جواب می‌دهد.',code:'FANDOGH_BALANCE',usage:await status(database,user.id,config,me)});return true;}
   }

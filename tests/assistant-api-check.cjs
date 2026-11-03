@@ -32,7 +32,8 @@ const assert=require('node:assert/strict'),{randomUUID}=require('node:crypto'),l
   assert.equal(holds.filter(Boolean).length,2,'50,000 rial covers two holds of 20,000, never more');assert.equal((await db.fandoghWallet(target)).balance,10000);
   for(const id of holds.filter(Boolean))assert.equal(typeof await db.settleFandogh(target,id,0),'number','no answer returns the hold');
   assert.equal((await db.fandoghWallet(target)).balance,50000);assert.equal((await db.fandoghWallet(target)).daily.length,0,'a returned hold leaves no usage row');
-  const held=await db.holdFandogh(target,20000,{model:'luna',label:'GPT-6 Luna'});
+  const held=await db.holdFandogh(target,20000,{model:'luna',label:'GPT-6 Luna',input:8000,output:2000});
+  const [row]=await store.execute('SELECT input_tokens,output_tokens FROM fandogh_ledger WHERE id=?',[held]);assert.equal(Number(row.input_tokens)+Number(row.output_tokens),10000,'an unsettled hold reports a typical message, not zero tokens');
   assert.equal(await db.settleFandogh(target,held,5251,{input:11667,output:0}),50000-5251,'the real price replaces the hold');
   await store.execute('INSERT OR IGNORE INTO wallets(user_id,balance_units) VALUES(?,?)',[target,0]);await store.execute('UPDATE wallets SET balance_units=? WHERE user_id=?',[20000,target]);
   await assert.rejects(()=>db.topUpFandogh(target,11,'a'.repeat(32)),/کافی نیست/);
