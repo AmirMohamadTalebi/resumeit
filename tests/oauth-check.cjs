@@ -31,9 +31,9 @@ const {chromium}=require(process.env.PLAYWRIGHT_PATH || 'playwright');
   };
   const finish=flow=>get('/api/auth/'+flow.provider+'/callback?state='+flow.state+'&code=provider-code',flow.cookie);
   try {
-    assert.deepEqual(await(await get('/api/auth/providers')).json(),{google:false,github:false});
+    assert.deepEqual(await(await get('/api/auth/providers')).json(),{google:false,github:false,email:false});
     for(const k of ['GOOGLE_CLIENT_ID','GOOGLE_CLIENT_SECRET','GITHUB_CLIENT_ID','GITHUB_CLIENT_SECRET'])process.env[k]='test-credential';
-    assert.deepEqual(await(await get('/api/auth/providers')).json(),{google:true,github:true});
+    assert.deepEqual(await(await get('/api/auth/providers')).json(),{google:true,github:true,email:false});
     assert.equal((await get('/api/auth/google/start?mode=link')).headers.get('location'),'/login/?social_error=expired');
     const google=await start('google',null,'/dashboard/themes/?tab=fonts');
     assert.equal((await get('/api/auth/google/callback?state='+google.state+'&code=provider-code')).headers.get('location'),'/login/?social_error=invalid');assert.equal(calls,0);

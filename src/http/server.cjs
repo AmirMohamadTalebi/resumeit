@@ -4,8 +4,9 @@ const { publicOrigin, securityHeaders } = require('./security.cjs');
 const { requestPath, serveStatic } = require('./static.cjs');
 
 function createServer(database, options) {
-  const auth = authHandler(database, options);
   const notifications=require('../notifications/service.cjs')(database,options?.notifications);
+  // Login codes by email go through the same mail provider as notifications.
+  const auth = authHandler(database, { mailer: notifications.provider, ...options });
   const dashboard=require('../dashboard/http.cjs').dashboardHandler(database,auth,notifications,options);
   const admin=require('../admin/http.cjs').adminHandler(database,auth,notifications);
   const payments=require('../payments/http.cjs').paymentHandler(database,auth,options?.payments);
@@ -17,6 +18,7 @@ function createServer(database, options) {
       try { origin = publicOrigin(req); pathname = requestPath(req.url); }
       catch { res.writeHead(400); res.end('Invalid request'); return; }
       securityHeaders(res, origin);
+      if (await notifications.marketing.handlePublic(req,res,pathname)) return;
       if (await payments(req,res,pathname,origin)) return;
       if (await admin(req,res,pathname,origin)) return;
       if (await dashboard(req,res,pathname,origin)) return;

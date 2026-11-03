@@ -89,7 +89,7 @@ async function serveStatic(req, res, pathname, origin, account, restricted) {
   if(workspacePage)file=path.join(root,'dashboard/index.html');
   const retentionPage=pathname==='/admin/retention/';if(retentionPage)file=path.join(root,'admin/health/index.html');
   // Fandogh's settings hold provider keys and allowances: the owner's page, like retention.
-  const ownerPage=retentionPage||pathname==='/admin/assistant/';
+  const ownerPage=retentionPage||pathname==='/admin/assistant/'||pathname==='/admin/mail/';
   try {
     const staffPath=pathname.toLowerCase()==='/staff'||pathname.toLowerCase().startsWith('/staff/');
     if(staffPath){res.setHeader('Cache-Control','no-store');const user=account&&await account(req);if(!user){res.writeHead(303,{Location:await signin()});res.end();return;}if(!require('../admin/access.cjs').isSupport(user)){send(403,'Forbidden');return;}}

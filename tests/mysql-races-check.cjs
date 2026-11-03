@@ -50,6 +50,18 @@ process.env.OWNER_PHONE = '09120000777';
     assert.equal(credits.filter(r => r.status === 'fulfilled').length, 5, 'parallel credits stop at the daily cap: ' + credits.map(r => r.status === 'fulfilled' ? 'ok' : r.reason?.code || r.reason?.message).join(' | '));
     assert(credits.filter(r => r.status === 'rejected').every(r => r.reason.status === 403));
 
+    // Promotional email: the audience is frozen at the start, only opted-in verified addresses are in it, and an opt-out stops that person at once.
+    for (const [i, id] of people.slice(0, 3).entries()) { await database.notificationChannels(id); await sql('UPDATE notification_channels SET email=?,email_verified=TRUE WHERE user_id=?', ['p' + i + '@example.com', id]); }
+    await database.saveMarketingConsent(people[0], true, 'settings'); await database.saveMarketingConsent(people[1], true, 'prompt');
+    assert.equal((await database.marketingStats()).audience, 2);
+    const campaign = await database.createMarketingCampaign(agent, { title: 'قالب تازه', body: 'چند قالب جدید اضافه شد.', cta: 'ببین', url: '/dashboard/' });
+    assert.equal(await database.startMarketingCampaign(campaign), 2);
+    await assert.rejects(database.startMarketingCampaign(campaign), /قبلاً/);
+    await database.saveMarketingConsent(people[1], false, 'link');
+    const batch = await database.marketingBatch(10); assert.deepEqual(batch.map(r => r.user_id), [people[0]], 'an opt-out is skipped immediately');
+    await database.finishMarketingSend(campaign, people[0], true); await database.skipUnsubscribedMarketing();
+    const done = await database.marketingCampaign(campaign); assert.equal(done.status, 'done'); assert.equal(Number(done.sent), 1);
+
     console.log('PASS MySQL races: parallel Fandogh credits, holds and repeated top-ups and an agent\'s parallel wallet credits all hold under real row locks, without deadlocks.');
   } finally {
     if (database) await database.close();

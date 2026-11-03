@@ -209,6 +209,7 @@
     try{await RI.loadDashboard(user.id);}catch(e){RI.$('#view').textContent=e.message;const retry=document.createElement('button');retry.className='btn';retry.textContent='تلاش دوباره';retry.addEventListener('click',()=>location.reload());RI.$('#view').appendChild(retry);document.dispatchEvent(new Event('ri:dashboard-ready'));return;}
     RI.applyAccount(user);
     paintAccount();bootstrapping=false;RI.$('#topPreview').disabled=false;
+    setTimeout(()=>RI.emailNudge?.(),2500);
     if((user.is_admin||user.is_support)&&sessionStorage.getItem('ri-panel-choice')!==user.id){
       // A notice, not a dialog: the dashboard stays usable and the other panels are one tap away.
       sessionStorage.setItem('ri-panel-choice',user.id);

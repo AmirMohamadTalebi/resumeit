@@ -172,7 +172,7 @@ function dashboardHandler(database,auth,notifications,options){const reset=requi
           const k=input.kind;if(!['resume','links'].includes(k))model.fail('نوع صفحه معتبر نیست');
           if(workspace===3&&k==='resume')model.fail('جایگاه سوم مخصوص صفحهٔ لینک‌هاست');
           if(pathname.endsWith('/unpublish')){doc.pub[k].status='draft';doc.pub[k].snap=null;delete doc.published[k];return;}
-          if(!user.first_name||!user.last_name||!user.phone_verified||!user.phone)model.fail('نام، نام خانوادگی و شمارهٔ تأییدشده را در تنظیمات کامل کن');
+          if(!user.first_name||!user.last_name||!((user.phone&&user.phone_verified)||user.email_ok))model.fail('نام، نام خانوادگی و یک راه ارتباطی تأییدشده (شماره یا ایمیل) را در تنظیمات کامل کن');
           const external=model.externalImages(doc.content).filter(url=>localized.get(url)!==url);
           if(external.some(url=>!localized.has(url)))throw Object.assign(new Error('تصویرهای اینترنتی هنوز کپی نشده‌اند'),{status:400,code:'EXTERNAL_IMAGES',urls:external,existing:external});
           doc.content=media.replaceValues(doc.content,localized);

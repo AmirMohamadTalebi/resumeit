@@ -5,6 +5,7 @@ const {clientIp}=require('../http/client-ip.cjs');
 const digest = value => createHash('sha256').update(value).digest('hex');
 function authHandler(database, options = {}) {
   const otp = require('./otp.cjs').createOtpService({ database, ...options });
+  const mailAvailable = () => !!(options.sendMail || options.mailer?.available?.email);
   const oauth = require('./oauth.cjs').oauthHandler(database,options);
   const status=require('./account-status.cjs'),statusHandler=status.handler(database);
   // scrypt is CPU-bound: a small shared pool keeps the event loop responsive without making every login wait behind one.
@@ -43,7 +44,7 @@ function authHandler(database, options = {}) {
       try { const user = await account(req),restricted=!user&&database.noticeProof?await database.noticeProof(status.proofHash(req)):null;reply(200, { user: user || null,...(restricted?.notice.active?{restricted:true,redirect:'/account-status/'}:{}) }); } catch { reply(503, { error: 'ارتباط با دیتابیس برقرار نشد' }); } return true;
     }
     if(pathname==='/api/auth/publication-check'&&req.method==='GET') {
-      try{const user=await account(req);if(!user){reply(401,{error:'اول وارد حسابت شو'});return true;}const missing=[!user.first_name&&'نام',!user.last_name&&'نام خانوادگی',!(user.phone&&user.phone_verified)&&'شماره تأییدشده'].filter(Boolean);reply(200,{canPublish:!missing.length,missing});}catch{reply(503,{error:'نتونستیم مشخصات حسابت رو بررسی کنیم'});}return true;
+      try{const user=await account(req);if(!user){reply(401,{error:'اول وارد حسابت شو'});return true;}const missing=[!user.first_name&&'نام',!user.last_name&&'نام خانوادگی',!((user.phone&&user.phone_verified)||user.email_ok)&&'شماره یا ایمیل تأییدشده'].filter(Boolean);reply(200,{canPublish:!missing.length,missing});}catch{reply(503,{error:'نتونستیم مشخصات حسابت رو بررسی کنیم'});}return true;
     }
     if(pathname==='/api/auth/sessions'&&req.method==='GET') {
       try{const user=await account(req);if(!user){reply(401,{error:'اول وارد حسابت شو'});return true;}if(!database.userSessions){reply(404,{error:'فهرست دستگاه‌ها در دسترس نیست'});return true;}reply(200,{sessions:await sessionRows(user,token(req))});}catch{reply(503,{error:'فهرست دستگاه‌ها دریافت نشد؛ دوباره امتحان کن'});}return true;
@@ -120,7 +121,9 @@ function authHandler(database, options = {}) {
         if (!['login','register','reset'].includes(input.purpose)) { reply(400,{error:'درخواست معتبر نیست'}); return true; }
         if (pathname.endsWith('/request')) {
           if (typeof input.phone!=='string'||!/^09\d{9}$/.test(input.phone)) { reply(400,{error:'شمارهٔ موبایل معتبر وارد کن'}); return true; }
-          let ownerId=null;
+          let ownerId=null,email=null;
+          const channel=input.channel==='email'?'email':'sms';
+          if(channel==='email'&&input.purpose==='register') { reply(400,{error:'کد ثبت‌نام فقط پیامک می‌شود'}); return true; }
           // Throttle registration probes too: the "already registered" answer must not become a free phone lookup.
           if(input.purpose==='register' && !await database.claimLoginAttempts('register:'+input.phone,ipHash(req))) { res.setHeader('Retry-After','900'); reply(429,{error:'تلاش‌های زیادی انجام شده؛ کمی بعد دوباره امتحان کن'}); return true; }
           if(input.purpose==='register' && await database.accountByPhone(input.phone)) {
@@ -130,12 +133,19 @@ function authHandler(database, options = {}) {
             if(!await database.claimLoginAttempts(input.phone,ipHash(req))) { reply(429,{error:'تلاش‌های زیادی انجام شده؛ کمی بعد دوباره امتحان کن'}); return true; }
             const owner=await database.accountByPhone(input.phone);
             const deleted=!owner&&database.identityNotice?await database.identityNotice('phone',input.phone):null;
+            if(!owner&&!deleted&&channel==='email') { reply(mailAvailable()?404:503,mailAvailable()?{error:'برای این شماره ایمیل تأییدشده‌ای نداریم؛ با پیامک ادامه بده یا با رمز وارد شو',code:'no_email'}:{error:'ارسال ایمیل فعلاً در دسترس نیست؛ با پیامک ادامه بده یا با رمز وارد شو',code:'email_unavailable'}); return true; }
             if(!owner&&!deleted) { reply(200,{challengeId:require('node:crypto').randomUUID(),expiresIn:120,retryAfter:60}); return true; }
             ownerId=owner?.id||deleted.user_id;
+            if(channel==='email') {
+              if(!mailAvailable()) { reply(503,{error:'ارسال ایمیل فعلاً در دسترس نیست؛ با پیامک ادامه بده یا با رمز وارد شو',code:'email_unavailable'}); return true; }
+              // An unknown phone and a phone without a verified address get the same answer.
+              email=owner?await database.verifiedEmail(owner.id):null;
+              if(!email) { reply(404,{error:'برای این شماره ایمیل تأییدشده‌ای نداریم؛ با پیامک ادامه بده یا با رمز وارد شو',code:'no_email'}); return true; }
+            }
           }
-          const result=await otp.request(input.phone,input.purpose,ipHash(req),ownerId);
-          if (!result||result.blocked) { res.setHeader('Retry-After',String(result?.retryAfter||60)); reply(429,{error:require('./otp.cjs').limitMessage(result||{blocked:'resend',retryAfter:60})}); }
-          else reply(200,result);
+          const result=await otp.request(input.phone,input.purpose,ipHash(req),ownerId,channel,email);
+          if (!result||result.blocked) { res.setHeader('Retry-After',String(result?.retryAfter||60)); reply(429,{error:require('./otp.cjs').limitMessage(result||{blocked:'resend',retryAfter:60}),retryAfter:result?.retryAfter||60}); }
+          else reply(200,channel==='email'?{...result,hint:email.replace(/^(.).*?@(.).*?(\.[^.]+)$/,'$1***@$2***$3')}:result);
         } else {
           if (typeof input.challengeId!=='string'||!/^[a-f0-9-]{36}$/.test(input.challengeId)||typeof input.code!=='string'||!/^\d{6}$/.test(input.code)) { reply(400,{error:'کد شش‌رقمی معتبر وارد کن'}); return true; }
           const result=await otp.verify(input.challengeId,input.code,input.purpose);
@@ -149,10 +159,11 @@ function authHandler(database, options = {}) {
           else {
             const user=await database.accountByPhone(result.phone);
             if (!user || user.id!==result.ownerId) reply(401,{error:'مشخصات حساب تغییر کرده؛ دوباره کد بگیر'});
-            else {await database.markPhoneVerified(user.id);await signIn(user);}
+            // Only an SMS code proves the phone; a code that came by email proves the mailbox, not the number.
+            else {if(result.channel!=='email')await database.markPhoneVerified(user.id);await signIn(user);}
           }
         }
-      } catch(error) { reply(error.status || (error instanceof SyntaxError?400:503),{error:error.code==='SMS_FAILED'?require('./otp.cjs').smsFailedMessage:'درخواست انجام نشد؛ شماره را بررسی کن و کمی بعد دوباره امتحان کن'}); }
+      } catch(error) { reply(error.status || (error instanceof SyntaxError?400:503),{error:error.code==='SMS_FAILED'?require('./otp.cjs').smsFailedMessage:error.code==='EMAIL_FAILED'?require('./otp.cjs').emailFailedMessage:'درخواست انجام نشد؛ شماره را بررسی کن و کمی بعد دوباره امتحان کن'}); }
       return true;
     }
     if (pathname !== '/api/auth/login') { reply(404, { error: 'Not found' }); return true; }

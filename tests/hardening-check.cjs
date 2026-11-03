@@ -11,6 +11,7 @@ const {ownerPhone}=require('../src/admin/access.cjs');
   assert.equal(clientIp(req({'x-forwarded-for':'1.2.3.4'}),{}),'10.0.0.5');
   assert.equal(clientIp(req({'x-forwarded-for':'6.6.6.6, 1.2.3.4'}),{TRUST_PROXY:'1'}),'1.2.3.4','one proxy: the entry it appended');
   assert.equal(clientIp(req({'x-forwarded-for':'1.2.3.4, 9.9.9.9'}),{TRUST_PROXY:'2'}),'1.2.3.4');
+  assert.equal(clientIp(req({'x-forwarded-for':'6.6.6.6'}),{TRUST_PROXY:'2'}),'10.0.0.5','a header shorter than the proxy count is ignored');
   assert.equal(clientIp(req({'x-forwarded-for':'not-an-ip'}),{TRUST_PROXY:'1'}),'10.0.0.5');
   assert.equal(clientIp(req({}),{TRUST_PROXY:'1'}),'10.0.0.5');
   assert.equal(trustedHops({TRUST_PROXY:'abc'}),0);assert.equal(trustedHops({TRUST_PROXY:'99'}),0);

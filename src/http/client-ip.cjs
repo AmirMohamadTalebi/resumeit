@@ -8,7 +8,9 @@ function clientIp(req,env=process.env){
   const header=String(req.headers['x-forwarded-for']||'');
   if(!header||header.length>1024)return socket;
   const list=header.split(',').map(value=>value.trim()).filter(Boolean);
-  const candidate=list.length>=hops?list[list.length-hops]:list[0];
+  // Fewer entries than proxies means the header did not come through all of them: never trust the client's own first entry.
+  if(list.length<hops)return socket;
+  const candidate=list[list.length-hops];
   return isIP(candidate||'')?candidate:socket;
 }
 module.exports={clientIp,trustedHops};

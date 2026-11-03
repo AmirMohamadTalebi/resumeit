@@ -6,24 +6,32 @@ module.exports = ({execute,transaction}) => {
       await execute('DELETE FROM otp_challenges WHERE expires_at<?', [now - 86400000]);
       return transaction(async connection => {
         const day = Math.floor(now / 86400000), tomorrow = (day + 1) * 86400000;
-        const budget = require('../auth/limits.cjs').smsLimits();
-        const limits = [['sms:all:'+day,budget.otpDaily,tomorrow], ['sms:ip:'+ipHash,budget.ipQuarterHour,now+900000], ['sms:phone:'+record.phone,budget.phoneDaily,tomorrow]];
+        const email = record.channel === 'email', limitsOf = require('../auth/limits.cjs'), budget = limitsOf.smsLimits(), mail = limitsOf.mailLimits();
+        // Each channel has its own site, address and phone budgets; a burst cap across both stops flipping channels to spam one phone.
+        const limits = email
+          ? [['mail:all:'+day,mail.daily,tomorrow], ['mail:ip:'+ipHash,mail.ipQuarterHour,now+900000], ['mail:phone:'+record.phone,mail.phoneDaily,tomorrow], ['otp:burst:'+record.phone,budget.burst,now+900000]]
+          : [['sms:all:'+day,budget.otpDaily,tomorrow], ['sms:ip:'+ipHash,budget.ipQuarterHour,now+900000], ['sms:phone:'+record.phone,budget.phoneDaily,tomorrow], ['otp:burst:'+record.phone,budget.burst,now+900000]];
         // Lock the shared budget first so concurrent replicas cannot overspend or resend together.
-        const reasons=['site','ip','phone'];
+        const reasons=['site','ip','phone','burst'];
         for (const [i,[key,limit,expires]] of limits.entries()) {
           await connection.execute('INSERT INTO login_attempts(attempt_key,count,expires_at) VALUES(?,0,?) ON DUPLICATE KEY UPDATE attempt_key=attempt_key',[key,expires]);
           const [[row]] = await connection.execute('SELECT count FROM login_attempts WHERE attempt_key=? FOR UPDATE',[key]);
           // Callers tell the person which limit applies; "wait a minute" for a daily cap looked like a broken sender.
           if (row.count >= limit) return {reason:reasons[i],retryAfter:Math.max(60,Math.ceil((expires-now)/1000))};
         }
-        const [[old]] = await connection.execute('SELECT sent_at FROM otp_challenges WHERE phone=? FOR UPDATE',[record.phone]);
-        if (old && old.sent_at + 60000 > now) return {reason:'resend',retryAfter:Math.ceil((old.sent_at+60000-now)/1000)};
+        const [[old]] = await connection.execute('SELECT sent_at,channel FROM otp_challenges WHERE phone=? FOR UPDATE',[record.phone]);
+        // The same channel can be asked again after a minute; switching to the other one is allowed sooner.
+        const wait = old && old.channel !== (email ? 'email' : 'sms') ? budget.switchSeconds * 1000 : budget.resendSeconds * 1000;
+        if (old && Number(old.sent_at) + wait > now) return {reason:'resend',retryAfter:Math.ceil((Number(old.sent_at)+wait-now)/1000)};
         for (const [key] of limits) await connection.execute('UPDATE login_attempts SET count=count+1 WHERE attempt_key=?',[key]);
-        await connection.execute(`INSERT INTO otp_challenges(phone,challenge_id,purpose,code_hash,status,sent_at,expires_at,owner_id) VALUES(?,?,?,?,'pending',?,?,?) ON DUPLICATE KEY UPDATE challenge_id=VALUES(challenge_id),purpose=VALUES(purpose),code_hash=VALUES(code_hash),status='pending',attempts=0,sent_at=VALUES(sent_at),expires_at=VALUES(expires_at),registration_token=NULL,owner_id=VALUES(owner_id)`,[record.phone,record.id,record.purpose,record.hash,now,now+120000,record.ownerId||null]);
-        await connection.execute("INSERT INTO otp_events(id,phone,purpose,status,created_at) VALUES(?,?,?,'pending',?)",[record.id,record.phone,record.purpose,now]);
+        await connection.execute(`INSERT INTO otp_challenges(phone,challenge_id,purpose,code_hash,status,sent_at,expires_at,owner_id,channel) VALUES(?,?,?,?,'pending',?,?,?,?) ON DUPLICATE KEY UPDATE challenge_id=VALUES(challenge_id),purpose=VALUES(purpose),code_hash=VALUES(code_hash),status='pending',attempts=0,sent_at=VALUES(sent_at),expires_at=VALUES(expires_at),registration_token=NULL,owner_id=VALUES(owner_id),channel=VALUES(channel)`,[record.phone,record.id,record.purpose,record.hash,now,now+(email?mail.otpSeconds:budget.otpSeconds)*1000,record.ownerId||null,email?'email':'sms']);
+        // The admin OTP figures count SMS cost, so email codes are not logged there.
+        if (!email) await connection.execute("INSERT INTO otp_events(id,phone,purpose,status,created_at) VALUES(?,?,?,'pending',?)",[record.id,record.phone,record.purpose,now]);
         return true;
       });
     },
+    // The account's verified notification address; a login code may be sent only there.
+    async verifiedEmail(userId) { const [row] = await execute('SELECT email FROM notification_channels WHERE user_id=? AND email_verified=TRUE AND email IS NOT NULL',[userId]); return row?.email || null; },
     async finishOtpSend(id, success) { await transaction(async con=>{await con.execute('UPDATE otp_challenges SET status=? WHERE challenge_id=? AND status=?',[success?'ready':'consumed',id,'pending']);await con.execute('UPDATE otp_events SET status=? WHERE id=?',[success?'accepted':'failed',id]);}); },
     async verifyOtp(id, hash, purpose, grantHash, now) {
       return transaction(async connection => {
@@ -33,7 +41,7 @@ module.exports = ({execute,transaction}) => {
         if (!timingSafeEqual(Buffer.from(row.code_hash,'hex'),Buffer.from(hash,'hex'))) return null;
         await connection.execute('UPDATE otp_challenges SET status=?,registration_token=?,expires_at=? WHERE challenge_id=?',[purpose!=='login'?'verified':'consumed',grantHash,now+300000,id]);
         await connection.execute('UPDATE otp_events SET verified_at=? WHERE id=?',[now,id]);
-        return {phone:row.phone,ownerId:row.owner_id};
+        return {phone:row.phone,ownerId:row.owner_id,channel:row.channel||'sms'};
       });
     },
     async registrationValid(grantHash,now,purpose='register') { return (await execute("SELECT phone FROM otp_challenges WHERE registration_token=? AND purpose=? AND status='verified' AND expires_at>?",[grantHash,purpose,now])).length>0; },

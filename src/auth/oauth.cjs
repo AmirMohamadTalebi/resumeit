@@ -14,7 +14,8 @@ function config(name) {
   } catch {return null;}
   return clientId&&secret ? {...providers[name],clientId,secret,origin,callback:origin+'/api/auth/'+name+'/callback'} : null;
 }
-function oauthHandler(database,{oauthFetch=fetch}={}) {
+function oauthHandler(database,options={}) {
+  const {oauthFetch=fetch}=options;
   async function json(url,options={}) {
     const response=await oauthFetch(url,{...options,signal:AbortSignal.timeout(10000),redirect:'error'});
     if(!response.ok)throw new Error('Provider request failed');
@@ -23,7 +24,8 @@ function oauthHandler(database,{oauthFetch=fetch}={}) {
   return async (req,res,pathname) => {
     if(pathname==='/api/auth/providers' && req.method==='GET') {
       res.writeHead(200,{'Content-Type':'application/json; charset=utf-8'});
-      res.end(JSON.stringify(Object.fromEntries(Object.keys(providers).map(name=>[name,!!config(name)]))));return true;
+      // email: whether login and recovery codes can be sent by mail; the sign-in screens hide that choice otherwise.
+      res.end(JSON.stringify({...Object.fromEntries(Object.keys(providers).map(name=>[name,!!config(name)])),email:!!(options.sendMail||options.mailer?.available?.email)}));return true;
     }
     const match=/^\/api\/auth\/(google|github)\/(start|callback)$/.exec(pathname);
     if(!match)return false;

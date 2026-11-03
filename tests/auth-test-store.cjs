@@ -1,6 +1,6 @@
 const { randomUUID } = require('node:crypto');
 function testStore() {
-  const users = new Map(), sessions = new Map(), attempts = new Map(), challenges = new Map(), smsLimits = new Map(), oauthStates = new Map(), identities=new Map();
+  const users = new Map(), sessions = new Map(), attempts = new Map(), challenges = new Map(), smsLimits = new Map(), oauthStates = new Map(), identities=new Map(), emails=new Map();
   const byId=id=>[...users.values()].find(u=>u.id===id);
   return {
     ...require('./dashboard-test-store.cjs')(byId,id=>{for(const [p,u]of users)if(u.id===id)users.delete(p);for(const [k,s]of sessions)if(s.id===id)sessions.delete(k);for(const [k,owner]of identities)if(owner===id)identities.delete(k);}),
@@ -10,21 +10,24 @@ function testStore() {
     async unlinkSocial(id,provider) {const user=byId(id),others=[...identities].filter(([key,owner])=>owner===id&&!key.startsWith(provider+':'));if(!others.length&&!(user.phone&&(user.phone_verified||user.password_hash)))return false;for(const [key,owner]of identities)if(owner===id&&key.startsWith(provider+':'))identities.delete(key);return true;},
     async setAccountNames(id,first,last) {Object.assign(byId(id),{first_name:first,last_name:last});},
     async markPhoneVerified(id) {byId(id).phone_verified=true;},
+    async verifiedEmail(id) {return emails.get(id)||null;},
+    setVerifiedEmail(id,address) {if(address)emails.set(id,address);else emails.delete(id);},
     async verifyPhoneOtp(id,hash,userId,now,keepSession='') {const row=[...challenges.values()].find(r=>r.id===id);if(!row||row.ownerId!==userId||row.purpose!=='phone'||row.status!=='ready'||row.expires<=now||row.attempts>=5)return null;row.attempts++;if(row.hash!==hash)return null;const existing=users.get(row.phone);if(existing&&existing.id!==userId)return {existing:true};const user=byId(userId);if(user.phone!==row.phone){challenges.delete(user.phone);for(const [key,session]of sessions)if(session.id===userId&&key!==keepSession)sessions.delete(key);}for(const [key,u]of users)if(u.id===userId)users.delete(key);user.phone=row.phone;user.phone_verified=true;users.set(row.phone,user);row.status='consumed';return {phone:row.phone};},
     async reserveOtp(record,ip,now) {
-      const old=challenges.get(record.phone);
-      if(old&&old.sentAt+60000>now) return false;
-      const day=Math.floor(now/86400000);
-      const limits=[['all:'+day,100,(day+1)*86400000],['ip:'+ip,10,now+900000],['phone:'+record.phone,5,(day+1)*86400000]];
+      const old=challenges.get(record.phone),email=record.channel==='email';
+      // Same channel again after a minute; the other channel after 30 seconds.
+      if(old&&old.sentAt+((old.channel||'sms')!==(email?'email':'sms')?30000:60000)>now) return false;
+      const day=Math.floor(now/86400000),kind=email?'mail:':'';
+      const limits=[[kind+'all:'+day,email?1000:100,(day+1)*86400000],[kind+'ip:'+ip,email?20:10,now+900000],[kind+'phone:'+record.phone,email?12:5,(day+1)*86400000],['burst:'+record.phone,6,now+900000]];
       for(const [key,limit] of limits) {const row=smsLimits.get(key);if(row&&row.expires>now&&row.count>=limit)return false;}
       for(const [key,,expires] of limits) {const row=smsLimits.get(key);smsLimits.set(key,{count:row&&row.expires>now?row.count+1:1,expires:row&&row.expires>now?row.expires:expires});}
-      challenges.set(record.phone,{...record,status:'pending',attempts:0,sentAt:now,expires:now+120000});return true;
+      challenges.set(record.phone,{...record,channel:email?'email':'sms',status:'pending',attempts:0,sentAt:now,expires:now+(email?300000:120000)});return true;
     },
     async finishOtpSend(id,success) {const row=[...challenges.values()].find(r=>r.id===id);if(row&&row.status==='pending')row.status=success?'ready':'consumed';},
     async verifyOtp(id,hash,purpose,grant,now) {
       const row=[...challenges.values()].find(r=>r.id===id);
       if(!row||row.purpose!==purpose||row.status!=='ready'||row.expires<=now||row.attempts>=5)return null;
-      row.attempts++;if(row.hash!==hash)return null;row.status=purpose!=='login'?'verified':'consumed';row.grant=grant;row.expires=now+300000;return {phone:row.phone,ownerId:row.ownerId};
+      row.attempts++;if(row.hash!==hash)return null;row.status=purpose!=='login'?'verified':'consumed';row.grant=grant;row.expires=now+300000;return {phone:row.phone,ownerId:row.ownerId,channel:row.channel||'sms'};
     },
     async registrationValid(grant,now,purpose='register') {return [...challenges.values()].some(r=>r.grant===grant&&r.purpose===purpose&&r.status==='verified'&&r.expires>now);},
     async resetPasswordVerified(grant,hash,now) {

@@ -19,6 +19,7 @@ async function openDatabase(options) {
   await require('./schema.cjs').initializeSchema(execute,pool);
   await require('./workspaces.cjs').initialize(execute);
   await require('./notification-delivery.cjs').initialize(execute);
+  await require('./marketing.cjs').initialize(execute);
   await require('./advisor.cjs').initialize(execute);
   await require('./reset.cjs').initialize(execute);
   await require('./media.cjs').initialize(execute);
@@ -43,6 +44,7 @@ async function openDatabase(options) {
     ...require('./owner-controls.cjs')(context),
     ...require('./retention.cjs')(context),
     ...require('./notification-delivery.cjs')(context),
+    ...require('./marketing.cjs')(context),
     ...require('./history.cjs')(context),
     ...require('./wallet.cjs')(context),
     ...require('./payments.cjs')(context),

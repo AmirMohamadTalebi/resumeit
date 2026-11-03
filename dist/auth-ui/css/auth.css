@@ -299,3 +299,8 @@ form { display: grid; gap: 16px; }
   .art__title { clip-path: none; }
 }
 @media (forced-colors: active) { #card { border: 1px solid CanvasText; } .inputwrap::after, .auth-otp::after { display: none; } }
+.segmented button[disabled] { opacity: .55; cursor: not-allowed; }
+.segmented button[disabled]:hover { background-color: transparent; color: var(--ink-2); }
+.segmented button[aria-selected='true'] { background-color: #fff; }
+.ch-wait { font-weight: 600; font-size: 12px; }
+.resend--switch { min-height: 22px; font-size: 13px; }
