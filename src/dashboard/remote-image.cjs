@@ -79,4 +79,4 @@ async function localize(urls,existing,localized,fetcher=download){
   });
   return localized;
 }
-module.exports={download,localize,publicAddress,sniff};
+module.exports={download,localize,publicAddress,lookup,sniff};

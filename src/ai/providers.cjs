@@ -55,18 +55,31 @@ function alternate(messages) {
   return out;
 }
 // One chat turn. Throws with a Persian message the owner panel can show; never includes the key.
-const { publicAddress } = require('../dashboard/remote-image.cjs');
+const { publicAddress, lookup } = require('../dashboard/remote-image.cjs');
+// A member's own address is reached through this request, whose connection only accepts the public addresses
+// checked at connect time, so a DNS answer cannot switch to a private one after the first check.
+function guardedFetch(url, init) {
+  return new Promise((resolve, reject) => {
+    const request = require('node:https').request(url, { method: init.method, headers: init.headers, signal: init.signal, lookup }, response => {
+      const chunks = []; let size = 0;
+      response.on('data', chunk => { size += chunk.length; if (size > 1048576) request.destroy(new Error('پاسخ سرویس بیش از حد بزرگ است')); else chunks.push(chunk); });
+      response.on('end', () => { const text = Buffer.concat(chunks).toString('utf8'); resolve({ ok: response.statusCode >= 200 && response.statusCode < 300, status: response.statusCode, json: async () => JSON.parse(text) }); });
+    });
+    request.on('error', error => reject(error.code === 'BLOCKED_ADDRESS' ? new Error('نشانی سرویس باید یک سرویس عمومی در اینترنت باشد') : error));
+    request.end(init.body);
+  });
+}
 async function chat(cfg, { system, messages }, fetcher = fetch) {
   const p = PROVIDERS[cfg.provider]; if (!p) throw new Error('سرویس انتخاب‌شده معتبر نیست');
   const base = String(cfg.url || p.url).replace(/\/+$/, ''), model = String(cfg.model || p.model);
   if (!/^https:\/\/[^\s/]+/.test(base)) throw new Error('نشانی سرویس باید با https شروع شود');
   if (!model) throw new Error('نام مدل را بنویس');
   // An address typed by a site member must lead to the public internet, never this server or its network.
-  // shortcut: checked before fetch resolves the name again; pin the resolved address if DNS rebinding becomes a concern.
   if (cfg.untrusted) {
     const found = await require('node:dns').promises.lookup(new URL(base).hostname.replace(/^\[|\]$/g, ''), { all: true, verbatim: true }).catch(() => []);
     if (!found.length || found.some(a => !publicAddress(a.address))) throw new Error('نشانی سرویس باید یک سرویس عمومی در اینترنت باشد');
   }
+  if (cfg.untrusted && fetcher === fetch) fetcher = guardedFetch;
   const controller = new AbortController(), timer = setTimeout(() => controller.abort(), cfg.timeout || 25000);
   try {
     let response, data;

@@ -138,6 +138,8 @@ module.exports=({execute,transaction})=>({
       if(prior){if(prior.toman!==toman||prior.userId!==userId)fail('شناسهٔ درخواست تکراری است',409);return {ok:true,repeated:true,balance:prior.balance/IT_RATE};}
       if(who.id===userId)fail('شارژ حساب خودت از این مسیر مجاز نیست',409);
       if(!who.admin){
+        // Parallel credits by the same agent queue on the agent's row, so the 24-hour cap cannot be passed together.
+        await con.execute('SELECT id FROM users WHERE id=? FOR UPDATE',[who.id]);
         const limits=creditLimits();
         if(toman>limits.each)fail('سقف هر شارژ پشتیبانی '+(limits.each/IT_RATE).toLocaleString('fa-IR')+' It است؛ برای مبلغ بیشتر تیکت را به مدیر ارجاع بده',403);
         const [today]=await con.execute("SELECT details FROM admin_audit WHERE actor_id=? AND action='support-credit' AND created_at>?",[who.id,Date.now()-86400000]);

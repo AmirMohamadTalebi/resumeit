@@ -47,7 +47,9 @@ const assert=require('node:assert/strict'),{randomUUID}=require('node:crypto');
   assert.equal((await db.wallet(target)).balance,10);
   const [audit]=await store.execute("SELECT actor_id,reason FROM admin_audit WHERE action='support-credit'");assert.deepEqual({...audit},{actor_id:agent,reason:'جبران پرداخت ناموفق'});
   assert((await db.ticket(null,ticket.id)).messages.some(m=>m.internal&&m.body.includes('شارژ کیف پول')));
-  for(let i=0;i<4;i++)await db.supportCredit(agent,target,{toman:200000,reason:'جبران پرداخت '+i,requestId:randomUUID()});
+  // Five credits sent at once: the 24-hour cap (1,000,000 toman, 20,000 already used) lets exactly four through.
+  const burst=await Promise.allSettled(Array.from({length:5},(_,i)=>db.supportCredit(agent,target,{toman:200000,reason:'جبران پرداخت '+i,requestId:randomUUID()})));
+  assert.equal(burst.filter(r=>r.status==='fulfilled').length,4,'parallel credits cannot pass the daily cap together');assert(burst.filter(r=>r.status==='rejected').every(r=>r.reason.status===403));
   await assert.rejects(()=>db.supportCredit(agent,target,{toman:200000,reason:'جبران بیش از سقف',requestId:randomUUID()}),e=>e.status===403,'daily cap per agent');
   await db.supportCredit(owner,target,{toman:400000,reason:'شارژ مدیر بالاتر از سقف پشتیبان',requestId:randomUUID()});
 
