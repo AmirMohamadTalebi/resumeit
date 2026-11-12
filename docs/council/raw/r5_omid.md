@@ -1,0 +1,24 @@
+R3-a2 (بزرگ): جزئیات پیاده‌سازی، یک استایل‌شیت واحد برای داشبورد
+
+شرط مریم: tokens.css، base.css، preview.css (و fandogh.css و charts.css که آن‌ها هم در publicAssets تو static.cjs:9-19 هستن) روی صفحه‌های منتشرشده سرو می‌شن. تصمیم: این پنج فایل از کل پاکسازی بیرونن، دست نمی‌خورن. محدوده فقط ۱۵ فایل داشبوردیه: shell، components، pages، abgoon، performance، resume-studio، liquid، nova، pet، fandogh-studio، night، hub، hub-publish، notice-center، quick-access (ترتیب باندل تو static.cjs:33 ثابت می‌مونه).
+
+روش فهرست مرده (فاز ۱): اسکریپت یک‌بارمصرف تو scratch، نه commit. هر سلکتور کلاسی از ۱۵ فایل رو می‌خونه و در dist/dashboard (html/js)، src/*.cjs، templates/vista-runtime.js جست‌وجو می‌کنه. کلاس‌هایی که با الحاق رشته ساخته می‌شن معاف: پیشوندهای واقعی که تو grep پیدا کردم: is-، template-، ri-pet-goal-، ri-pet-edits-، ri-vista-، ri-satiar-، ri-mtab-، project-، coral-hide-، set-tab-/set-panel-، fset-tab-/fset-panel-، rs-، rs-h-، rs-add-، ra-help-، ptab-/ppanel-، ib-، tf-، site-، s- و هر چیز با ${ تو template string. سلکتورهای با data-*، :is/:not، @keyframes و @media معاف از حذف خودکارن (فقط دستی). خروجی: CSV (فایل، سلکتور، دلیل) که من و یه نفر دیگه خط‌به‌خط تأیید می‌کنیم؛ تأیید نشده = نمی‌مونه تو حذف. عدد ۵۳۰ فقط حدس اولیه‌ست؛ عدد نهایی بعد تأیید اعلام می‌شه.
+
+تأیید رفتار: اسکریپت Playwright (check:ui) روی ۱۵ مسیر داشبورد (home, resume, studio, themes, links, publish, stats, messages, notifications, wallet, billing, support, settings, fandogh, assistant) در عرض‌های ۳۹۰، ۷۶۸، ۱۲۸۰؛ با reducedMotion. به‌جای پیکسل، getComputedStyle ده ویژگی اصلی (رنگ، پس‌زمینه، اندازه، فاصله، display، border، radius، shadow) برای همهٔ عنصرهای مرئی قبل/بعد دامپ و مقایسه می‌شه؛ هر اختلاف یعنی توقف. دو مسیر عمومی رو هم برای اطمینان می‌گیرم: یک رزومهٔ منتشرشده و یک لینک‌پیج (هرچند فایل‌هاشون دست نمی‌خورن).
+
+ریلیزها: ۳.۳.۲ فقط فاز ۱ (حذف مرده‌های تأییدشده). ۳.۳.۳ فاز ۲ (۴۳۵ تکرار هم‌سلکتور تا شن تو فایل اصلی، و حذف abgoon.css بعد از اینکه دامپ نشون داد پالتش هیچ‌جا اثر نداره). فاز ۳ (theme.css) فقط اگه ۱ و ۲ صفر اختلاف داشتن؛ وگرنه کنار می‌ره.
+
+نخواهیم کرد: تغییر ظاهر یا رنگ، بازنویسی سلکتورها، دست‌زدن به قالب‌ها و CSS صفحه‌های عمومی، !important ها رو تو این دور کم کنیم (فقط وقتی مجبوریم)، ابزار build/minify تازه.
+
+R3-b (کوچک): جزئیات
+
+فقط dist/admin/admin.css و دو فایل کنارش. admin.css خط ۱ و ۲ @import دارن (glass.css و navigation.css). محتوای glass.css (۴ خط) و بعد navigation.css (۸ خط) عین همین ترتیب جایگزین دو خط @import می‌شه (بالای فایل، چون @import همیشه اول می‌شینه)، بعد هر دو فایل حذف می‌شن. هیچ ارجاع دیگه‌ای بهشون نیست (grep کردم: فقط همین دو @import تو dist/src/tests). صفحه‌های ادمین چیز دیگه‌ای نمی‌کشن؛ liquid.css و night.css جدا لینک شدن و می‌مونن. تأیید: admin-ui-check، admin-workflow-ui-check، check:ui-layout و دامپ computed-style روی /admin/، /admin/users/، /admin/health/ در ۱۲۸۰ و ۳۹۰. ریلیز همراه ۳.۳.۲. نخواهیم کرد: ادغام liquid/night ادمین یا تغییر سلکتور.
+
+R3-d (کوچک): پاکسازی docs و تست‌های یتیم + حذف test:serial
+
+بمانن (لینک‌شده یا زنده): HOSTING، AUTH-SETUP، SMSIR، DASHBOARD-IMPLEMENTATION، REVIEW-21.1، PAYMENTS، SEP-PAYMENTS، SEP-CONNECTION-CHECK، SECURITY-REVIEW، ADMIN، AUTH-DESIGN، DASHBOARD، DASHBOARD-SAVING، DASHBOARD-LOADING، DASHBOARD-PERFORMANCE، LOADING، RESUME-TEMPLATES، IMPORTED-RESUME-TEMPLATES، WALLET-AND-FONTS، editorial-images، account-roles، account-status، admin-identifiers، multipage-workspaces، notification-delivery-setup، owner-controls، support-role، user-workspace-revision، font-licenses/، template-*-import.json، council/.
+تست‌ها: tests/_peek.cjs، checkout-response-check، coral-release-check، email-login-ui-check، rail-glass-hover-ui-check، workspace-preview. اسکریپت‌ها: scripts/refine-satiar.cjs، refine-vista.cjs. package.json: حذف test:serial، و README: «اجرای ترتیبی: RI_JOBS=1 npm test» + اصلاح خط «docs/». پیش از حذف دوباره grep اسم هر فایل. حذف ≈۲٬۲۵۰ خط، اضافه ≈۳.
+نخواهیم کرد: دست‌زدن به releases.json یا تست‌های کاربردی.
+
+فهرست حذف docs (۲۹ فایل، ۲٬۰۷۱ خط، بی‌ارجاع تو src/tests/dist/README/اسناد نگه‌داشته‌شده):
+ACCOUNT-DASHBOARD-AUDIT.fa.md, AUDIT.fa.md, AUTH-FIXES.fa.md, BROWSER-AUDIT.fa.md, DASHBOARD-LOADING-COUNCIL-FIXES.fa.md, DASHBOARD-LOADING-REVIEW.fa.md, DASHBOARD-PERFORMANCE-2026-10-27.fa.md, EDITOR-APPEARANCE-AUDIT-16-18.fa.md, EDITOR-PUBLICATION-AUDIT-16-20-FIXES.fa.md, PUBLIC-AUDIT-0.24.5.fa.md, REQUEST-CHECKLIST.md, REVIEW-21.1.2.fa.md, SECTION-LOADING-PREVIEW-ALIGNMENT.fa.md, SITE-AUDIT-CHECKLIST.fa.md, TEMPLATE-EDITOR-REVIEW.fa.md, WORKSPACE-AUDIT-21-24.fa.md, WORKSPACE-AUDIT-25.fa.md, WORKSPACE-AUDIT-26-30.fa.md, admin-release-2026-10-16.md, advisor-release-checklist.md, advisor-release-report.fa.md, all-template-refinement-checklist.fa.md, performance-2026-10-15.md, resume-journey-checklist.fa.md, three-pass-review.fa.md, ui-audit-2026-10-15.md, user-request-audit-2026-10-15.md, vista-publication-response-review.fa.md, vista-refinement-checklist.fa.md

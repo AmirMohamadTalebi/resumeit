@@ -1,0 +1,13 @@
+C2-a (بزرگ): نسخهٔ نهایی
+
+همهٔ اصلاح‌ها پذیرفته شد. مریم: مبلغ اعتبار در settleReview دقیقاً همان فرمول completePayment است: Number(current.credit_units ?? current.amount_toman)، نه amount_toman؛ ترتیب قفل users سپس payment_orders بدون تغییر. رضا: هر تسویهٔ مالک (paid یا بازگشت وجه) در همان تراکنش یک اعلان تراکنشی در user_notifications با reference یکتای 'settle:'+همان reference پرداخت می‌نویسد («پرداختت بررسی و تأیید شد، N It به کیف پولت اضافه شد»)، بدون ایمیل تبلیغاتی.
+چه می‌شود: فاز ۱ (۳.۳.۲): صف «در بازبینی» در dist/admin/payments و admin.js؛ database/payments.cjs: reviewPayments() و settleReview(); zibal.cjs: inquire() فقط خواندنی، فقط Zibal؛ مسیر POST /api/admin/payments/:id/settle فقط روی شاخهٔ ownerPanel در src/admin/http.cjs؛ مدرک (RRN یا trace) و یادداشت اجباری؛ INSERT در wallet_credit_claims با 'payment:'+provider+':'+id پیش از تغییر موجودی؛ audit با request_id. فاز ۱.۵: فقط گزینهٔ «بازگشت وجه» در TOPICS و شمارش. فاز ۲ فقط با دادهٔ تقاضا: refunded_at، سیاست ۷۲ ساعته در صفحهٔ شرایط، refundPurchase با reference 'refund:'+ref. فاز ۳: کارت درآمد فقط‌خواندنی.
+تست: بلوک جدا در tests/mysql-races-check.cjs (۲۰ settle موازی، settle در برابر completePayment، سفارش دارای بونوس با مبلغ درست) و payments-database-check.cjs (status 2 زیبال اعتبار نمی‌دهد؛ اعلان یکتا).
+
+C2-b: نسخهٔ نهایی
+
+پذیرفته شد. مریم: dueSubscriptionReminders فقط کاربری را برمی‌دارد که max(expires_at) میان همهٔ ردیف‌های subscription:* او (منطق billing() در wallet.cjs) در پنجرهٔ ۷ یا ۱ روز باشد. الهام: تابع کمکی مشترک «ثبت اعلان با reference یکتا» (notifyOnce) در notifications/service.cjs ساخته می‌شود و N3-a و C3-a از همان استفاده می‌کنند؛ reference='sub-end:'+ref+':'+end+':'+stage، بدون migration. رضا: نوار در زبانهٔ plans در dist/dashboard/js/pages/wallet.js و در home.js می‌آید (نه billing.js)؛ برای هر مرحله با کلید localStorage بسته می‌شود؛ متن می‌گوید دقیقاً چه چیز به رایگان برمی‌گردد و «رزومه‌ات منتشر می‌ماند»، بدون شمارش معکوس. دکمهٔ تمدید همان خرید با requestId است و تا پاسخ disabled می‌ماند. کار روی tick موجود و notification_preferences رعایت می‌شود. تست: دو tick یک اعلان؛ کاربر با دو اشتراک و پلن بلندتر اخطار نگیرد؛ دو خرید موازی یک کسر (wallet-check.cjs)؛ نوار فقط در پنجره و بستنش ماندگار (UI). ترتیب: اول C2-b، بعد R2-a.
+
+C2-c: نسخهٔ نهایی
+
+پذیرفته شد. آبجکت ثابت CANNED[department] و waitingTickets(now) در src/database/support-desk.cjs؛ منوی «درج پاسخ آماده» فقط متن را در فیلد می‌گذارد و ارسال نمی‌کند؛ نشان «۲۴ ساعت+» فقط برای تیکتی که آخرین پیام غیرداخلی از مشتری است و یادداشت internal و ارجاع حساب نمی‌شوند (قاعدهٔ 3.2.8). بدون ستون، بدون میانگین هفته. تست: support-desk-check.cjs (یادداشت داخلی تیکت را «پاسخ‌داده‌شده» نمی‌کند، پاسخ staff برمی‌دارد) و support-desk-ui-check.cjs (درج بدون ارسال). حدود ۱۰۰ خط.

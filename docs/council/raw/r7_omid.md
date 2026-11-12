@@ -1,0 +1,11 @@
+R3-a2 (بزرگ): نسخهٔ نهایی توافق‌شده
+
+همهٔ اصلاح‌ها قبول. فقط یک توضیح برای حالت شب: توی داشبورد تم تاریک جدا (data-theme یا prefers-color-scheme) نیست، night.css یه لایهٔ همیشه‌روشنه (grep روی dist/dashboard فقط تو کد قالب‌های vista/imported پیداش می‌کنه)، پس دامپ روی همون لایه اجرا می‌شه و برای اطمینان یک دور هم با colorScheme تاریک. متن نهایی: محدودهٔ پاکسازی ۱۵ فایل داشبورد (shell، components، pages، abgoon، performance، resume-studio، liquid، nova، pet، fandogh-studio، night، hub، hub-publish، notice-center، quick-access)؛ tokens، base، preview، fandogh و charts که در publicAssets (static.cjs:9-19) به صفحه‌های عمومی هم می‌رسن دست‌نخورده می‌مونن. فاز ۱ فقط بعد از ریلیز R2-a، R2-c و R2-d شروع می‌شه و فهرست سلکتورهای مرده قبل از هر ریلیز دوباره grep می‌شه؛ سلکتورهای ساخته‌شده با الحاق رشته (is-، coral-hide-، rs-، ptab- و ...) و data-*/@keyframes فقط دستی. مسیرهای تأیید در لحظه از NAV (app.js:7) خوانده می‌شن، نه فهرست ثابت. دامپ computed-style فقط برای عنصرهای دارای class، با reducedMotion و ساعت ثابت، عرض‌های ۳۹۰/۷۶۸/۱۲۸۰، هر اختلاف = توقف. ریلیز ۱: حذف مرده‌های تأییدشده؛ ۲: تا کردن تکرارهای هم‌سلکتور و حذف abgoon.css؛ ۳ (theme.css) فقط اگه ۱ و ۲ صفر اختلاف داشتن. بدون تغییر ظاهر و بدون ابزار جدید.
+
+R3-b (کوچک): نسخهٔ نهایی
+
+بدون اصلاح تازه. محتوای glass.css و بعد navigation.css عین ترتیب فعلی جای دو خط @import بالای dist/admin/admin.css می‌شینه و دو فایل حذف می‌شن؛ liquid.css و night.css ادمین جدا می‌مونن. تأیید با admin-ui-check، admin-workflow-ui-check، check:ui-layout و دامپ computed-style (فقط عنصرهای کلاس‌دار، reducedMotion) روی /admin/، /admin/users/، /admin/health/ در ۱۲۸۰ و ۳۹۰. همراه ریلیز اول، چون به R2-a/c/d وابسته نیست.
+
+R3-d (کوچک): نسخهٔ نهایی
+
+بدون اصلاح تازه؛ مریم و الهام هم ۲۹ سند رو بی‌ارجاع تأیید کردن. حذف ۲۹ سند docs (فهرست کامل تو r5_omid.md)، شش تست یتیم (_peek، checkout-response-check، coral-release-check، email-login-ui-check، rail-glass-hover-ui-check، workspace-preview)، scripts/refine-satiar.cjs و refine-vista.cjs، و خط test:serial از package.json. نگه‌داشتن: HOSTING، AUTH-SETUP، SMSIR، DASHBOARD-IMPLEMENTATION، REVIEW-21.1 و بقیهٔ اسناد زنده. README: خط «docs/» اصلاح و یک جمله «RI_JOBS=1 npm test». یک grep نهایی از نام هر فایل قبل از commit. حذف ≈۲٬۲۵۰ خط، اضافه ≈۳.
