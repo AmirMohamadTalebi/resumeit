@@ -14,7 +14,7 @@ const fs=require('node:fs/promises'),path=require('node:path'),assert=require('n
   try{
     browser=await chromium.launch({channel:process.platform==='win32'?'msedge':undefined,headless:true});
     const contexts={};for(const [name,token]of [['public',null],['owner','a'],['admin','b']]){const c=await browser.newContext({reducedMotion:'reduce'});if(token){await c.addCookies([{name:'ri_session',value:token.repeat(64),url:base}]);await c.addInitScript(id=>sessionStorage.setItem('ri-panel-choice',id),token==='a'?owner:target);}contexts[name]=c;}
-    const publicRoutes=['/','/about/','/contact/','/privacy/','/terms/','/changes/','/login/','/register/','/forgot-password/','/demo/','/signature/'];
+    const publicRoutes=['/','/about/','/contact/','/privacy/','/terms/','/changes/','/login/','/register/','/forgot-password/','/demo/'];
     const dashRoutes=['/dashboard/','/dashboard/resume/','/dashboard/links/','/dashboard/themes/','/dashboard/studio/','/dashboard/publish/','/dashboard/stats/','/dashboard/wallet/','/dashboard/billing/','/dashboard/settings/','/dashboard/support/','/dashboard/notifications/'];
     const adminRoutes=['/admin/',...['users','pages','traffic','transactions','payments','purchases','catalog','otp','audit','health','retention'].map(p=>'/admin/'+p+'/'),'/staff/'];
     const page=await contexts.public.newPage();let active=page;

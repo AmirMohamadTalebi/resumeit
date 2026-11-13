@@ -22,7 +22,6 @@ DESIGN.md                Implemented visual system
 dist/                    Public pages and frontend assets
   auth-ui/               Shared authentication components
   dashboard/js/pages/    Independent dashboard page modules
-  signature/             Shared card-formed R hero
 tests/                   Security, integration and browser tests
 scripts/                 Account provisioning tools
 docs/                    Setup guides, design notes and the feature council (docs/council)

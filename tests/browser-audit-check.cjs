@@ -40,7 +40,7 @@ const { RI } = require('../src/dashboard/render.cjs');
     });
     const widths = live ? [390, 1366] : [320, 360, 390, 640, 768, 900, 960, 961, 1024, 1280, 1366, 1920];
     const routes = live
-      ? ['/', '/about/', '/terms/', '/contact/', '/login/', '/register/', '/forgot-password/', '/demo/', '/signature/']
+      ? ['/', '/about/', '/terms/', '/contact/', '/login/', '/register/', '/forgot-password/', '/demo/']
       : ['/dashboard/', '/dashboard/links/', '/dashboard/resume/', '/dashboard/themes/', '/dashboard/publish/', '/dashboard/billing/', '/dashboard/stats/', '/dashboard/settings/', '/dashboard/wallet/'];
     fs.mkdirSync('artifacts/browser-audit', { recursive: true });
     for (const width of widths) {
