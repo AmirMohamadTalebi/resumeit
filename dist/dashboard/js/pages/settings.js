@@ -1,15 +1,16 @@
-/* تنظیمات حساب: مشخصات، ورود و امنیت، حریم خصوصی و داده‌ها؛ هر بخش یک زبانه با فهرست کناری */
+/* تنظیمات حساب: مشخصات، ورود و امنیت و داده‌ها؛ نمایش عمومی راه‌های تماس فقط در مرحلهٔ تماس رزومه است */
 (function () {
   'use strict';
   const RI = window.RI, esc = RI.esc;
-  const SECTIONS = [['profile', 'مشخصات', 'user', 'نام و شمارهٔ موبایل'], ['security', 'ورود و امنیت', 'shield', 'رمز، گوگل، گیت‌هاب و دستگاه‌ها'], ['privacy', 'حریم خصوصی', 'eye', 'نمایش عمومی راه‌های تماس'], ['data', 'داده‌ها و حساب', 'download', 'خروجی، خروج و حذف حساب']];
+  const SECTIONS = [['profile', 'مشخصات', 'user', 'نام و شمارهٔ موبایل'], ['security', 'ورود و امنیت', 'shield', 'رمز، گوگل، گیت‌هاب و دستگاه‌ها'], ['data', 'داده‌ها و حساب', 'download', 'خروجی و حذف حساب']];
   const phone = n => esc(String(n || '').replace(/^(\d{4})(\d{3})(\d{4})$/, '$1 $2 $3'));
 
   function profile(a) {
     const c = RI.C(), plan = RI.hasSub() && RI.PLANS[RI.state.billing.plan.id];
     return '<div class="nv-identity"><img src="' + esc(RI.avatarOf(c.profile)) + '" alt="" width="64" height="64"><div><b>' + esc(a.name || 'بدون نام') + '</b><span><bdi dir="ltr">' + phone(a.mobile) + '</bdi>' + (a.mobileVerified ? '<span class="nv-chip nv-chip--ok">' + RI.icon('check') + 'تأییدشده</span>' : '<span class="nv-chip nv-chip--warn">تأییدنشده</span>') + '<span class="nv-chip nv-chip--accent">' + RI.icon('crown') + (plan ? 'اشتراک ' + esc(plan.name) : 'حساب رایگان') + '</span></span></div></div>' +
       '<section class="nv-set"><div class="nv-set__head"><h3>نام حساب</h3><p>نامی که در فاکتورها، پشتیبانی و پیام‌ها دیده می‌شود. برای انتشار صفحه، نام و نام خانوادگی لازم است.</p></div><div class="nv-form"><div class="nv-form__row"><div class="field"><label class="field__label" for="a_name">نام</label><input class="input" id="a_name" autocomplete="given-name" value="' + esc(a.firstName || '') + '" maxlength="39"></div><div class="field"><label class="field__label" for="a_last">نام خانوادگی</label><input class="input" id="a_last" autocomplete="family-name" maxlength="39" value="' + esc(a.lastName || '') + '"></div></div><div class="nv-actions"><button type="button" class="btn btn--primary" data-name>' + RI.icon('check') + 'ذخیرهٔ نام</button><p class="nv-status" data-name-status></p></div></div></section>' +
-      '<section class="nv-set"><div class="nv-set__head"><h3>شمارهٔ موبایل</h3><p>کد ورود و تأییدها به این شماره پیامک می‌شود.</p></div><div class="nv-row"><span class="nv-ico' + (a.mobileVerified ? ' nv-ico--ok' : ' nv-ico--warn') + '">' + RI.icon('phone') + '</span><span class="nv-row__main"><span class="nv-row__title"><bdi dir="ltr">' + (a.mobile ? phone(a.mobile) : 'شماره‌ای ثبت نشده') + '</bdi></span><span class="nv-row__meta">' + (a.mobileVerified ? 'تأیید شده و برای ورود قابل استفاده است' : 'برای انتشار و امنیت حساب، شماره را تأیید کن') + '</span></span><button type="button" class="btn btn--soft btn--sm" data-mobile>' + (a.mobile ? 'تغییر یا تأیید' : 'افزودن شماره') + '</button></div></section>';
+      '<section class="nv-set"><div class="nv-set__head"><h3>شمارهٔ موبایل</h3><p>کد ورود و تأییدها به این شماره پیامک می‌شود.</p></div><div class="nv-row"><span class="nv-ico' + (a.mobileVerified ? ' nv-ico--ok' : ' nv-ico--warn') + '">' + RI.icon('phone') + '</span><span class="nv-row__main"><span class="nv-row__title"><bdi dir="ltr">' + (a.mobile ? phone(a.mobile) : 'شماره‌ای ثبت نشده') + '</bdi></span><span class="nv-row__meta">' + (a.mobileVerified ? 'تأیید شده و برای ورود قابل استفاده است' : 'برای انتشار و امنیت حساب، شماره را تأیید کن') + '</span></span><button type="button" class="btn btn--soft btn--sm" data-mobile>' + (a.mobile ? 'تغییر یا تأیید' : 'افزودن شماره') + '</button></div></section>' +
+      '<a class="nv-link" href="' + RI.routeUrl('resume', { step: 'contact' }) + '" data-go="resume" data-step="contact">نمایش عمومی راه‌های تماس را در مرحلهٔ تماس رزومه تعیین کن' + RI.icon('chevL') + '</a>';
   }
   function security(a) {
     const provider = (k, label) => '<div class="nv-provider' + (a[k] ? ' is-on' : '') + '"><span class="nv-provider__logo">' + RI.icon(k) + '</span><span class="nv-row__main"><span class="nv-row__title">' + label + '</span><span class="nv-row__meta">' + (a[k] ? 'متصل است؛ می‌توانی با آن وارد شوی' : 'متصل نیست') + '</span></span><button type="button" class="btn btn--sm ' + (a[k] ? 'btn--ghost' : 'btn--soft') + '" data-conn="' + k + '">' + (a[k] ? 'قطع اتصال' : 'اتصال') + '</button></div>';
@@ -17,15 +18,8 @@
       '<section class="nv-set"><div class="nv-set__head"><h3>ورود با حساب‌های دیگر</h3><p>با اتصال، بدون رمز و فقط با یک کلیک وارد می‌شوی.</p></div><div class="nv-providers">' + provider('google', 'گوگل') + provider('github', 'گیت‌هاب') + '</div></section>' +
       '<section class="nv-set"><div class="nv-set__head nv-set__head--row"><div><h3>دستگاه‌های واردشده</h3><p>هر دستگاهی که نمی‌شناسی را خارج کن.</p></div><button type="button" class="btn btn--ghost btn--sm" data-revoke-others hidden>' + RI.icon('logout') + 'خروج همهٔ دستگاه‌های دیگر</button></div><div data-sessions aria-live="polite" aria-busy="true"><div class="nv-skeleton" style="height:48px"></div></div></section>';
   }
-  function privacy() {
-    const contacts = RI.C().contacts;
-    return '<section class="nv-set"><div class="nv-set__head"><h3>نمایش عمومی راه‌های تماس</h3><p>مقدارها را در بخش «تماس» رزومه وارد می‌کنی؛ این‌جا فقط تعیین می‌کنی کدام در صفحهٔ عمومی دیده شود.</p></div>' +
-      (contacts.length ? '<ul class="nv-list">' + contacts.map(x => '<li class="nv-row"><span class="nv-ico nv-ico--blue">' + RI.icon(x.icon || 'mail') + '</span><span class="nv-row__main"><span class="nv-row__title">' + esc(x.label) + '</span><span class="nv-row__meta"><bdi dir="ltr">' + (x.value ? esc(x.value) : 'وارد نشده') + '</bdi></span></span>' + RI.switchHtml({ checked: x.public && !!x.value, disabled: !x.value, label: 'نمایش عمومی ' + x.label }).replace('<input', '<input data-cpub="' + x.id + '"') + '</li>').join('') + '</ul>' : '<div class="nv-empty"><span class="nv-ico">' + RI.icon('mail') + '</span><b>راه تماسی ثبت نشده</b><p>در بخش تماس رزومه، شماره یا ایمیلت را اضافه کن.</p></div>') +
-      '<a class="nv-link" href="' + RI.routeUrl('resume', { step: 'contact' }) + '" data-go="resume" data-step="contact">ویرایش راه‌های تماس' + RI.icon('chevL') + '</a></section>';
-  }
   function data(a) {
     return '<section class="nv-set"><div class="nv-set__head"><h3>خروجی اطلاعات</h3><p>فایل JSON از محتوا، تنظیمات و وضعیت انتشار جایگاه فعال؛ بدون رمز یا نشست.</p></div><div class="nv-row"><span class="nv-ico nv-ico--blue">' + RI.icon('download') + '</span><span class="nv-row__main"><span class="nv-row__title">دریافت فایل خروجی</span><span class="nv-row__meta">resumeit-export.json</span></span><button type="button" class="btn btn--soft btn--sm" data-export>دریافت</button></div></section>' +
-      '<section class="nv-set"><div class="nv-set__head"><h3>خروج</h3><p>نشست همین دستگاه بسته می‌شود.</p></div><div class="nv-row"><span class="nv-ico">' + RI.icon('logout') + '</span><span class="nv-row__main"><span class="nv-row__title">خروج از حساب</span></span><button type="button" class="btn btn--soft btn--sm" data-logout>خروج</button></div></section>' +
       (a.isOwner ? '<section class="nv-set"><div class="nv-set__head"><h3>مالکیت این حساب</h3><p>تو مالک سایت هستی؛ پیش از حذف حساب، مالک دیگری باید نقش تو را تغییر دهد.</p></div><a class="btn btn--soft btn--sm" href="/admin/users/">' + RI.icon('shield') + 'مدیریت نقش‌ها</a></section>'
         : '<section class="nv-set nv-danger"><div class="nv-set__head"><h3>حذف حساب</h3><p>رزومه، صفحهٔ لینک، آمار، موجودی و خریدها پاک می‌شوند و آدرس صفحه آزاد می‌شود. این کار برگشت ندارد.</p></div><button type="button" class="btn btn--danger-soft" data-delete>' + RI.icon('trash') + 'حذف همیشگی حساب</button></section>');
   }
@@ -34,7 +28,7 @@
     title: 'تنظیمات حساب',
     render(ctx) {
       const a = RI.state.account, initial = new URLSearchParams(location.search).get('tab'), tab = SECTIONS.some(s => s[0] === initial) ? initial : 'profile';
-      const panels = { profile: profile(a), security: security(a), privacy: privacy(), data: data(a) };
+      const panels = { profile: profile(a), security: security(a), data: data(a) };
       return '<div class="nv nv-settings"><header class="nv-head"><div><p class="nv-head__eyebrow">' + RI.icon('settings') + 'حساب</p><h1 id="page-title" tabindex="-1">تنظیمات حساب</h1><p>مشخصات، روش‌های ورود و داده‌های حسابت.</p></div></header>' +
         '<div class="nv-settings__layout"><nav class="nv-vtabs" role="tablist" aria-label="بخش‌های تنظیمات" aria-orientation="vertical">' + SECTIONS.map(([id, label, glyph, hint]) => '<button type="button" role="tab" id="set-tab-' + id + '" aria-controls="set-panel-' + id + '" data-workspace-tab="' + id + '" aria-selected="' + (id === tab) + '"><span class="nv-ico">' + RI.icon(glyph) + '</span><span><b>' + label + '</b><small>' + hint + '</small></span></button>').join('') + '</nav>' +
         '<div class="nv-card nv-settings__panel">' + SECTIONS.map(([id]) => '<div role="tabpanel" id="set-panel-' + id + '" aria-labelledby="set-tab-' + id + '"' + (id === tab ? '' : ' hidden') + '>' + panels[id] + '</div>').join('') + '</div></div></div>';
@@ -59,12 +53,10 @@
         } catch (error) { if (active()) RI.toast(error.message, { kind: 'error' }); }
         finally { b.disabled = false; }
       });
-      root.addEventListener('change', e => { const t = e.target; if (t.dataset.cpub) { const x = RI.C().contacts.find(k => k.id === t.dataset.cpub); x.public = t.checked; RI.touch('contacts'); } });
       RI.delegate(root, 'click', '[data-export]', () => {
         const out = { _note: 'خروجی اطلاعات ResumeIt', account: { name: a.name, mobile: a.mobile }, content: RI.C(), preferences: { indexing: a.indexing, brand: a.brand }, publication: RI.state.pub };
         const l = document.createElement('a'); l.href = URL.createObjectURL(new Blob([JSON.stringify(out, null, 2)], { type: 'application/json' })); l.download = 'resumeit-export.json'; l.click(); setTimeout(() => URL.revokeObjectURL(l.href), 500); RI.toast('فایل اطلاعات دانلود شد');
       });
-      RI.delegate(root, 'click', '[data-logout]', () => RI.logout());
       const box = RI.$('[data-sessions]', root), others = RI.$('[data-revoke-others]', root);
       const when = t => { try { return t ? new Intl.DateTimeFormat('fa-IR', { dateStyle: 'medium', timeStyle: 'short' }).format(t) : 'نامشخص'; } catch { return 'نامشخص'; } };
       const draw = rows => {

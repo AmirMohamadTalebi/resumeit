@@ -223,7 +223,7 @@
     if (!a) return; const c = RI.C();
     if (a.kind === 'open') { toggle(true); return; }
     if (a.kind === 'tab') { if (!open) toggle(true); select(a.tab === 'review' && !reviewHost ? 'chat' : a.tab); if (a.tab === 'review' && !reviewHost) RI.go('resume'); return; }
-    if (a.kind === 'route') { if (open) toggle(false); RI.go(a.route, a.tab ? { tab: a.tab } : undefined); return; }
+    if (a.kind === 'route') { if (open) toggle(false); RI.go(a.route, a.tab || a.step ? { tab: a.tab, step: a.step } : undefined); return; }
     if (a.kind === 'model') { if (lastQuestion) ask(lastQuestion, a.value); return; }
     if (a.kind === 'go') { if (RI.resumeFocus) RI.resumeFocus({ section: a.section, field: a.field }); else RI.go('resume', { step: a.section }); return; }
     if (a.kind === 'goal') { store('ri-pet-goal-' + RI.ownerId, a.value); RI.toast('هدفت ثبت شد: ' + a.value); if (tab === 'score') paintScore(); return; }

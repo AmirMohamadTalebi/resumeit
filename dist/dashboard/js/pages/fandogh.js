@@ -237,7 +237,7 @@
         else if (t.dataset.fsPal) pick(Number(t.dataset.fsPal));
         else if (t.dataset.fsAct) { const id = t.closest('[data-fs-msg]').dataset.fsMsg, m = current().messages.find(x => x.id === id), a = m?.actions?.[Number(t.dataset.fsAct)]; if (!a) return;
           if (a.kind === 'model') { current().model = a.value; save(); paintModel(); send(lastUserText(id), { retry: false, model: a.value }); }
-          else if (a.kind === 'route') RI.go(a.route, a.tab ? { tab: a.tab } : undefined);
+          else if (a.kind === 'route') RI.go(a.route, a.tab || a.step ? { tab: a.tab, step: a.step } : undefined);
           else if (a.kind === 'go') RI.go('resume', { step: a.section });
           else if (a.kind === 'tab') RI.petOpen?.(a.tab); }
         else if (t.dataset.fsTool) { const art = t.closest('[data-fs-msg]'), m = current().messages.find(x => x.id === art.dataset.fsMsg); if (!m) return; const k = t.dataset.fsTool;
