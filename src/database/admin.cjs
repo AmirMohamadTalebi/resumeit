@@ -35,8 +35,8 @@ module.exports = ({ execute, transaction }) => ({
   async adminOverview(from) {
     const results = await Promise.all([
       execute(
-        "SELECT COUNT(*) total,SUM(phone_verified) verified,SUM(created_at>=FROM_UNIXTIME(?/1000)) recent FROM users",
-        [from],
+        "SELECT COUNT(*) total,SUM(phone_verified) verified,SUM(created_at>=FROM_UNIXTIME(?/1000)) recent,(SELECT COUNT(*) FROM referrals WHERE created_at>=?) referred FROM users",
+        [from,from],
       ),
       execute(
         `SELECT COUNT(*) total,SUM(d.slot<>3 AND JSON_UNQUOTE(JSON_EXTRACT(d.pub,'$.resume.status'))='published' AND COALESCE(c.suspended,0)=0 AND COALESCE(c.publication_blocked,0)=0) resumes,SUM(JSON_UNQUOTE(JSON_EXTRACT(d.pub,'$.links.status'))='published' AND COALESCE(c.suspended,0)=0 AND COALESCE(c.publication_blocked,0)=0) links FROM ${documents} d LEFT JOIN admin_controls c ON c.user_id=d.user_id LEFT JOIN owner_user_settings o ON o.user_id=d.user_id WHERE (d.slot=3 AND ${subscribed}) OR (d.slot<>3 AND ((${customQuota} AND (${quotaValue} IS NULL OR JSON_UNQUOTE(${quotaValue})='null')) OR (CASE WHEN d.slot<3 THEN d.slot ELSE d.slot-1 END)<=(CASE WHEN ${customQuota} THEN CAST(JSON_UNQUOTE(${quotaValue}) AS UNSIGNED) ELSE (CASE WHEN ${subscribed} THEN 2 ELSE 1 END)+(CASE WHEN CAST(JSON_UNQUOTE(JSON_EXTRACT(o.settings,'$.extraSubdomain')) AS CHAR) IN ('true','1') THEN 1 ELSE 0 END) END)))`,

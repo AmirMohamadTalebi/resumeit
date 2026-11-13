@@ -199,7 +199,7 @@
         [
           d.users.total,
           "کل کاربران",
-          fa(d.users.recent) + " حساب جدید در بازه",
+          fa(d.users.recent) + " حساب جدید در بازه" + (d.users.referred ? " · " + fa(d.users.referred) + " با دعوت" : ""),
         ],
         [views, "بازدید صفحات", "در بازهٔ انتخاب‌شده"],
         [

@@ -13,13 +13,13 @@ module.exports = ({execute,transaction}) => {
         return row.expires_at>now?row:null;
       });
     },
-    async socialAccount(provider,subject,name,ownerId=null) {
+    async socialAccount(provider,subject,name,ownerId=null,referralCode=null) {
       const lookup=async()=> (await execute('SELECT users.id,users.phone,users.password_hash FROM social_identities JOIN users ON users.id=user_id WHERE provider=? AND subject=?',[provider,subject]))[0];
       const existing=await lookup();if(existing){if(ownerId&&existing.id!==ownerId)throw new Error('Identity already linked');return existing;}
       try {
         return await transaction(async connection=>{
           const id=ownerId||randomUUID();
-          if(!ownerId){await connection.execute('INSERT INTO users(id,phone,password_hash) VALUES(?,NULL,NULL)',[id]);await connection.execute('INSERT INTO profiles(user_id,name) VALUES(?,?)',[id,name]);}
+          if(!ownerId){await connection.execute('INSERT INTO users(id,phone,password_hash) VALUES(?,NULL,NULL)',[id]);await connection.execute('INSERT INTO profiles(user_id,name) VALUES(?,?)',[id,name]);await require('./referrals.cjs').attach(connection,id,referralCode);}
           const [[user]]=await connection.execute('SELECT id,phone,password_hash FROM users WHERE id=? FOR UPDATE',[id]);
           if(!user)throw new Error('Account missing');
           await connection.execute('INSERT INTO social_identities(provider,subject,user_id) VALUES(?,?,?)',[provider,subject,id]);

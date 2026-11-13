@@ -69,6 +69,7 @@ function dashboardHandler(database,auth,notifications,options){const reset=requi
     if(route.endsWith('/share-image')){const img=RI.shareCard(page.content,kind).image,ref=stored.refHash(img),row=ref&&database.dashboardMedia?await database.dashboardMedia(page.id,ref):null;if(row){res.writeHead(200,{'Content-Type':row.type,'Content-Length':row.body.length});res.end(req.method==='HEAD'?undefined:row.body);return true;}const m=/^data:image\/(png|jpeg|webp);base64,(.+)$/.exec(img||'');if(!m){res.writeHead(404);res.end();return true;}res.writeHead(200,{'Content-Type':'image/'+m[1]});res.end(req.method==='HEAD'?undefined:Buffer.from(m[2],'base64'));return true;}
     const c=model.publicContent(page.content,database.billing?await database.billing(page.id):{}),esc=RI.esc,canonical=pathPages?root.protocol+'//'+domain+base:local?origin+base+(kind==='links'?linksPath:resumePath):root.protocol+'//'+slug+'.'+domain+(kind==='links'?linksPath:resumePath);
     c._publicPages={resume:!!pages?.resume,links:!!pages?.links};
+    if(database.referralCode)c._ref=await database.referralCode(page.id).catch(()=>null);
     if(pathPages)c._linksOnly=true;
     const card=RI.shareCard(c,kind),image=card.image,ogImage=/^https:\/\//.test(image||'')?image:/^data:image\//.test(image||'')||stored.refHash(image)?canonical+'/share-image':null;
     const templatePage=new URL(req.url,origin).searchParams.get('page')||'home',imported=kind==='resume'&&RI.IMPORTED_TEMPLATES[c.theme.resume];
@@ -138,6 +139,11 @@ function dashboardHandler(database,auth,notifications,options){const reset=requi
         const rows=await database.dashboardStats(user.id,90,workspace),csv='\ufeffday,event,link_id,total\r\n'+rows.map(r=>[r.day,r.event,r.link_id,r.total].map(cell).join(',')).join('\r\n');res.writeHead(200,{'Content-Type':'text/csv; charset=utf-8','Content-Disposition':'attachment; filename="resumeit-stats.csv"'});res.end(csv);return true;
       }
       else if(pathname==='/api/dashboard/wallet')reply(200,await database.wallet(user.id));
+      else if(pathname==='/api/dashboard/referrals'){
+        if(!database.referralCode)model.fail('دعوت دوستان در این محیط آماده نیست',503);
+        const policy=database.commerceSettings?await database.commerceSettings():{},on=policy.referral?.on!==false,code=await database.referralCode(user.id);
+        reply(200,{on,link:(domain==='resumeit.ir'&&root.hostname!==domain?'https://resumeit.ir':root.origin)+'/?ref='+code,...await database.referralStats(user.id)});
+      }
       else if(pathname==='/api/dashboard/stats')reply(200,{rows:await database.dashboardStats(user.id,90,workspace)});
       else if(pathname==='/api/dashboard/slug'){const slug=new URL(req.url,origin).searchParams.get('value');reply(200,{available:model.slugValid(slug)&&await database.slugAvailable(slug,user.id,workspace)});}
       else if(pathname==='/api/dashboard/share-check'){

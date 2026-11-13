@@ -27,6 +27,7 @@
       return RI.pageHead({ eyebrow: 'حساب', eyebrowIcon: 'card', title: 'کیف پول It', desc: 'اعتبار It برای خرید اشتراک، قالب و فونت است؛ شارژ با درگاه بانکی انجام می‌شود و همهٔ تراکنش‌ها این‌جا ثبت می‌شوند.', actions: '<a class="btn btn--soft btn--sm" data-go="billing" href="/dashboard/billing/">' + RI.icon('crown') + 'اشتراک و خریدها</a>' }) +
         '<div class="wl-top"><section class="wl-balance" id="wallet-balance" aria-live="polite">' + RI.sectionLoading('در حال دریافت موجودی…') + '</section><section class="wl-stats" id="wallet-stats" aria-label="خلاصهٔ تراکنش‌های اخیر"></section></div>' +
         '<div id="wallet-pending" aria-live="polite"></div>' +
+        '<section class="wl-invite" id="wallet-invite" aria-labelledby="invite-title" hidden></section>' +
         // Top-up, history and help as tabs; an address that names a history tab opens the history directly.
         RI.sectionTabs('wallet', [['topup', 'افزایش اعتبار', 'plus', '<section class="wl-topup" aria-labelledby="topup-title"><div class="wl-topup__head"><div><h2 id="topup-title">افزایش اعتبار</h2><p>مبلغ را انتخاب کن؛ پیش‌فاکتور را می‌بینی و بعد در صفحهٔ بانک پرداخت می‌کنی.</p></div><ol class="wl-flow" aria-label="مراحل شارژ"><li class="is-on"><span>۱</span>مبلغ</li><li><span>۲</span>پیش‌فاکتور</li><li><span>۳</span>درگاه بانک</li></ol></div><form id="wallet-payment" novalidate><div class="wl-topup__grid"><div class="wl-amounts"><div class="wl-presets" role="group" aria-label="مبلغ‌های پیشنهادی"></div><div class="field wl-custom"><label class="field__label" for="wallet-topup">مبلغ دلخواه (تومان)</label><input class="input ltr" id="wallet-topup" type="number" inputmode="numeric" min="' + MIN + '" max="' + MAX + '" step="2000" required><p class="field__hint" id="wallet-amount-words">حداقل ' + RI.toman(MIN) + ' و مضربی از ۲٬۰۰۰ تومان</p></div></div><aside class="wl-summary" aria-labelledby="summary-title"><h3 id="summary-title">خلاصهٔ شارژ</h3><dl><div><dt>مبلغ پرداخت</dt><dd id="wallet-sum-toman">—</dd></div><div class="wl-summary__get"><dt>دریافت می‌کنی</dt><dd id="wallet-conversion" role="status">—</dd></div><div><dt>موجودی پس از شارژ</dt><dd id="wallet-after">—</dd></div></dl><p class="wl-gateways" id="gateway-note" role="status">در حال دریافت وضعیت درگاه‌ها…</p><p class="field__error" id="payment-error" role="alert" hidden></p><button class="btn btn--primary wl-pay" id="wallet-pay" type="submit">' + RI.icon('receipt') + 'مشاهدهٔ پیش‌فاکتور و پرداخت</button></aside></div></form>' +
         '<ul class="wl-trust"><li>' + RI.icon('check') + 'اعتبار فقط بعد از تأیید بانک اضافه می‌شود.</li><li>' + RI.icon('lock') + 'اطلاعات کارت را فقط در صفحهٔ بانک وارد می‌کنی.</li><li>' + RI.icon('refresh') + 'کلیک دوباره روی پرداخت، دوبار شارژ یا کسر نمی‌کند.</li></ul></section>'], ['activity', 'گردش و سوابق', 'receipt', '<section class="wl-activity" aria-labelledby="activity-title"><div class="wl-activity__head"><h2 id="activity-title">گردش و سوابق</h2></div>' + RI.tabsHtml(TABS, 'ledger') + '<div id="wallet-body"></div></section>'], ['help', 'پرسش‌های رایج', 'info', '<section class="wl-help" aria-labelledby="help-title"><h2 id="help-title">پرسش‌های رایج</h2>' +
@@ -64,6 +65,20 @@
           $('#wallet-stats').innerHTML = [['down', 'واریز در ۳۰ روز اخیر', into ? '+' + RI.fa(into) + ' It' : '—', 'in'], ['up', 'خرج در ۳۰ روز اخیر', out ? '−' + RI.fa(out) + ' It' : '—', 'out'], ['clock', 'آخرین تراکنش', last ? esc(last.label) : 'هنوز تراکنشی نیست', 'last', last ? ago(last.at) : '']].map(([ico, label, value, kind, sub]) => '<div class="wl-stat wl-stat--' + kind + '"><span class="wl-stat__ico">' + RI.icon(ico) + '</span><div><small>' + label + '</small><b>' + value + '</b>' + (sub ? '<span>' + esc(sub) + '</span>' : '') + '</div></div>').join('') + (tx.length >= 50 ? '<p class="wl-stats__note">بر اساس ۵۰ تراکنش اخیر</p>' : '');
           paintSummary();
         } catch (e) { if (alive) host.innerHTML = '<p role="alert">' + esc(e.message) + '</p><button class="btn btn--soft btn--sm" type="button" data-balance-retry>' + RI.icon('refresh') + 'تلاش دوباره</button>'; }
+      }
+
+      // Invite a friend: the link, how many friends are counted and how close the next 25 It is. Hidden when the programme is off.
+      async function invite() {
+        const host = $('#wallet-invite'); if (!host) return;
+        try {
+          const d = await RI.dashboardRequest('referrals'); if (!alive || !d.on) return;
+          const dots = [0, 1, 2].map(i => '<i class="' + (i < d.counted % 3 ? 'is-on' : '') + '" style="--i:' + i + '"></i>').join('');
+          host.hidden = false;
+          host.innerHTML = '<div class="wl-invite__art" aria-hidden="true"><img src="/brand/it-coin-v2.webp" width="64" height="64" alt=""></div><div class="wl-invite__body"><h2 id="invite-title">دوستت را دعوت کن، It بگیر</h2><p>دوستت ۱ It هدیه می‌گیرد و تو با هر ۳ دوستی که صفحه‌شان را منتشر کنند ۲۵ It. پاداش تو ۷ روز بعد از انتشار آن‌ها می‌رسد؛ هر ماه حداکثر دو بار.</p>' +
+            '<div class="pb-urlbox is-small"><bdi dir="ltr">' + esc(d.link) + '</bdi><button type="button" class="pb-icon" data-copy="' + esc(d.link) + '" aria-label="کپی لینک دعوت">' + RI.icon('copy') + '</button></div>' +
+            '<div class="wl-invite__meter" role="img" aria-label="' + RI.fa(d.counted % 3) + ' از ۳ دوست برای پاداش بعدی"><span class="wl-invite__dots">' + dots + '</span><small>' + (d.invited ? RI.fa(d.invited) + ' دعوت‌شده · ' + RI.fa(d.counted) + ' تأییدشده · ' + RI.fa(d.untilNext) + ' دوست تا پاداش بعدی' : 'لینک بالا را برای دوستانت بفرست') + (d.earned ? ' · تا حالا ' + RI.fa(d.earned) + ' It گرفته‌ای' : '') + '</small></div>' +
+            '<p class="wl-invite__note">لینک دعوت پایین صفحهٔ منتشرشده‌ات هم هست، مگر نشان رزومیت را برداشته باشی؛ در این صورت از همین‌جا بفرست.</p></div>';
+        } catch { /* the card is optional; the wallet works without it */ }
       }
 
       async function payments() {
@@ -122,7 +137,7 @@
         try { const result = await RI.paymentRequest('invoices', { amount: Number(amount), requestId }); if (alive) location.assign(result.url); }
         catch (ex) { if (alive) { error.textContent = ex.message; error.hidden = false; button.disabled = false; root.querySelectorAll('.wl-flow li')[1]?.classList.remove('is-on'); } paying = false; }
       });
-      paintPresets(); paintSummary(); balance(); payments(); paintTab();
+      paintPresets(); paintSummary(); balance(); invite(); payments(); paintTab();
       return () => { alive = false; historyOff?.(); };
     },
   });

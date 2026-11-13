@@ -1,7 +1,9 @@
 const {randomInt}=require('node:crypto'),{readJson}=require('../http/security.cjs'),{fail}=require('../dashboard/model.cjs');
 const {providers,email,subscription,endpointId}=require('./providers.cjs'),templates=require('./email-templates.cjs');
 module.exports=(database,options={})=>{
-  const provider=options.provider||providers();const marketing=require('./marketing.cjs')(database,provider);let timer,busy=false,stopped=false,remindedAt=0;
+  const provider=options.provider||providers();const marketing=require('./marketing.cjs')(database,provider);let timer,busy=false,stopped=false,remindedAt=0,referredAt=0;
+  // Invite rewards (docs/council/ACTIVATION.md): one hourly pass; the owner switch and budget live in commerce settings.
+  async function referralPass(now=Date.now()){if(!database.processReferrals||now-referredAt<36e5)return;referredAt=now;return database.processReferrals(now);}
   // user_notifications.reference is unique, so each user gets each stage once; a renewal moves the end and starts a fresh pair.
   async function subscriptionReminders(now=Date.now()){
     if(!database.dueSubscriptionReminders||!database.notify||now-remindedAt<36e5)return;remindedAt=now;
@@ -13,6 +15,7 @@ module.exports=(database,options={})=>{
   async function tick(){
     if(stopped||busy||!database.notificationCandidates)return;busy=true;
     try{await subscriptionReminders();}catch{remindedAt=0;/* retried on the next tick */}
+    try{await referralPass();}catch{referredAt=0;/* retried on the next tick */}
     try{await database.expireNotificationDeliveries();const candidates=await database.notificationCandidates();
       for(const item of candidates){if(stopped)break;if(!provider.available[item.channel]||!(await policy())[item.channel]||!await database.claimNotificationDelivery(item))continue;
         if(!(await policy())[item.channel]){await database.finishNotificationDelivery(item,'paused');continue;}
@@ -28,6 +31,7 @@ module.exports=(database,options={})=>{
     marketing,
     tick,
     subscriptionReminders,
+    referralPass,
     async adminSettings(){return {configured:{...provider.available},enabled:await policy()};},
     async saveAdminSettings(actor,input){for(const key of ['email','sms','push'])if(typeof input[key]!=='boolean')fail('انتخاب کانال معتبر نیست');if(Object.keys(input).some(key=>!['email','sms','push'].includes(key)))fail('تنظیم ناشناخته است');if(!database.saveNotificationPolicy)fail('تنظیم کانال‌ها در این محیط آماده نیست',503);await database.saveNotificationPolicy(actor,input);return this.adminSettings();},
     start(){if(database.notificationCandidates&&!timer){timer=setInterval(()=>void tick(),15000);timer.unref();}},

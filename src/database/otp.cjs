@@ -58,7 +58,7 @@ module.exports = ({execute,transaction}) => {
         return {...user,password_hash:passwordHash};
       });
     },
-    async registerVerified(grantHash, passwordHash, now) {
+    async registerVerified(grantHash, passwordHash, now, referralCode) {
       return transaction(async connection => {
         const [[row]] = await connection.execute("SELECT * FROM otp_challenges WHERE registration_token=? AND purpose='register' AND status='verified' FOR UPDATE",[grantHash]);
         if (!row || row.expires_at<=now) return null;
@@ -67,6 +67,7 @@ module.exports = ({execute,transaction}) => {
         const id = randomUUID();
           await connection.execute('INSERT INTO users(id,phone,password_hash,phone_verified) VALUES(?,?,?,TRUE)',[id,row.phone,passwordHash]);
         await connection.execute('INSERT INTO profiles(user_id) VALUES(?)',[id]);
+        await require('./referrals.cjs').attach(connection,id,referralCode,now);
         await connection.execute("UPDATE otp_challenges SET status='consumed',registration_token=NULL WHERE challenge_id=?",[row.challenge_id]);
         return { id, phone: row.phone, password_hash: passwordHash };
       });

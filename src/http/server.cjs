@@ -18,6 +18,8 @@ function createServer(database, options) {
       try { origin = publicOrigin(req); pathname = requestPath(req.url); }
       catch { res.writeHead(400); res.end('Invalid request'); return; }
       securityHeaders(res, origin);
+      // An invite link (?ref=code) keeps its code for 30 days so it can be attached at sign-up; nothing else is tracked.
+      if (req.method === 'GET') { const ref = /^\/(?:\?|$)/.test(req.url) && new URL(req.url, origin).searchParams.get('ref'); if (ref && /^[a-z0-9]{8}$/.test(ref)) res.appendHeader('Set-Cookie', `ri_ref=${ref}; Path=/; HttpOnly; SameSite=Lax; Max-Age=2592000${origin.startsWith('https:') ? '; Secure' : ''}`); }
       if (await notifications.marketing.handlePublic(req,res,pathname)) return;
       if (await payments(req,res,pathname,origin)) return;
       if (await admin(req,res,pathname,origin)) return;

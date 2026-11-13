@@ -550,3 +550,19 @@ html body .wl-row .wl-row__text small{justify-self:start;max-width:100%}
 .msg-card footer{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;padding-top:10px;border-top:1px dashed var(--ice-200)}
 .msg-contact,.msg-state{display:flex;gap:6px;flex-wrap:wrap}
 @media(max-width:600px){.msg-switch{align-items:flex-start}.msg-card{padding:14px}.msg-card footer{flex-direction:column}.msg-state{justify-content:flex-end}}
+/* Invite card: rises in with a blur, the coin floats, the three progress dots pop in one by one, a sheen crosses the card once */
+.wl-invite{position:relative;display:grid;grid-template-columns:auto 1fr;gap:18px;align-items:center;margin-top:14px;padding:18px 20px;border-radius:24px;border:1px solid #e8d7c3;background:linear-gradient(150deg,#fffaf2,#f4f9fb);overflow:hidden;animation:wl-invite-in .65s cubic-bezier(.2,.8,.2,1) both}
+.wl-invite[hidden]{display:none}
+.wl-invite::after{content:"";position:absolute;inset:0;background:linear-gradient(105deg,transparent 35%,#ffffffb0 50%,transparent 65%);translate:-130% 0;animation:wl-invite-sheen 1.5s .5s cubic-bezier(.2,.8,.2,1) both;pointer-events:none}
+.wl-invite__art img{display:block;animation:wl-invite-float 5s ease-in-out infinite}
+.wl-invite__body{display:grid;gap:10px;min-width:0}.wl-invite h2{margin:0;font-size:17px;color:#3b2a1d}.wl-invite p{margin:0;font-size:13px;line-height:1.9;color:var(--ink-3,#5a7080)}
+.wl-invite__meter{display:flex;align-items:center;flex-wrap:wrap;gap:10px}.wl-invite__meter small{font-size:12px;color:var(--ink-3,#5a7080)}
+.wl-invite__dots{display:inline-flex;gap:6px}.wl-invite__dots i{width:14px;height:14px;border-radius:50%;border:2px solid #c7dfe9;background:#fff;animation:wl-invite-dot .5s calc(.3s + var(--i) * 120ms) cubic-bezier(.3,1.4,.5,1) both}
+.wl-invite__dots i.is-on{background:#e2a03a;border-color:#c98a24}
+.wl-invite__note{font-size:12px!important;opacity:.85}
+@keyframes wl-invite-in{from{opacity:0;translate:0 12px;filter:blur(4px)}to{opacity:1;translate:0 0;filter:none}}
+@keyframes wl-invite-sheen{to{translate:130% 0}}
+@keyframes wl-invite-float{50%{translate:0 -4px}}
+@keyframes wl-invite-dot{from{scale:0;opacity:0}to{scale:1;opacity:1}}
+@media (max-width:560px){.wl-invite{grid-template-columns:1fr}.wl-invite__art{display:none}}
+@media (prefers-reduced-motion:reduce){.wl-invite,.wl-invite::after,.wl-invite__art img,.wl-invite__dots i{animation:none}.wl-invite::after{display:none}}

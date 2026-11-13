@@ -111,7 +111,7 @@ function authHandler(database, options = {}) {
           pending++;
           try {
             const hash=await hashPassword(input.password);
-            const user=await (reset?database.resetPasswordVerified(digest(grant),hash,Date.now()):database.registerVerified(digest(grant),hash,Date.now()));
+            const user=await (reset?database.resetPasswordVerified(digest(grant),hash,Date.now()):database.registerVerified(digest(grant),hash,Date.now(),/(?:^|;\s*)ri_ref=([a-z0-9]{8})(?:;|$)/.exec(req.headers.cookie||'')?.[1]));
             if (!user) reply(401,{error:'تأیید شماره منقضی شده؛ دوباره کد بگیر'});
             else if(user.existing) reply(409,{error:'این شماره حساب دارد؛ از صفحهٔ ورود استفاده کن'});
             else await signIn(user);
