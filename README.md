@@ -25,7 +25,7 @@ dist/                    Public pages and frontend assets
   signature/             Shared card-formed R hero
 tests/                   Security, integration and browser tests
 scripts/                 Account provisioning tools
-docs/                    Setup, design and review reports
+docs/                    Setup guides, design notes and the feature council (docs/council)
 ```
 
 ## Product boundaries
@@ -46,6 +46,8 @@ npm run check:ui         Dashboard, authentication, mobile, motion and public pa
 npm run check:database   Real MySQL integration in a temporary test database
 npm audit --omit=dev     Dependency advisories
 ```
+
+`npm test` runs checks in parallel; `RI_JOBS=1 npm test` runs them one at a time.
 
 Database tests create and remove a randomly named database; use a test MySQL instance and an account allowed to create databases. Tests do not send real SMS or call real OAuth providers. `.github/workflows/checks.yml` runs the suite with MySQL 8.4 and Chromium.
 
