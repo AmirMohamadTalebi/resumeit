@@ -56,6 +56,11 @@ module.exports=async(database,req,path,origin,user,reply,res)=>{
     if(!uuid.test(input.userId||'')||!uuid.test(input.requestId||'')||(input.ticketId!==undefined&&!uuid.test(input.ticketId||'')))fail('اطلاعات شارژ معتبر نیست');
     await require('../auth/confirm.cjs').confirmPassword(database,user,input.password);
     reply(200,await database.supportCredit(user.id,input.userId,input));
+  }else if(staff&&path==='/api/dashboard/support/refund'){
+    if(!uuid.test(input.userId||'')||!uuid.test(input.requestId||'')||!uuid.test(input.ticketId||'')||typeof input.ref!=='string'||(input.override!==undefined&&typeof input.override!=='boolean'))fail('اطلاعات بازگشت وجه معتبر نیست');
+    if(!database.supportRefund)fail('بازگشت وجه در این محیط آماده نیست',503);
+    await require('../auth/confirm.cjs').confirmPassword(database,user,input.password);
+    reply(200,await database.supportRefund(user.id,input.userId,input));
   }else if(path==='/api/dashboard/support/status'){
     if(!uuid.test(input.id||'')||!['open','closed'].includes(input.status))fail('وضعیت معتبر نیست');await database.ticketStatus(user.id,input.id,input.status,staff);reply(200,{ok:true});
   }else if(path==='/api/dashboard/notifications/read'){

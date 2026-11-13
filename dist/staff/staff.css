@@ -262,3 +262,12 @@ input[type=checkbox]{width:18px;height:18px;accent-color:var(--accent);cursor:po
 .customer-file svg{width:17px;height:17px}.cf-head h2 svg{width:22px;height:22px}.cf-head h2{white-space:nowrap;min-width:0;overflow:hidden;text-overflow:ellipsis}
 .cf-head .btn-icon svg{width:18px;height:18px}
 @media(max-width:600px){.cf-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.cf-grid dd{font-size:13px;word-break:break-word}.cf-body{padding:12px 14px 16px}}
+/* Refund form: a warm-brown variant of the credit card that rises in, with a short ring on the icon when it appears */
+.cf-refund{margin-top:14px;border-color:#ead9c6;background:linear-gradient(160deg,#fffaf4,#fff);animation:cf-refund-in .55s cubic-bezier(.2,.8,.2,1) both}
+.cf-refund h3 svg{color:#875a36;animation:cf-refund-spin .9s .2s cubic-bezier(.3,1.4,.5,1) both}
+.cf-refund select{width:100%;min-height:42px;padding:8px 12px;border:1px solid #d9c7b3;border-radius:12px;background:#fff;color:#3b2a1d;font:inherit}
+.cf-refund .cf-check{display:flex;align-items:center;gap:8px;font-size:12px;color:#7a5149}
+.cf-refund-hint{display:flex;align-items:center;gap:6px;margin-top:12px}.cf-refund-hint svg{width:16px;height:16px}
+@keyframes cf-refund-in{from{opacity:0;translate:0 10px;filter:blur(3px)}to{opacity:1;translate:0 0;filter:none}}
+@keyframes cf-refund-spin{from{rotate:-200deg;scale:.6}to{rotate:0deg;scale:1}}
+@media (prefers-reduced-motion:reduce){.cf-refund,.cf-refund h3 svg{animation:none}}

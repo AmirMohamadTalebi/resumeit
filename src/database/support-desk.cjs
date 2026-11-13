@@ -1,6 +1,7 @@
 // Support desk tools beyond the conversation itself: departments, transfer between them, escalation to an admin,
 // internal notes, the customer's account at a glance and wallet credit with a reason. Every staff action is audited.
-const {randomUUID}=require('node:crypto'),{fail}=require('../dashboard/model.cjs');
+const {randomUUID}=require('node:crypto'),{fail,refsInUse}=require('../dashboard/model.cjs');
+const REFUND_HOURS=72,REFUND_DAYS=90,REFUND_CAP=2;
 const DEPARTMENTS={sales:'فروش',finance:'مالی',technical:'فنی',account:'حساب کاربری',general:'عمومی'};
 const CATEGORY_DEPARTMENT={sales:'sales',payment:'finance',account:'account',editor:'technical',publication:'technical',other:'general'};
 const IT_RATE=2000;
@@ -159,6 +160,45 @@ module.exports=({execute,transaction})=>({
       await con.execute('INSERT INTO user_notifications(id,user_id,kind,title,body,url,created_at) VALUES(?,?,\'payments\',?,?,?,?)',[randomUUID(),userId,'کیف پولت شارژ شد',(toman/IT_RATE).toLocaleString('fa-IR')+' It از طرف پشتیبانی به کیف پولت اضافه شد.','/dashboard/wallet/',now]);
       await audit(con,who.id,userId,'support-credit',reason,{toman,balance,userId,ticketId:ticket?.id||null},input.requestId);
       return {ok:true,balance:balance/IT_RATE};
+    });
+  },
+  // Council decision (docs/council/ACTIVATION.md): staff refund a bought template, link theme, font or palette from a
+  // ticket, within 72 hours, only while nothing of the user's selects it, at most twice in 90 days (an admin may pass
+  // the cap with a reason). The money goes back to the It wallet only, and the access row is removed so every reader
+  // of account_access sees it as not owned.
+  async supportRefund(actor,userId,input,now=Date.now()){
+    const ref=input.ref,reason=note(input.reason,true);
+    if(typeof ref!=='string'||!/^(rt|lt|font|pal):[a-z0-9-]+$/.test(ref))fail('فقط قالب، قالب لینک، فونت یا پالت بازگشت وجه دارد');
+    if(typeof input.ticketId!=='string'||!/^[a-z0-9_-]{16,64}$/i.test(input.requestId||''))fail('درخواست بازگشت وجه معتبر نیست');
+    return transaction(async con=>{
+      const who=await staff(con,actor);
+      const prior=await repeated(con,input.requestId,who.id,'support-refund');
+      if(prior){if(prior.ref!==ref||prior.userId!==userId)fail('شناسهٔ درخواست تکراری است',409);return {ok:true,repeated:true,amount:prior.amount/IT_RATE,balance:prior.balance/IT_RATE};}
+      if(who.id===userId)fail('بازگشت وجه برای حساب خودت از این مسیر مجاز نیست',409);
+      const [[policy]]=await con.execute('SELECT settings FROM commerce_settings WHERE id=1');const settings=policy?(typeof policy.settings==='string'?JSON.parse(policy.settings):policy.settings):{};
+      if(settings.refund?.on===false)fail('بازگشت وجه فعلاً بسته است',409);
+      // Same first lock as a dashboard save, so a save that picks this item waits for the refund (or the reverse).
+      const [[target]]=await con.execute('SELECT id FROM users WHERE id=? FOR UPDATE',[userId]);if(!target)fail('حساب پیدا نشد',404);
+      const ticket=await lockTicket(con,input.ticketId);if(ticket.user_id!==userId)fail('این تیکت مال همین کاربر نیست',409);
+      const [[access]]=await con.execute('SELECT created_at,expires_at FROM account_access WHERE user_id=? AND ref=? FOR UPDATE',[userId,ref]);if(!access||access.expires_at!==null)fail('این مورد در حساب کاربر نیست',404);
+      const [[purchase]]=await con.execute("SELECT delta_units,reference,created_at FROM wallet_transactions WHERE user_id=? AND product_ref=? AND reference LIKE 'purchase:%' ORDER BY created_at DESC LIMIT 1",[userId,ref]);
+      if(!purchase||Number(purchase.delta_units)>=0||Number(purchase.created_at)!==Number(access.created_at))fail('این مورد هدیه یا اعطای مدیریتی است و بازگشت وجه ندارد',409);
+      if(now-Number(purchase.created_at)>REFUND_HOURS*36e5)fail('بازگشت وجه فقط تا '+REFUND_HOURS.toLocaleString('fa-IR')+' ساعت بعد از خرید ممکن است',409);
+      const [[count]]=await con.execute("SELECT COUNT(*) n FROM wallet_transactions WHERE user_id=? AND reference LIKE 'refund:%' AND created_at>?",[userId,now-REFUND_DAYS*864e5]);
+      if(Number(count.n)>=REFUND_CAP&&!(who.admin&&input.override===true))fail('این کاربر در '+REFUND_DAYS.toLocaleString('fa-IR')+' روز گذشته '+REFUND_CAP.toLocaleString('fa-IR')+' بار بازگشت وجه گرفته؛ فقط مدیر با دلیل می‌تواند از سقف بگذرد',409);
+      const [docs]=await con.execute('SELECT draft,published FROM dashboard_documents WHERE user_id=?',[userId]),[spaces]=await con.execute('SELECT draft,published FROM dashboard_workspaces WHERE user_id=?',[userId]);
+      const parse=v=>v?(typeof v==='string'?JSON.parse(v):v):{};
+      for(const row of [...docs,...spaces]){const published=parse(row.published);for(const content of [parse(row.draft),published.resume,published.links])if(content&&refsInUse(content).has(ref))fail('این مورد هنوز در یکی از صفحه‌های کاربر انتخاب شده؛ اول باید آن را عوض کند',409);}
+      const amount=-Number(purchase.delta_units),reference='refund:'+purchase.reference,name=require('../owner/settings.cjs').product(ref)?.name||ref;
+      await con.execute('DELETE FROM account_access WHERE user_id=? AND ref=?',[userId,ref]);
+      await con.execute('INSERT IGNORE INTO wallets(user_id,balance_units) VALUES(?,0)',[userId]);
+      const [[wallet]]=await con.execute('SELECT balance_units FROM wallets WHERE user_id=? FOR UPDATE',[userId]);const balance=Number(wallet.balance_units)+amount;if(!Number.isSafeInteger(balance))fail('موجودی بیش از حد مجاز است');
+      await con.execute('UPDATE wallets SET balance_units=? WHERE user_id=?',[balance,userId]);
+      await con.execute('INSERT INTO wallet_transactions(id,user_id,delta_units,balance_units,label,reference,created_at,product_ref) VALUES(?,?,?,?,?,?,?,?)',[randomUUID(),userId,amount,balance,('بازگشت وجه '+name).slice(0,120),reference,now,ref]);
+      await internalNote(con,ticket.id,who.id,'بازگشت وجه «'+name+'»: '+(amount/IT_RATE).toLocaleString('fa-IR')+' It به کیف پول\n'+reason,now);
+      await con.execute('INSERT IGNORE INTO user_notifications(id,user_id,kind,title,body,url,reference,created_at) VALUES(?,?,\'payments\',?,?,?,?,?)',[randomUUID(),userId,'بازگشت وجه انجام شد',(amount/IT_RATE).toLocaleString('fa-IR')+' It بابت «'+name+'» به کیف پولت برگشت.','/dashboard/wallet/',reference,now]);
+      await audit(con,who.id,userId,'support-refund',reason,{ref,userId,amount,balance,ticketId:ticket.id,override:who.admin&&input.override===true},input.requestId);
+      return {ok:true,amount:amount/IT_RATE,balance:balance/IT_RATE};
     });
   },
 });

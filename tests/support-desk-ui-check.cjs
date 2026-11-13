@@ -1,7 +1,7 @@
 const assert=require('node:assert/strict'),{randomUUID}=require('node:crypto'),fs=require('node:fs/promises'),path=require('node:path'),{chromium}=require('playwright'),{createServer}=require('../src/http/server.cjs');
 (async()=>{
   const {db,owner,target}=await require('./admin-fixture.cjs')(),store=require('./workspace-test-store.cjs')(db,[owner,target]);
-  for(const sql of ['ALTER TABLE users ADD COLUMN created_at INTEGER','ALTER TABLE profiles ADD COLUMN first_name TEXT','ALTER TABLE profiles ADD COLUMN last_name TEXT','CREATE TABLE IF NOT EXISTS wallets(user_id TEXT PRIMARY KEY,balance_units INTEGER)','CREATE TABLE IF NOT EXISTS account_access(user_id TEXT,ref TEXT,price_units INTEGER,expires_at INTEGER,created_at INTEGER,PRIMARY KEY(user_id,ref))'])try{store.sql.exec(sql);}catch{}
+  for(const sql of ['ALTER TABLE users ADD COLUMN created_at INTEGER','ALTER TABLE profiles ADD COLUMN first_name TEXT','ALTER TABLE profiles ADD COLUMN last_name TEXT','CREATE TABLE IF NOT EXISTS wallets(user_id TEXT PRIMARY KEY,balance_units INTEGER)','CREATE TABLE IF NOT EXISTS dashboard_documents(user_id TEXT PRIMARY KEY,draft TEXT,published TEXT)','CREATE TABLE IF NOT EXISTS dashboard_workspaces(user_id TEXT,slot INTEGER,draft TEXT,published TEXT)','CREATE TABLE IF NOT EXISTS account_access(user_id TEXT,ref TEXT,price_units INTEGER,expires_at INTEGER,created_at INTEGER,PRIMARY KEY(user_id,ref))'])try{store.sql.exec(sql);}catch{}
   const wallet=require('../src/database/wallet.cjs')(store);for(const key of ['wallet','billing'])db[key]=wallet[key];
   await db.markPhoneVerified(target);await db.setAccountNames(target,'نگار','مهر');await store.execute("UPDATE profiles SET name='نگار مهر' WHERE user_id=?",[target]);
   const paid=await db.createTicket(target,{subject:'شارژ کیف پول انجام نشد',body:'مبلغ از کارت کم شد ولی موجودی کیف پول تغییری نکرد.',category:'payment',priority:'high',requestId:randomUUID()});
@@ -44,6 +44,15 @@ const assert=require('node:assert/strict'),{randomUUID}=require('node:crypto'),f
     await page.screenshot({path:path.join(out,'customer-wallet-desktop.png')});
     await page.locator('[data-credit] [type=submit]').click();await page.locator('.cf-balance strong',{hasText:'۲۵'}).waitFor();
     assert.equal((await db.wallet(target)).balance,25);
+    // Refund from the ticket: the customer buys a template with that credit, staff returns it to the wallet.
+    await wallet.purchaseWithWallet(target,'rt:terminal',randomUUID().replace(/-/g,''));assert.equal((await db.wallet(target)).balance,0);
+    await page.locator('[data-cf-tab=account]').click();await page.locator('[data-cf-tab=wallet]').click();await page.locator('[data-refund] select[name=ref]').waitFor();
+    assert.match(await page.locator('[data-refund]').innerText(),/۷۲ ساعت/);await page.locator('[data-refund] select[name=ref]').selectOption('rt:terminal');await page.locator('[data-refund] [name=reason]').fill('قالب را اشتباهی خرید و استفاده نکرد');
+    await page.screenshot({path:path.join(out,'customer-refund-desktop.png')});
+    await page.locator('[data-refund] [type=submit]').click();await page.locator('.cf-balance strong',{hasText:'۲۵'}).waitFor();
+    assert.equal((await db.wallet(target)).balance,25);assert(!(await db.billing(target)).purchases.some(p=>p.ref==='rt:terminal'),'access removed');
+    const customerPost=await fetch(base+'/api/dashboard/support/refund',{method:'POST',headers:{'content-type':'application/json',origin:base,cookie:'ri_session='+'b'.repeat(64)},body:JSON.stringify({userId:target,ticketId:paid.id,ref:'rt:terminal',reason:'دوباره پس بده',requestId:randomUUID()})});
+    assert.notEqual(customerPost.status,200,'no refund path for anyone without a staff session');
     await page.keyboard.press('Escape');await page.locator('.message.internal',{hasText:'شارژ کیف پول'}).waitFor();
     await page.locator('[data-escalation-done]').click();await page.locator('dialog [type=submit]').click();await page.waitForFunction(()=>!document.querySelector('.escalation'));
 

@@ -7,3 +7,13 @@
 #content>.owner-workspace[role=tabpanel]{margin-block:0;padding-top:0;border-top:0}.catalog-products .pager{flex-wrap:wrap;gap:14px}.catalog-products .pager label{display:flex;align-items:center;gap:8px}.catalog-products .pager select{min-height:42px;padding:8px;border:1px solid #b8d2df;background:#fafdff;border-radius:12px}
 .advanced-filters>div{grid-template-columns:repeat(auto-fit,minmax(min(210px,100%),1fr))}.advanced-filters input{min-width:0;box-sizing:border-box}.advanced-filters input[type=datetime-local]{font-size:12px}
 .detail-tabs .tab:is(:hover,:focus-visible),.owner-workspace .tab:is(:hover,:focus-visible),.owner-product-picker [data-access-kind]:is(:hover,:focus-visible){background:#f3e6d8;color:#4d3320;border-color:#dcc2a7;box-shadow:none}
+/* Refund and referral switches: a soft card that rises in; the tick pops when a switch changes */
+.owner-switches{display:grid;gap:8px;margin:4px 0;padding:12px 14px;border:1px solid #d5e3eb;border-radius:16px;background:#ffffffb8;animation:owner-switch-in .5s cubic-bezier(.2,.8,.2,1) both}
+.owner-switches legend{padding:0 6px;font-size:12px;font-weight:700;color:#805447}
+.owner-switches label{display:flex;align-items:center;gap:8px;font-size:13px;color:#2c4959}
+.owner-switches input{width:18px;height:18px;accent-color:#875a36}
+.owner-switches input:checked{animation:owner-switch-pop .35s cubic-bezier(.3,1.4,.5,1)}
+.owner-switches input:focus-visible{outline:2px solid #805447;outline-offset:2px}
+@keyframes owner-switch-in{from{opacity:0;translate:0 8px}to{opacity:1;translate:0 0}}
+@keyframes owner-switch-pop{50%{scale:1.25}}
+@media (prefers-reduced-motion:reduce){.owner-switches,.owner-switches input:checked{animation:none}}
