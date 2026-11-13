@@ -24,7 +24,7 @@ assert(B.reply('چه مهارت هایی اضافه کنم',dev).actions.some(a=
 assert(B.reply('امتیاز',dev).text.includes(String(s1.total).replace(/\d/g,d=>'۰۱۲۳۴۵۶۷۸۹'[d])));
 const unknown=B.reply('بلبلبل',dev);assert.equal(unknown.intent,'unknown');assert(unknown.follow.length>=3);
 // Privacy answers point at the résumé contact step, not the removed settings tab.
-const privacy=B.reply('حریم خصوصی شماره',dev);assert.equal(privacy.intent,'privacy');assert(privacy.actions.some(a=>a.kind==='route'&&a.route==='resume'&&a.step==='contact'&&!a.tab));
+const privacy=B.reply('حریم خصوصی شماره',dev);assert.equal(privacy.intent,'privacy');assert(privacy.actions.some(a=>a.kind==='route'&&a.route==='resume'&&a.step==='contacts'&&!a.tab));
 assert(B.opening(dev).text.includes('نیلوفر'));
 // Spelling: one-letter slips in the words people read first, never names or punctuation.
 const slip={...empty,profile:{...empty.profile,name:'امیرمحمد طالبی',title:'دانشجوری کامپیوتر',bio:'ساکن مراغه، علاقمند به طراحی.'}};
