@@ -1,12 +1,18 @@
 const {randomInt}=require('node:crypto'),{readJson}=require('../http/security.cjs'),{fail}=require('../dashboard/model.cjs');
 const {providers,email,subscription,endpointId}=require('./providers.cjs'),templates=require('./email-templates.cjs');
 module.exports=(database,options={})=>{
-  const provider=options.provider||providers();const marketing=require('./marketing.cjs')(database,provider);let timer,busy=false,stopped=false;
+  const provider=options.provider||providers();const marketing=require('./marketing.cjs')(database,provider);let timer,busy=false,stopped=false,remindedAt=0;
+  // user_notifications.reference is unique, so each user gets each stage once; a renewal moves the end and starts a fresh pair.
+  async function subscriptionReminders(now=Date.now()){
+    if(!database.dueSubscriptionReminders||!database.notify||now-remindedAt<36e5)return;remindedAt=now;
+    for(const r of await database.dueSubscriptionReminders(now))await database.notify(r.userId,'payments',r.stage===1?'اشتراکت فردا تمام می‌شود':'اشتراکت یک هفتهٔ دیگر تمام می‌شود','صفحهٔ منتشرشده‌ات همان‌طور می‌ماند. بعد از پایان اشتراک، در ذخیره یا انتشار بعدی، قالب‌ها و فونت‌هایی که با اشتراک باز شده بودند به نسخهٔ رایگان برمی‌گردند؛ چیزهایی که جدا خریده‌ای می‌مانند. تمدید خودکار نیست و فقط با انتخاب خودت انجام می‌شود.','/dashboard/billing/','sub-end:'+r.userId+':'+r.end+':'+r.stage);
+  }
   const policy=async()=>database.notificationPolicy?await database.notificationPolicy():{email:true,sms:true,push:true};
   const availability=enabled=>Object.fromEntries(['email','sms','push'].map(key=>[key,!!provider.available[key]&&enabled[key]]));
   const publicSettings=async owner=>{const value=await database.notificationChannels(owner),adminEnabled=await policy();return {available:availability(adminEnabled),adminEnabled,publicKey:provider.publicKey,email:value.email||'',pendingEmail:value.pending_email||'',emailVerified:!!value.email_verified,marketing:!!value.marketing_optin,enabled:{email:!!value.email_enabled,sms:!!value.sms_enabled,push:!!value.push_enabled},devices:value.devices,history:value.history};};
   async function tick(){
     if(stopped||busy||!database.notificationCandidates)return;busy=true;
+    try{await subscriptionReminders();}catch{remindedAt=0;/* retried on the next tick */}
     try{await database.expireNotificationDeliveries();const candidates=await database.notificationCandidates();
       for(const item of candidates){if(stopped)break;if(!provider.available[item.channel]||!(await policy())[item.channel]||!await database.claimNotificationDelivery(item))continue;
         if(!(await policy())[item.channel]){await database.finishNotificationDelivery(item,'paused');continue;}
@@ -21,6 +27,7 @@ module.exports=(database,options={})=>{
     provider,
     marketing,
     tick,
+    subscriptionReminders,
     async adminSettings(){return {configured:{...provider.available},enabled:await policy()};},
     async saveAdminSettings(actor,input){for(const key of ['email','sms','push'])if(typeof input[key]!=='boolean')fail('انتخاب کانال معتبر نیست');if(Object.keys(input).some(key=>!['email','sms','push'].includes(key)))fail('تنظیم ناشناخته است');if(!database.saveNotificationPolicy)fail('تنظیم کانال‌ها در این محیط آماده نیست',503);await database.saveNotificationPolicy(actor,input);return this.adminSettings();},
     start(){if(database.notificationCandidates&&!timer){timer=setInterval(()=>void tick(),15000);timer.unref();}},
