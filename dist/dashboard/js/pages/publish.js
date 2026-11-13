@@ -35,6 +35,10 @@
       }
 
       /* ---------- Publish tab ---------- */
+      function diffList(k) {
+        const rows = RI.pubDiff(k); if (!rows.length) return '';
+        return '<div class="pb-diff"><b>' + RI.icon('edit') + 'چه چیزی هنوز منتشر نشده؟</b><ul>' + rows.map((r, i) => '<li style="--i:' + i + '"><span><strong>' + esc(r.label) + '</strong>' + esc(r.change) + '</span>' + (r.route !== 'publish' ? '<button type="button" data-diff-go="' + esc(r.route) + '"' + (r.step ? ' data-diff-step="' + esc(r.step) + '"' : '') + ' aria-label="رفتن به ' + esc(r.label) + '">' + RI.icon('chevL') + '</button>' : '') + '</li>').join('') + '</ul></div>';
+      }
       function pubCard(k, rd, n) {
         const s = RI.state.pub[k], live = s.status === 'published', dirty = RI.pubDirty(k), u = RI.urls(), url = k === 'resume' ? u.resume : u.links;
         const list = k === 'resume' ? rd.resume : rd.links, missing = list.filter(i => i.req && !i.done), ok = (k === 'resume' ? rd.resumeOk : rd.linksOk) && RI.canWorkspace(RI.workspaceSlot);
@@ -43,6 +47,7 @@
         const chip = live ? (dirty ? '<span class="pb-chip is-warn">' + RI.icon('edit') + 'تغییرات منتشرنشده</span>' : '<span class="pb-chip is-ok">' + RI.icon('check') + 'منتشر شده</span>') : '<span class="pb-chip">پیش‌نویس</span>';
         return '<section class="pubcard pb-card" style="--i:' + n + '" aria-label="' + pageName(k) + '"><header class="pb-card__head"><span class="pb-card__ico is-' + k + '">' + RI.icon(k === 'resume' ? 'resume' : 'link') + '</span><div><h2>' + pageName(k) + '</h2><p>' + (live ? 'نسخهٔ ' + RI.fa(s.version) + (dirty ? ' منتشر است و تغییرات تازه هنوز عمومی نشده' : ' منتشر است؛ آخرین به‌روزرسانی ' + RI.date(s.at)) : 'هنوز منتشر نشده؛ فقط تو می‌بینی‌اش') + '</p></div>' + chip + '</header>' +
           '<ol class="pb-stages" aria-label="مرحلهٔ انتشار">' + steps + '</ol>' +
+          (live && dirty ? diffList(k) : '') +
           '<div class="pb-urlbox"><span class="pb-urlbox__lock">' + RI.icon('shield') + '</span><bdi dir="ltr">' + esc(url) + '</bdi><button type="button" class="pb-icon" data-copy="' + esc(url) + '" aria-label="کپی آدرس">' + RI.icon('copy') + '</button>' + (live ? '<button type="button" class="pb-icon" data-open-url="' + esc(url) + '" aria-label="باز کردن صفحه">' + RI.icon('external') + '</button>' : '') + '</div>' +
           (missing.length ? '<div class="pb-todo"><b>' + RI.icon('alert') + RI.fa(missing.length) + ' کار ضروری مانده</b><ul>' + missing.slice(0, 4).map(i => '<li><button type="button" data-fix="' + i.id + '">' + esc(i.label) + RI.icon('chevL') + '</button></li>').join('') + '</ul></div>' : !RI.canWorkspace(RI.workspaceSlot) ? '' : '<p class="pb-ready">' + RI.icon('check') + 'آمادهٔ ساخت نسخهٔ عمومی</p>') +
           '<div class="pb-actions"><button type="button" class="btn btn--soft" data-pv="' + k + '">' + RI.icon('eye') + 'پیش‌نمایش</button>' +
@@ -213,6 +218,7 @@
       });
       body.addEventListener('change', e => { if (e.target.id === 'idx') { RI.state.account.indexing = e.target.checked; RI.touch('preferences'); RI.toast('تنظیم به‌صورت خودکار ذخیره می‌شود', { kind: 'info' }); } });
       RI.delegate(body, 'click', '[data-sug]', (e, b) => { C().slug = b.dataset.sug; RI.touch('slug'); paint(); heroAddress(true); });
+      RI.delegate(body, 'click', '[data-diff-go]', (e, b) => RI.go(b.dataset.diffGo, b.dataset.diffStep ? { step: b.dataset.diffStep } : undefined));
       RI.delegate(body, 'click', '[data-fix]', (e, b) => {
         const all = RI.readiness(), it = all.resume.concat(all.links).find(x => x.id === b.dataset.fix); if (!it) return;
         if (it.route === 'publish') { tab = it.anchor === 'share' ? 'share' : 'address'; paint(); if (tab === 'address') RI.$('#slug', body).focus(); } else RI.go(it.route, { step: it.step, tab: it.tab });

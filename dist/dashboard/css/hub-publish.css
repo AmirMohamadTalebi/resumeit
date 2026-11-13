@@ -295,3 +295,16 @@ html body .pb-kinds--cards button:focus-visible{outline:2px solid #e2a03a;outlin
   .pb-pane[data-pane=share]>.pb-subtabs .pb-subtabs__ink{top:0;height:auto}
   .pb-pane[data-pane=share]>:is(.pb-two,.pb-tools){grid-column:2;grid-row:2;margin-top:0}
 }
+/* «چه چیزی منتشر نشده؟»: ردیف‌ها پله‌ای با محوشدن بالا می‌آیند، لبهٔ کادر نور می‌گیرد و پیکان به سمت مقصد خم می‌شود */
+.pb-diff{position:relative;display:grid;gap:8px;padding:12px;border-radius:16px;background:#f3f8fb;border:1px solid #cfe2ea;overflow:hidden;animation:pb-diff-in .6s cubic-bezier(.2,.8,.2,1) both}
+.pb-diff::before{content:"";position:absolute;inset:0;background:linear-gradient(100deg,transparent 30%,#ffffffb8 50%,transparent 70%);translate:-120% 0;animation:pb-diff-sheen 1.4s .35s cubic-bezier(.2,.8,.2,1) both;pointer-events:none}
+.pb-diff b{display:flex;align-items:center;gap:6px;font-size:13px;color:#2f5a6b}.pb-diff b svg{width:16px;height:16px}
+.pb-diff ul{display:grid;gap:6px;margin:0;padding:0;list-style:none}
+.pb-diff li{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:7px 10px;border-radius:12px;background:#fff;font-size:12px;color:#3d5560;animation:pb-diff-row .5s calc(.12s + var(--i,0) * 70ms) cubic-bezier(.2,.8,.2,1) both}
+.pb-diff li strong{margin-inline-end:6px;color:#6b4629}
+.pb-diff button{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;flex:none;border:1px solid #d6e6ec;border-radius:999px;background:#fff;color:#3d8c9c;cursor:pointer;transition:background .25s,translate .35s cubic-bezier(.3,1.4,.5,1)}
+.pb-diff button svg{width:14px;height:14px}.pb-diff button:hover{background:#eef6f9;translate:-3px 0}.pb-diff button:focus-visible{outline:2px solid #875a36;outline-offset:2px}
+@keyframes pb-diff-in{from{opacity:0;translate:0 8px;filter:blur(4px)}to{opacity:1;translate:0 0;filter:none}}
+@keyframes pb-diff-row{from{opacity:0;translate:-10px 0}to{opacity:1;translate:0 0}}
+@keyframes pb-diff-sheen{to{translate:120% 0}}
+@media (prefers-reduced-motion:reduce){.pb-diff,.pb-diff::before,.pb-diff li{animation:none}.pb-diff::before{display:none}.pb-diff button{transition:none}}

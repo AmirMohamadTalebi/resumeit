@@ -316,6 +316,27 @@
     return RI.publicationData(k,c);
   };
   RI.pubDirty = function (k) { const s = RI.state.pub[k]; return s.status === 'published' && JSON.stringify(RI.pubData(k)) !== s.snap; };
+  /* بخش‌به‌بخش: نسخهٔ منتشرشده در برابر پیش‌نویس؛ فقط برچسب‌های قابل‌فهم، نه فیلدهای فنی */
+  const DIFF_LABELS = { profile: ['معرفی', 'resume', 'profile'], contacts: ['راه‌های تماس', 'resume', 'contacts'], socials: ['شبکه‌های اجتماعی', 'resume', 'socials'], skills: ['مهارت‌ها', 'resume', 'skills'], experience: ['تجربهٔ کاری', 'resume', 'experience'], education: ['تحصیلات', 'resume', 'education'], projects: ['پروژه‌ها', 'resume', 'projects'], certs: ['دوره‌ها و افتخارات', 'resume', 'certs'], languages: ['زبان‌ها', 'resume', 'languages'], sections: ['ترتیب و نمایش بخش‌ها', 'resume', 'settings'], resumeTemplates: ['محتوای اختصاصی قالب', 'resume', 'template'], theme: ['قالب و ظاهر', 'themes'], inbox: ['فرم پیام', 'messages'], share: ['کارت اشتراک', 'publish'], branding: ['نشان پایین صفحه', 'publish'], slug: ['آدرس صفحه', 'publish'], routing: ['آدرس صفحه', 'publish'], links: ['لینک‌ها', 'links'], name: ['نام', 'links'], bio: ['معرفی', 'links'], avatar: ['تصویر', 'links'] };
+  RI.pubDiff = function (k, snap = RI.state.pub[k].snap) {
+    if (!snap) return [];
+    let old; try { old = JSON.parse(snap); } catch { return []; }
+    const now = RI.pubData(k), same = (a, b) => JSON.stringify(a) === JSON.stringify(b), seen = new Set(), out = [];
+    for (const key of new Set([...Object.keys(old), ...Object.keys(now)])) {
+      const meta = DIFF_LABELS[key]; if (!meta || same(old[key], now[key]) || seen.has(meta[0])) continue; seen.add(meta[0]);
+      let change = 'ویرایش شد';
+      const a = old[key], b = now[key];
+      if (Array.isArray(a) && Array.isArray(b) && [...a, ...b].every(x => x && x.id != null)) {
+        const ids = new Set(a.map(x => x.id)), next = new Set(b.map(x => x.id));
+        const added = b.filter(x => !ids.has(x.id)).length, removed = a.filter(x => !next.has(x.id)).length;
+        const edited = b.filter(x => ids.has(x.id) && !same(x, a.find(y => y.id === x.id))).length;
+        const moved = !added && !removed && !edited;
+        change = moved ? 'ترتیب عوض شد' : [added && RI.fa(added) + ' مورد اضافه', removed && RI.fa(removed) + ' مورد حذف', edited && RI.fa(edited) + ' مورد ویرایش'].filter(Boolean).join('، ');
+      }
+      out.push({ key, label: meta[0], change, route: meta[1], step: meta[2] });
+    }
+    return out;
+  };
 
   /* انتشار آخرین محتوای ذخیره‌شده روی سرور */
   RI.publish = async function (k, onStep) {
