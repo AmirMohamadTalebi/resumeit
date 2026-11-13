@@ -140,9 +140,11 @@ function dashboardHandler(database,auth,notifications,options){const reset=requi
       }
       else if(pathname==='/api/dashboard/wallet')reply(200,await database.wallet(user.id));
       else if(pathname==='/api/dashboard/referrals'){
-        if(!database.referralCode)model.fail('دعوت دوستان در این محیط آماده نیست',503);
-        const policy=database.commerceSettings?await database.commerceSettings():{},on=policy.referral?.on!==false,code=await database.referralCode(user.id);
-        reply(200,{on,link:(domain==='resumeit.ir'&&root.hostname!==domain?'https://resumeit.ir':root.origin)+'/?ref='+code,...await database.referralStats(user.id)});
+        if(!database.referralCode)reply(200,{on:false});
+        else{
+          const policy=database.commerceSettings?await database.commerceSettings():{},on=policy.referral?.on!==false,code=await database.referralCode(user.id);
+          reply(200,{on,link:(domain==='resumeit.ir'&&root.hostname!==domain?'https://resumeit.ir':root.origin)+'/?ref='+code,...await database.referralStats(user.id)});
+        }
       }
       else if(pathname==='/api/dashboard/stats')reply(200,{rows:await database.dashboardStats(user.id,90,workspace)});
       else if(pathname==='/api/dashboard/slug'){const slug=new URL(req.url,origin).searchParams.get('value');reply(200,{available:model.slugValid(slug)&&await database.slugAvailable(slug,user.id,workspace)});}
