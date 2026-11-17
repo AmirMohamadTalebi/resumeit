@@ -9,6 +9,9 @@ const root = path.resolve(__dirname, '../../dist');
 const publicAssets=new Map([['/public-assets/tokens.css','dashboard/css/tokens.css'],['/public-assets/base.css','dashboard/css/base.css'],['/public-assets/preview.css','dashboard/css/preview.css'],['/assets/fonts/Vazirmatn.woff2','dashboard/assets/fonts/Vazirmatn.woff2'],['/brand/resumeit-logo-v1.png','brand/resumeit-logo-v1.png'],['/brand/favicon.svg','brand/favicon.svg']]);
 const assetHash=createHash('sha256'),localFiles=require('node:fs');
 publicAssets.set('/public-assets/print.css','dashboard/css/print.css');
+// Share images used when a page has no picture of its own (council C1-b2); the same files serve the root domain and every subdomain.
+publicAssets.set('/public-assets/share-default-resume.png','assets/share-default-resume.png');
+publicAssets.set('/public-assets/share-default-links.png','assets/share-default-links.png');
 publicAssets.set('/public-assets/icons.js','dashboard/js/icons.js');
 publicAssets.set('/public-assets/projects.js','dashboard/js/projects.js');
 publicAssets.set('/public-assets/inbox.js','dashboard/js/inbox-form.js');

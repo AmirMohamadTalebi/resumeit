@@ -29,6 +29,11 @@ try{
   const plain=await (await fetch(base+'/u/amir/')).text();assert(!/window\.print|\bprint\(\)/.test(plain),'the public page never opens the print dialog by itself');
   const css=await fetch(base+'/public-assets/print.css');assert.equal(css.status,200);assert.match(css.headers.get('content-type'),/text\/css/);assert((await css.text()).includes('@page{size:A4'));}
  r=await fetch(base+'/u/amir/links');html=await r.text();assert.equal(r.status,200);assert(html.includes('/u/amir/out/link1'));assert(!html.includes('SECRET_LINK'));
+ // Share image fallback (C1-b2): a page without a picture names the default one, absolute https on the root domain, for its own kind.
+ {const og=text=>/property="og:image" content="([^"]*)"/.exec(text)?.[1];assert.equal(og(html),'https://resumeit.ir/public-assets/share-default-links.png','links page');
+  const resumeHtml=await (await fetch(base+'/u/amir/?format=html')).text();assert.equal(og(resumeHtml),'https://resumeit.ir/public-assets/share-default-resume.png','résumé page');
+  for(const kind of ['resume','links']){const png=await fetch(base+'/public-assets/share-default-'+kind+'.png'),bytes=Buffer.from(await png.arrayBuffer());assert.equal(png.status,200);assert.match(png.headers.get('content-type'),/image\/png/);assert.equal(bytes.readUInt32BE(16),1200);assert.equal(bytes.readUInt32BE(20),630,kind+' is 1200x630');
+   const fromSubdomain=await fetch(base+'/public-assets/share-default-'+kind+'.png',{headers:{host:'amir.resumeit.ir'}});assert.equal(fromSubdomain.status,200,'also served on a subdomain');}}
  const seenCookie=r.headers.get('set-cookie');assert.match(seenCookie,/ri_seen_links=1; Path=\/u\/amir; HttpOnly; SameSite=Lax; Max-Age=86400/);
  for(let i=0;i<3;i++){const refreshed=await fetch(base+'/u/amir/links',{headers:{Cookie:seenCookie.split(';')[0]}});assert.equal(refreshed.status,200);assert.equal(refreshed.headers.get('set-cookie'),null);}
  assert.equal((await(await request('stats')).json()).rows.find(x=>x.event==='links').total,1);

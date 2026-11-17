@@ -52,6 +52,12 @@ const { createServer } = require('../src/http/server.cjs'), { testStore } = requ
     const [popup] = await Promise.all([context.waitForEvent('page'), page.locator('[data-ats]').click()]);
     await popup.waitForLoadState(); assert.match(asked, /amir[^?]*\/?\?format=ats$/); await popup.close();
 
+    // 3b. Share card without a picture shows the default one with the label and a way to add one's own (council C1-b2); a picture removes both.
+    await page.locator('#ptabs [data-tab=share]').click(); await page.locator('.sharecard__img.is-default').waitFor(); assert.match(await page.locator('.pb-default-tag').innerText(), /تصویر پیش‌فرض/);
+    assert.match(await page.locator('.sharecard__img').getAttribute('style'), /share-default-resume\.png/); await page.locator('[data-add-share-image]').click();
+    await page.evaluate(() => { RI.C().share.image = 'https://example.com/me.png'; RI.touch('share'); }); await page.locator('#ptabs [data-tab=go]').click(); await page.locator('#ptabs [data-tab=share]').click();
+    assert.equal(await page.locator('.sharecard__img.is-default').count(), 0); assert.equal(await page.locator('[data-add-share-image]').count(), 0); await page.evaluate(() => { RI.C().share.image = null; });
+
     // 4. Phones have no reliable print-from-frame: the steps for the browser menu are shown, nothing is printed.
     const phone = await browser.newContext({ hasTouch: true, isMobile: true, viewport: { width: 390, height: 844 }, reducedMotion: 'reduce' });
     await phone.addCookies([{ name: 'ri_session', value: 'a'.repeat(64), url: base }]); const small = await phone.newPage(); small.on('pageerror', e => errors.push(e.message));

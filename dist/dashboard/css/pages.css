@@ -595,3 +595,8 @@ html body .wl-row .wl-row__text small{justify-self:start;max-width:100%}
 @keyframes pb-vrise{from{opacity:0;translate:0 8px}to{opacity:1;translate:0 0}}
 @keyframes pb-vspin{to{rotate:360deg}}
 @media (prefers-reduced-motion:reduce){.pb-vlist li,.pb-vlist button:disabled svg{animation:none}}
+/* Default share image: a small tag sits on it so it is never mistaken for the person's own picture */
+.sharecard__img.is-default{position:relative}
+.pb-default-tag{position:absolute;inset-block-end:8px;inset-inline-start:8px;padding:2px 9px;border-radius:99px;background:#1d2c36cc;color:#fff;font-size:11px;font-weight:700;animation:cmp-in .5s .2s cubic-bezier(.3,1.4,.5,1) both}
+.pb-default-hint{display:flex;align-items:center;gap:6px;flex-wrap:wrap}.pb-default-hint svg{width:16px;height:16px;flex:none}
+@media (prefers-reduced-motion:reduce){.pb-default-tag{animation:none}}
