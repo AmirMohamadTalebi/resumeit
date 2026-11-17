@@ -1,5 +1,5 @@
 const {readJson,securityHeaders}=require('../http/security.cjs');
-const model=require('./model.cjs'),{render,RI,atsHtml}=require('./render.cjs');
+const sources=require('./sources.cjs'),model=require('./model.cjs'),{render,RI,atsHtml}=require('./render.cjs');
 const {gzipSync}=require('node:zlib');
 const {serveStatic,publicAssets}=require('../http/static.cjs'),{notFound}=require('../http/not-found.cjs');
 const pubData=(c,k)=>RI.publicationData(k,c);
@@ -90,7 +90,7 @@ function dashboardHandler(database,auth,notifications,options){const reset=requi
     if(req.method==='GET'){
       const marker='ri_seen_'+kind,seen=(req.headers.cookie||'').split(';').some(c=>c.trim()===marker+'=1');
       // shortcut: cookie-based visits; clearing cookies or using another browser starts a new visit.
-      if(!seen&&metrics.countable(req,kind+'|'+page.id+'|'+host+pathname)){await database.recordMetric(page.id,kind,'',Date.now(),page.slot||1);res.setHeader('Set-Cookie',marker+'=1; Path='+(base||'/')+'; HttpOnly; SameSite=Lax; Max-Age=86400'+(origin.startsWith('https:')?'; Secure':''));}
+      if(!seen&&metrics.countable(req,kind+'|'+page.id+'|'+host+pathname)){await database.recordMetric(page.id,kind,'',Date.now(),page.slot||1,sources.bucket(req,host));res.setHeader('Set-Cookie',marker+'=1; Path='+(base||'/')+'; HttpOnly; SameSite=Lax; Max-Age=86400'+(origin.startsWith('https:')?'; Secure':''));}
     }
     res.writeHead(200,{'Content-Type':'text/html; charset=utf-8'});res.end(req.method==='HEAD'?undefined:output);return true;
   }
@@ -152,6 +152,7 @@ function dashboardHandler(database,auth,notifications,options){const reset=requi
         }
       }
       else if(pathname==='/api/dashboard/stats')reply(200,{rows:await database.dashboardStats(user.id,90,workspace)});
+      else if(pathname==='/api/dashboard/sources')reply(200,{rows:database.dashboardSources?await database.dashboardSources(user.id,90,workspace):[]});
       else if(pathname==='/api/dashboard/slug'){const slug=new URL(req.url,origin).searchParams.get('value');reply(200,{available:model.slugValid(slug)&&await database.slugAvailable(slug,user.id,workspace)});}
       else if(pathname==='/api/dashboard/share-check'){
         // What a messenger or search engine gets from the live page now, beside the draft card, so the person sees what still needs publishing.

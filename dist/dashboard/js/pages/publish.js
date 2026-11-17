@@ -49,12 +49,16 @@
           '<ol class="pb-stages" aria-label="مرحلهٔ انتشار">' + steps + '</ol>' +
           (live && dirty ? diffList(k) : '') +
           '<div class="pb-urlbox"><span class="pb-urlbox__lock">' + RI.icon('shield') + '</span><bdi dir="ltr">' + esc(url) + '</bdi><button type="button" class="pb-icon" data-copy="' + esc(url) + '" aria-label="کپی آدرس">' + RI.icon('copy') + '</button>' + (live ? '<button type="button" class="pb-icon" data-open-url="' + esc(url) + '" aria-label="باز کردن صفحه">' + RI.icon('external') + '</button>' : '') + '</div>' +
+          (live ? srcTool(url) : '') +
           (missing.length ? '<div class="pb-todo"><b>' + RI.icon('alert') + RI.fa(missing.length) + ' کار ضروری مانده</b><ul>' + missing.slice(0, 4).map(i => '<li><button type="button" data-fix="' + i.id + '">' + esc(i.label) + RI.icon('chevL') + '</button></li>').join('') + '</ul></div>' : !RI.canWorkspace(RI.workspaceSlot) ? '' : '<p class="pb-ready">' + RI.icon('check') + 'آمادهٔ ساخت نسخهٔ عمومی</p>') +
           '<div class="pb-actions"><button type="button" class="btn btn--soft" data-pv="' + k + '">' + RI.icon('eye') + 'پیش‌نمایش</button>' +
           (live ? '<button type="button" class="btn btn--primary" data-pub="' + k + '" ' + (dirty && ok ? '' : 'disabled') + '>' + RI.icon('refresh') + 'به‌روزرسانی نسخهٔ منتشرشده</button><button type="button" class="btn btn--danger-soft" data-unpub="' + k + '">' + RI.icon('eyeOff') + 'برداشتن از انتشار</button>' : '<button type="button" class="btn btn--primary" data-pub="' + k + '" ' + (ok ? '' : 'disabled') + '>' + RI.icon('rocket') + 'انتشار</button>') +
           (k === 'resume' ? '<button type="button" class="btn btn--soft" data-save-pdf>' + RI.icon('download') + 'ذخیره به‌صورت PDF</button><button type="button" class="btn btn--soft" data-ats>' + RI.icon('file') + 'نسخهٔ ساده برای سامانه‌های استخدام</button>' : '') + '</div>' +
           (k === 'resume' ? '<p class="pb-hint">برای PDF در پنجرهٔ چاپ، مقصد را «ذخیره به‌عنوان PDF» بگذار. نسخهٔ ساده فقط متن است و همیشه رایگان؛ برای سامانه‌های استخدام که طرح قالب را درست نمی‌خوانند.</p>' : '') + '</section>';
       }
+      // A link made for one place (council C3-a): the same address with ?src=, so the stats can show where visits came from.
+      const SRC = [['telegram', 'تلگرام'], ['instagram', 'اینستاگرام'], ['linkedin', 'لینکدین'], ['whatsapp', 'واتساپ'], ['jobsite', 'سایت کاریابی (جابینجا، جاب‌ویژن، ایران‌تلنت)'], ['irmsg', 'پیام‌رسان داخلی (بله، ایتا، روبیکا)'], ['google', 'گوگل'], ['other', 'جای دیگر']];
+      const srcTool = url => '<details class="pb-src"><summary>' + RI.icon('link') + 'لینک مخصوص هر جا</summary><div class="pb-src__row"><select aria-label="این لینک را کجا می‌گذاری؟">' + SRC.map(([v, t]) => '<option value="' + v + '">' + t + '</option>').join('') + '</select><button type="button" class="btn btn--soft btn--sm" data-src-copy="' + esc(url) + '">' + RI.icon('copy') + 'کپی لینک</button></div><p class="pb-hint">هر جا لینک مخصوص خودش را بگذار تا در «آمار» ببینی بازدید از کجا آمده.</p></details>';
       function goTab() {
         const rd = RI.readiness(), paused = !RI.canWorkspace(RI.workspaceSlot);
         return (paused ? '<div class="pb-banner">' + RI.icon('alert') + '<div><b>این جایگاه با دسترسی یا سهمیهٔ فعلی قابل انتشار نیست.</b><p>پیش‌نویس و نسخه‌های قبلی حفظ شده‌اند؛ سهمیه و وضعیت اشتراک را بررسی کن.</p></div><a class="btn btn--soft" href="' + RI.routeUrl('billing') + '" data-go="billing">بررسی دسترسی</a></div>' : '') +
@@ -227,6 +231,7 @@
         });
         document.body.append(frame);
       }
+      RI.delegate(root, 'click', '[data-src-copy]', (e, b) => { const v = b.parentElement.querySelector('select').value; RI.copy(b.dataset.srcCopy + (b.dataset.srcCopy.includes('?') ? '&' : '?') + 'src=' + v); });
       RI.delegate(root, 'click', '[data-save-pdf]', savePdf);
       RI.delegate(root, 'click', '[data-ats]', () => { if (RI.state.pub.resume.status !== 'published') { RI.toast('نسخهٔ ساده را پس از انتشار می‌توانی باز کنی', { kind: 'info' }); return; } window.open(RI.urls().resume + '?format=ats', '_blank', 'noopener'); });
       RI.delegate(root, 'click', '[data-native-share]', async () => { if (RI.state.pub[shareKind].status !== 'published') { RI.toast('لینک را پس از انتشار بفرست', { kind: 'info' }); return; } const card = RI.shareCard(C(), shareKind), data = { title: card.title, text: card.desc, url: RI.urls()[shareKind] }; try { if (navigator.share) await navigator.share(data); else await RI.copy(data.url); } catch (e) { if (e.name !== 'AbortError') RI.toast('لینک را با دکمهٔ کپی بردار', { kind: 'info' }); } });

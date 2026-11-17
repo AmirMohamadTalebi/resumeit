@@ -1,6 +1,6 @@
 {
   "name": "resumeit",
-  "version": "3.3.4-beta",
+  "version": "3.3.5-beta",
   "private": true,
   "engines": {
     "node": ">=24.15.0"
@@ -18,7 +18,7 @@
     "start": "node server.cjs",
     "posttest": "node tests/advisor-core-check.cjs && node tests/advisor-api-check.cjs && node tests/readjson-limit-check.cjs && node tests/support-retry-check.cjs",
     "check:advisor": "node tests/advisor-core-check.cjs && node tests/advisor-api-check.cjs && node tests/advisor-coordinator-ui-check.cjs && node tests/advisor-journey-check.cjs && node tests/compact-pages-ui-check.cjs && node tests/reset-context-ui-check.cjs && node tests/advisor-guidance-ui-check.cjs && node tests/resume-field-help-ui-check.cjs && node tests/vista-publication-recovery-ui-check.cjs",
-    "check:database": "node tests/database-check.cjs && node tests/payments-database-check.cjs && node tests/mysql-races-check.cjs && node tests/subscription-reminder-check.cjs && node tests/refund-check.cjs && node tests/referral-check.cjs",
+    "check:database": "node tests/database-check.cjs && node tests/payments-database-check.cjs && node tests/mysql-races-check.cjs && node tests/subscription-reminder-check.cjs && node tests/refund-check.cjs && node tests/referral-check.cjs && node tests/visit-sources-check.cjs",
     "check:auth": "node tests/auth-check.cjs",
     "check:sms": "node tests/smsir-check.cjs && node tests/otp-check.cjs && node tests/otp-limits-check.cjs",
     "check:dashboard": "node tests/dashboard-check.cjs",
@@ -40,7 +40,7 @@
     "check:oauth": "node tests/oauth-check.cjs",
     "check:security": "node tests/security-check.cjs && node tests/static-cache-check.cjs && node tests/hardening-check.cjs && node tests/sessions-images-check.cjs",
     "check:enamad": "node tests/enamad-footer-check.cjs",
-    "test": "node tests/run-parallel.cjs npm:check:security npm:check:auth npm:check:sms npm:check:oauth email-code-check email-templates-check dashboard-api-check dashboard-media-check resume-inbox-check support-desk-check advisor-brain-check assistant-api-check fandogh-edits-check palette-harmony-check resume-templates-check imported-templates-check wallet-check dashboard-save-check pub-diff-check referral-link-check admin-api-check admin-completion-check npm:check:payments workspace-revision-api-check notification-delivery-check notification-policy-check multipage-check revision-completion-check template-loader-check payment-status-poll-check owner-role-check support-role-check owner-controls-check admin-filters-check retention-check admin-codes-check account-status-check npm:check:contrast seo-check",
+    "test": "node tests/run-parallel.cjs npm:check:security npm:check:auth npm:check:sms npm:check:oauth email-code-check email-templates-check dashboard-api-check dashboard-media-check resume-inbox-check support-desk-check advisor-brain-check assistant-api-check fandogh-edits-check palette-harmony-check resume-templates-check imported-templates-check wallet-check dashboard-save-check pub-diff-check referral-link-check visit-sources-check admin-api-check admin-completion-check npm:check:payments workspace-revision-api-check notification-delivery-check notification-policy-check multipage-check revision-completion-check template-loader-check payment-status-poll-check owner-role-check support-role-check owner-controls-check admin-filters-check retention-check admin-codes-check account-status-check npm:check:contrast seo-check",
     "check:ui": "node tests/full-ui-suite.cjs",
     "check:contrast": "node tests/nightlight-contrast-check.cjs && node tests/site-interaction-contrast-check.cjs",
     "check:ui-layout": "node tests/full-ui-audit.cjs",
