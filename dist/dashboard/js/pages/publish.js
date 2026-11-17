@@ -51,7 +51,9 @@
           '<div class="pb-urlbox"><span class="pb-urlbox__lock">' + RI.icon('shield') + '</span><bdi dir="ltr">' + esc(url) + '</bdi><button type="button" class="pb-icon" data-copy="' + esc(url) + '" aria-label="کپی آدرس">' + RI.icon('copy') + '</button>' + (live ? '<button type="button" class="pb-icon" data-open-url="' + esc(url) + '" aria-label="باز کردن صفحه">' + RI.icon('external') + '</button>' : '') + '</div>' +
           (missing.length ? '<div class="pb-todo"><b>' + RI.icon('alert') + RI.fa(missing.length) + ' کار ضروری مانده</b><ul>' + missing.slice(0, 4).map(i => '<li><button type="button" data-fix="' + i.id + '">' + esc(i.label) + RI.icon('chevL') + '</button></li>').join('') + '</ul></div>' : !RI.canWorkspace(RI.workspaceSlot) ? '' : '<p class="pb-ready">' + RI.icon('check') + 'آمادهٔ ساخت نسخهٔ عمومی</p>') +
           '<div class="pb-actions"><button type="button" class="btn btn--soft" data-pv="' + k + '">' + RI.icon('eye') + 'پیش‌نمایش</button>' +
-          (live ? '<button type="button" class="btn btn--primary" data-pub="' + k + '" ' + (dirty && ok ? '' : 'disabled') + '>' + RI.icon('refresh') + 'به‌روزرسانی نسخهٔ منتشرشده</button><button type="button" class="btn btn--danger-soft" data-unpub="' + k + '">' + RI.icon('eyeOff') + 'برداشتن از انتشار</button>' : '<button type="button" class="btn btn--primary" data-pub="' + k + '" ' + (ok ? '' : 'disabled') + '>' + RI.icon('rocket') + 'انتشار</button>') + '</div></section>';
+          (live ? '<button type="button" class="btn btn--primary" data-pub="' + k + '" ' + (dirty && ok ? '' : 'disabled') + '>' + RI.icon('refresh') + 'به‌روزرسانی نسخهٔ منتشرشده</button><button type="button" class="btn btn--danger-soft" data-unpub="' + k + '">' + RI.icon('eyeOff') + 'برداشتن از انتشار</button>' : '<button type="button" class="btn btn--primary" data-pub="' + k + '" ' + (ok ? '' : 'disabled') + '>' + RI.icon('rocket') + 'انتشار</button>') +
+          (k === 'resume' ? '<button type="button" class="btn btn--soft" data-save-pdf>' + RI.icon('download') + 'ذخیره به‌صورت PDF</button><button type="button" class="btn btn--soft" data-ats>' + RI.icon('file') + 'نسخهٔ ساده برای سامانه‌های استخدام</button>' : '') + '</div>' +
+          (k === 'resume' ? '<p class="pb-hint">برای PDF در پنجرهٔ چاپ، مقصد را «ذخیره به‌عنوان PDF» بگذار. نسخهٔ ساده فقط متن است و همیشه رایگان؛ برای سامانه‌های استخدام که طرح قالب را درست نمی‌خوانند.</p>' : '') + '</section>';
       }
       function goTab() {
         const rd = RI.readiness(), paused = !RI.canWorkspace(RI.workspaceSlot);
@@ -203,6 +205,30 @@
         } catch { RI.copy(html); }
       });
       RI.delegate(root, 'click', '[data-share-qr]', async (e, b) => { b.disabled = true; try { const result = await RI.dashboardRequest('share-qr?kind=' + shareKind); await RI.qrPoster({ image: result.image, url: result.url, kind: shareKind }); } catch (error) { RI.toast(error.message, { kind: 'error' }); } finally { b.disabled = false; } });
+      // Save as PDF (council N2-a): the résumé is drawn in a hidden same-origin frame with print.css and printed on click. No scripts
+      // run in the frame; on phones, or if printing fails, the steps for the browser's own menu are shown instead.
+      function phonePdf() {
+        const live = RI.state.pub.resume.status === 'published', url = RI.urls().resume;
+        RI.modal({ title: 'ذخیرهٔ رزومه به‌صورت PDF', size: 'sm', body: '<p>در گوشی، PDF را از منوی خود مرورگر بگیر؛ ' + (live ? 'صفحهٔ عمومی رزومه را باز کن و:' : 'اول رزومه را منتشر کن، بعد صفحهٔ عمومی‌اش را باز کن و:') + '</p><ul class="pb-hint"><li><b>آیفون (Safari):</b> دکمهٔ اشتراک ← «چاپ» ← روی پیش‌نمایش با دو انگشت زوم کن ← اشتراک ← ذخیره در «فایل‌ها».</li><li><b>اندروید (Chrome):</b> ⋮ ← اشتراک‌گذاری ← «چاپ» ← ذخیره به‌صورت PDF.</li></ul>', actions: [{ label: 'بستن', kind: 'ghost' }, { label: 'باز کردن صفحهٔ رزومه', kind: 'primary', icon: 'external', onClick: () => { if (live) window.open(url, '_blank', 'noopener'); else RI.toast('رزومه هنوز منتشر نشده', { kind: 'info' }); } }] });
+      }
+      function savePdf() {
+        const c = C(), item = RI.RESUME_TEMPLATES.find(x => x.id === c.theme.resume);
+        if (item && !RI.allowed('rt:' + item.id, item, RI.state.billing)) { RI.toast('PDF قالب پولی بعد از خرید یا اشتراک باز می‌شود؛ نسخهٔ ساده رایگان است', { kind: 'info' }); return; }
+        if (matchMedia('(pointer: coarse)').matches) { phonePdf(); return; }
+        const html = RI.resumeHtml(c, {}), sheet = /<link rel="stylesheet"[^>]*>/g, own = (html.match(sheet) || []).join(''), imported = RI.IMPORTED_TEMPLATES && RI.IMPORTED_TEMPLATES[c.theme.resume];
+        const base = ['/fonts/fonts.css', '/public-assets/tokens.css', '/public-assets/base.css', '/public-assets/preview.css'].map(h => '<link rel="stylesheet" href="' + h + '">').join('');
+        const frame = document.createElement('iframe'); frame.title = 'چاپ رزومه'; frame.setAttribute('sandbox', 'allow-same-origin allow-modals'); frame.setAttribute('aria-hidden', 'true');
+        frame.style.cssText = 'position:fixed;inset-inline-start:-9999px;top:0;width:794px;height:1123px;border:0';
+        frame.srcdoc = '<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8">' + (imported ? own : base) + '<link rel="stylesheet" href="/public-assets/print.css"></head><body' + (imported ? ' class="' + esc((imported.pages.home || {}).bodyClass || '') + '"' : '') + '><main class="public-page">' + html.replace(sheet, '') + '</main></body></html>';
+        frame.addEventListener('load', async () => {
+          const done = () => setTimeout(() => frame.remove(), 1000);
+          try { await frame.contentDocument.fonts?.ready; frame.contentWindow.addEventListener('afterprint', done); frame.contentWindow.focus(); frame.contentWindow.print(); setTimeout(done, 120000); }
+          catch { frame.remove(); phonePdf(); }
+        });
+        document.body.append(frame);
+      }
+      RI.delegate(root, 'click', '[data-save-pdf]', savePdf);
+      RI.delegate(root, 'click', '[data-ats]', () => { if (RI.state.pub.resume.status !== 'published') { RI.toast('نسخهٔ ساده را پس از انتشار می‌توانی باز کنی', { kind: 'info' }); return; } window.open(RI.urls().resume + '?format=ats', '_blank', 'noopener'); });
       RI.delegate(root, 'click', '[data-native-share]', async () => { if (RI.state.pub[shareKind].status !== 'published') { RI.toast('لینک را پس از انتشار بفرست', { kind: 'info' }); return; } const card = RI.shareCard(C(), shareKind), data = { title: card.title, text: card.desc, url: RI.urls()[shareKind] }; try { if (navigator.share) await navigator.share(data); else await RI.copy(data.url); } catch (e) { if (e.name !== 'AbortError') RI.toast('لینک را با دکمهٔ کپی بردار', { kind: 'info' }); } });
       body.addEventListener('input', e => {
         const t = e.target;

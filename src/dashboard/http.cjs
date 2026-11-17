@@ -1,5 +1,5 @@
 const {readJson,securityHeaders}=require('../http/security.cjs');
-const model=require('./model.cjs'),{render,RI}=require('./render.cjs');
+const model=require('./model.cjs'),{render,RI,atsHtml}=require('./render.cjs');
 const {gzipSync}=require('node:zlib');
 const {serveStatic,publicAssets}=require('../http/static.cjs'),{notFound}=require('../http/not-found.cjs');
 const pubData=(c,k)=>RI.publicationData(k,c);
@@ -71,6 +71,11 @@ function dashboardHandler(database,auth,notifications,options){const reset=requi
     c._publicPages={resume:!!pages?.resume,links:!!pages?.links};
     if(database.referralCode)c._ref=await database.referralCode(page.id).catch(()=>null);
     if(pathPages)c._linksOnly=true;
+    // Plain text version for applicant-tracking systems: free, never indexed, no scripts, not counted as a visit.
+    if(kind==='resume'&&new URL(req.url,origin).searchParams.get('format')==='ats'){
+      const doc='<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+esc(c.profile.name)+' — رزومهٔ متنی</title><meta name="robots" content="noindex,nofollow"><link rel="canonical" href="'+esc(canonical)+'"><style>body{font:16px/1.9 Vazirmatn,Tahoma,sans-serif;max-width:46rem;margin:2rem auto;padding:0 1rem;color:#111}h1{font-size:1.6rem}h2{font-size:1.15rem;margin-top:1.4rem;border-bottom:1px solid #ccc}ul{padding-inline-start:1.2rem}</style></head><body>'+atsHtml(c)+'</body></html>';
+      securityHeaders(res,origin,doc);res.setHeader('Cache-Control','private, no-store');res.writeHead(200,{'Content-Type':'text/html; charset=utf-8'});res.end(req.method==='HEAD'?undefined:doc);return true;
+    }
     const card=RI.shareCard(c,kind),image=card.image,ogImage=/^https:\/\//.test(image||'')?image:/^data:image\//.test(image||'')||stored.refHash(image)?canonical+'/share-image':null;
     const templatePage=new URL(req.url,origin).searchParams.get('page')||'home',imported=kind==='resume'&&RI.IMPORTED_TEMPLATES[c.theme.resume];
     if(imported&&!Object.hasOwn(imported.pages,templatePage)&&templatePage!=='contact'){if((imported.legacyPages||[]).includes(templatePage)){res.writeHead(308,{Location:canonical+'#ri-projects'});res.end();return true;}res.writeHead(404);res.end('صفحه پیدا نشد');return true;}

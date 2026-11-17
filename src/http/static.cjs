@@ -8,6 +8,7 @@ const {version}=require('../version.cjs');
 const root = path.resolve(__dirname, '../../dist');
 const publicAssets=new Map([['/public-assets/tokens.css','dashboard/css/tokens.css'],['/public-assets/base.css','dashboard/css/base.css'],['/public-assets/preview.css','dashboard/css/preview.css'],['/assets/fonts/Vazirmatn.woff2','dashboard/assets/fonts/Vazirmatn.woff2'],['/brand/resumeit-logo-v1.png','brand/resumeit-logo-v1.png'],['/brand/favicon.svg','brand/favicon.svg']]);
 const assetHash=createHash('sha256'),localFiles=require('node:fs');
+publicAssets.set('/public-assets/print.css','dashboard/css/print.css');
 publicAssets.set('/public-assets/icons.js','dashboard/js/icons.js');
 publicAssets.set('/public-assets/projects.js','dashboard/js/projects.js');
 publicAssets.set('/public-assets/inbox.js','dashboard/js/inbox-form.js');

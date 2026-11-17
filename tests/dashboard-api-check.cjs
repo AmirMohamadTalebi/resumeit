@@ -22,6 +22,12 @@ try{
  assert.equal((await request('publish',{revision:2,kind:'links'})).status,200);
  const small=await(await request('document')).json();assert.equal(small.pub.resume.snap,null);assert.equal(small.pub.resume.snapCurrent,true);assert.equal(small.pub.links.snapCurrent,true);assert((await db.loadDashboard(a)).pub.resume.snap,'stored snapshot retained');
  let r=await fetch(base+'/u/amir/'),html=await r.text();assert.equal(r.status,200);assert(html.includes('public@example.com'));assert(!html.includes('09129999999'));assert(!html.includes('<script>alert'));assert(html.includes('&lt;script&gt;'));
+ // Plain version for applicant-tracking systems (N2-a): public contacts only, no script or image, never indexed, canonical without the parameter, not a counted visit.
+ {const ats=await fetch(base+'/u/amir/?format=ats'),text=await ats.text();assert.equal(ats.status,200);assert(text.includes('public@example.com'),'public contact is listed');assert(!text.includes('09129999999'),'private contact is not');assert(!/<script|<img|<iframe|<form/i.test(text),'plain text only');
+  assert(text.includes('<meta name="robots" content="noindex,nofollow">'));assert.match(text,/<link rel="canonical" href="[^"]*\/u\/amir\/?">/);assert(!/canonical[^>]*format=ats/.test(text));assert.equal(ats.headers.get('set-cookie'),null,'not counted as a visit');assert(text.includes('<h1>'),'real heading');
+  assert(text.includes('رزومهٔ متنی'));
+  const plain=await (await fetch(base+'/u/amir/')).text();assert(!/window\.print|\bprint\(\)/.test(plain),'the public page never opens the print dialog by itself');
+  const css=await fetch(base+'/public-assets/print.css');assert.equal(css.status,200);assert.match(css.headers.get('content-type'),/text\/css/);assert((await css.text()).includes('@page{size:A4'));}
  r=await fetch(base+'/u/amir/links');html=await r.text();assert.equal(r.status,200);assert(html.includes('/u/amir/out/link1'));assert(!html.includes('SECRET_LINK'));
  const seenCookie=r.headers.get('set-cookie');assert.match(seenCookie,/ri_seen_links=1; Path=\/u\/amir; HttpOnly; SameSite=Lax; Max-Age=86400/);
  for(let i=0;i<3;i++){const refreshed=await fetch(base+'/u/amir/links',{headers:{Cookie:seenCookie.split(';')[0]}});assert.equal(refreshed.status,200);assert.equal(refreshed.headers.get('set-cookie'),null);}

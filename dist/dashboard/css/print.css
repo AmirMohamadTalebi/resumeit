@@ -1,0 +1,15 @@
+/* A4 print for the résumé (council N2-a). Loaded only by the hidden print frame in the dashboard; nothing here changes the public page. */
+@page{size:A4;margin:12mm}
+@media print{
+  html,body{background:#fff!important;color:#111!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  *,*::before,*::after{animation:none!important;transition:none!important;box-shadow:none!important}
+  nav,.pv-nav,form,button,.ri-inbox,[data-pv-go],video,iframe{display:none!important}
+  a{color:inherit!important;text-decoration:none!important}
+  section,article,li,.pv-item,.pv-sec>*{break-inside:avoid}
+  h1,h2,h3{break-after:avoid}
+  /* The template colours come from custom properties set inline on .pv; an !important rule here beats them. */
+  .pv{--pv-bg:#fff!important;--pv-surface:#fff!important;--pv-hero:none!important;--pv-ink:#111!important;--pv-muted:#444!important;background:#fff!important}
+  .pv-cover{display:none!important}
+  .pv-avatar{margin-top:16px!important;box-shadow:none!important}
+  .public-page,.pv-page,main{max-width:none!important;width:auto!important;padding:0!important;margin:0!important}
+}
