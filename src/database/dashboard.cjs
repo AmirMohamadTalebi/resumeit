@@ -13,12 +13,14 @@ module.exports=({execute,transaction})=>({
     const doc=r?{content:parse(r.draft),preferences:parse(r.preferences),pub:parse(r.pub),revision:r.revision,slug:r.slug,published:r.published?parse(r.published):{}}:{...initial(),slug:null,published:{}};
     const imagesBefore=require('../dashboard/media.cjs').documentHashes(doc);
     if(doc.revision!==expected)fail('نسخهٔ جدیدتری ذخیره شده است؛ صفحه را دوباره باز کن',409,'REVISION_CONFLICT');
+    const before=options.version&&options.version!=='publish'?structuredClone(doc.content):null;
     await action(doc);doc.revision++;
     if(options.resetAdvisor)await con.execute('DELETE FROM advisor_state WHERE user_id=? AND slot=?',[id,slot]);
     if(doc.slug){const namespace=slot===3?'path':'subdomain',[[claim]]=await con.execute('SELECT user_id,slot FROM dashboard_slug_claims WHERE namespace=? AND slug=?',[namespace,doc.slug]);if(claim&&(claim.user_id!==id||Number(claim.slot)!==slot))fail('این نام صفحه قبلاً گرفته شده است',409);if(!claim)await con.execute('INSERT INTO dashboard_slug_claims(namespace,slug,user_id,slot) VALUES(?,?,?,?)',[namespace,doc.slug,id,slot]);await con.execute('DELETE FROM dashboard_slug_claims WHERE user_id=? AND slot=? AND slug<>?',[id,slot,doc.slug]);}
     else await con.execute('DELETE FROM dashboard_slug_claims WHERE user_id=? AND slot=?',[id,slot]);
     // Image bytes go to dashboard_media; the row keeps only their addresses.
     await require('./media.cjs').store(con,id,slot,imagesBefore,doc,!(options.draftOnly&&r));
+    if(options.version)await require('./versions.cjs').add(con,id,slot,options.version,options.version==='publish'?doc.content:before,doc.revision);
     // Never upsert on the unique slug: a collision must not update another account's row.
     const values=options.draftOnly&&r?null:[doc.slug,JSON.stringify(doc.content),JSON.stringify(doc.preferences),JSON.stringify(doc.pub),JSON.stringify(doc.published),doc.revision];
     if(r&&options.draftOnly)await con.execute('UPDATE '+table+' SET slug=?,draft=?,preferences=?,revision=? WHERE '+where,[doc.slug,JSON.stringify(doc.content),JSON.stringify(doc.preferences),doc.revision,...keys]);

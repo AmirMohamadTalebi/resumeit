@@ -35,6 +35,9 @@ async function store(con,id,slot,before,doc,publishedLoaded){
         for(const h of used)still.add(h);
       }
     }
+    // A saved version (council C1-a) keeps its images too; its rows are read once, here, and only when something was removed.
+    const [kept]=await con.execute('SELECT content FROM dashboard_versions WHERE user_id=?',[id]);
+    for(const v of kept)for(const h of media.documentHashes({content:parse(v.content)}))still.add(h);
     const orphans=removed.filter(h=>!still.has(h));
     if(orphans.length)await con.execute('UPDATE dashboard_media SET orphaned_at=? WHERE user_id=? AND orphaned_at IS NULL AND hash IN ('+list(orphans)+')',[Date.now(),id,...orphans]);
   }

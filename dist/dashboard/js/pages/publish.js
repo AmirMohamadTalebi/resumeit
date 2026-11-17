@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   const RI = window.RI, esc = RI.esc;
-  const TABS = [['go', 'انتشار', 'rocket'], ['address', 'آدرس', 'globe'], ['share', 'کارت لینک و جست‌وجو', 'external']];
+  const TABS = [['go', 'انتشار', 'rocket'], ['address', 'آدرس', 'globe'], ['share', 'کارت لینک و جست‌وجو', 'external'], ['versions', 'نسخه‌ها', 'clock']];
   const pageName = k => k === 'resume' ? 'صفحهٔ رزومه' : 'صفحهٔ لینک‌ها';
 
   RI.registerPage('publish', {
@@ -59,6 +59,24 @@
       // A link made for one place (council C3-a): the same address with ?src=, so the stats can show where visits came from.
       const SRC = [['telegram', 'تلگرام'], ['instagram', 'اینستاگرام'], ['linkedin', 'لینکدین'], ['whatsapp', 'واتساپ'], ['jobsite', 'سایت کاریابی (جابینجا، جاب‌ویژن، ایران‌تلنت)'], ['irmsg', 'پیام‌رسان داخلی (بله، ایتا، روبیکا)'], ['google', 'گوگل'], ['other', 'جای دیگر']];
       const srcTool = url => '<details class="pb-src"><summary>' + RI.icon('link') + 'لینک مخصوص هر جا</summary><div class="pb-src__row"><select aria-label="این لینک را کجا می‌گذاری؟">' + SRC.map(([v, t]) => '<option value="' + v + '">' + t + '</option>').join('') + '</select><button type="button" class="btn btn--soft btn--sm" data-src-copy="' + esc(url) + '">' + RI.icon('copy') + 'کپی لینک</button></div><p class="pb-hint">هر جا لینک مخصوص خودش را بگذار تا در «آمار» ببینی بازدید از کجا آمده.</p></details>';
+      // Versions (council C1-a): a copy at every publish and a backup before a reset or restore; restoring brings back the draft only.
+      let versions = null, versionsFailed = false;
+      const REASON = { publish: 'انتشار', reset: 'پیش از پاک‌سازی', restore: 'پیش از بازگردانی' };
+      async function loadVersions() {
+        try { versions = (await RI.dashboardRequest('versions?full=1')).versions; versionsFailed = false; } catch { versions = null; versionsFailed = true; }
+        if (tab === 'versions') paint();
+      }
+      function versionDiff(v) {
+        const labels = [...new Set(['resume', 'links'].flatMap(k => { try { return RI.pubDiff(k, JSON.stringify(RI.pubData(k, v.content))).map(r => r.label); } catch { return []; } }))];
+        return labels.length ? '<small class="pb-vdiff">با پیش‌نویس فعلی فرق دارد در: ' + labels.map(esc).join('، ') + '</small>' : '<small class="pb-vdiff">مثل پیش‌نویس فعلی</small>';
+      }
+      function versionsTab() {
+        if (versionsFailed) return '<div class="pb-banner">' + RI.icon('alert') + '<div><b>نسخه‌ها دریافت نشد.</b></div><button type="button" class="btn btn--soft" data-versions-retry>تلاش دوباره</button></div>';
+        if (versions === null) return RI.sectionLoading('در حال دریافت نسخه‌ها…');
+        return '<section class="pb-panel pb-versions" aria-labelledby="pb-ver"><header><h2 id="pb-ver">' + RI.icon('clock') + 'نسخه‌های این صفحه</h2><p>از هر انتشار یک نسخه ذخیره می‌شود، تا ۲۰ نسخهٔ آخر. بازگردانی فقط پیش‌نویس را برمی‌گرداند و صفحهٔ عمومی تا انتشار دوباره عوض نمی‌شود؛ از پیش‌نویس فعلی‌ات هم یک نسخهٔ پشتیبان می‌ماند.</p></header>' +
+          (versions.length ? '<ol class="pb-vlist">' + versions.map((v, i) => '<li style="--i:' + i + '"><div><b>' + esc(REASON[v.reason] || v.reason) + '</b><small>' + esc(RI.date(v.at)) + '</small>' + versionDiff(v) + '</div><button type="button" class="btn btn--soft btn--sm" data-restore="' + esc(v.id) + '">' + RI.icon('refresh') + 'بازگردانی</button></li>').join('') + '</ol><button type="button" class="btn btn--danger-soft btn--sm" data-versions-clear>' + RI.icon('trash') + 'حذف همهٔ نسخه‌ها</button>'
+            : RI.empty({ icon: 'clock', title: 'هنوز نسخه‌ای نیست', text: 'با اولین انتشار، یک نسخه از رزومه‌ات این‌جا ذخیره می‌شود.' })) + '</section>';
+      }
       function goTab() {
         const rd = RI.readiness(), paused = !RI.canWorkspace(RI.workspaceSlot);
         return (paused ? '<div class="pb-banner">' + RI.icon('alert') + '<div><b>این جایگاه با دسترسی یا سهمیهٔ فعلی قابل انتشار نیست.</b><p>پیش‌نویس و نسخه‌های قبلی حفظ شده‌اند؛ سهمیه و وضعیت اشتراک را بررسی کن.</p></div><a class="btn btn--soft" href="' + RI.routeUrl('billing') + '" data-go="billing">بررسی دسترسی</a></div>' : '') +
@@ -175,7 +193,7 @@
       }
 
       function paint() {
-        body.innerHTML = '<div class="pb-pane" data-pane="' + tab + '" data-sub="' + sub + '">' + (tab === 'address' ? addressTab() : tab === 'share' ? shareTab() : goTab()) + '</div>';
+        body.innerHTML = '<div class="pb-pane" data-pane="' + tab + '" data-sub="' + sub + '">' + (tab === 'address' ? addressTab() : tab === 'share' ? shareTab() : tab === 'versions' ? versionsTab() : goTab()) + '</div>';
         RI.$$('#ptabs [data-tab]', root).forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === tab)));
         moveInk(); subInk();
         if (tab === 'share') { RI.bindImageField(body, 'shimg', { set: v => { C().share.image = v; RI.touch('share'); paint(); } }); counts(); meters(); health(); }
@@ -191,7 +209,23 @@
       function paintCard() { const v = RI.shareCard(C(), shareKind), card = RI.$('.sharecard__body', body); if (!card) return; card.querySelector('b').textContent = v.title; card.querySelector('p').textContent = v.desc; const st = RI.$('[data-serp-title]', body), sd = RI.$('[data-serp-desc]', body); if (st) st.textContent = v.title; if (sd) sd.textContent = v.desc; meters(); const sig = RI.$('[data-sig]', body); if (sig) sig.innerHTML = signature(RI.urls()[shareKind], true); }
 
       /* ---------- Events ---------- */
-      RI.delegate(root, 'click', '#ptabs [data-tab]', (e, b) => { tab = b.dataset.tab; paint(); });
+      RI.delegate(root, 'click', '#ptabs [data-tab]', (e, b) => { tab = b.dataset.tab; if (tab === 'versions') versions = null; paint(); if (tab === 'versions') loadVersions(); });
+      RI.delegate(root, 'click', '[data-versions-retry]', () => { versions = null; versionsFailed = false; paint(); loadVersions(); });
+      RI.delegate(root, 'click', '[data-restore]', async (e, b) => {
+        if (RI.state.ui.dirty) { RI.toast('اول صبر کن تغییرات فعلی ذخیره شود', { kind: 'info' }); return; }
+        if (!await RI.confirm({ title: 'این نسخه برگردد؟', text: 'پیش‌نویس فعلی‌ات با این نسخه عوض می‌شود و از آن یک نسخهٔ پشتیبان می‌ماند. صفحهٔ عمومی تا انتشار دوباره عوض نمی‌شود.', confirmLabel: 'بازگردانی', icon: 'refresh' })) return;
+        b.disabled = true;
+        try {
+          const doc = await RI.dashboardRequest('versions/restore', { id: b.dataset.restore, revision: RI.revision });
+          RI.state.content = doc.content; RI.state.pub = doc.pub; RI.revision = doc.revision; RI.saved = JSON.stringify(doc.content); RI.state.ui.dirty = false; RI.resetEdits(); RI.clearDraft();
+          RI.toast(doc.downgraded && doc.downgraded.length ? 'بازگردانده شد؛ ' + doc.downgraded.join('، ') + ' به نسخهٔ رایگان برگشت چون هنوز نخریده‌ای. اگر خواستی، از «ظاهر و قالب» بخرش.' : 'پیش‌نویس برگشت؛ صفحهٔ عمومی تا انتشار عوض نمی‌شود', { kind: doc.downgraded && doc.downgraded.length ? 'info' : 'success' });
+          versions = null; paint(); loadVersions();
+        } catch (err) { RI.toast(err.message, { kind: 'error' }); b.disabled = false; }
+      });
+      RI.delegate(root, 'click', '[data-versions-clear]', async () => {
+        if (!await RI.confirm({ title: 'همهٔ نسخه‌ها پاک شوند؟', text: 'نسخه‌های ذخیره‌شدهٔ این صفحه برای همیشه حذف می‌شوند؛ پیش‌نویس و صفحهٔ منتشرشده دست نمی‌خورند.', danger: true, icon: 'trash', confirmLabel: 'حذف همه' })) return;
+        try { await RI.dashboardRequest('versions/clear', { confirm: 'CLEAR' }); versions = []; paint(); RI.toast('نسخه‌ها حذف شدند'); } catch (err) { RI.toast(err.message, { kind: 'error' }); }
+      });
       RI.delegate(root, 'click', '[data-share-kind]', (e, b) => { shareKind = b.dataset.shareKind; paint(); });
       RI.delegate(root, 'click', '[data-health-run]', () => health());
       RI.delegate(root, 'click', '.pb-subtabs [data-sub]', (e, b) => {

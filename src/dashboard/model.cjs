@@ -73,6 +73,19 @@ function validateContent(input,billing={},previous,afterImages,known=new Set()){
 function validatePatch(patch){if(!patch||typeof patch!=='object'||Array.isArray(patch)||Object.keys(patch).some(k=>!Object.hasOwn(blank(),k)))fail('بخش تغییرکرده معتبر نیست');return patch;}
 function preferences(input={}){return {indexing:input.indexing!==false,brand:true,notify:{sms_publish:false,sms_security:false,email_tips:false,email_stats:false,push_milestones:false}};}
 function checkAccess(c,billing={},kind,previous){if(kind!=='links'){const selected=c.resumeTemplates?.[c.theme.resume]?.settings?.font,f=RI.FONTS.find(x=>x.id===selected);if(f&&!RI.allowed('font:'+f.id,f,billing)&&!(previous?.theme.resume===c.theme.resume&&previous.resumeTemplates?.[c.theme.resume]?.settings?.font===selected))fail('این فونت به خرید یک‌باره نیاز دارد',403);}for(const [key,ref,list]of [['resume','rt',RI.RESUME_TEMPLATES],['links','lt',RI.LINK_TEMPLATES],['font','font',RI.FONTS],['palette','pal',RI.PALETTES],['linksPalette','pal',RI.PALETTES]]){if(kind==='resume'&&['links','linksPalette'].includes(key)||kind==='links'&&['resume','palette'].includes(key))continue;const item=list.find(x=>x.id===c.theme[key]);if(!item||!RI.allowed(ref+':'+item.id,item,billing)&&previous?.theme[key]!==c.theme[key])fail('این ظاهر به خرید یک‌باره یا اشتراک فعال نیاز دارد',403);}}
+// A restored copy may select paid things the person does not have; each falls back to the first free one (what the draft already
+// had stays). Returns the names that fell back so the answer can say so.
+function downgradeAccess(c,billing={},previous){
+  const names=[];
+  for(const [key,ref,list] of [['resume','rt',RI.RESUME_TEMPLATES],['links','lt',RI.LINK_TEMPLATES],['font','font',RI.FONTS],['palette','pal',RI.PALETTES],['linksPalette','pal',RI.PALETTES]]){
+    const item=list.find(x=>x.id===c.theme[key]);
+    if(item&&(RI.allowed(ref+':'+item.id,item,billing)||previous?.theme?.[key]===c.theme[key]))continue;
+    names.push(item?.name||c.theme[key]);c.theme[key]=list.find(x=>x.access==='free').id;
+  }
+  const own=c.resumeTemplates?.[c.theme.resume]?.settings,font=own&&RI.FONTS.find(x=>x.id===own.font);
+  if(font&&!RI.allowed('font:'+font.id,font,billing)&&previous?.resumeTemplates?.[c.theme.resume]?.settings?.font!==own.font){names.push(font.name);own.font='theme';}
+  return names;
+}
 // Every paid ref a content selects, in the same places checkAccess reads; used to refuse refunds of things still in use.
 function refsInUse(c){const t=c?.theme||{},out=new Set();for(const [key,ref] of [['resume','rt'],['links','lt'],['font','font'],['palette','pal'],['linksPalette','pal']])if(typeof t[key]==='string')out.add(ref+':'+t[key]);const own=c?.resumeTemplates?.[t.resume]?.settings?.font;if(typeof own==='string')out.add('font:'+own);return out;}
 function publicContent(c,billing={}){
@@ -86,4 +99,4 @@ function publicContent(c,billing={}){
 }
 function ready(c,kind,billing={},existingSlug=false){checkAccess(c,billing,kind);if(!slugValid(c.slug)&&!existingSlug)fail('نام صفحه را انتخاب کن');if(kind==='links'){if(!(c.links.header.sync?c.profile.name:c.links.header.name).trim()||!c.links.items.some(x=>x.type==='link'&&x.active))fail('نام و حداقل یک لینک فعال لازم است');}else {const missing=RI.resumeRequirements(c).find(x=>!x.done);if(missing)fail(missing.label);}}
 function initial(){return {content:blank(),preferences:preferences(),pub:{resume:{status:'draft',version:0,at:null,snap:null},links:{status:'draft',version:0,at:null,snap:null}},revision:0};}
-module.exports={validatePatch,content,externalImages,preferences,ready,initial,slugValid,webUrl,fail,checkAccess,publicContent,refsInUse};
+module.exports={validatePatch,content,externalImages,preferences,ready,initial,slugValid,webUrl,fail,checkAccess,publicContent,refsInUse,downgradeAccess};

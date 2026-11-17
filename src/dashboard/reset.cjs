@@ -24,7 +24,7 @@ module.exports=(database,options)=>{
         doc.content.branding.resume=blank.branding.resume;
       }else{doc.content.links=blank.links;doc.content.branding.links=blank.branding.links;doc.content.theme.links=blank.theme.links;doc.content.theme.linksPalette=blank.theme.linksPalette;}
       doc.pub[input.kind]={status:'draft',version:doc.pub[input.kind].version,at:null,snap:null};delete doc.published[input.kind];
-    },{workspace:slot,resetAdvisor:input.kind==='resume'});
+    },{workspace:slot,resetAdvisor:input.kind==='resume',version:'reset'});
     reply(200,result);return true;
   };
 };

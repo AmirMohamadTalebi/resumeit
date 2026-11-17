@@ -98,7 +98,7 @@ function dashboardHandler(database,auth,notifications,options){const reset=requi
   try{
     if(req.headers.host!==root.host)model.fail('مبدأ درخواست معتبر نیست',403);
     const user=await auth.account(req);if(!user)model.fail('دوباره وارد حسابت شو',401);
-    const scoped=['document','save','publish','unpublish','slug','share-qr','share-check','advisor'].some(route=>pathname==='/api/dashboard/'+route)||pathname.startsWith('/api/dashboard/media/');
+    const scoped=['document','save','publish','unpublish','slug','share-qr','share-check','advisor','versions','versions/restore','versions/clear'].some(route=>pathname==='/api/dashboard/'+route)||pathname.startsWith('/api/dashboard/media/');
     const workspace=Number(new URL(req.url,origin).searchParams.get('workspace')||1);if(!require('../owner/settings.cjs').validSlot(workspace))model.fail('جایگاه صفحه معتبر نیست');
     activeWorkspace=workspace;
     if(scoped&&workspace>1&&req.method==='POST'&&pathname!=='/api/dashboard/unpublish'){const billing=await database.billing(user.id),owner=database.ownerUserSettings?await database.ownerUserSettings(user.id):{};if(!require('../owner/settings.cjs').workspaceAllowed(workspace,billing,owner))model.fail('این جایگاه به اشتراک فعال یا سهمیهٔ اضافهٔ مالک نیاز دارد',403);}
@@ -152,6 +152,7 @@ function dashboardHandler(database,auth,notifications,options){const reset=requi
         }
       }
       else if(pathname==='/api/dashboard/stats')reply(200,{rows:await database.dashboardStats(user.id,90,workspace)});
+      else if(pathname==='/api/dashboard/versions')reply(200,{versions:database.listVersions?await database.listVersions(user.id,workspace,new URL(req.url,origin).searchParams.get('full')==='1'):[]});
       else if(pathname==='/api/dashboard/sources')reply(200,{rows:database.dashboardSources?await database.dashboardSources(user.id,90,workspace):[]});
       else if(pathname==='/api/dashboard/slug'){const slug=new URL(req.url,origin).searchParams.get('value');reply(200,{available:model.slugValid(slug)&&await database.slugAvailable(slug,user.id,workspace)});}
       else if(pathname==='/api/dashboard/share-check'){
@@ -168,6 +169,8 @@ function dashboardHandler(database,auth,notifications,options){const reset=requi
     if(req.headers.origin!==origin||req.headers['content-type']?.split(';')[0]!=='application/json')model.fail('مبدأ درخواست معتبر نیست',403);
     const input=await readJson(req,8*1024*1024);
     if(pathname==='/api/dashboard/delete'){if(input.confirm!=='DELETE')model.fail('تأیید حذف لازم است');await require('../auth/confirm.cjs').confirmPassword(database,user,input.password);await database.deleteAccount(user.id);res.setHeader('Set-Cookie','ri_session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0'+(origin.startsWith('https:')?'; Secure':''));reply(200,{ok:true});return true;}
+    if(pathname==='/api/dashboard/versions/restore'){if(!database.restoreVersion)model.fail('نسخه‌ها در این محیط آماده نیست',503);if(typeof input.id!=='string'||!Number.isSafeInteger(input.revision)||input.revision<0)model.fail('درخواست بازگردانی معتبر نیست');const billing=database.billing?await database.billing(user.id):{};reply(200,await database.restoreVersion(user.id,workspace,input.id,input.revision,billing));return true;}
+    if(pathname==='/api/dashboard/versions/clear'){if(input.confirm!=='CLEAR')model.fail('تأیید حذف لازم است');reply(200,{removed:database.clearVersions?await database.clearVersions(user.id,workspace):0});return true;}
     if(pathname==='/api/dashboard/wallet/purchase'){await database.purchaseWithWallet(user.id,input.ref,input.requestId,input.expectedPrice);if(database.notify)await database.notify(user.id,'payments','خرید ثبت شد','جزئیات و مبلغ خرید در گردش کیف پول ثبت شده است.','/dashboard/billing/?tab=purchases','purchase:'+input.requestId).catch(()=>{});reply(200,{wallet:await database.wallet(user.id),billing:await database.billing(user.id)});return true;}
     if(!Number.isSafeInteger(input.revision)||input.revision<0)model.fail('نسخهٔ اطلاعات معتبر نیست');
     if(!['/api/dashboard/save','/api/dashboard/publish','/api/dashboard/unpublish'].includes(pathname))model.fail('مسیر پیدا نشد',404);
@@ -191,7 +194,7 @@ function dashboardHandler(database,auth,notifications,options){const reset=requi
           if(external.some(url=>!localized.has(url)))throw Object.assign(new Error('تصویرهای اینترنتی هنوز کپی نشده‌اند'),{status:400,code:'EXTERNAL_IMAGES',urls:external,existing:external});
           doc.content=media.replaceValues(doc.content,localized);
           model.ready(doc.content,k,billing,!!doc.slug&&doc.slug===doc.content.slug);doc.slug=doc.content.slug;doc.published[k]=structuredClone(doc.content);doc.pub[k]={status:'published',version:doc.pub[k].version+1,at:Date.now(),snap:JSON.stringify(pubData(doc.content,k))};
-        },{draftOnly:saving,workspace,checkAccess:!pathname.endsWith('/unpublish')});
+        },{draftOnly:saving,workspace,checkAccess:!pathname.endsWith('/unpublish'),version:saving||pathname.endsWith('/unpublish')?null:'publish'});
         break;
       }catch(error){
         if(error.code!=='EXTERNAL_IMAGES'||attempt>=2)throw error;

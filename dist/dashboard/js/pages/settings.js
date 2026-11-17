@@ -53,8 +53,9 @@
         } catch (error) { if (active()) RI.toast(error.message, { kind: 'error' }); }
         finally { b.disabled = false; }
       });
-      RI.delegate(root, 'click', '[data-export]', () => {
-        const out = { _note: 'خروجی اطلاعات ResumeIt', account: { name: a.name, mobile: a.mobile }, content: RI.C(), preferences: { indexing: a.indexing, brand: a.brand }, publication: RI.state.pub };
+      RI.delegate(root, 'click', '[data-export]', async () => {
+        let versions = []; try { versions = (await RI.dashboardRequest('versions?full=1')).versions; } catch { /* the export still works without them */ }
+        const out = { _note: 'خروجی اطلاعات ResumeIt', account: { name: a.name, mobile: a.mobile }, content: RI.C(), preferences: { indexing: a.indexing, brand: a.brand }, publication: RI.state.pub, versions };
         const l = document.createElement('a'); l.href = URL.createObjectURL(new Blob([JSON.stringify(out, null, 2)], { type: 'application/json' })); l.download = 'resumeit-export.json'; l.click(); setTimeout(() => URL.revokeObjectURL(l.href), 500); RI.toast('فایل اطلاعات دانلود شد');
       });
       const box = RI.$('[data-sessions]', root), others = RI.$('[data-revoke-others]', root);

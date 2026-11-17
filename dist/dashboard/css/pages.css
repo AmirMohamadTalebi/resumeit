@@ -587,3 +587,11 @@ html body .wl-row .wl-row__text small{justify-self:start;max-width:100%}
 .cmpnote--empty{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:14px 16px}.cmpnote--empty p{margin:0;flex:1 1 18rem}
 @keyframes cmp-in{from{opacity:0;translate:0 6px;scale:.9}to{opacity:1;translate:0 0;scale:1}}
 @media (prefers-reduced-motion:reduce){.cmp{animation:none}}
+/* Versions list: rows rise in one after another; the restore button turns while it works */
+.pb-vlist{list-style:none;margin:12px 0;padding:0;display:grid;gap:8px}
+.pb-vlist li{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;border:1px solid var(--line,#d5e3ea);border-radius:16px;background:#ffffffc8;animation:pb-vrise .5s calc(var(--i) * 45ms) cubic-bezier(.2,.8,.2,1) both}
+.pb-vlist li div{display:grid;gap:2px;min-width:0}.pb-vlist small{color:var(--ink-3,#5a7080);font-size:12px}.pb-vdiff{overflow-wrap:anywhere}
+.pb-vlist button:disabled svg{animation:pb-vspin .8s linear infinite}
+@keyframes pb-vrise{from{opacity:0;translate:0 8px}to{opacity:1;translate:0 0}}
+@keyframes pb-vspin{to{rotate:360deg}}
+@media (prefers-reduced-motion:reduce){.pb-vlist li,.pb-vlist button:disabled svg{animation:none}}
