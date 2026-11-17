@@ -62,8 +62,8 @@
     if (RI.statsLoading || (!RI.statsError && RI.statsRows === null)) return '<p class="sr-only" role="status">در حال دریافت آمار بازدیدها…</p><div class="hb-kpis" aria-hidden="true">' + '<div class="hb-kpi"><span class="nv-skeleton"></span></div>'.repeat(3) + '</div>';
     if (RI.statsRows === null) return '<div class="hb-note">' + RI.icon('alert') + '<span>آمار دریافت نشد. <button type="button" class="nv-link" data-retry-stats>تلاش دوباره</button></span></div>';
     const ser = RI.metricSeries(7), sum = a => a.reduce((x, y) => x + y, 0), views = linksOnly() ? ser.linkViews : ser.views;
-    const kpi = (label, value, icon, i) => '<div class="hb-kpi" style="--i:' + i + '"><span class="hb-kpi__ico">' + RI.icon(icon) + '</span><small>' + label + '</small><b data-hb-count="' + value + '">' + RI.fa(value) + '</b></div>';
-    return '<div class="hb-kpis">' + (linksOnly() ? '' : kpi('بازدید رزومه', sum(ser.views), 'eye', 0)) + kpi('بازدید لینک‌ها', sum(ser.linkViews), 'link', 1) + kpi('کلیک لینک‌ها', sum(ser.clicks), 'zap', 2) + '</div>' +
+    const kpi = (label, value, icon, i, event) => '<div class="hb-kpi" style="--i:' + i + '"><span class="hb-kpi__ico">' + RI.icon(icon) + '</span><small>' + label + '</small><b data-hb-count="' + value + '">' + RI.fa(value) + '</b>' + RI.compareChip(event, 7) + '</div>';
+    return '<div class="hb-kpis">' + (linksOnly() ? '' : kpi('بازدید رزومه', sum(ser.views), 'eye', 0, 'resume')) + kpi('بازدید لینک‌ها', sum(ser.linkViews), 'link', 1, 'links') + kpi('کلیک لینک‌ها', sum(ser.clicks), 'zap', 2, 'click') + '</div>' +
       '<div class="hb-chart">' + RI.charts.placeholder({ title: 'بازدید هفت روز اخیر', labelTitle: 'روز', height: 160, table: false, labels: views.map((v, i) => i === views.length - 1 ? 'امروز' : RI.fa(views.length - i - 1) + ' روز پیش'), series: [{ name: linksOnly() ? 'بازدید لینک‌ها' : 'بازدید رزومه', values: views, color: '#3d8c9c' }, { name: 'کلیک لینک‌ها', values: ser.clicks, color: '#e2a03a' }] }) + '</div>';
   }
 

@@ -36,5 +36,19 @@
     if(!doc.revision&&old.profile.name){const importOld=await RI.choice({title:'پیش‌نویس قبلی این تب',text:'یک پیش‌نویس موقت از نسخهٔ قبلی پیدا شد. آن را روی حساب ذخیره کنیم؟',options:[{label:'انتقال به حساب',kind:'primary',value:true},{label:'شروع خالی',kind:'ghost',value:false}]});if(importOld){RI.state.content=old;RI.touch();await RI.save();}}
   };
   RI.metricSeries=(n)=>{const day=Math.floor((Date.now()+12600000)/86400000),ser={views:Array(n).fill(0),linkViews:Array(n).fill(0),clicks:Array(n).fill(0)};for(const r of RI.statsRows||[]){const i=r.day-(day-n+1);if(i>=0&&i<n){const key={resume:'views',links:'linkViews',click:'clicks'}[r.event];if(key)ser[key][i]+=Number(r.total);}}return ser;};
+  // This period against the one before it (council C3-c). Never divides by zero: no earlier visits is "new", nothing in both is "none",
+  // and a range whose earlier half is older than the 90 stored days is "na".
+  RI.compareSeries=(rows,n,event,today=Math.floor((Date.now()+12600000)/86400000))=>{
+    if(n*2>90)return {state:'na',now:0,before:0};
+    const sum=(from,to)=>(rows||[]).filter(r=>r.event===event&&r.day>=from&&r.day<=to).reduce((t,r)=>t+Number(r.total),0),now=sum(today-n+1,today),before=sum(today-2*n+1,today-n);
+    if(!now&&!before)return {state:'none',now,before};
+    if(!before)return {state:'new',now,before};
+    if(now===before)return {state:'same',now,before};
+    return {state:now>before?'up':'down',now,before,pct:Math.round(Math.abs(now-before)*100/before)};
+  };
+  RI.compareChip=(event,n)=>{
+    const c=RI.compareSeries(RI.statsRows,n,event),days=RI.fa(n)+' روز قبل',text={up:()=>'▲ '+RI.fa(c.pct)+'٪ بیشتر از '+days,down:()=>'▼ '+RI.fa(c.pct)+'٪ کمتر از '+days,same:()=>'برابر با '+days,new:()=>'جدید؛ '+days+' بازدیدی نبود'}[c.state];
+    return text?'<span class="cmp cmp--'+c.state+'">'+text()+'</span>':'';
+  };
   RI.linkClicks=(id,n=90)=>(RI.statsRows||[]).filter(r=>r.event==='click'&&r.link_id===id&&r.day>=Math.floor((Date.now()+12600000)/86400000)-n+1).reduce((s,r)=>s+Number(r.total),0);
 })();
